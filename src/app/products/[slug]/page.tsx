@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import ProductConfigurator from "@/components/ProductConfigurator";
 import ProductReviews from "@/components/ProductReviews";
 
-/** Render sempre em runtime (sem SSG/ISR) */
+/** Always render at runtime (disable SSG/ISR so builds never touch the DB) */
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
@@ -113,8 +113,8 @@ function buildUIProduct(args: {
   };
 }
 
-/** Garante que a lista de tamanhos inclui até 3XL.
- *  Para tamanhos ausentes, cria com stock 0 (aparecem desativados).
+/** Ensure the size list covers up to 3XL.
+ *  Missing sizes are added with stock 0 (rendered disabled).
  */
 function ensureUpTo3XL(sizes: SizeUI[]): SizeUI[] {
   const order = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
@@ -135,9 +135,9 @@ function ensureUpTo3XL(sizes: SizeUI[]): SizeUI[] {
   return merged;
 }
 
-/* ---------- SSG params (protegido na Vercel) ---------- */
+/* ---------- Static params (guarded on Vercel) ---------- */
 export async function generateStaticParams() {
-  // Em ambiente de build na Vercel, não pré-gera nada para não bater no DB
+  // On Vercel builds, do not pre-generate anything to avoid DB access
   if (process.env.VERCEL) return [];
   try {
     const rows = await prisma.product.findMany({ select: { slug: true }, take: 500 });
@@ -199,10 +199,9 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <div className="container-fw py-10 grid gap-10">
-      {/* Configurador / detalhe do produto */}
+      {/* Product configurator / details */}
       <ProductConfigurator product={uiProduct} />
-
-      {/* Reviews (rating 0–5 + comentário) */}
+      {/* Reviews (rating 0–5 + comment) */}
       <ProductReviews productId={uiProduct.id} />
     </div>
   );
