@@ -1,0 +1,59 @@
+name: Preview (Vercel)
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      # Puxa envs do projeto (Preview) e grava .vercel/ + .env.local conforme o teu projeto
+      - name: Vercel Pull (preview)
+        run: vercel pull --yes --environment=preview --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build (previews)
+        run: vercel build --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Opcional: “desliga” typecheck/eslint se precisares
+          # NEXT_PRIVATE_SKIP_TYPE_CHECK: "1"
+          # NEXT_SKIP_ESLINT: "1"
+
+      - name: Deploy (prebuilt) - Preview
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token ${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Comment PR with preview URL
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: vercel-preview
+          message: |
+            ✅ Preview deploy: ${{ steps.deploy.outputs.url }}
