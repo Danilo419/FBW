@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import ProductConfigurator from "@/components/ProductConfigurator";
 import ProductReviews from "@/components/ProductReviews";
 
-export const revalidate = 60;
+/** Render sempre em runtime (sem SSG/ISR) */
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 /* ---------- UI types ---------- */
 type OptionValueUI = {
@@ -122,29 +124,34 @@ function ensureUpTo3XL(sizes: SizeUI[]): SizeUI[] {
   const merged: SizeUI[] = [];
   for (const key of order) {
     const found = bySize.get(key);
-    if (found) merged.push(found);
-    else {
-      merged.push({
+    merged.push(
+      found ?? {
         id: `ghost-${key}`,
         size: key,
         stock: 0,
-      });
-    }
+      }
+    );
   }
   return merged;
 }
 
-/* ---------- SSG params ---------- */
+/* ---------- SSG params (protegido na Vercel) ---------- */
 export async function generateStaticParams() {
-  const rows = await prisma.product.findMany({ select: { slug: true } });
-  return rows.map((r) => ({ slug: r.slug }));
+  // Em ambiente de build na Vercel, não pré-gera nada para não bater no DB
+  if (process.env.VERCEL) return [];
+  try {
+    const rows = await prisma.product.findMany({ select: { slug: true }, take: 500 });
+    return rows.map((r) => ({ slug: r.slug }));
+  } catch {
+    return [];
+  }
 }
 
 /* ---------- Page ---------- */
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = { params: { slug: string } };
 
 export default async function ProductPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug } = params;
 
   const core = await prisma.product.findUnique({
     where: { slug },

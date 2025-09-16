@@ -5,8 +5,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")  // pooled (pgbouncer)
-  directUrl = env("DIRECT_URL")    // non-pooled
+  url       = env("POSTGRES_PRISMA_URL")      // pooled (pgbouncer)
+  directUrl = env("POSTGRES_URL_NON_POOLING") // non-pooled
 }
 
 /**
