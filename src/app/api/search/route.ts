@@ -226,29 +226,7 @@ async function loadFromHttp(reqUrl: URL, q: string): Promise<LoadResult> {
   return null;
 }
 
-/* ------------ 3) Local modules/files (optional) ------------ */
-
-async function loadFromModules(): Promise<LoadResult> {
-  async function tryImport(path: string) {
-    try {
-      // @ts-ignore
-      const m = await import(path);
-      return m as AnyRec;
-    } catch {
-      return null;
-    }
-  }
-  const mods = ["@/lib/products", "@/data/products", "src/lib/products", "src/data/products"];
-  for (const m of mods) {
-    const mod = await tryImport(m);
-    if (!mod) continue;
-    if (Array.isArray((mod as any).products) && (mod as any).products.length)
-      return { items: (mod as any).products, filtered: false };
-    if (Array.isArray((mod as any).default) && (mod as any).default.length)
-      return { items: (mod as any).default, filtered: false };
-  }
-  return null;
-}
+/* ------------ 3) Local JSON files (fallback sem imports dinâmicos) ------------ */
 
 async function loadFromJsonFiles(): Promise<LoadResult> {
   try {
@@ -283,8 +261,7 @@ export async function GET(req: Request) {
   // 2) HTTP endpoints (if present)
   if (!data) data = await loadFromHttp(url, q);
 
-  // 3) Local modules/files (fallback)
-  if (!data) data = await loadFromModules();
+  // 3) Local JSON files (fallback)
   if (!data) data = await loadFromJsonFiles();
 
   if (!data) {

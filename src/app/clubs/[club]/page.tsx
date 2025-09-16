@@ -1,9 +1,12 @@
+// src/app/clubs/[club]/page.tsx
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-export const revalidate = 60;
+/** Render sempre em runtime (sem SSG/ISR) */
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 function slugify(s: string) {
   return s
@@ -21,7 +24,13 @@ function titleFromSlug(slug: string) {
     .join(" ");
 }
 
+/**
+ * Em ambiente de build na Vercel, não pré-gera nada para não bater no DB.
+ * Em dev local, podes continuar a pré-gerar se quiseres.
+ */
 export async function generateStaticParams() {
+  if (process.env.VERCEL) return [];
+
   const rows = await prisma.product.findMany({
     select: { team: true },
     distinct: ["team"],
@@ -34,6 +43,7 @@ type PageProps = { params: { club: string } };
 export default async function ClubProductsPage({ params }: PageProps) {
   const { club } = params;
 
+  // Lista de equipas distintas para mapear slug -> nome real
   const teams = await prisma.product.findMany({
     select: { team: true },
     distinct: ["team"],
@@ -45,7 +55,14 @@ export default async function ClubProductsPage({ params }: PageProps) {
   const products = await prisma.product.findMany({
     where: { team: teamName },
     orderBy: { name: "asc" },
-    select: { id: true, slug: true, name: true, images: true, basePrice: true, team: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      images: true,
+      basePrice: true,
+      team: true,
+    },
   });
 
   if (!products.length) notFound();
@@ -64,7 +81,7 @@ export default async function ClubProductsPage({ params }: PageProps) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((p) => {
-          const img = p.images?.[0] ?? "/placeholder.png";
+          const img = (Array.isArray(p.images) ? p.images[0] : undefined) ?? "/placeholder.png";
           return (
             <Link
               key={p.id}
