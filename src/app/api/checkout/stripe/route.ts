@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -26,7 +26,7 @@ type Shipping = {
     city?: string;
     state?: string;
     postal_code?: string;
-    country?: string; // ISO-3166 alpha-2 recomendado
+    country?: string; // ISO-3166 alpha-2
   };
 };
 
@@ -74,13 +74,24 @@ function shippingToMetadata(s?: Shipping | null) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure Stripe is configured (lazy init to avoid build-time crash)
+    let stripe;
+    try {
+      stripe = getStripe();
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: e?.message ?? "Stripe not configured (missing STRIPE_SECRET_KEY)" },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method;
 
     const APP = buildAppBase();
 
     // Identify cart by session cookie
-    const jar = await cookies(); // <- FIX: await
+    const jar = await cookies();            // ✅ use await with Next 15 types
     const sid = jar.get("sid")?.value ?? null;
 
     const cart = await prisma.cart.findFirst({
@@ -104,7 +115,7 @@ export async function POST(req: NextRequest) {
 
     // Read shipping from cookie created at /checkout/address (base64 JSON)
     let shippingFromCookie: Shipping | null = null;
-    const rawShip = jar.get("ship")?.value; // <- jar já é o ReadonlyRequestCookies
+    const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
         shippingFromCookie = JSON.parse(
@@ -113,6 +124,37 @@ export async function POST(req: NextRequest) {
       } catch {
         shippingFromCookie = null;
       }
+    }
+
+    // If user chose Link, send to Link-only page (Elements) and create pending order
+    if (method === "link") {
+      const createdForLink = await prisma.order.create({
+        data: {
+          sessionId: cart.sessionId ?? null,
+          status: "pending",
+          currency,
+          subtotal,
+          shipping: 0,
+          tax: 0,
+          total: subtotal,
+          shippingJson: (shippingFromCookie as any) ?? null,
+          items: {
+            create: cart.items.map((it: (typeof cart.items)[number]) => ({
+              productId: it.productId,
+              name: it.product.name,
+              image: it.product.images?.[0] ?? null,
+              qty: it.qty,
+              unitPrice: it.unitPrice,
+              totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
+              snapshotJson: (it as any).optionsJson ?? {},
+            })),
+          },
+        },
+        include: { items: true },
+      });
+
+      const url = `${APP}/checkout/link?order=${createdForLink.id}`;
+      return NextResponse.json({ url, sessionId: null });
     }
 
     // Create local order (persist shippingJson now)
@@ -140,12 +182,6 @@ export async function POST(req: NextRequest) {
       },
       include: { items: true },
     });
-
-    // If user chose Link, send to your Link-only page (Elements)
-    if (method === "link") {
-      const url = `${APP}/checkout/link?order=${createdOrder.id}`;
-      return NextResponse.json({ url, sessionId: null });
-    }
 
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe`;
     const cancel_url = `${APP}/cart`;
