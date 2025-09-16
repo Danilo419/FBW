@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   RotateCcw,
-  BadgeDollarSign, // <-- SUBSTITUI ReceiptRefund por este
+  BadgeDollarSign, // replacing ReceiptRefund
   Package,
   Shirt,
   Tag,
@@ -18,7 +18,8 @@ import {
   Camera,
 } from "lucide-react";
 
-export const revalidate = 60 * 60; // 1h
+// Use a literal (not an expression) to avoid "Unsupported node type BinaryExpression"
+export const revalidate = 3600; // 1h
 
 export const metadata: Metadata = {
   title: "Returns & Exchanges – FootballWorld",

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export const revalidate = 60 * 60; // revalidates every hour
+export const revalidate = 3600; // revalidates every hour
 
 export const metadata: Metadata = {
   title: "Shipping & Tracking – FootballWorld",
