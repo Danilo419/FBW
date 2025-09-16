@@ -2,9 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { paypal, paypalClient } from "@/lib/paypal";
+import { paypalClient, paypal } from "@/lib/paypal";
 
 export const runtime = "nodejs";
+
+/* -------------------------- helpers -------------------------- */
 
 type Shipping = {
   name?: string;
@@ -20,40 +22,50 @@ type Shipping = {
   };
 };
 
-/* -------------------------- helpers -------------------------- */
+function getBaseUrl(req: NextRequest): string {
+  // Preferir cabeçalhos enviados pelo Vercel/Proxy
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host =
+    req.headers.get("x-forwarded-host") ??
+    req.headers.get("host") ??
+    "";
+  if (host) return `${proto}://${host}`.replace(/\/+$/, "");
 
-function buildAppBase(): string {
-  // Nunca assumimos que a env existe; evitamos .startsWith em undefined
-  const raw = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
-  if (!raw) {
-    // fallback seguro só para evitar crash em build; define a env na Vercel!
-    return "http://localhost:3000";
-  }
-  // Se vier sem protocolo, assume https
-  const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-  return withProto.replace(/\/+$/, "");
+  // Fallback para env, se existir
+  const env = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
+  if (env) return env.replace(/\/+$/, "");
+
+  // Último recurso: erro explícito
+  throw new Error(
+    "Base URL not resolvable. Set NEXT_PUBLIC_APP_URL or ensure Host headers are present."
+  );
 }
 
-function toAbsoluteImage(url?: string | null): string | undefined {
-  if (!url) return undefined;
-  const t = String(url).trim();
-  if (!t) return undefined;
-  if (/^https?:\/\//i.test(t)) return t;
-  if (t.startsWith("/")) return `${buildAppBase()}${t}`;
-  return undefined;
+function decodeShippingCookie(raw?: string | null): Shipping | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
 }
 
 /* --------------------------- route --------------------------- */
 
 export async function POST(req: NextRequest) {
   try {
+    const APP = getBaseUrl(req);
+
+    // Identificar carrinho pela cookie de sessão
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid ?? undefined },
       include: {
-        items: { include: { product: { select: { name: true, images: true } } } },
+        items: {
+          include: { product: { select: { name: true, images: true } } },
+        },
       },
     });
 
@@ -61,33 +73,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // Shipping guardado como base64(JSON) no cookie "ship"
-    let shippingFromCookie: Shipping | null = null;
-    const rawShip = jar.get("ship")?.value;
-    if (rawShip) {
-      try {
-        shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
-      } catch {
-        shippingFromCookie = null;
-      }
-    }
-
-    const currency = "eur";
-    const subtotal = cart.items.reduce((acc, it) => {
+    const currency = "EUR";
+    const subtotalCents = cart.items.reduce((acc, it) => {
       const line = (it as any).totalPrice ?? it.qty * it.unitPrice;
       return acc + line;
     }, 0);
 
-    // Criar Order local primeiro
+    // Morada do step /checkout/address guardada em cookie (base64 JSON)
+    const shippingFromCookie = decodeShippingCookie(jar.get("ship")?.value);
+
+    // Criar encomenda local (status pending) antes de ir ao PayPal
     const order = await prisma.order.create({
       data: {
         sessionId: cart.sessionId ?? null,
         status: "pending",
-        currency,
-        subtotal,
+        currency: currency.toLowerCase(),
+        subtotal: subtotalCents,
         shipping: 0,
         tax: 0,
-        total: subtotal,
+        total: subtotalCents, // para retrocompat
         shippingJson: (shippingFromCookie as any) ?? null,
         items: {
           create: cart.items.map((it) => ({
@@ -96,7 +100,8 @@ export async function POST(req: NextRequest) {
             image: it.product.images?.[0] ?? null,
             qty: it.qty,
             unitPrice: it.unitPrice,
-            totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
+            totalPrice:
+              (it as any).totalPrice ?? it.qty * it.unitPrice,
             snapshotJson: (it as any).optionsJson ?? {},
           })),
         },
@@ -104,49 +109,35 @@ export async function POST(req: NextRequest) {
       include: { items: true },
     });
 
-    const APP = buildAppBase();
+    // Preparar pedido ao PayPal (OrdersCreateRequest)
     const return_url = `${APP}/checkout/paypal/return?order=${order.id}`;
     const cancel_url = `${APP}/cart`;
 
-    // Criar PayPal Order (intent CAPTURE)
-    const createReq = new paypal.orders.OrdersCreateRequest();
-    createReq.headers["prefer"] = "return=representation";
+    const valueStr = (subtotalCents / 100).toFixed(2);
 
-    const pu = {
-      amount: {
-        currency_code: "EUR",
-        value: (subtotal / 100).toFixed(2),
-        // breakdown é opcional; omitimos para simplificar
-      },
-      items: order.items.map((it) => {
-        const image_url = toAbsoluteImage(it.image);
-        return {
-          name: it.name,
-          quantity: String(it.qty),
-          unit_amount: { currency_code: "EUR", value: (it.unitPrice / 100).toFixed(2) },
-          ...(image_url ? { image_url } : {}),
-        };
-      }),
-      // shipping opcional
-      ...(shippingFromCookie?.address
-        ? {
-            shipping: {
-              address: {
-                address_line_1: shippingFromCookie.address.line1 ?? "",
-                address_line_2: shippingFromCookie.address.line2 ?? "",
-                admin_area_2: shippingFromCookie.address.city ?? "",
-                admin_area_1: shippingFromCookie.address.state ?? "",
-                postal_code: shippingFromCookie.address.postal_code ?? "",
-                country_code: (shippingFromCookie.address.country ?? "").toUpperCase().slice(0, 2),
-              },
-            },
-          }
-        : {}),
-    };
-
-    createReq.requestBody({
+    const ppReq = new paypal.orders.OrdersCreateRequest();
+    ppReq.prefer("return=representation");
+    ppReq.requestBody({
       intent: "CAPTURE",
-      purchase_units: [pu as any],
+      purchase_units: [
+        {
+          amount: {
+            currency_code: currency,
+            value: valueStr,
+          },
+          custom_id: order.id, // para encontrarmos no webhook/return
+          // (opcional) itens detalhados
+          items: order.items.map((it) => ({
+            name: it.name.slice(0, 127),
+            quantity: it.qty.toString(),
+            unit_amount: {
+              currency_code: currency,
+              value: (it.unitPrice / 100).toFixed(2),
+            },
+            category: "PHYSICAL_GOODS",
+          })),
+        },
+      ],
       application_context: {
         brand_name: "FootballWorld",
         user_action: "PAY_NOW",
@@ -155,27 +146,36 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const ppRes = await paypalClient.execute(createReq);
-    const ppId = (ppRes.result as any)?.id as string | undefined;
-    const approveUrl = (ppRes.result as any)?.links?.find((l: any) => l.rel === "approve")?.href as
-      | string
-      | undefined;
+    const ppRes = await paypalClient.execute(ppReq);
+    const ppOrderId = (ppRes.result as any)?.id as string | undefined;
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { paypalOrderId: ppId ?? null },
-    });
+    // Guardar o paypalOrderId na nossa encomenda
+    if (ppOrderId) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { paypalOrderId: ppOrderId },
+      });
+    }
+
+    // Encontrar approval URL
+    const approveUrl =
+      (ppRes.result as any)?.links?.find(
+        (l: any) => l?.rel === "approve"
+      )?.href ?? null;
 
     if (!approveUrl) {
       return NextResponse.json(
-        { error: "PayPal did not return an approval link", paypalOrderId: ppId },
+        { error: "PayPal did not return an approval URL." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ url: approveUrl, paypalOrderId: ppId, orderId: order.id });
+    return NextResponse.json({ url: approveUrl, orderId: order.id });
   } catch (err: any) {
-    console.error("paypal/create error:", err);
-    return NextResponse.json({ error: err?.message ?? "PayPal error" }, { status: 400 });
+    console.error("PayPal create error:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "PayPal create error" },
+      { status: 400 }
+    );
   }
 }
