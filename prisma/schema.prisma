@@ -5,8 +5,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = env("DATABASE_URL")  // pooled (pgbouncer)
+  directUrl = env("DIRECT_URL")    // non-pooled
 }
 
 /**
@@ -80,13 +80,13 @@ model VerificationToken {
  * =========================================================
  */
 model Product {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String     @id @default(cuid())
+  slug        String     @unique
   name        String
   team        String
   basePrice   Int        // cents
   images      String[]   // URLs
-  description String
+  description String?    // opcional para evitar falhas no seed
 
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
@@ -96,6 +96,8 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([team])
 }
 
 model SizeStock {
@@ -165,6 +167,7 @@ model Player {
   optionValues OptionValue[]
 
   @@unique([team, name], name: "player_team_name")
+  @@index([team])
 }
 
 /**
@@ -231,7 +234,7 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   sessionId String?
-  status    String  @default("pending")
+  status    String  @default("pending") // (mantido como String para compatibilidade)
   currency  String  @default("eur")
 
   // Totals
@@ -248,10 +251,10 @@ model Order {
   stripePaymentIntentId String?
   paypalOrderId         String?
   paypalCaptured        Boolean?
-  paypalCaptureId       String?   // <— added to store capture id
+  paypalCaptureId       String?   // store capture id
 
   // Payment bookkeeping
-  paidAt   DateTime?    // <— added; set when order becomes paid
+  paidAt   DateTime?    // set when order becomes paid
 
   // Shipping snapshot (legacy / fallback)
   shippingJson Json?
