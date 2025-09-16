@@ -1,0 +1,93 @@
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+
+export const revalidate = 60;
+
+function slugify(s: string) {
+  return s
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function titleFromSlug(slug: string) {
+  return slug
+    .split("-")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ""))
+    .join(" ");
+}
+
+export async function generateStaticParams() {
+  const rows = await prisma.product.findMany({
+    select: { team: true },
+    distinct: ["team"],
+  });
+  return rows.map((r) => ({ club: slugify(r.team) }));
+}
+
+type PageProps = { params: { club: string } };
+
+export default async function ClubProductsPage({ params }: PageProps) {
+  const { club } = params;
+
+  const teams = await prisma.product.findMany({
+    select: { team: true },
+    distinct: ["team"],
+  });
+
+  const matchedTeam = teams.find((t) => slugify(t.team) === club)?.team;
+  const teamName = matchedTeam ?? titleFromSlug(club);
+
+  const products = await prisma.product.findMany({
+    where: { team: teamName },
+    orderBy: { name: "asc" },
+    select: { id: true, slug: true, name: true, images: true, basePrice: true, team: true },
+  });
+
+  if (!products.length) notFound();
+
+  const money = (cents: number) =>
+    (cents / 100).toLocaleString(undefined, { style: "currency", currency: "EUR" });
+
+  return (
+    <div className="container-fw py-10 space-y-8">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-extrabold tracking-tight">{teamName} — Products</h1>
+        <Link href="/products" className="rounded-full px-4 py-2 border hover:bg-gray-50 text-sm">
+          ← Back to all products
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+        {products.map((p) => {
+          const img = p.images?.[0] ?? "/placeholder.png";
+          return (
+            <Link
+              key={p.id}
+              href={`/products/${p.slug}`}
+              className="group rounded-2xl border bg-white overflow-hidden"
+            >
+              <div className="relative aspect-[4/5]">
+                <Image
+                  src={img}
+                  alt={p.name}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+              <div className="p-3">
+                <div className="text-xs text-gray-500">{p.team}</div>
+                <div className="font-semibold line-clamp-2">{p.name}</div>
+                <div className="mt-1 text-sm text-gray-700">{money(p.basePrice)}</div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

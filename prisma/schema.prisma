@@ -1,0 +1,342 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/**
+ * =========================================================
+ * =============== Auth / Users ============================
+ * =========================================================
+ */
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  Cart     Cart[]
+
+  // Back-relations
+  orders  Order[]
+  reviews Review[]
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+}
+
+/**
+ * =========================================================
+ * =============== Store / Products ========================
+ * =========================================================
+ */
+model Product {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  team        String
+  basePrice   Int // cents
+  images      String[] // URLs
+  description String
+
+  sizes      SizeStock[]
+  options    OptionGroup[] @relation("ProductOptions")
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[] // back-relation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SizeStock {
+  id        String @id @default(cuid())
+  productId String
+  size      String
+  stock     Int
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+model OptionGroup {
+  id        String     @id @default(cuid())
+  productId String
+  key       String // "size", "customization", "shorts", "socks", ...
+  label     String
+  type      OptionType
+  required  Boolean    @default(false)
+
+  product Product       @relation("ProductOptions", fields: [productId], references: [id])
+  values  OptionValue[]
+
+  @@index([productId])
+}
+
+model OptionValue {
+  id         String @id @default(cuid())
+  groupId    String
+  value      String
+  label      String
+  priceDelta Int    @default(0) // cents
+
+  // Optional link to an official player (for team/player personalization)
+  playerId     String?
+  playerName   String?
+  playerNumber Int?
+
+  group  OptionGroup @relation(fields: [groupId], references: [id])
+  player Player?     @relation(fields: [playerId], references: [id])
+
+  @@index([groupId])
+  @@index([playerId])
+}
+
+enum OptionType {
+  SIZE
+  RADIO
+  ADDON
+}
+
+/**
+ * =========================================================
+ * =============== Players (official squad) =================
+ * =========================================================
+ */
+model Player {
+  id        String   @id @default(cuid())
+  team      String // e.g., "Real Madrid"
+  name      String
+  number    Int
+  position  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  optionValues OptionValue[]
+
+  @@unique([team, name], name: "player_team_name")
+}
+
+/**
+ * =========================================================
+ * =============== Cart ====================================
+ * =========================================================
+ */
+model Cart {
+  id        String  @id @default(cuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId String? @unique // one cookie = one cart
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // @@unique([userId]) // optional: enforce one cart per logged user
+  @@index([userId])
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  productId String
+
+  qty        Int @default(1)
+  unitPrice  Int // cents
+  totalPrice Int @default(0)
+
+  // snapshot of selected options
+  optionsJson     Json?
+  personalization Json?
+
+  product Product @relation(fields: [productId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+/**
+ * =========================================================
+ * =============== Orders / Fulfillment =====================
+ * =========================================================
+ */
+enum OrderStatus {
+  pending
+  paid
+  failed
+  canceled
+  refunded
+  shipped
+  delivered
+}
+
+model Order {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  sessionId String?
+  status    String  @default("pending")
+  currency  String  @default("eur")
+
+  // Totais (tens estes nos prints)
+  subtotal Int @default(0)
+  shipping Int @default(0)
+  tax      Int @default(0)
+
+  // Alternativas (se existirem no teu schema)
+  total      Float?
+  totalCents Int?
+
+  // Stripe / PayPal (dos teus prints)
+  stripeSessionId       String?
+  stripePaymentIntentId String?
+  paypalOrderId         String?
+  paypalCaptured        Boolean?
+
+  // JSON antigo (mantemos para fallback / compat)
+  shippingJson Json?
+
+  // 🔥 NOVO — colunas canónicas (a partir de agora usa-se isto)
+  shippingFullName   String?
+  shippingEmail      String?
+  shippingPhone      String?
+  shippingAddress1   String?
+  shippingAddress2   String?
+  shippingCity       String?
+  shippingRegion     String?
+  shippingPostalCode String?
+  shippingCountry    String?
+
+  // Outros
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  items OrderItem[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([shippingCountry])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  name         String
+  image        String?
+  qty          Int
+  unitPrice    Int // cents
+  totalPrice   Int // cents
+  snapshotJson Json?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+/**
+ * =========================================================
+ * =============== Engagement / Public Stats ================
+ * =========================================================
+ */
+model Review {
+  id        String   @id @default(cuid())
+  userId    String?
+  productId String?
+  rating    Int // 1..5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model SocialMetric {
+  id             String   @id @default(cuid())
+  followersTotal Int
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Visit {
+  id        String   @id @default(cuid())
+  visitorId String // id anónimo por cookie
+  path      String
+  referrer  String?
+  ua        String? // user-agent
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}
