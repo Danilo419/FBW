@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { finalizePaidOrder } from "@/lib/checkout";
 import { pusherServer } from "@/lib/pusher";
 
@@ -156,16 +156,11 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
 
 /* ------------------------- status updaters ------------------------- */
 
-/**
- * Marca a ordem como paga e devolve se houve transição real para "paid"
- * (para evitares triggers duplicados quando chegam 2 eventos do Stripe).
- */
 async function markPaid(
   orderId: string,
   paymentIntentId?: string | null,
   newShipping?: ShippingJson
 ): Promise<{ transitioned: boolean; country?: string | null }> {
-  // fetch existente para decidir merge e transição
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
     select: { status: true, shippingJson: true, shippingCountry: true },
@@ -229,14 +224,21 @@ async function markCanceled(orderId: string) {
 /* ------------------------------ route ----------------------------- */
 
 export const POST = async (req: NextRequest) => {
-  const sig = req.headers.get("stripe-signature") as string;
-  const secret = process.env.STRIPE_WEBHOOK_SECRET!;
+  const stripe = getStripe();
+
+  const sig = req.headers.get("stripe-signature") as string | null;
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !secret) {
+    return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET or signature" }, { status: 500 });
+  }
+
   let event: Stripe.Event;
 
   // Stripe requires the raw payload for signature verification
   let raw: string;
   try {
-    raw = await req.text(); // keep body raw, do not JSON.parse here
+    raw = await req.text();
     event = stripe.webhooks.constructEvent(raw, sig, secret);
   } catch (err: any) {
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
@@ -257,7 +259,7 @@ export const POST = async (req: NextRequest) => {
 
       if (!orderId) break;
 
-      // shipping dos vários sítios
+      // shipping de várias fontes
       const fromMeta = shippingFromMetadata(session.metadata ?? null);
       const fromSession = shippingFromSession(session);
       const shipping = mergeShipping(fromMeta, fromSession);
@@ -270,13 +272,13 @@ export const POST = async (req: NextRequest) => {
       if (session.payment_status === "paid") {
         const { transitioned } = await markPaid(orderId, piId, shipping);
         if (transitioned) {
-          // tempo real: incrementar "orders"
-          await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
-          // opcional: sinalizar que países podem ter mudado
-          await pusherServer.trigger("stats", "metric:update", {
-            metric: "countriesMaybeChanged",
-            value: 1,
-          });
+          try {
+            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
         }
       } else {
         // e.g., métodos async (boleto, etc.)
@@ -292,11 +294,13 @@ export const POST = async (req: NextRequest) => {
         const shipping = shippingFromPaymentIntent(pi);
         const { transitioned } = await markPaid(orderId, pi.id, shipping);
         if (transitioned) {
-          await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
-          await pusherServer.trigger("stats", "metric:update", {
-            metric: "countriesMaybeChanged",
-            value: 1,
-          });
+          try {
+            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
         }
       }
       break;
@@ -327,11 +331,13 @@ export const POST = async (req: NextRequest) => {
             : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
         const { transitioned } = await markPaid(orderId, piId);
         if (transitioned) {
-          await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
-          await pusherServer.trigger("stats", "metric:update", {
-            metric: "countriesMaybeChanged",
-            value: 1,
-          });
+          try {
+            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
         }
       }
       break;

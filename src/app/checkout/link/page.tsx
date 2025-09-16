@@ -1,190 +1,200 @@
-// src/app/api/checkout/stripe/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe";
+// src/app/checkout/link/page.tsx
+"use client";
 
-export const runtime = "nodejs";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  LinkAuthenticationElement,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 
-type Method =
-  | "card"
-  | "link"
-  | "multibanco"
-  | "klarna"
-  | "revolut_pay"
-  | "satispay"
-  | "amazon_pay"
-  | "automatic";
+/** Public key must be exposed as NEXT_PUBLIC_... */
+const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+const stripePromise = pk ? loadStripe(pk) : null;
 
-type Shipping = {
-  name?: string;
-  phone?: string;
-  address?: {
-    line1?: string;
-    line2?: string;
-    city?: string;
-    state?: string;
-    postal_code?: string;
-    country?: string;
-  };
-  email?: string;
-};
+export default function LinkCheckoutPage() {
+  const search = useSearchParams();
+  const orderId = search.get("order") || "";
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-/** Ensure valid app base (no trailing slash). */
-function buildAppBase(): string {
-  const raw = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
-  if (!raw) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
-  if (!/^https?:\/\//i.test(raw)) {
-    throw new Error(
-      `NEXT_PUBLIC_APP_URL must start with http:// or https:// (got "${raw}")`,
-    );
-  }
-  return raw.replace(/\/+$/, "");
-}
-
-/** Make product image URL absolute; ignore invalid. */
-function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
-  if (!url) return null;
-  const t = url.trim();
-  if (!t) return null;
-  if (/^https?:\/\//i.test(t)) return t;
-  if (t.startsWith("/")) return `${APP}${t}`;
-  return null;
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const method = (body?.method ?? "automatic") as Method;
-    const shipping: Shipping | undefined = body?.shipping;
-
-    const APP = buildAppBase();
-
-    // Identify cart by session cookie
-    const jar = await cookies();
-    const sid = jar.get("sid")?.value ?? null;
-
-    const cart = await prisma.cart.findFirst({
-      where: { sessionId: sid ?? undefined },
-      include: {
-        items: {
-          include: { product: { select: { name: true, images: true } } },
-        },
-      },
-    });
-
-    if (!cart || cart.items.length === 0) {
-      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+  // fetch a PaymentIntent client_secret for this order
+  useEffect(() => {
+    let active = true;
+    async function go() {
+      setError(null);
+      setClientSecret(null);
+      if (!orderId) {
+        setError("Missing order id.");
+        return;
+      }
+      if (!pk) {
+        setError("Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.");
+        return;
+      }
+      try {
+        const res = await fetch("/api/checkout/link/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j?.error || `Failed to start Link checkout (HTTP ${res.status})`);
+        }
+        const j = (await res.json()) as { clientSecret?: string };
+        if (active) setClientSecret(j.clientSecret || null);
+        if (active && !j.clientSecret) setError("Server did not return clientSecret.");
+      } catch (e: any) {
+        if (active) setError(e?.message || "Failed to start Link checkout.");
+      }
     }
-
-    const currency = "eur";
-    const subtotal = cart.items.reduce((acc, it) => {
-      const line = (it as any).totalPrice ?? it.qty * it.unitPrice;
-      return acc + line;
-    }, 0);
-
-    // Create local order
-    const order = await prisma.order.create({
-      data: {
-        sessionId: cart.sessionId ?? null,
-        status: "pending",
-        currency,
-        subtotal,
-        shipping: 0,
-        tax: 0,
-        total: subtotal,
-        items: {
-          create: cart.items.map((it) => ({
-            productId: it.productId,
-            name: it.product.name,
-            image: it.product.images?.[0] ?? null,
-            qty: it.qty,
-            unitPrice: it.unitPrice,
-            totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
-            snapshotJson: (it as any).optionsJson ?? {},
-          })),
-        },
-      },
-      include: { items: true },
-    });
-
-    // If user chose Link, send to our Link-only page (Elements)
-    if (method === "link") {
-      const url = `${APP}/checkout/link?order=${order.id}`;
-      return NextResponse.json({ url, sessionId: null });
-    }
-
-    const success_url = `${APP}/checkout/success?order=${order.id}&provider=stripe`;
-    const cancel_url = `${APP}/cart`;
-
-    // Map to Stripe line_items
-    const line_items = order.items.map((it) => {
-      const img = toAbsoluteImage(it.image, APP);
-      const product_data: any = { name: it.name };
-      if (img) product_data.images = [img];
-      return {
-        quantity: it.qty,
-        price_data: { currency, unit_amount: it.unitPrice, product_data },
-      };
-    });
-
-    // Base Checkout params — sem shipping_address_collection (para não limitar países)
-    const params: any = {
-      mode: "payment",
-      success_url,
-      cancel_url,
-      metadata: {
-        orderId: order.id,
-        // guarda a morada (se enviada) para consulta posterior
-        ...(shipping ? { shipping_json: JSON.stringify(shipping) } : {}),
-      },
-      line_items,
-      // phone_number_collection: { enabled: true }, // opcional
+    go();
+    return () => {
+      active = false;
     };
+  }, [orderId]);
 
-    // Force specific method for Checkout when chosen
-    switch (method) {
-      case "card":
-        params.payment_method_types = ["card"];
-        break;
-      case "multibanco":
-        params.payment_method_types = ["multibanco"];
-        break;
-      case "klarna":
-        params.payment_method_types = ["klarna"];
-        break;
-      case "revolut_pay":
-        params.payment_method_types = ["revolut_pay"];
-        break;
-      case "satispay":
-        params.payment_method_types = ["satispay"];
-        break;
-      case "amazon_pay":
-        params.payment_method_types = ["amazon_pay"];
-        break;
-      case "automatic":
-      default:
-        // Leave it to Stripe Checkout
-        break;
+  const appearance = useMemo(
+    () => ({
+      theme: "stripe" as const,
+      variables: {
+        colorPrimary: "#000000",
+        borderRadius: "10px",
+      },
+    }),
+    []
+  );
+
+  // Elements options: only render after we have the clientSecret
+  const options = useMemo(
+    () =>
+      clientSecret
+        ? ({
+            clientSecret,
+            appearance,
+            loader: "auto",
+          } as const)
+        : undefined,
+    [clientSecret, appearance]
+  );
+
+  return (
+    <div className="container-fw section-gap">
+      <header className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Pay with Link</h1>
+        <p className="mt-2 text-gray-600">
+          Use your saved details with Stripe Link for a fast, secure checkout.
+        </p>
+      </header>
+
+      {!pk && (
+        <div className="card p-4 border-amber-300 bg-amber-50 text-amber-800">
+          <b>Missing publishable key:</b> set <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> in your
+          environment.
+        </div>
+      )}
+
+      {error && (
+        <div className="card p-4 mt-4 border-rose-300 bg-rose-50 text-rose-700">
+          <b>Checkout error:</b> {error}
+        </div>
+      )}
+
+      {!error && !clientSecret && (
+        <div className="card p-6 mt-4">
+          <div className="animate-pulse text-gray-500">Preparing Link checkout…</div>
+        </div>
+      )}
+
+      {stripePromise && options && (
+        <Elements stripe={stripePromise} options={options}>
+          <div className="card p-6 mt-4">
+            <CheckoutForm orderId={orderId} />
+          </div>
+        </Elements>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------- form --------------------------- */
+
+function CheckoutForm({ orderId }: { orderId: string }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    try {
+      // Confirm the payment with Link in the PaymentElement
+      const { error } = await stripe.confirmPayment({
+        elements,
+        // If Link requires a redirect (e.g., 3DS), Stripe will handle it
+        redirect: "if_required",
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success?order=${encodeURIComponent(
+            orderId
+          )}&provider=stripe`,
+        },
+      });
+
+      if (error) {
+        setMsg(error.message || "Payment failed. Try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      // If no redirect was needed, navigate to success right away
+      router.push(`/checkout/success?order=${encodeURIComponent(orderId)}&provider=stripe`);
+    } catch (err: any) {
+      setMsg(err?.message || "Unexpected error.");
+      setSubmitting(false);
     }
-
-    const session = await stripe.checkout.sessions.create(params);
-
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { stripeSessionId: session.id },
-    });
-
-    if (!session.url) {
-      return NextResponse.json(
-        { error: "Stripe did not return a hosted checkout URL.", sessionId: session.id },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ url: String(session.url), sessionId: session.id });
-  } catch (err: any) {
-    console.error("Stripe checkout error:", err);
-    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
   }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="text-sm text-gray-600">
+        <p>Sign in with Link or enter your email to get started:</p>
+      </div>
+
+      {/* Captura email / login Link */}
+      <LinkAuthenticationElement
+        options={{ defaultValues: { email: "" } }}
+      />
+
+      {/* Mostra o PaymentElement — Link aparecerá prioritário se o PaymentIntent foi criado para Link */}
+      <PaymentElement />
+
+      {msg && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-rose-700 text-sm">
+          {msg}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={!stripe || !elements || submitting}
+        className="btn-primary w-full disabled:opacity-60"
+      >
+        {submitting ? "Processing…" : "Pay with Link"}
+      </button>
+
+      <p className="text-xs text-gray-500 text-center">
+        Secured by Stripe. You may be redirected to complete authentication.
+      </p>
+    </form>
+  );
 }
