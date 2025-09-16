@@ -1,14 +1,16 @@
 // src/lib/paypal.ts
-import paypal from '@paypal/checkout-server-sdk';
-
-function environment() {
-  const cid = process.env.PAYPAL_CLIENT_ID!;
-  const sec = process.env.PAYPAL_CLIENT_SECRET!;
-  // Use Sandbox unless you explicitly put Live credentials
-  return cid.startsWith('A') || cid.startsWith('B')
-    ? new paypal.core.LiveEnvironment(cid, sec)
-    : new paypal.core.SandboxEnvironment(cid, sec);
-}
-
-export const paypalClient = new paypal.core.PayPalHttpClient(environment());
+import paypal from "@paypal/checkout-server-sdk";
 export { paypal };
+
+// NÃO faças .startsWith/.trim() em envs aqui.
+// Só lê as envs e constrói o client.
+const CLIENT_ID = process.env.PAYPAL_CLIENT_ID ?? "";
+const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET ?? "";
+const ENV = (process.env.PAYPAL_ENV ?? "sandbox").toLowerCase();
+
+const environment =
+  ENV === "live"
+    ? new paypal.core.LiveEnvironment(CLIENT_ID, CLIENT_SECRET)
+    : new paypal.core.SandboxEnvironment(CLIENT_ID, CLIENT_SECRET);
+
+export const paypalClient = new paypal.core.PayPalHttpClient(environment);
