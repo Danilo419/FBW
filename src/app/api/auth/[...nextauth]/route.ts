@@ -1,4 +1,6 @@
 // src/app/api/auth/[...nextauth]/route.ts
+export const runtime = "nodejs";
+
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
@@ -8,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET, // <— importante em produção
   providers: [
     Credentials({
       name: "Credentials",
@@ -16,19 +19,22 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (creds) => {
-        if (!creds?.email || !creds?.password) return null;
-        const user = await prisma.user.findUnique({ where: { email: creds.email } });
-        if (!user || !user.passwordHash) return null;
-        const ok = await bcrypt.compare(creds.password, user.passwordHash);
-        if (!ok) return null;
-        // devolve só os campos necessários
-        return { id: user.id, name: user.name ?? undefined, email: user.email ?? undefined };
+        try {
+          if (!creds?.email || !creds?.password) return null;
+          const user = await prisma.user.findUnique({ where: { email: creds.email } });
+          if (!user || !user.passwordHash) return null;
+          const ok = await bcrypt.compare(creds.password, user.passwordHash);
+          if (!ok) return null;
+          return { id: user.id, name: user.name ?? undefined, email: user.email ?? undefined };
+        } catch {
+          // nunca atires erro aqui, devolve null para cair em "CredentialsSignin"
+          return null;
+        }
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Quando faz login, "user" vem preenchido
       if (user) {
         const name = (user.name ?? "").toLowerCase();
         (token as any).isAdmin = name === "admin";
@@ -36,9 +42,7 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      // expõe isAdmin na sessão
       (session.user as any).isAdmin = (token as any).isAdmin === true;
-      // id (sub) útil no client
       if (token.sub) (session.user as any).id = token.sub;
       return session;
     },
