@@ -1,33 +1,35 @@
 // src/app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
-import Providers from "../components/Providers";
-import SiteChrome from "../components/site/SiteChrome";
+import { Suspense } from "react";
+
+// Estes dois são Client Components e usam usePathname / useSearchParams
 import Tracker from "@/components/analytics/Tracker";
+import SiteChrome from "@/components/site/SiteChrome";
 
 export const metadata: Metadata = {
   title: "FootballWorld",
-  description: "Concept football jerseys with WOW effect",
+  description: "Authentic & concept football jerseys with worldwide shipping.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 font-outfit antialiased">
-        <Providers>
-          {/* Tracker de visitas (ignora rotas /admin) */}
+      <body>
+        {/* Qualquer componente que use useSearchParams/usePathname
+            precisa estar dentro de <Suspense> */}
+        <Suspense fallback={null}>
           <Tracker />
-          {/* SiteChrome mostra Header/Footer fora de /admin */}
+        </Suspense>
+
+        {/* Se o SiteChrome usa usePathname (ex.: navegação ativa), também precisa de Suspense */}
+        <Suspense fallback={null}>
           <SiteChrome>{children}</SiteChrome>
-        </Providers>
+        </Suspense>
       </body>
     </html>
   );
