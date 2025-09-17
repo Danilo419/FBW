@@ -11,6 +11,9 @@ const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
+  // Página de erro opcional para ver o código do erro (ex.: ?error=Configuration)
+  // Se não criares /auth/error, podes remover esta linha.
+  pages: { error: "/auth/error" },
   providers: [
     Credentials({
       name: "Credentials",
@@ -19,35 +22,34 @@ const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        try {
-          if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) return null;
 
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
-          });
-          if (!user || !user.passwordHash) return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
+        if (!user || !user.passwordHash) return null;
 
-          const ok = await bcrypt.compare(credentials.password, user.passwordHash);
-          if (!ok) return null;
+        const ok = await bcrypt.compare(credentials.password, user.passwordHash);
+        if (!ok) return null;
 
-          return { id: user.id, name: user.name ?? undefined, email: user.email ?? undefined };
-        } catch {
-          // Em credenciais nunca lances erro; devolve null para cair em "CredentialsSignin"
-          return null;
-        }
+        return {
+          id: user.id,
+          name: user.name ?? undefined,
+          email: user.email ?? undefined
+        };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const name = (user.name ?? "").toLowerCase();
-        (token as any).isAdmin = name === "admin";
+        const isAdmin = (user.name ?? "").toLowerCase() === "admin";
+        (token as any).isAdmin = isAdmin;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token.sub) (session.user as any).id = token.sub;
+      if (token?.sub) (session.user as any).id = token.sub;
       (session.user as any).isAdmin = (token as any).isAdmin === true;
       return session;
     }
