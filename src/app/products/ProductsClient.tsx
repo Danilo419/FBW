@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import {
-  players,
-  featuredClubs,
-  leaguesOrder,
-  clubImg,
-} from "./data";
+import { players, featuredClubs, leaguesOrder, clubImg } from "./data";
 
 export default function ProductsClient() {
   const first5Players = players.slice(0, 5);
@@ -74,7 +69,7 @@ export default function ProductsClient() {
         </div>
       </section>
 
-      {/* Clubs (destaque) → navega para /products/team/[club] */}
+      {/* Clubs destaque → /products/team/[club] */}
       <section className="mb-16">
         <div className="flex items-end justify-between mb-6">
           <h2 className="text-2xl font-bold">By Clubs</h2>

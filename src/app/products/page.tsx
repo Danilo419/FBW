@@ -1,4 +1,4 @@
-// src/app/products/page.tsx
+// Server Component — apenas faz o wrap em <Suspense>
 import { Suspense } from "react";
 import ProductsClient from "./ProductsClient";
 
