@@ -9,7 +9,10 @@ import Link from "next/link";
 export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status } = useSession();
+
+  // Safe usage (avoid destructuring directly to prevent SSR build errors)
+  const s = useSession();
+  const status = s?.status;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,9 +53,13 @@ export default function LoginClient() {
         callbackUrl,
       });
 
-      if (!res) setErr("Something went wrong. Please try again.");
-      else if (res.error) setErr("Invalid email or password.");
-      else router.push(res.url || callbackUrl);
+      if (!res) {
+        setErr("Something went wrong. Please try again.");
+      } else if (res.error) {
+        setErr("Invalid email or password.");
+      } else {
+        router.push(res.url || callbackUrl);
+      }
     } catch {
       setErr("Unexpected error. Please try again.");
     } finally {

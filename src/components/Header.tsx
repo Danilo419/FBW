@@ -23,7 +23,10 @@ import {
  * e.g. <Header cartCount={cart.totalQty} />
  */
 export default function Header({ cartCount = 0 }: { cartCount?: number }) {
-  const { data: session, status } = useSession();
+  // Safe pattern: avoid destructuring directly (prevents SSR/undefined errors)
+  const s = useSession();
+  const session = s?.data;
+  const status = s?.status;
 
   const [userOpen, setUserOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

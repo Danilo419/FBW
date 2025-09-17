@@ -1,5 +1,5 @@
 // src/app/account/signup/SignupClient.tsx
-'use client';
+"use client";
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +9,10 @@ import Link from "next/link";
 export default function SignupClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status } = useSession();
+
+  // Avoid destructuring directly to prevent build-time crashes if useSession is undefined
+  const s = useSession();
+  const status = s?.status;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,7 +35,7 @@ export default function SignupClient() {
     const callbackUrl = searchParams.get("callbackUrl") || "/account";
 
     try {
-      // Replace with your actual signup endpoint if different
+      // Create account
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -44,7 +47,7 @@ export default function SignupClient() {
         throw new Error(data?.error || "Sign up failed");
       }
 
-      // Auto sign-in after successful signup (optional)
+      // Auto sign-in after successful signup (if credentials provider is configured)
       const si = await signIn("credentials", {
         redirect: false,
         email,
@@ -55,7 +58,7 @@ export default function SignupClient() {
       if (si && !si.error) {
         router.replace(si.url || callbackUrl);
       } else {
-        // If credentials sign-in not configured, just send them to login
+        // Fallback: send to login
         router.replace(`/account/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
       }
     } catch (e: any) {
@@ -66,7 +69,9 @@ export default function SignupClient() {
   };
 
   return (
-    <>
+    <div className="container-fw py-16 max-w-md">
+      <h1 className="text-3xl font-extrabold mb-6">Create your account</h1>
+
       <form onSubmit={onSubmit} className="space-y-4">
         {err && (
           <p className="text-red-600 text-sm rounded-md border border-red-200 bg-red-50 px-3 py-2">
@@ -139,6 +144,6 @@ export default function SignupClient() {
           Log in
         </Link>
       </p>
-    </>
+    </div>
   );
 }

@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <SessionProviderClient>
-          {/* Qualquer componente com usePathname/useSearchParams precisa de Suspense */}
+          {/* Qualquer componente com usePathname/useSearchParams deve estar dentro de <Suspense> */}
           <Suspense fallback={null}>
             <Tracker />
           </Suspense>
