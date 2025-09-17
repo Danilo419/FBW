@@ -5,8 +5,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")      // pooled (pgbouncer)
-  directUrl = env("POSTGRES_URL_NON_POOLING") // non-pooled
+  url       = env("POSTGRES_POSTGRES_PRISMA_URL")       // pooled (pgBouncer) — corresponde ao teu Vercel
+  directUrl = env("POSTGRES_POSTGRES_URL_NON_POOLING")  // ligação direta — corresponde ao teu Vercel
 }
 
 /**
