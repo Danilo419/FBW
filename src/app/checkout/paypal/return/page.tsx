@@ -1,58 +1,24 @@
 // src/app/checkout/paypal/return/page.tsx
-import { prisma } from "@/lib/prisma";
-import paypal from "@paypal/checkout-server-sdk";
-import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
+import ReturnClient from "./ReturnClient";
 
-/** Cliente PayPal — usa PAYPAL_MODE para escolher sandbox/live */
-function paypalClient() {
-  const mode = (process.env.PAYPAL_MODE || "sandbox").toLowerCase().trim();
-  const clientId = (process.env.PAYPAL_CLIENT_ID || "").trim();
-  const secret = (process.env.PAYPAL_CLIENT_SECRET || "").trim();
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-  if (!clientId || !secret) {
-    throw new Error("Missing PayPal credentials (PAYPAL_CLIENT_ID/SECRET).");
-  }
+export default function PayPalReturnPage() {
+  return (
+    <main className="max-w-lg mx-auto p-6">
+      <h1 className="text-2xl font-extrabold mb-4 text-center">Finalizing PayPal payment…</h1>
 
-  const env =
-    mode === "live"
-      ? new paypal.core.LiveEnvironment(clientId, secret)
-      : new paypal.core.SandboxEnvironment(clientId, secret);
-
-  return new paypal.core.PayPalHttpClient(env);
-}
-
-type PageProps = {
-  searchParams: { token?: string; PayerID?: string };
-};
-
-export default async function PayPalReturnPage({ searchParams }: PageProps) {
-  const token = searchParams.token; // PayPal order ID
-  if (!token) notFound();
-
-  const client = paypalClient();
-
-  try {
-    // 1) Capturar pagamento
-    const captureReq = new paypal.orders.OrdersCaptureRequest(token);
-    captureReq.requestBody({});
-    const capture = await client.execute(captureReq);
-
-    const orderId = capture.result.purchase_units?.[0]?.custom_id;
-    if (!orderId) throw new Error("Missing custom_id (internal orderId).");
-
-    // 2) Atualizar DB → status paid
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: "paid",
-        paypalCaptureId: String(capture.result.id),
-      },
-    });
-
-    // 3) Redirecionar para página de sucesso
-    redirect(`/checkout/success?order=${orderId}&provider=paypal`);
-  } catch (err: any) {
-    console.error("[PayPalReturn] error:", err);
-    redirect("/checkout?error=paypal");
-  }
+      <Suspense
+        fallback={
+          <div className="rounded-2xl border bg-white p-5 text-center">
+            Checking payment status…
+          </div>
+        }
+      >
+        <ReturnClient />
+      </Suspense>
+    </main>
+  );
 }
