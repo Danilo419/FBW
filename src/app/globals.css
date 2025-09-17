@@ -132,3 +132,7 @@ body.scrolled .hero-fade::after{
   background:linear-gradient(180deg, rgba(41,152,255,.55), rgba(127,204,69,.55));
   border-radius:9999px; border:2px solid transparent; background-clip:padding-box;
 }
+
+@layer base {
+  html { font-size: 90%; } /* ~14.4px em vez de 16px */
+}
