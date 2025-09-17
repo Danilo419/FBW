@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -18,25 +14,13 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
+      "@/*": ["src/*"]
     },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
-    // 🔹 garante que o TS encontra os teus .d.ts personalizados (ex.: PayPal)
-    "typeRoots": [
-      "./types",
-      "./node_modules/@types"
-    ]
-    // (Opcional em TS ≥5): "verbatimModuleSyntax": true
-    ,
-    "allowJs": true
+    "allowJs": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
   "include": [
     "next-env.d.ts",
@@ -44,9 +28,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src",
-    "types"
+    "types/**/*.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
