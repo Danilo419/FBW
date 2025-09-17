@@ -26,7 +26,7 @@ export default function ClubsClient({ initialTeams = [] }: Props) {
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
       {teams.map((club) => (
         <motion.div key={club} whileHover={{ y: -6 }} className="group product-hover">
-          <Link href={`/products/team/${encodeURIComponent(club)}`}>
+          <Link href={`/products/team/${encodeURIComponent(club)}`} aria-label={`Open ${club.replace(/-/g, ' ')}`}>
             <div className="relative aspect-[4/5] overflow-hidden rounded-2xl shadow ring-1 ring-black/5 bg-white grid place-items-center">
               <span className="px-3 text-center text-sm font-semibold capitalize">
                 {club.replace(/-/g, ' ')}

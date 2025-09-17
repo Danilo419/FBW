@@ -1,18 +1,14 @@
-// Server Component — apenas faz o wrap em <Suspense>
+// src/app/products/page.tsx
 import { Suspense } from "react";
-import ProductsClient from "./ProductsClient";
+import dynamic from "next/dynamic";
+
+const ProductsClient = dynamic(() => import("./ProductsClient"), {
+  ssr: false, // garante que qualquer hook de navegação só corre no cliente
+});
 
 export default function Page() {
   return (
-    <Suspense
-      fallback={
-        <main className="container-fw py-16">
-          <div className="rounded-2xl border bg-white p-5 text-center">
-            Loading…
-          </div>
-        </main>
-      }
-    >
+    <Suspense fallback={<div className="container-fw py-16">Loading…</div>}>
       <ProductsClient />
     </Suspense>
   );
