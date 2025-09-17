@@ -1,50 +1,36 @@
-'use client';
+// src/app/clubs/page.tsx
+import { Suspense } from "react";
+import { prisma } from "@/lib/prisma";
+import ClubsClient from "./ClubsClient";
 
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { leagueClubs, type LeagueKey, clubImg } from '../products/page';
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export default function ClubsPage() {
-  const searchParams = useSearchParams();
-  const league = searchParams.get('league') as LeagueKey | null;
+export default async function ClubsPage() {
+  // Load unique team names on the server
+  const rows = await prisma.product.findMany({
+    select: { team: true },
+    distinct: ["team"],
+    take: 500, // safety cap
+  });
 
-  if (!league) {
-    return <div className="p-10 text-center text-xl">Escolhe uma liga primeiro.</div>;
-  }
-
-  const clubs = leagueClubs[league];
-  if (!clubs) {
-    return <div className="p-10 text-center text-xl">Liga não encontrada.</div>;
-  }
-
-  const title = league.replace(/-/g, ' ').toUpperCase();
+  const teams = Array.from(
+    new Set(rows.map((r) => (r.team || "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
-    <div className="container-fw py-16">
-      <h1 className="text-3xl font-extrabold mb-12 text-center">{title}</h1>
+    <main className="container-fw py-10 space-y-6">
+      <h1 className="text-3xl font-extrabold tracking-tight">Clubs</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-        {clubs.map((club: string) => (
-          <motion.div key={club} whileHover={{ y: -6 }} className="group product-hover">
-            {/* AGORA apontamos para /products/team/[club] */}
-            <Link href={`/products/team/${encodeURIComponent(club)}`}>
-              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl shadow ring-1 ring-black/5 bg-white">
-                <img
-                  src={clubImg(league, club)}
-                  alt={club}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-              </div>
-              <div className="p-2 text-center">
-                <h3 className="font-semibold text-sm capitalize">
-                  {club.replace(/-/g, ' ')}
-                </h3>
-              </div>
-            </Link>
-          </motion.div>
-        ))}
-      </div>
-    </div>
+      <Suspense
+        fallback={
+          <div className="rounded-2xl border bg-white p-5 text-center">
+            Loading clubs…
+          </div>
+        }
+      >
+        <ClubsClient initialTeams={teams} />
+      </Suspense>
+    </main>
   );
 }
