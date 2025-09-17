@@ -1,10 +1,10 @@
 // src/app/account/login/LoginClient.tsx
-'use client';
+"use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useSession, signIn } from "next-auth/react";
 
 export default function LoginClient() {
   const router = useRouter();
@@ -18,16 +18,13 @@ export default function LoginClient() {
 
   // If already logged in, go to account
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/account");
-    }
+    if (status === "authenticated") router.replace("/account");
   }, [status, router]);
 
   // Surface any NextAuth error from query (?error=...)
   useEffect(() => {
     const e = searchParams.get("error");
     if (!e) return;
-
     const map: Record<string, string> = {
       OAuthAccountNotLinked:
         "This email is already linked to a credentials account. Log in using email & password.",
@@ -35,7 +32,6 @@ export default function LoginClient() {
       Configuration: "Auth configuration error. Please try again later.",
       Default: "Unable to sign in. Please try again.",
     };
-
     setErr(map[e] || "Unable to sign in. Please try again.");
   }, [searchParams]);
 
@@ -54,13 +50,9 @@ export default function LoginClient() {
         callbackUrl,
       });
 
-      if (!res) {
-        setErr("Something went wrong. Please try again.");
-      } else if (res.error) {
-        setErr("Invalid email or password.");
-      } else {
-        router.push(res.url || callbackUrl);
-      }
+      if (!res) setErr("Something went wrong. Please try again.");
+      else if (res.error) setErr("Invalid email or password.");
+      else router.push(res.url || callbackUrl);
     } catch {
       setErr("Unexpected error. Please try again.");
     } finally {
@@ -68,8 +60,18 @@ export default function LoginClient() {
     }
   };
 
+  if (status === "loading") {
+    return (
+      <div className="container-fw py-16">
+        <p>Loading…</p>
+      </div>
+    );
+  }
+
   return (
-    <>
+    <div className="container-fw py-16 max-w-md">
+      <h1 className="text-3xl font-extrabold mb-6">Log in</h1>
+
       <form onSubmit={onSubmit} className="space-y-4">
         {err && (
           <p className="text-red-600 text-sm rounded-md border border-red-200 bg-red-50 px-3 py-2">
@@ -110,11 +112,7 @@ export default function LoginClient() {
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full btn-primary justify-center"
-        >
+        <button type="submit" disabled={loading} className="w-full btn-primary justify-center">
           {loading ? "Logging in…" : "Log in"}
         </button>
       </form>
@@ -141,6 +139,6 @@ export default function LoginClient() {
           Sign up
         </Link>
       </p>
-    </>
+    </div>
   );
 }
