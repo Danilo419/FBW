@@ -1,6 +1,11 @@
 // src/app/admin/(panel)/layout.tsx
 "use client";
 
+// Impede pré-render na build e garante runtime Node (necessário para Prisma)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const runtime = "nodejs";
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
