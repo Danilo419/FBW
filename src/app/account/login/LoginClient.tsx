@@ -10,26 +10,38 @@ export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Safe usage (avoid destructuring directly to prevent SSR build errors)
+  // Evita destructuring direto (SSR safe)
   const s = useSession();
   const status = s?.status;
   const session = s?.data;
 
-  // Now accepts Name OR Email
+  // Name OR Email
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, go to account/admin
+  const rawCallbackUrl = searchParams.get("callbackUrl") || "/account";
+
+  // Decide para onde ir com base em ser admin e no callbackUrl
+  const decideNext = (isAdmin: boolean, cb: string) => {
+    // se não for admin e o callback levar para /admin, manda para /account
+    if (!isAdmin && cb?.startsWith("/admin")) return "/account";
+    // se for admin, envia para /admin (a não ser que o callback seja outra coisa explícita tua)
+    if (isAdmin && (cb === "/account" || cb === "/")) return "/admin";
+    return cb || (isAdmin ? "/admin" : "/account");
+  };
+
+  // Se já estiver autenticado e aterrar no /account/login, redireciona logo
   useEffect(() => {
     if (status === "authenticated") {
       const isAdmin = (session?.user as any)?.isAdmin === true;
-      router.replace(isAdmin ? "/admin" : "/account");
+      const next = decideNext(isAdmin, rawCallbackUrl);
+      router.replace(next);
     }
-  }, [status, session, router]);
+  }, [status, session, rawCallbackUrl, router]);
 
-  // Surface any NextAuth error from query (?error=...)
+  // Mostra erros do NextAuth (?error=...)
   useEffect(() => {
     const e = searchParams.get("error");
     if (!e) return;
@@ -49,29 +61,27 @@ export default function LoginClient() {
     setErr(null);
     setLoading(true);
 
-    const callbackUrl = searchParams.get("callbackUrl") || "/account";
-
     try {
       const res = await signIn("credentials", {
         redirect: false,
-        identifier, // <-- name OR email
+        identifier, // name OR email
         password,
       });
 
       if (!res) {
         setErr("Something went wrong. Please try again.");
       } else if (res.error) {
-        // NextAuth returns a code in res.error (e.g., "CredentialsSignin")
         const map: Record<string, string> = {
           CredentialsSignin: "Invalid credentials.",
           Configuration: "Auth configuration error. Please try again later.",
         };
         setErr(map[res.error] || "Unable to sign in. Please try again.");
       } else {
-        // Check admin flag to route accordingly
+        // Lê sessão atualizada para ver se é admin
         const s = await getSession();
         const isAdmin = (s?.user as any)?.isAdmin === true;
-        router.push(isAdmin ? "/admin" : callbackUrl);
+        const next = decideNext(isAdmin, rawCallbackUrl);
+        router.replace(next);
       }
     } catch {
       setErr("Unexpected error. Please try again.");
@@ -143,7 +153,7 @@ export default function LoginClient() {
           <button
             onClick={() =>
               signIn("google", {
-                callbackUrl: searchParams.get("callbackUrl") || "/account",
+                callbackUrl: rawCallbackUrl,
               })
             }
             className="w-full btn-outline justify-center"
