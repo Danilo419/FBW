@@ -11,38 +11,49 @@ const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
-  pages: { error: "/auth/error" }, // opcional, só para mostrar o código do erro
+  pages: {
+    signIn: "/account/signup", // <- usa a tua página existente
+    error: "/auth/error",
+  },
   providers: [
     Credentials({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
         if (!user || !user.passwordHash) return null;
 
         const ok = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!ok) return null;
 
-        return { id: user.id, name: user.name ?? undefined, email: user.email ?? undefined };
-      }
-    })
+        return {
+          id: user.id,
+          name: user.name ?? undefined,
+          email: user.email ?? undefined,
+        };
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) (token as any).isAdmin = (user.name ?? "").toLowerCase() === "admin";
+      if (user) {
+        (token as any).isAdmin = (user.name ?? "").toLowerCase() === "admin";
+      }
       return token;
     },
     async session({ session, token }) {
       if (token?.sub) (session.user as any).id = token.sub;
       (session.user as any).isAdmin = (token as any).isAdmin === true;
       return session;
-    }
-  }
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

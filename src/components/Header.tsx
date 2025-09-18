@@ -4,7 +4,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import {
   ChevronDown,
   LogOut,
@@ -27,6 +27,8 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   const s = useSession();
   const session = s?.data;
   const status = s?.status;
+
+  const isAdmin = (session?.user as any)?.isAdmin === true;
 
   const [userOpen, setUserOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -125,6 +127,9 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           <Link href="/players" className="hover:text-blue-700">Players</Link>
           <Link href="/clubs" className="hover:text-blue-700">Clubs</Link>
           <Link href="/faq" className="hover:text-blue-700">FAQ</Link>
+          {isAdmin && (
+            <Link href="/admin" className="hover:text-blue-700">Admin</Link>
+          )}
         </nav>
 
         {/* Right: Search pushed to the right + Cart + User */}
@@ -182,12 +187,17 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                   <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
                     Account page
                   </MenuItem>
-                  <MenuButton
-                    onClick={() => signIn(undefined, { callbackUrl: "/account" })}
+                  {isAdmin && (
+                    <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
+                      Admin panel
+                    </MenuItem>
+                  )}
+                  <MenuItem
+                    href="/account/signup"
                     icon={<ArrowLeftRight className="h-4 w-4" />}
                   >
                     Change account
-                  </MenuButton>
+                  </MenuItem>
                   <div className="my-1 h-px bg-gray-100" />
                   <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
                     Help / FAQ
@@ -202,13 +212,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               )}
             </div>
           ) : (
-            <button
-              onClick={() => signIn(undefined, { callbackUrl: "/account" })}
+            <Link
+              href="/account/signup"
               className="inline-flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 text-sm"
             >
               <LogIn className="h-4 w-4" />
               Sign in
-            </button>
+            </Link>
           )}
         </div>
       </div>
@@ -278,13 +288,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               <Avatar src={avatarSrc} name={displayName} size={36} />
             </button>
           ) : (
-            <button
-              onClick={() => signIn(undefined, { callbackUrl: "/account" })}
+            <Link
+              href="/account/signup"
               className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-gray-100 text-sm"
             >
               <LogIn className="h-4 w-4" />
               Login
-            </button>
+            </Link>
           )}
         </div>
       </div>
@@ -299,7 +309,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       {/* User dropdown (mobile) */}
       {userOpen && (
         <div id="user-menu-mobile" role="menu" className="md:hidden container-fw">
-          <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
+          <div className="mx-auto mt-2 w/full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
             <div className="px-3 py-2">
               <div className="text-xs text-gray-500">Signed in as</div>
               <div className="truncate text-sm font-medium">{displayName}</div>
@@ -307,12 +317,17 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
               Account page
             </MenuItem>
-            <MenuButton
-              onClick={() => signIn(undefined, { callbackUrl: "/account" })}
+            {isAdmin && (
+              <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
+                Admin panel
+              </MenuItem>
+            )}
+            <MenuItem
+              href="/account/signup"
               icon={<ArrowLeftRight className="h-4 w-4" />}
             >
               Change account
-            </MenuButton>
+            </MenuItem>
             <div className="my-1 h-px bg-gray-100" />
             <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
               Help / FAQ
@@ -349,6 +364,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           <MobileLink href="/clubs" onClick={() => setMobileOpen(false)}>Clubs</MobileLink>
           <MobileLink href="/faq" onClick={() => setMobileOpen(false)}>FAQ</MobileLink>
           <MobileLink href="/cart" onClick={() => setMobileOpen(false)}>Cart</MobileLink>
+          {isAdmin && <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>Admin</MobileLink>}
         </nav>
 
         <div className="mt-auto p-3 border-t">
@@ -361,13 +377,14 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               Sign out
             </button>
           ) : (
-            <button
-              onClick={() => { setMobileOpen(false); signIn(undefined, { callbackUrl: "/account" }); }}
+            <Link
+              href="/account/signup"
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
+              onClick={() => setMobileOpen(false)}
             >
               <LogIn className="h-4 w-4" />
               Sign in
-            </button>
+            </Link>
           )}
         </div>
       </MobileDrawer>
