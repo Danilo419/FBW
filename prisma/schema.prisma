@@ -5,8 +5,10 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_POSTGRES_PRISMA_URL")       // pooled (pgBouncer) — corresponde ao teu Vercel
-  directUrl = env("POSTGRES_POSTGRES_URL_NON_POOLING")  // ligação direta — corresponde ao teu Vercel
+  // pooled (pgBouncer) — corresponde ao Vercel
+  url       = env("POSTGRES_POSTGRES_PRISMA_URL")
+  // ligação direta — corresponde ao Vercel (migracoes/Studio)
+  directUrl = env("POSTGRES_POSTGRES_URL_NON_POOLING")
 }
 
 /**
@@ -16,7 +18,7 @@ datasource db {
  */
 model User {
   id            String    @id @default(cuid())
-  name          String?
+  name          String?   @unique // opcional: garante unicidade do nome (DB); múltiplos NULL são permitidos
   email         String?   @unique
   emailVerified DateTime?
   image         String?

@@ -35,31 +35,37 @@ export default function SignupClient() {
     const callbackUrl = searchParams.get("callbackUrl") || "/account";
 
     try {
-      // Create account
-      const res = await fetch("/api/auth/signup", {
+      // Create account (checks for duplicate name/email on the server)
+      const res = await fetch("/api/account/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        throw new Error(data?.error || "Sign up failed");
+      if (res.status === 201) {
+        // Auto sign-in after successful signup
+        const result = await signIn("credentials", {
+          // our credentials provider accepts "identifier" (name or email)
+          identifier: email,
+          password,
+          redirect: true,
+          callbackUrl,
+        });
+        // if NextAuth doesn't redirect for some reason, fallback:
+        if (!result) router.replace(callbackUrl);
+        return;
       }
 
-      // Auto sign-in after successful signup (if credentials provider is configured)
-      const si = await signIn("credentials", {
-        redirect: false,
-        email,
-        password,
-        callbackUrl,
-      });
-
-      if (si && !si.error) {
-        router.replace(si.url || callbackUrl);
+      // Handle known errors
+      const data = await res.json().catch(() => ({}));
+      if (data?.code === "USERNAME_TAKEN") {
+        setErr("A user with this name already exists. Please choose another name.");
+      } else if (data?.code === "EMAIL_TAKEN") {
+        setErr("An account with this email already exists.");
+      } else if (data?.message) {
+        setErr(data.message);
       } else {
-        // Fallback: send to login
-        router.replace(`/account/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+        setErr("Could not create account. Please try again.");
       }
     } catch (e: any) {
       setErr(e?.message || "Sign up failed");

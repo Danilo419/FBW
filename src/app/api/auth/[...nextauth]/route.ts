@@ -12,25 +12,33 @@ const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: "/account/signup", // <- usa a tua página existente
+    signIn: "/account/signup", // tua página
     error: "/auth/error",
   },
   providers: [
     Credentials({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        identifier: { label: "Name or Email", type: "text" },
+        password:   { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        const id = credentials?.identifier?.trim();
+        const pw = credentials?.password;
+        if (!id || !pw) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        // 1) tenta email; 2) se não for email, tenta por nome (case-insensitive)
+        let user = null;
+        if (id.includes("@")) {
+          user = await prisma.user.findUnique({ where: { email: id } });
+        } else {
+          user = await prisma.user.findFirst({
+            where: { name: { equals: id, mode: "insensitive" } },
+          });
+        }
         if (!user || !user.passwordHash) return null;
 
-        const ok = await bcrypt.compare(credentials.password, user.passwordHash);
+        const ok = await bcrypt.compare(pw, user.passwordHash);
         if (!ok) return null;
 
         return {
@@ -43,9 +51,7 @@ const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        (token as any).isAdmin = (user.name ?? "").toLowerCase() === "admin";
-      }
+      if (user) (token as any).isAdmin = (user.name ?? "").toLowerCase() === "admin";
       return token;
     },
     async session({ session, token }) {
