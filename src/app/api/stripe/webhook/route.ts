@@ -154,13 +154,20 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
   };
 }
 
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
 /* ------------------------- status updaters ------------------------- */
 
 async function markPaid(
   orderId: string,
-  paymentIntentId?: string | null,
-  newShipping?: ShippingJson
-): Promise<{ transitioned: boolean; country?: string | null }> {
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+  }
+): Promise<{ transitioned: boolean }> {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
     select: { status: true, shippingJson: true, shippingCountry: true },
@@ -169,38 +176,52 @@ async function markPaid(
   const wasAlreadyFinal =
     existing?.status === "paid" || existing?.status === "shipped" || existing?.status === "delivered";
 
-  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, newShipping ?? null);
-  const country = (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
+  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, opts.shipping ?? null);
+  const country =
+    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
 
   await prisma.order.update({
     where: { id: orderId },
     data: {
       status: "paid",
-      stripePaymentIntentId: paymentIntentId ?? null,
+      paymentStatus: "paid",
+      paidAt: new Date(),
+      stripePaymentIntentId: opts.paymentIntentId ?? null,
+      stripeSessionId: opts.sessionId ?? undefined,
+      currency: upper(opts.currency) ?? undefined,
+      totalCents: typeof opts.totalCents === "number" ? opts.totalCents : undefined,
       ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
       ...(country ? { shippingCountry: country } : {}),
     },
   });
 
-  await finalizePaidOrder(orderId);
-
-  return { transitioned: !wasAlreadyFinal, country };
+  // só executar pós-processamento quando mudou realmente
+  if (!wasAlreadyFinal) {
+    await finalizePaidOrder(orderId);
+  }
+  return { transitioned: !wasAlreadyFinal };
 }
 
-async function markPending(orderId: string, paymentIntentId?: string | null, newShipping?: ShippingJson) {
+async function markPending(
+  orderId: string,
+  opts: { paymentIntentId?: string | null; sessionId?: string | null; shipping?: ShippingJson }
+) {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
     select: { shippingJson: true, shippingCountry: true },
   });
 
-  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, newShipping ?? null);
-  const country = (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
+  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, opts.shipping ?? null);
+  const country =
+    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
 
   await prisma.order.update({
     where: { id: orderId },
     data: {
       status: "pending",
-      stripePaymentIntentId: paymentIntentId ?? null,
+      paymentStatus: "pending",
+      stripePaymentIntentId: opts.paymentIntentId ?? null,
+      stripeSessionId: opts.sessionId ?? undefined,
       ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
       ...(country ? { shippingCountry: country } : {}),
     },
@@ -210,14 +231,14 @@ async function markPending(orderId: string, paymentIntentId?: string | null, new
 async function markFailed(orderId: string) {
   await prisma.order.update({
     where: { id: orderId },
-    data: { status: "failed" },
+    data: { status: "failed", paymentStatus: "failed" },
   });
 }
 
 async function markCanceled(orderId: string) {
   await prisma.order.update({
     where: { id: orderId },
-    data: { status: "canceled" },
+    data: { status: "canceled", paymentStatus: "canceled" },
   });
 }
 
@@ -230,12 +251,15 @@ export const POST = async (req: NextRequest) => {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig || !secret) {
-    return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET or signature" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Missing STRIPE_WEBHOOK_SECRET or signature" },
+      { status: 500 }
+    );
   }
 
   let event: Stripe.Event;
 
-  // Stripe requires the raw payload for signature verification
+  // Stripe precisa do body raw para verificar a assinatura
   let raw: string;
   try {
     raw = await req.text();
@@ -244,92 +268,98 @@ export const POST = async (req: NextRequest) => {
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
 
-      // orderId via session.metadata or PI.metadata (fallback)
-      const orderId =
-        (session.metadata?.orderId as string | undefined) ??
-        (session.payment_intent &&
-        typeof session.payment_intent !== "string" &&
-        (session.payment_intent.metadata?.orderId as string | undefined)
-          ? (session.payment_intent.metadata.orderId as string)
-          : undefined);
+        // encontrar orderId
+        let orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (session.payment_intent &&
+          typeof session.payment_intent !== "string" &&
+          (session.payment_intent.metadata?.orderId as string | undefined)
+            ? (session.payment_intent.metadata.orderId as string)
+            : undefined);
 
-      if (!orderId) break;
-
-      // shipping de várias fontes
-      const fromMeta = shippingFromMetadata(session.metadata ?? null);
-      const fromSession = shippingFromSession(session);
-      const shipping = mergeShipping(fromMeta, fromSession);
-
-      const piId =
-        typeof session.payment_intent === "string"
-          ? session.payment_intent
-          : session.payment_intent?.id ?? null;
-
-      if (session.payment_status === "paid") {
-        const { transitioned } = await markPaid(orderId, piId, shipping);
-        if (transitioned) {
-          try {
-            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
-            await pusherServer.trigger("stats", "metric:update", {
-              metric: "countriesMaybeChanged",
-              value: 1,
-            });
-          } catch {}
-        }
-      } else {
-        // e.g., métodos async (boleto, etc.)
-        await markPending(orderId, piId, shipping);
-      }
-      break;
-    }
-
-    case "payment_intent.succeeded": {
-      const pi = event.data.object as Stripe.PaymentIntent;
-      const orderId = pi.metadata?.orderId as string | undefined;
-      if (orderId) {
-        const shipping = shippingFromPaymentIntent(pi);
-        const { transitioned } = await markPaid(orderId, pi.id, shipping);
-        if (transitioned) {
-          try {
-            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
-            await pusherServer.trigger("stats", "metric:update", {
-              metric: "countriesMaybeChanged",
-              value: 1,
-            });
-          } catch {}
-        }
-      }
-      break;
-    }
-
-    case "payment_intent.payment_failed": {
-      const pi = event.data.object as Stripe.PaymentIntent;
-      const orderId = pi.metadata?.orderId as string | undefined;
-      if (orderId) await markFailed(orderId);
-      break;
-    }
-
-    case "payment_intent.canceled": {
-      const pi = event.data.object as Stripe.PaymentIntent;
-      const orderId = pi.metadata?.orderId as string | undefined;
-      if (orderId) await markCanceled(orderId);
-      break;
-    }
-
-    // Legacy fallback if needed
-    case "charge.succeeded": {
-      const charge = event.data.object as Stripe.Charge;
-      const orderId = charge.metadata?.orderId as string | undefined;
-      if (orderId && charge.paid) {
+        // fallbacks: procurar pela sessionId ou pelo paymentIntentId
         const piId =
-          typeof charge.payment_intent === "string"
-            ? charge.payment_intent
-            : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
-        const { transitioned } = await markPaid(orderId, piId);
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        if (!orderId) {
+          const bySession = await prisma.order.findFirst({
+            where: { stripeSessionId: session.id },
+            select: { id: true },
+          });
+          orderId = bySession?.id;
+        }
+        if (!orderId && piId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const fromMeta = shippingFromMetadata(session.metadata ?? null);
+        const fromSession = shippingFromSession(session);
+        const shipping = mergeShipping(fromMeta, fromSession);
+
+        const totalCents =
+          typeof session.amount_total === "number" ? session.amount_total : undefined;
+        const currency = session.currency ?? undefined;
+
+        if (session.payment_status === "paid") {
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            currency,
+            totalCents,
+            shipping,
+          });
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        } else {
+          await markPending(orderId, { paymentIntentId: piId, sessionId: session.id, shipping });
+        }
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        let orderId = pi.metadata?.orderId as string | undefined;
+
+        if (!orderId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: pi.id },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+        if (!orderId) break;
+
+        const shipping = shippingFromPaymentIntent(pi);
+        const totalCents =
+          typeof pi.amount_received === "number" ? pi.amount_received : undefined;
+
+        const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: pi.id,
+            sessionId: null,
+            currency: pi.currency ?? undefined,
+            totalCents,
+            shipping,
+        });
         if (transitioned) {
           try {
             await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
@@ -339,14 +369,88 @@ export const POST = async (req: NextRequest) => {
             });
           } catch {}
         }
+        break;
       }
-      break;
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .then((r) => r?.id));
+        if (orderId) await markFailed(orderId);
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .then((r) => r?.id));
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      // Fallback legacy
+      case "charge.succeeded": {
+        const charge = event.data.object as Stripe.Charge;
+        let orderId = charge.metadata?.orderId as string | undefined;
+
+        if (!orderId && charge.payment_intent) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as any)?.id;
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (orderId && charge.paid) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
+          const cents =
+            typeof charge.amount_captured === "number"
+              ? charge.amount_captured
+              : typeof charge.amount === "number"
+              ? charge.amount
+              : undefined;
+
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: null,
+            currency: charge.currency,
+            totalCents: cents,
+            shipping: null,
+          });
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        }
+        break;
+      }
+
+      default:
+        // ignorar outros eventos
+        break;
     }
 
-    default:
-      // no-op for other events
-      break;
+    return NextResponse.json({ received: true });
+  } catch (e) {
+    console.error("stripe webhook error", e);
+    return new NextResponse("internal error", { status: 500 });
   }
-
-  return NextResponse.json({ received: true });
 };

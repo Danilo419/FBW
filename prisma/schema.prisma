@@ -256,7 +256,8 @@ model Order {
   paypalCaptureId       String?   // store capture id
 
   // Payment bookkeeping
-  paidAt   DateTime?    // set when order becomes paid
+  paymentStatus String? // ex.: "paid" | "pending" | "failed" | "refunded" | "canceled"
+  paidAt        DateTime?    // set when order becomes paid
 
   // Shipping snapshot (legacy / fallback)
   shippingJson Json?
@@ -280,6 +281,7 @@ model Order {
   items OrderItem[]
 
   @@index([status])
+  @@index([paymentStatus])
   @@index([createdAt])
   @@index([shippingCountry])
   @@index([paidAt])
