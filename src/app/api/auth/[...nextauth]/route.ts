@@ -11,9 +11,7 @@ const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
-  // Página de erro opcional para ver o código do erro (ex.: ?error=Configuration)
-  // Se não criares /auth/error, podes remover esta linha.
-  pages: { error: "/auth/error" },
+  pages: { error: "/auth/error" }, // opcional, só para mostrar o código do erro
   providers: [
     Credentials({
       name: "Credentials",
@@ -24,28 +22,19 @@ const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
+        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
         if (!user || !user.passwordHash) return null;
 
         const ok = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!ok) return null;
 
-        return {
-          id: user.id,
-          name: user.name ?? undefined,
-          email: user.email ?? undefined
-        };
+        return { id: user.id, name: user.name ?? undefined, email: user.email ?? undefined };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        const isAdmin = (user.name ?? "").toLowerCase() === "admin";
-        (token as any).isAdmin = isAdmin;
-      }
+      if (user) (token as any).isAdmin = (user.name ?? "").toLowerCase() === "admin";
       return token;
     },
     async session({ session, token }) {
