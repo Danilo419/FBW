@@ -2,7 +2,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
+import { useSession, signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -13,22 +13,28 @@ export default function LoginClient() {
   // Safe usage (avoid destructuring directly to prevent SSR build errors)
   const s = useSession();
   const status = s?.status;
+  const session = s?.data;
 
-  const [email, setEmail] = useState("");
+  // Now accepts Name OR Email
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, go to account
+  // If already logged in, go to account/admin
   useEffect(() => {
-    if (status === "authenticated") router.replace("/account");
-  }, [status, router]);
+    if (status === "authenticated") {
+      const isAdmin = (session?.user as any)?.isAdmin === true;
+      router.replace(isAdmin ? "/admin" : "/account");
+    }
+  }, [status, session, router]);
 
   // Surface any NextAuth error from query (?error=...)
   useEffect(() => {
     const e = searchParams.get("error");
     if (!e) return;
     const map: Record<string, string> = {
+      CredentialsSignin: "Invalid credentials.",
       OAuthAccountNotLinked:
         "This email is already linked to a credentials account. Log in using email & password.",
       AccessDenied: "Access denied.",
@@ -48,17 +54,24 @@ export default function LoginClient() {
     try {
       const res = await signIn("credentials", {
         redirect: false,
-        email,
+        identifier, // <-- name OR email
         password,
-        callbackUrl,
       });
 
       if (!res) {
         setErr("Something went wrong. Please try again.");
       } else if (res.error) {
-        setErr("Invalid email or password.");
+        // NextAuth returns a code in res.error (e.g., "CredentialsSignin")
+        const map: Record<string, string> = {
+          CredentialsSignin: "Invalid credentials.",
+          Configuration: "Auth configuration error. Please try again later.",
+        };
+        setErr(map[res.error] || "Unable to sign in. Please try again.");
       } else {
-        router.push(res.url || callbackUrl);
+        // Check admin flag to route accordingly
+        const s = await getSession();
+        const isAdmin = (s?.user as any)?.isAdmin === true;
+        router.push(isAdmin ? "/admin" : callbackUrl);
       }
     } catch {
       setErr("Unexpected error. Please try again.");
@@ -87,19 +100,18 @@ export default function LoginClient() {
         )}
 
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email
+          <label htmlFor="identifier" className="text-sm font-medium">
+            Name or Email
           </label>
           <input
-            id="email"
-            type="email"
+            id="identifier"
+            type="text"
             className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="yourname or you@example.com"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             required
-            autoComplete="email"
-            inputMode="email"
+            autoComplete="username"
           />
         </div>
 
@@ -116,6 +128,7 @@ export default function LoginClient() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
+            minLength={6}
           />
         </div>
 
