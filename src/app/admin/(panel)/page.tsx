@@ -1,4 +1,8 @@
 // src/app/admin/(panel)/page.tsx
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const runtime = "nodejs";
+
 import { prisma } from "@/lib/prisma";
 
 /* ---------- helpers ---------- */
