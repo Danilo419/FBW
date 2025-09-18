@@ -12,7 +12,7 @@ const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: "/account/login", // <-- login comum
+    signIn: "/account/login", // login comum
     error: "/auth/error",
   },
   providers: [
@@ -27,8 +27,8 @@ const authOptions: NextAuthOptions = {
         const pw = credentials?.password;
         if (!id || !pw) return null;
 
-        // 1) tenta pelo email; 2) se não parecer email, tenta pelo name (case-insensitive)
-        let user = null;
+        // 1) tenta email; 2) se não for email, tenta name (case-insensitive)
+        let user = null as any;
         if (id.includes("@")) {
           user = await prisma.user.findUnique({ where: { email: id } });
         } else {

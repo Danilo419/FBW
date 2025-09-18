@@ -7,25 +7,30 @@ import { getToken } from "next-auth/jwt";
  * - Protege /admin com NextAuth (só entra quem for admin)
  * - Garante que /checkout tem o cookie "ship" (senão redireciona para /checkout/address)
  *
- * Importante: para o guard de /admin funcionar em produção,
- * garante que NEXTAUTH_SECRET está definido nas variáveis do Vercel.
+ * Nota: define NEXTAUTH_SECRET nas variáveis do Vercel.
  */
 export async function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
-  // --- Guard para /admin ---
+  // --- Proteger /admin ---
   if (pathname.startsWith("/admin")) {
-    const token = await getToken({ req, secureCookie: true });
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET, // passa o secret explicitamente
+    });
+
     const isAdmin =
       !!token &&
-      (((token as any).isAdmin === true) ||
-        (typeof token?.name === "string" && token.name.toLowerCase() === "admin"));
+      ( (token as any).isAdmin === true ||
+        (typeof token?.name === "string" && token.name.toLowerCase() === "admin") );
 
     if (!isAdmin) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/account/login";
-      url.search = `?callbackUrl=${encodeURIComponent(pathname + search)}`;
-      return NextResponse.redirect(url);
+      const login = new URL("/account/login", req.nextUrl.origin);
+      login.searchParams.set(
+        "callbackUrl",
+        req.nextUrl.pathname + req.nextUrl.search
+      );
+      return NextResponse.redirect(login);
     }
   }
 
