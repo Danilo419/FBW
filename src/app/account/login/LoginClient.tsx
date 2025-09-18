@@ -168,7 +168,6 @@ export default function LoginClient() {
         <Link href="/account/signup" className="text-blue-600 hover:underline">
           Sign up
         </Link>
-        <br></br>
       </p>
     </div>
   );
