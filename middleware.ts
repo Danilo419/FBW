@@ -1,45 +1,40 @@
-// middleware.ts (raiz do projeto)
+// src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
-/**
- * - Protege /admin com NextAuth (só entra quem for admin)
- * - Garante que /checkout tem o cookie "ship" (senão redireciona para /checkout/address)
- *
- * Nota: define NEXTAUTH_SECRET nas variáveis do Vercel.
- */
-export async function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // --- Proteger /admin ---
-  if (pathname.startsWith("/admin")) {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET, // passa o secret explicitamente
-    });
-
-    const isAdmin =
-      !!token &&
-      ( (token as any).isAdmin === true ||
-        (typeof token?.name === "string" && token.name.toLowerCase() === "admin") );
-
-    if (!isAdmin) {
-      const login = new URL("/account/login", req.nextUrl.origin);
-      login.searchParams.set(
-        "callbackUrl",
-        req.nextUrl.pathname + req.nextUrl.search
-      );
-      return NextResponse.redirect(login);
-    }
+  // rotas/ficheiros que nunca devem ser interceptados
+  const PUBLIC_PATHS = [
+    "/login",
+    "/signup",
+    "/auth/error",
+    "/api/auth",          // next-auth
+    "/_next",             // assets Next
+    "/favicon.ico",
+    "/manifest.webmanifest",
+    "/images",
+    "/static",
+  ];
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return NextResponse.next();
   }
 
-  // --- Fluxo do checkout: precisa do cookie "ship" ---
-  if (pathname === "/checkout") {
-    const ship = req.cookies.get("ship")?.value;
-    if (!ship) {
+  // proteger /admin
+  if (pathname.startsWith("/admin")) {
+    // Cookie de sessão NextAuth:
+    // - dev: "next-auth.session-token"
+    // - prod/https: "__Secure-next-auth.session-token"
+    const token =
+      req.cookies.get("__Secure-next-auth.session-token")?.value ||
+      req.cookies.get("next-auth.session-token")?.value;
+
+    if (!token) {
       const url = req.nextUrl.clone();
-      url.pathname = "/checkout/address";
+      url.pathname = "/login";
+      // preserva query string e next
+      url.searchParams.set("next", pathname + req.nextUrl.search);
       return NextResponse.redirect(url);
     }
   }
@@ -48,5 +43,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/checkout", "/admin/:path*"],
+  // aplica o middleware a tudo excepto os assets estáticos comuns
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico)).*)"],
 };
