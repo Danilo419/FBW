@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type CaptureBody = { paypalOrderId?: string; orderId?: string };
 
@@ -11,7 +12,7 @@ type CaptureBody = { paypalOrderId?: string; orderId?: string };
 type PayPalCaptureResult = {
   result?: {
     id?: string;
-    status?: string;
+    status?: string; // "COMPLETED" esperado
     payer?: {
       email_address?: string;
       name?: { given_name?: string; surname?: string };
@@ -32,7 +33,7 @@ type PayPalCaptureResult = {
       payments?: {
         captures?: Array<{
           id?: string;
-          status?: string;
+          status?: string; // "COMPLETED"
           amount?: { value?: string; currency_code?: string };
         }>;
       };

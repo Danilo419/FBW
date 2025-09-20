@@ -8,6 +8,7 @@ import { pusherServer } from "@/lib/pusher";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /* ---------------------------- helpers ---------------------------- */
 
@@ -195,7 +196,6 @@ async function markPaid(
     },
   });
 
-  // só executar pós-processamento quando mudou realmente
   if (!wasAlreadyFinal) {
     await finalizePaidOrder(orderId);
   }
@@ -336,6 +336,55 @@ export const POST = async (req: NextRequest) => {
         break;
       }
 
+      case "checkout.session.async_payment_succeeded": {
+        // pagamentos assíncronos (iDEAL, Bancontact, etc.)
+        const session = event.data.object as Stripe.Checkout.Session;
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        let orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(piId ? [{ stripePaymentIntentId: piId }] : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: piId,
+          sessionId: session.id,
+          currency: session.currency ?? undefined,
+          totalCents:
+            typeof session.amount_total === "number" ? session.amount_total : undefined,
+          shipping,
+        });
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
         let orderId = pi.metadata?.orderId as string | undefined;
@@ -354,11 +403,11 @@ export const POST = async (req: NextRequest) => {
           typeof pi.amount_received === "number" ? pi.amount_received : undefined;
 
         const { transitioned } = await markPaid(orderId, {
-            paymentIntentId: pi.id,
-            sessionId: null,
-            currency: pi.currency ?? undefined,
-            totalCents,
-            shipping,
+          paymentIntentId: pi.id,
+          sessionId: null,
+          currency: pi.currency ?? undefined,
+          totalCents,
+          shipping,
         });
         if (transitioned) {
           try {
@@ -368,6 +417,19 @@ export const POST = async (req: NextRequest) => {
               value: 1,
             });
           } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.processing": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .then((r) => r?.id));
+        if (orderId) {
+          await markPending(orderId, { paymentIntentId: pi.id, sessionId: null, shipping: shippingFromPaymentIntent(pi) });
         }
         break;
       }
@@ -389,6 +451,26 @@ export const POST = async (req: NextRequest) => {
           (pi.metadata?.orderId as string | undefined) ||
           (await prisma.order
             .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .then((r) => r?.id));
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        let orderId =
+          (session.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(typeof session.payment_intent === "string"
+                    ? [{ stripePaymentIntentId: session.payment_intent }]
+                    : []),
+                ],
+              },
+            })
             .then((r) => r?.id));
         if (orderId) await markCanceled(orderId);
         break;
@@ -448,9 +530,11 @@ export const POST = async (req: NextRequest) => {
         break;
     }
 
+    // devolver 2xx para o Stripe não re-tentar desnecessariamente
     return NextResponse.json({ received: true });
   } catch (e) {
     console.error("stripe webhook error", e);
-    return new NextResponse("internal error", { status: 500 });
+    // 200 mesmo em erro interno para o Stripe não fazer retry infinito; logs ajudam a investigar.
+    return new NextResponse("ok", { status: 200 });
   }
 };
