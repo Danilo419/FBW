@@ -1,11 +1,13 @@
 // src/app/account/page.tsx
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const runtime = "nodejs";
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import AccountClient from "./AccountClient";
-
-export const dynamic = "force-dynamic";
 
 const fallbackImg =
   "https://api.dicebear.com/7.x/initials/svg?radius=50&backgroundType=gradientLinear&seed=FW";
@@ -13,23 +15,14 @@ const fallbackImg =
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
 
+  // Sem sessão → redireciona para login preservando o destino
   if (!session?.user?.email) {
-    return (
-      <div className="container-fw py-16">
-        <h1 className="text-2xl font-bold mb-4">You must be logged in</h1>
-        <Link
-          href="/login"
-          className="inline-flex items-center rounded-2xl border px-4 py-2 hover:bg-gray-50"
-        >
-          Go to login
-        </Link>
-      </div>
-    );
+    redirect("/login?next=/account");
   }
 
-  // Load user from DB
+  // Carregar utilizador da BD
   const dbUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email: session.user.email! },
     select: {
       id: true,
       name: true,
@@ -40,18 +33,12 @@ export default async function AccountPage() {
     },
   });
 
+  // Se por algum motivo não existir (ex.: registo incompleto), volta ao login
   if (!dbUser) {
-    return (
-      <div className="container-fw py-16">
-        <h1 className="text-2xl font-bold mb-2">Account</h1>
-        <p className="text-red-600">
-          We couldn’t load your profile. Please sign out and in again.
-        </p>
-      </div>
-    );
+    redirect("/login?next=/account");
   }
 
-  // Discover OAuth provider (if any)
+  // Descobrir provider OAuth (se existir)
   const oauth = await prisma.account.findFirst({
     where: { userId: dbUser.id },
     select: { provider: true },
@@ -70,11 +57,10 @@ export default async function AccountPage() {
       </div>
 
       <AccountClient
-        /** 👇 agora enviamos o ID para aparecer no Overview */
         userId={dbUser.id}
         email={dbUser.email!}
         defaultName={dbUser.name ?? ""}
-        defaultImage={dbUser.image}
+        defaultImage={dbUser.image ?? undefined}
         createdAt={dbUser.createdAt.toISOString()}
         updatedAt={dbUser.updatedAt.toISOString()}
         provider={provider}

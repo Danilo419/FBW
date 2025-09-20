@@ -10,7 +10,7 @@ export default function SignupClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Avoid destructuring directly to prevent build-time crashes if useSession is undefined
+  // Evitar crash em build se o hook não estiver disponível em algum momento
   const s = useSession();
   const status = s?.status;
 
@@ -20,7 +20,7 @@ export default function SignupClient() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // If already logged in, go to account
+  // Se já estiver autenticado, mandar para /account
   useEffect(() => {
     if (status === "authenticated") {
       router.replace("/account");
@@ -29,34 +29,46 @@ export default function SignupClient() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+
     setErr(null);
     setBusy(true);
 
-    const callbackUrl = searchParams.get("callbackUrl") || "/account";
+    const next =
+      searchParams.get("next") ||
+      searchParams.get("callbackUrl") ||
+      "/account";
+
+    const payload = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    };
 
     try {
-      // Create account (checks for duplicate name/email on the server)
+      // 1) Criar conta
       const res = await fetch("/api/account/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify(payload),
       });
 
       if (res.status === 201) {
-        // Auto sign-in after successful signup
+        // 2) Login automático (NextAuth Credentials)
+        //   O teu provider aceita "identifier" (nome ou email) + password
         const result = await signIn("credentials", {
-          // our credentials provider accepts "identifier" (name or email)
-          identifier: email,
-          password,
+          identifier: payload.email,
+          password: payload.password,
           redirect: true,
-          callbackUrl,
+          callbackUrl: next,
         });
-        // if NextAuth doesn't redirect for some reason, fallback:
-        if (!result) router.replace(callbackUrl);
+
+        // Fallback no caso raro de não haver redirect
+        if (!result) router.replace(next);
         return;
       }
 
-      // Handle known errors
+      // Erros conhecidos do endpoint /api/account/register
       const data = await res.json().catch(() => ({}));
       if (data?.code === "USERNAME_TAKEN") {
         setErr("A user with this name already exists. Please choose another name.");
@@ -78,7 +90,7 @@ export default function SignupClient() {
     <div className="container-fw py-16 max-w-md">
       <h1 className="text-3xl font-extrabold mb-6">Create your account</h1>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4" aria-busy={busy}>
         {err && (
           <p className="text-red-600 text-sm rounded-md border border-red-200 bg-red-50 px-3 py-2">
             {err}
@@ -98,6 +110,7 @@ export default function SignupClient() {
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
+            disabled={busy}
           />
         </div>
 
@@ -115,6 +128,10 @@ export default function SignupClient() {
             required
             autoComplete="email"
             inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            disabled={busy}
           />
         </div>
 
@@ -132,6 +149,7 @@ export default function SignupClient() {
             required
             autoComplete="new-password"
             minLength={6}
+            disabled={busy}
           />
         </div>
 
@@ -146,7 +164,7 @@ export default function SignupClient() {
 
       <p className="mt-6 text-sm text-gray-600">
         Already have an account?{" "}
-        <Link href="/account/login" className="text-blue-600 hover:underline">
+        <Link href="/login" className="text-blue-600 hover:underline">
           Log in
         </Link>
       </p>
