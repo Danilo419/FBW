@@ -15,30 +15,59 @@ const fallbackImg =
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
 
-  // Sem sessão → redireciona para login preservando o destino
-  if (!session?.user?.email) {
+  // Sem sessão nenhuma → ir para login
+  if (!session) {
     redirect("/login?next=/account");
   }
 
-  // Carregar utilizador da BD
-  const dbUser = await prisma.user.findUnique({
-    where: { email: session.user.email! },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const email = session.user?.email ?? null;
+  const name = session.user?.name ?? null;
 
-  // Se por algum motivo não existir (ex.: registo incompleto), volta ao login
+  // Tenta carregar o utilizador por email; se não houver, tenta por name (se for único)
+  let dbUser =
+    (email &&
+      (await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }))) ||
+    (name &&
+      (await prisma.user.findUnique({
+        where: { name },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }))) ||
+    null;
+
+  // Se mesmo autenticado não encontrarmos registo, evita loop: mostra aviso em vez de redirect
   if (!dbUser) {
-    redirect("/login?next=/account");
+    return (
+      <div className="container-fw py-16 space-y-4">
+        <h1 className="text-3xl font-extrabold">My account</h1>
+        <p className="text-gray-700">
+          We couldn't load your profile record. This sometimes happens if you signed in with a username
+          and your email isn't attached to the session.
+        </p>
+        <p className="text-gray-600">
+          Try logging out and in again using your <b>email</b>. If the problem persists, contact support.
+        </p>
+      </div>
+    );
   }
 
-  // Descobrir provider OAuth (se existir)
+  // Provider OAuth (se existir)
   const oauth = await prisma.account.findFirst({
     where: { userId: dbUser.id },
     select: { provider: true },
@@ -58,7 +87,7 @@ export default async function AccountPage() {
 
       <AccountClient
         userId={dbUser.id}
-        email={dbUser.email!}
+        email={dbUser.email ?? ""}
         defaultName={dbUser.name ?? ""}
         defaultImage={dbUser.image ?? undefined}
         createdAt={dbUser.createdAt.toISOString()}
