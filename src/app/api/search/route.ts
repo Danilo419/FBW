@@ -70,8 +70,25 @@ function normalizeProduct(p: AnyRec) {
   return { id, name, price, img, slug, ...p };
 }
 
+/* ---------- text building & matching (improved) ---------- */
+
+function loose(s: unknown) {
+  return (s ?? "")
+    .toString()
+    .toLowerCase()
+    // trata hífens/underscores como espaços para casar "real madrid" com "real-madrid"
+    .replace(/[-_]+/g, " ")
+    // remove ruído
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function productText(p: AnyRec) {
-  const parts = [
+  const parts: string[] = [];
+
+  // campos de texto mais comuns
+  parts.push(
     p.name,
     p.title,
     p.productName,
@@ -79,9 +96,35 @@ function productText(p: AnyRec) {
     p.club,
     p.team,
     p.category,
-    ...(Array.isArray(p.tags) ? p.tags : []),
-  ];
-  return parts.filter(Boolean).join(" ").toLowerCase();
+    p.league,
+    p.brand,
+    p.slug,
+    p.clubSlug,
+    p.teamSlug,
+    p.categorySlug,
+    p.keywords,
+    p.search,
+    p.searchText
+  );
+
+  // arrays comuns
+  if (Array.isArray(p.tags)) parts.push(p.tags.join(" "));
+  if (Array.isArray(p.labels)) parts.push(p.labels.join(" "));
+  if (Array.isArray(p.variants)) {
+    parts.push(
+      p.variants
+        .map((v: any) => [v?.name, v?.title, v?.sku, v?.slug].filter(Boolean).join(" "))
+        .join(" ")
+    );
+  }
+
+  return loose(parts.filter(Boolean).join(" "));
+}
+
+function matches(query: string, haystack: string) {
+  const tokens = loose(query).split(" ").filter(Boolean);
+  if (tokens.length === 0) return false;
+  return tokens.every((t) => haystack.includes(t));
 }
 
 function unique<T>(arr: T[]) {
@@ -152,15 +195,15 @@ async function loadFromPrisma(q: string): Promise<LoadResult> {
     if (!model || typeof model.findMany !== "function") continue;
 
     try {
-      // Fetch up to 500 rows and filter in JS to avoid unknown-field errors
-      const rows: any[] = await model.findMany({ take: 500 });
+      // Fetch up to 1000 rows and filter in JS (evita depender de campos exatos)
+      const rows: any[] = await model.findMany({ take: 1000 });
       log("Prisma model:", key, "rows:", rows?.length ?? 0);
       if (!Array.isArray(rows) || rows.length === 0) continue;
 
-      const filtered = rows.filter((r) => productText(r).includes(q));
+      const filtered = rows.filter((r) => matches(q, productText(r)));
       if (filtered.length) return { items: filtered, filtered: true };
 
-      // If nothing matched, return all for further normalization
+      // Se nada bateu, devolve tudo para o filtro final
       return { items: rows, filtered: false };
     } catch (e: any) {
       log("Prisma error on", key, e?.message || e);
@@ -271,7 +314,7 @@ export async function GET(req: Request) {
 
   const { items, filtered } = data;
 
-  const final = (filtered ? items : items.filter((p: any) => productText(p).includes(q))).map(
+  const final = (filtered ? items : items.filter((p: any) => matches(q, productText(p)))).map(
     normalizeProduct
   );
 
