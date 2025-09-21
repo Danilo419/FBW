@@ -3,321 +3,141 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-type AnyRec = Record<string, any>;
-type LoadResult = { items: any[]; filtered: boolean } | null;
-
-const DEBUG = process.env.SEARCH_DEBUG === "1";
-function log(...args: any[]) {
-  if (DEBUG) console.log("[/api/search]", ...args);
-}
-
-/* ----------------- helpers ----------------- */
-
-// Convert number | string | Prisma.Decimal to number
-function toNum(v: any): number | undefined {
-  if (v == null) return undefined;
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
-  }
-  // Prisma Decimal has toNumber / toString
-  if (typeof v?.toNumber === "function") {
-    try {
-      const n = v.toNumber();
-      return Number.isFinite(n) ? n : undefined;
-    } catch {}
-  }
-  if (typeof v?.toString === "function") {
-    const n = Number(v.toString());
-    return Number.isFinite(n) ? n : undefined;
-  }
-  return undefined;
-}
-
-// Normalize a product-like object to a common shape the UI expects
-function normalizeProduct(p: AnyRec) {
-  const name = p.name ?? p.title ?? p.productName ?? "";
-
-  // Collect many possible price fields (DB & APIs)
-  let price: number | undefined;
-  if (typeof p.price_cents === "number") {
-    price = p.price_cents / 100;
-  } else {
-    price =
-      toNum(p.price) ??
-      toNum(p.basePrice) ?? // <- Prisma Product.basePrice
-      toNum(p.price_eur) ??
-      toNum(p.pricing?.price) ??
-      toNum(p.amount) ??
-      toNum(p.value);
-  }
-
-  const img =
-    p.img ??
-    p.image ??
-    p.imageUrl ??
-    p.cover ??
-    p.photo ??
-    (Array.isArray(p.images) ? (p.images[0]?.url ?? p.images[0]) : undefined) ??
-    (Array.isArray(p.photos) ? (p.photos[0]?.url ?? p.photos[0]) : undefined);
-
-  const id = p.id ?? p.sku ?? p.slug ?? name;
-  const slug =
-    p.slug ??
-    (typeof name === "string" ? name.toLowerCase().replace(/\s+/g, "-") : undefined);
-
-  return { id, name, price, img, slug, ...p };
-}
-
-/* ---------- text building & matching (improved) ---------- */
-
 function loose(s: unknown) {
   return (s ?? "")
     .toString()
     .toLowerCase()
-    // trata hífens/underscores como espaços para casar "real madrid" com "real-madrid"
-    .replace(/[-_]+/g, " ")
-    // remove ruído
+    .replace(/[-_]+/g, " ")     // "real-madrid" -> "real madrid"
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
+const tokensOf = (q: string) => loose(q).split(" ").filter(Boolean);
 
-function productText(p: AnyRec) {
-  const parts: string[] = [];
+type Any = Record<string, any>;
 
-  // campos de texto mais comuns
-  parts.push(
-    p.name,
-    p.title,
-    p.productName,
-    p.description,
-    p.club,
-    p.team,
-    p.category,
-    p.league,
-    p.brand,
-    p.slug,
-    p.clubSlug,
-    p.teamSlug,
-    p.categorySlug,
-    p.keywords,
-    p.search,
-    p.searchText
-  );
-
-  // arrays comuns
-  if (Array.isArray(p.tags)) parts.push(p.tags.join(" "));
-  if (Array.isArray(p.labels)) parts.push(p.labels.join(" "));
-  if (Array.isArray(p.variants)) {
-    parts.push(
-      p.variants
-        .map((v: any) => [v?.name, v?.title, v?.sku, v?.slug].filter(Boolean).join(" "))
-        .join(" ")
-    );
+// preço -> euros
+function toPrice(p: any): number | undefined {
+  if (p == null) return undefined;
+  if (typeof p === "number") return p >= 1000 ? Math.round(p) / 100 : p;
+  if (typeof p === "string") {
+    const n = Number(p);
+    return Number.isFinite(n) ? (n >= 1000 ? Math.round(n) / 100 : n) : undefined;
   }
-
-  return loose(parts.filter(Boolean).join(" "));
+  if (typeof p?.toNumber === "function") return toPrice(p.toNumber());
+  if (typeof p?.toString === "function") return toPrice(p.toString());
+  return undefined;
 }
 
-function matches(query: string, haystack: string) {
-  const tokens = loose(query).split(" ").filter(Boolean);
-  if (tokens.length === 0) return false;
-  return tokens.every((t) => haystack.includes(t));
+function normalizeProduct(p: Any) {
+  const name = p.name ?? p.title ?? p.productName ?? "Product";
+  const img =
+    p.img ??
+    p.image ??
+    p.imageUrl ??
+    (Array.isArray(p.images) ? (p.images[0]?.url ?? p.images[0]) : undefined);
+
+  const price =
+    toPrice(p.basePrice) ??
+    toPrice(p.price) ??
+    toPrice(p.price_cents) ??
+    toPrice(p.price_eur);
+
+  return {
+    id: p.id ?? p.slug ?? name,
+    name,
+    slug: p.slug,
+    img,
+    price,
+  };
 }
-
-function unique<T>(arr: T[]) {
-  return Array.from(new Set(arr));
-}
-
-function extractArrayFromJson(json: any): any[] | null {
-  if (!json) return null;
-  if (Array.isArray(json)) return json;
-
-  const keys = ["products", "items", "results", "data", "rows", "list", "edges", "nodes"];
-  for (const k of keys) {
-    const v = (json as AnyRec)[k];
-    if (Array.isArray(v) && v.length) return v;
-    if (Array.isArray(v?.data) && v.data.length) return v.data;
-  }
-
-  const candidates: any[] = [];
-  function scan(v: any) {
-    if (!v) return;
-    if (Array.isArray(v)) {
-      if (v.length && typeof v[0] === "object") {
-        const ok = "name" in (v[0] || {}) || "title" in (v[0] || {}) || "productName" in (v[0] || {});
-        if (ok) candidates.push(v);
-      }
-      return;
-    }
-    if (typeof v === "object") for (const k of Object.keys(v)) scan(v[k]);
-  }
-  scan(json);
-  if (candidates.length) return candidates.sort((a, b) => b.length - a.length)[0];
-  return null;
-}
-
-/* ------------ 1) Try Prisma directly ------------ */
-
-let prismaSingleton: any;
-async function getPrisma() {
-  if (prismaSingleton) return prismaSingleton;
-  try {
-    const { PrismaClient } = await import("@prisma/client");
-    prismaSingleton = (globalThis as any).__prisma ?? new PrismaClient();
-    (globalThis as any).__prisma = prismaSingleton;
-    return prismaSingleton;
-  } catch {
-    return null;
-  }
-}
-
-async function loadFromPrisma(q: string): Promise<LoadResult> {
-  const prisma = await getPrisma();
-  if (!prisma) return null;
-
-  // common model names
-  const candidates = [
-    "product",
-    "products",
-    "item",
-    "items",
-    "listing",
-    "listings",
-    "jersey",
-    "kit",
-  ];
-
-  for (const key of candidates) {
-    const model = (prisma as any)[key];
-    if (!model || typeof model.findMany !== "function") continue;
-
-    try {
-      // Fetch up to 1000 rows and filter in JS (evita depender de campos exatos)
-      const rows: any[] = await model.findMany({ take: 1000 });
-      log("Prisma model:", key, "rows:", rows?.length ?? 0);
-      if (!Array.isArray(rows) || rows.length === 0) continue;
-
-      const filtered = rows.filter((r) => matches(q, productText(r)));
-      if (filtered.length) return { items: filtered, filtered: true };
-
-      // Se nada bateu, devolve tudo para o filtro final
-      return { items: rows, filtered: false };
-    } catch (e: any) {
-      log("Prisma error on", key, e?.message || e);
-      continue;
-    }
-  }
-  return null;
-}
-
-/* ------------ 2) Optional HTTP endpoints ------------ */
-
-const DEFAULT_RELATIVE_ENDPOINTS = unique([
-  "/api/products",
-  "/api/store/products",
-  "/api/catalog",
-  "/api/items",
-  "/store/products",
-  "/api/v1/products",
-]);
-
-const QUERY_PARAM_NAMES = ["q", "query", "search", "term", "keyword", "name", "title"];
-
-async function loadFromHttp(reqUrl: URL, q: string): Promise<LoadResult> {
-  const envCsv =
-    process.env.PRODUCTS_API_URLS || process.env.NEXT_PUBLIC_PRODUCTS_API_URLS || "";
-  const envEndpoints = envCsv.split(",").map((s) => s.trim()).filter(Boolean);
-  const bases = unique([...envEndpoints, ...DEFAULT_RELATIVE_ENDPOINTS]);
-  if (DEBUG) log("Trying endpoints:", bases);
-
-  // 1) endpoints with query param
-  for (const base of bases) {
-    try {
-      const absolute = base.startsWith("http") ? base : new URL(base, reqUrl).toString();
-      for (const param of QUERY_PARAM_NAMES) {
-        const u = new URL(absolute);
-        u.searchParams.set(param, q);
-        const r = await fetch(u.toString(), { cache: "no-store" });
-        if (!r.ok) continue;
-        const json = await r.json();
-        const arr = extractArrayFromJson(json);
-        log(" ->", u.toString(), "status", r.status, "items", arr?.length ?? 0);
-        if (Array.isArray(arr) && arr.length) return { items: arr, filtered: true };
-      }
-    } catch (e: any) {
-      log(" x failed", base, e?.message || e);
-    }
-  }
-
-  // 2) fetch all and filter locally
-  for (const base of bases) {
-    try {
-      const absolute = base.startsWith("http") ? base : new URL(base, reqUrl).toString();
-      const r = await fetch(absolute, { cache: "no-store" });
-      if (!r.ok) continue;
-      const json = await r.json();
-      const arr = extractArrayFromJson(json);
-      log(" ->", absolute, "status", r.status, "items_total", arr?.length ?? 0);
-      if (Array.isArray(arr) && arr.length) return { items: arr, filtered: false };
-    } catch (e: any) {
-      log(" x failed", base, e?.message || e);
-    }
-  }
-  return null;
-}
-
-/* ------------ 3) Local JSON files (fallback sem imports dinâmicos) ------------ */
-
-async function loadFromJsonFiles(): Promise<LoadResult> {
-  try {
-    const { readFile } = await import("fs/promises");
-    const { join } = await import("path");
-    const files = [
-      join(process.cwd(), "src", "data", "products.json"),
-      join(process.cwd(), "data", "products.json"),
-      join(process.cwd(), "public", "products.json"),
-    ];
-    for (const p of files) {
-      try {
-        const raw = await readFile(p, "utf-8");
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length) return { items: arr, filtered: false };
-      } catch {}
-    }
-  } catch {}
-  return null;
-}
-
-/* -------------------- handler -------------------- */
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const q = (url.searchParams.get("q") || "").trim().toLowerCase();
+  const q = (url.searchParams.get("q") || "").trim();
   if (!q) return NextResponse.json({ products: [] });
 
-  // 1) Try DB (Prisma)
-  let data: LoadResult = await loadFromPrisma(q);
+  const tokens = tokensOf(q);
+  if (!tokens.length) return NextResponse.json({ products: [] });
 
-  // 2) HTTP endpoints (if present)
-  if (!data) data = await loadFromHttp(url, q);
+  // 1) tenta Product “direto” (os campos name/slug/description são quase universais)
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const prisma = (globalThis as any).__prisma ?? new PrismaClient();
+    (globalThis as any).__prisma = prisma;
 
-  // 3) Local JSON files (fallback)
-  if (!data) data = await loadFromJsonFiles();
+    // AND de tokens; cada token procura em OR name/slug/description
+    const where: any = {
+      AND: tokens.map((t) => ({
+        OR: [
+          { name: { contains: t, mode: "insensitive" } },
+          { slug: { contains: t, mode: "insensitive" } },
+          { description: { contains: t, mode: "insensitive" } },
+          // Se tiveres estes campos no teu schema, podes descomentar:
+          // { teamSlug: { contains: t, mode: "insensitive" } },
+          // { clubSlug: { contains: t, mode: "insensitive" } },
+          // { category: { contains: t, mode: "insensitive" } },
+        ],
+      })),
+    };
 
-  if (!data) {
-    log("No product source found.");
-    return NextResponse.json({ products: [] });
+    // Se o modelo se chama "Product", o client é prisma.product
+    // (Prisma transforma o nome do modelo em camelCase)
+    if ((prisma as any).product?.findMany) {
+      const rows = await (prisma as any).product.findMany({
+        where,
+        take: 100, // evita scan gigante
+        orderBy: { updatedAt: "desc" },
+      });
+      const products = Array.isArray(rows) ? rows.map(normalizeProduct) : [];
+      return NextResponse.json({ products });
+    }
+  } catch (e) {
+    // cai para os fallbacks abaixo
   }
 
-  const { items, filtered } = data;
+  // 2) fallback super-genérico: tenta carregar alguma lista e filtra no Node
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const prisma = (globalThis as any).__prisma ?? new PrismaClient();
+    (globalThis as any).__prisma = prisma;
 
-  const final = (filtered ? items : items.filter((p: any) => matches(q, productText(p)))).map(
-    normalizeProduct
-  );
+    // tenta alguns nomes comuns
+    for (const key of ["product", "products", "item", "items", "listing", "listings"]) {
+      const model = (prisma as any)[key];
+      if (!model?.findMany) continue;
+      const rows: any[] = await model.findMany({ take: 500 });
+      if (!rows?.length) continue;
 
-  log("Returning", final.length, "results for:", q);
-  return NextResponse.json({ products: final });
+      const hay = (p: any) =>
+        loose(
+          [
+            p.name,
+            p.title,
+            p.productName,
+            p.slug,
+            p.description,
+            p.team,
+            p.teamSlug,
+            p.club,
+            p.clubSlug,
+            p.category,
+            p.categorySlug,
+            Array.isArray(p.tags) ? p.tags.join(" ") : "",
+          ]
+            .filter(Boolean)
+            .join(" ")
+        );
+
+      const filtered = rows.filter((r) => {
+        const h = hay(r);
+        return tokens.every((t) => h.includes(t));
+      });
+
+      const products = filtered.map(normalizeProduct);
+      return NextResponse.json({ products });
+    }
+  } catch {}
+
+  return NextResponse.json({ products: [] });
 }
