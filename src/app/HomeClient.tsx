@@ -1,7 +1,7 @@
 // src/app/HomeClient.tsx
 'use client'
 
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   motion,
   useMotionValue,
@@ -9,6 +9,7 @@ import {
   useSpring,
   useTransform,
   useVelocity,
+  AnimatePresence,
 } from 'framer-motion'
 import {
   ArrowRight,
@@ -31,6 +32,8 @@ import {
 /* ======================================================================================
    1) REUSABLE PIECES
 ====================================================================================== */
+
+const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
 
 /** Spotlight that follows the cursor */
 function Spotlight({
@@ -141,7 +144,184 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) MOCK DATA
+   2) HERO IMAGE CYCLER (random order, one at a time) — LOCAL FILES
+====================================================================================== */
+
+const heroImages: { src: string; alt: string }[] = [
+  { src: '/images/players/Arsenal/Arsenal1.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal2.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal3.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal4.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal5.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal6.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal7.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal8.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal9.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal10.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal11.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal12.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona1.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona2.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona3.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona4.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona5.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona6.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona7.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona8.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea1.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea2.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea3.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea4.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea5.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea6.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea7.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea8.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea9.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea10.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea11.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea12.png', alt: 'image' },
+  { src: '/images/players/Legends/Legends1.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool1.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool2.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool3.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool4.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool5.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool6.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool7.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool8.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool9.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool10.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon1.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon2.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon3.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon4.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon5.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity1.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity2.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity3.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity4.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity5.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity6.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity7.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity8.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited1.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited2.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited3.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited4.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited5.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited6.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited7.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited8.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited9.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha1.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha2.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha3.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha4.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha5.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha6.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha7.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha8.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco1.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco2.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco3.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco4.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco5.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco6.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco7.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco8.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco9.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco10.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG1.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG2.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG3.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG4.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG5.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG6.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG7.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG8.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid4.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid5.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid6.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid7.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid8.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid9.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham1.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham2.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham3.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham4.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham5.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham6.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham7.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham8.png', alt: 'image' },
+]
+
+/**
+ * Mostra uma imagem de cada vez; a ordem é aleatória sem repetir
+ * até esgotar o “baralho”. Depois volta a baralhar.
+ */
+function HeroImageCycler({ interval = 4000 }: { interval?: number }) {
+  const [current, setCurrent] = useState(0)
+  const poolRef = useRef<number[]>([])
+  const curRef = useRef(0)
+  curRef.current = current
+
+  useEffect(() => {
+    poolRef.current = heroImages.map((_, i) => i).filter((i) => i !== current)
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      let pool = poolRef.current
+      if (pool.length === 0) {
+        pool = heroImages.map((_, i) => i).filter((i) => i !== curRef.current)
+      }
+      const r = Math.floor(Math.random() * pool.length)
+      const next = pool.splice(r, 1)[0]
+      poolRef.current = pool
+      setCurrent(next)
+    }, interval)
+    return () => clearInterval(id)
+  }, [interval])
+
+  return (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={current}
+          src={heroImages[current].src}
+          alt={heroImages[current].alt}
+          initial={{ opacity: 0, scale: 1.02 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e: any) => {
+            const img = e.currentTarget as HTMLImageElement
+            // evitar loop caso o fallback também falhe
+            if ((img as any)._fallbackApplied) return
+            ;(img as any)._fallbackApplied = true
+            img.src = FALLBACK_IMG
+          }}
+        />
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ======================================================================================
+   3) MOCK DATA — LOCAL IMAGENS
 ====================================================================================== */
 type Product = {
   id: string
@@ -151,62 +331,19 @@ type Product = {
   tag?: string
 }
 const products: Product[] = [
-  {
-    id: 'kit-aurora',
-    name: 'Aurora Kit (concept)',
-    price: 59.9,
-    img: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1400&auto=format&fit=crop',
-    tag: 'New',
-  },
-  {
-    id: 'street-pro',
-    name: 'Street Pro (concept)',
-    price: 54.9,
-    img: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1400&auto=format&fit=crop',
-    tag: 'Best-seller',
-  },
-  {
-    id: 'cosmos',
-    name: 'Cosmos (concept)',
-    price: 64.9,
-    img: 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?q=80&w=1400&auto=format&fit=crop',
-  },
-  {
-    id: 'voltage',
-    name: 'Voltage (concept)',
-    price: 49.9,
-    img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1400&auto=format&fit=crop',
-  },
-  {
-    id: 'cobalt',
-    name: 'Cobalt (concept)',
-    price: 52.9,
-    img: 'https://images.unsplash.com/photo-1520975922327-8b456906c813?q=80&w=1400&auto=format&fit=crop',
-  },
-  {
-    id: 'nebula',
-    name: 'Nebula (limited)',
-    price: 67.9,
-    img: 'https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?q=80&w=1400&auto=format&fit=crop',
-    tag: 'Limited',
-  },
-  {
-    id: 'wave',
-    name: 'Wave (concept)',
-    price: 57.5,
-    img: 'https://images.unsplash.com/photo-1476362555312-618a414fd0bf?q=80&w=1400&auto=format&fit=crop',
-  },
-  {
-    id: 'onyx',
-    name: 'Onyx (concept)',
-    price: 62.0,
-    img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1400&auto=format&fit=crop',
-  },
+  { id: 'kit-aurora',  name: 'Aurora Kit (concept)',  price: 59.9, img: '/images/products/aurora.jpg',  tag: 'New' },
+  { id: 'street-pro',  name: 'Street Pro (concept)',  price: 54.9, img: '/images/products/street-pro.jpg', tag: 'Best-seller' },
+  { id: 'cosmos',      name: 'Cosmos (concept)',      price: 64.9, img: '/images/products/cosmos.jpg' },
+  { id: 'voltage',     name: 'Voltage (concept)',     price: 49.9, img: '/images/products/voltage.jpg' },
+  { id: 'cobalt',      name: 'Cobalt (concept)',      price: 52.9, img: '/images/products/cobalt.jpg' },
+  { id: 'nebula',      name: 'Nebula (limited)',      price: 67.9, img: '/images/products/nebula.jpg', tag: 'Limited' },
+  { id: 'wave',        name: 'Wave (concept)',        price: 57.5, img: '/images/products/wave.jpg' },
+  { id: 'onyx',        name: 'Onyx (concept)',        price: 62.0, img: '/images/products/onyx.jpg' },
 ]
 const eur = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })
 
 /* ======================================================================================
-   3) PAGE (delayed fade on scroll) — NO HEADER / NO FOOTER
+   4) PAGE
 ====================================================================================== */
 export default function Home() {
   const { scrollY } = useScroll()
@@ -265,15 +402,14 @@ export default function Home() {
               </div>
 
               {/* right mockup */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="relative">
-                <TiltCard className="shadow-glow">
-                  <div className="aspect-[4/3]">
-                    <img
-                      src="https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1600&auto=format&fit=crop"
-                      alt="Concept kit mockup"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7 }}
+                className="relative"
+              >
+                <TiltCard className="shadow-glow overflow-hidden">
+                  <HeroImageCycler interval={4200} />
                 </TiltCard>
               </motion.div>
             </div>
@@ -313,6 +449,12 @@ export default function Home() {
                   alt={p.name}
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    const img = e.currentTarget
+                    if ((img as any)._fallbackApplied) return
+                    ;(img as any)._fallbackApplied = true
+                    img.src = FALLBACK_IMG
+                  }}
                 />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
                 {p.tag && (
@@ -366,7 +508,6 @@ export default function Home() {
                   <h3 className="font-semibold">{f.t}</h3>
                 </div>
                 <p className="mt-2 text-sm text-gray-600">{f.s}</p>
-                {/* blue line animation */}
                 <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w-full transition-all" />
               </motion.div>
             ))}
@@ -448,7 +589,6 @@ export default function Home() {
                 <div className="font-semibold">{f.title}</div>
               </div>
               <p className="mt-2 text-sm text-gray-600">{f.desc}</p>
-              {/* blue line animation added */}
               <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w-full transition-all" />
             </div>
           ))}
