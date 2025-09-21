@@ -9,7 +9,6 @@ import {
   useSpring,
   useTransform,
   useVelocity,
-  AnimatePresence,
 } from 'framer-motion'
 import {
   ArrowRight,
@@ -144,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (random order, one at a time) — LOCAL FILES
+   2) HERO IMAGE CYCLER (random order, no white flash, Ken Burns, preload, fallback)
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -267,61 +266,126 @@ const heroImages: { src: string; alt: string }[] = [
   { src: '/images/players/Tottenham/Tottenham8.png', alt: 'image' },
 ]
 
-/**
- * Mostra uma imagem de cada vez; a ordem é aleatória sem repetir
- * até esgotar o “baralho”. Depois volta a baralhar.
- */
-function HeroImageCycler({ interval = 4000 }: { interval?: number }) {
-  const [current, setCurrent] = useState(0)
-  const poolRef = useRef<number[]>([])
-  const curRef = useRef(0)
-  curRef.current = current
+function shuffle<T>(arr: T[]) {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
+/**
+ * Cross-fade SUAVE (sem flash) com efeito Ken Burns (zoom/pan subtil).
+ * Mantemos a imagem anterior por baixo enquanto a nova aparece.
+ * Também fazemos preload da próxima e fallback se der erro.
+ */
+function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
+  const [current, setCurrent] = useState(0)
+  const [previous, setPrevious] = useState<number | null>(null)
+  const [firstReady, setFirstReady] = useState(false)
+
+  const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
+  const ptrRef = useRef(0)
+
+  // Preload helper
+  const preload = (idx: number) => {
+    const img = new Image()
+    img.src = heroImages[idx].src
+    if ('decode' in img) {
+      ;(img as any).decode?.().catch(() => void 0)
+    }
+  }
+
+  // Inicial: garantir preload do primeiro e do próximo
   useEffect(() => {
-    poolRef.current = heroImages.map((_, i) => i).filter((i) => i !== current)
+    preload(orderRef.current[0])
+    preload(orderRef.current[1])
   }, [])
 
   useEffect(() => {
     const id = setInterval(() => {
-      let pool = poolRef.current
-      if (pool.length === 0) {
-        pool = heroImages.map((_, i) => i).filter((i) => i !== curRef.current)
+      const order = orderRef.current
+      ptrRef.current = (ptrRef.current + 1) % order.length
+      if (ptrRef.current === 0) {
+        orderRef.current = shuffle(orderRef.current)
       }
-      const r = Math.floor(Math.random() * pool.length)
-      const next = pool.splice(r, 1)[0]
-      poolRef.current = pool
-      setCurrent(next)
+      const nextIdx = orderRef.current[ptrRef.current]
+      setPrevious(current)
+      setCurrent(nextIdx)
+      // Precarregar o seguinte
+      const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
+      preload(after)
     }, interval)
     return () => clearInterval(id)
-  }, [interval])
+  }, [interval, current])
+
+  // Ken Burns: origem aleatória para cada nova imagem
+  const [kbSeed, setKbSeed] = useState(() => Math.random())
+  useEffect(() => {
+    setKbSeed(Math.random())
+  }, [current])
+
+  // origem (transform-origin) muda: cantos/lados aleatórios
+  const originList = ['center', 'left top', 'right top', 'left bottom', 'right bottom', 'center top', 'center bottom', 'left center', 'right center']
+  const origin = originList[Math.floor(kbSeed * originList.length)]
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
-      <AnimatePresence mode="wait">
+      {/* Overlay suave para dar profundidade e esconder qualquer “edge” */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
+
+      {/* Placeholder/skeleton até a primeira imagem carregar */}
+      {!firstReady && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 to-slate-50" />
+      )}
+
+      {/* Imagem anterior (a desaparecer) */}
+      {previous !== null && (
         <motion.img
-          key={current}
-          src={heroImages[current].src}
-          alt={heroImages[current].alt}
-          initial={{ opacity: 0, scale: 1.02 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
+          key={`prev-${previous}`}
+          src={heroImages[previous].src}
+          alt={heroImages[previous].alt}
           className="absolute inset-0 h-full w-full object-cover"
+          initial={{ opacity: 1, scale: 1 }}
+          animate={{ opacity: 0, scale: 1.02, filter: 'blur(2px)' }}
+          transition={{ duration: 0.9, ease: 'easeInOut' }}
           onError={(e: any) => {
             const img = e.currentTarget as HTMLImageElement
-            // evitar loop caso o fallback também falhe
             if ((img as any)._fallbackApplied) return
             ;(img as any)._fallbackApplied = true
             img.src = FALLBACK_IMG
           }}
         />
-      </AnimatePresence>
+      )}
+
+      {/* Imagem atual (a aparecer com Ken Burns) */}
+      <motion.img
+        key={`curr-${current}`}
+        src={heroImages[current].src}
+        alt={heroImages[current].alt}
+        className="absolute inset-0 h-full w-full object-cover will-change-transform"
+        style={{ transformOrigin: origin }}
+        initial={{ opacity: 0, scale: 1.04, filter: 'blur(6px)' }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        transition={{ duration: 0.9, ease: 'easeOut' }}
+        onLoad={() => setFirstReady(true)}
+        onError={(e: any) => {
+          const img = e.currentTarget as HTMLImageElement
+          if ((img as any)._fallbackApplied) return
+          ;(img as any)._fallbackApplied = true
+          img.src = FALLBACK_IMG
+        }}
+      />
+
+      {/* brilho de borda muito subtil */}
+      <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-black/5" />
     </div>
   )
 }
 
 /* ======================================================================================
-   3) MOCK DATA — LOCAL IMAGENS
+   3) MOCK DATA — LOCAL IMAGENS (cards)
 ====================================================================================== */
 type Product = {
   id: string
@@ -401,7 +465,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* right mockup */}
+              {/* right mockup com animação pro */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
