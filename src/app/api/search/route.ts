@@ -7,12 +7,9 @@ export const dynamic = "force-dynamic";
 
 /* ================= utils ================= */
 
-/** Remove acentos/diacríticos e normaliza espaços */
 function normalize(s: string) {
   return s.normalize("NFKD").replace(/\p{Diacritic}/gu, "").trim();
 }
-
-/** Parte a query em tokens simples e seguros */
 function splitTokens(q: string) {
   const s = normalize(q)
     .toLowerCase()
@@ -22,14 +19,12 @@ function splitTokens(q: string) {
     .trim();
   return s ? s.split(" ") : [];
 }
-
-/** Converte cêntimos para euros */
 function centsToEur(v?: number | null) {
   if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
   return Math.round(v) / 100;
 }
 
-/** Seleção do Prisma (ajusta se mudares o select) */
+/** Seleção do Prisma */
 type Row = {
   id: string;
   slug: string;
@@ -40,7 +35,6 @@ type Row = {
   description: string | null;
   updatedAt: Date;
 };
-
 /** Payload para o UI */
 type UIProduct = {
   id: string;
@@ -66,7 +60,10 @@ function matchesRow(p: Row, qFull: string, tokens: string[]) {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const qRaw = (url.searchParams.get("q") || "").trim();
-  if (!qRaw) return NextResponse.json({ products: [] });
+  const debug = url.searchParams.get("debug") === "1";
+  if (!qRaw) {
+    return NextResponse.json(debug ? { products: [], info: { reason: "empty query" } } : { products: [] });
+  }
 
   const qFull = normalize(qRaw).toLowerCase();
   const tokens = splitTokens(qRaw);
@@ -101,7 +98,7 @@ export async function GET(req: Request) {
 
     let rows = (await prisma.product.findMany({
       where,
-      take: 100,
+      take: 150,
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -116,9 +113,12 @@ export async function GET(req: Request) {
     })) as Row[];
 
     // ---------- Fallback: carregar e filtrar em JS ----------
+    let usedFallback = false;
+    let totalAll = 0;
+
     if (!rows.length) {
       const all = (await prisma.product.findMany({
-        take: 500,
+        take: 1000,
         orderBy: { updatedAt: "desc" },
         select: {
           id: true,
@@ -132,7 +132,9 @@ export async function GET(req: Request) {
         },
       })) as Row[];
 
+      totalAll = all.length;
       rows = all.filter((p: Row) => matchesRow(p, qFull, tokens));
+      usedFallback = true;
     }
 
     const products: UIProduct[] = rows.map((p: Row) => ({
@@ -143,9 +145,26 @@ export async function GET(req: Request) {
       price: centsToEur(p.basePrice),
     }));
 
+    if (debug) {
+      return NextResponse.json({
+        products,
+        info: {
+          query: qRaw,
+          tokens,
+          matched: products.length,
+          usedFallback,
+          totalAll: usedFallback ? totalAll : undefined,
+          sample: products.slice(0, 5).map((x) => x.name),
+        },
+      });
+    }
+
     return NextResponse.json({ products });
-  } catch {
-    // Em caso de erro, devolve vazio (evita quebrar a página)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (debug) {
+      return NextResponse.json({ products: [], error: msg }, { status: 500 });
+    }
     return NextResponse.json({ products: [] });
   }
 }
