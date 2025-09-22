@@ -1,90 +1,16 @@
 // src/app/search/page.tsx
-import { Search } from "lucide-react";
-
-/* =========================== helpers =========================== */
-
-function normalizePrice(input: unknown): number | undefined {
-  if (input == null) return undefined;
-  if (typeof input === "number") {
-    if (input >= 1000) return Math.round(input) / 100;
-    return input;
-  }
-  if (typeof input === "string") {
-    const raw = input.trim().replace(/\s/g, "");
-    if (/^\d+$/.test(raw)) return Number(raw) / 100;
-    const n = Number(raw.replace(",", "."));
-    return Number.isFinite(n) ? n : undefined;
-  }
-  if (typeof (input as any)?.toNumber === "function") {
-    try {
-      const n = (input as any).toNumber();
-      return normalizePrice(n);
-    } catch {}
-  }
-  if (typeof (input as any)?.toString === "function") {
-    return normalizePrice((input as any).toString());
-  }
-  return undefined;
-}
-
-function formatEUR(value: number) {
-  return value
-    .toLocaleString("pt-PT", { style: "currency", currency: "EUR" })
-    .replace(/\s/g, "");
-}
-
-/* =========================== tipos =========================== */
-
-type UIProduct = {
-  id: string | number;
-  name: string;
-  slug?: string;
-  img?: string;
-  price?: number; // EUR
-};
-
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+import { Search } from "lucide-react";
+import ResultsClient from "./ResultsClient";
 
 type PageProps = {
   searchParams?: { q?: string };
 };
 
-export default async function SearchPage({ searchParams }: PageProps) {
+export default function SearchPage({ searchParams }: PageProps) {
   const query = (searchParams?.q ?? "").toString().trim();
-
-  let results: UIProduct[] = [];
-  if (query) {
-    try {
-      // URL relativa — corre em RSC no servidor
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const arr: any[] = Array.isArray(json?.products) ? json.products : [];
-        results = arr.map((p: any): UIProduct => {
-          const price = normalizePrice(
-            p.price ?? p.basePrice ?? p.price_eur ?? p.amount ?? p.value
-          );
-          const img =
-            p.img ??
-            p.image ??
-            p.imageUrl ??
-            (Array.isArray(p.images) ? (p.images[0]?.url ?? p.images[0]) : undefined);
-
-          return {
-            id: p.id ?? p.slug ?? p.name,
-            name: p.name ?? p.title ?? p.productName ?? "Product",
-            slug: p.slug,
-            img,
-            price,
-          };
-        });
-      }
-    } catch {
-      // mantém results=[]
-    }
-  }
 
   return (
     <div className="container-fw py-6 md:py-10">
@@ -113,58 +39,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </button>
       </form>
 
-      {/* Resultados */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {!!query && results.length === 0 && (
-          <p className="text-gray-500 col-span-full">
-            No products found. Try another term.
-          </p>
-        )}
-
-        {results.map((p) => {
-          const href = p.slug ? `/products/${p.slug}` : undefined;
-          const priceLabel =
-            typeof p.price === "number" ? formatEUR(p.price) : undefined;
-
-          return (
-            <a
-              key={String(p.id)}
-              href={href}
-              className="group rounded-3xl border bg-white/60 backdrop-blur hover:bg-white transition shadow-sm hover:shadow-lg overflow-hidden flex flex-col"
-            >
-              <div className="relative aspect-[4/5]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={p.name}
-                  src={
-                    p.img ||
-                    "https://dummyimage.com/800x1000/f3f4f6/8f9094&text=No+image"
-                  }
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-
-              <div className="p-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{p.name}</div>
-                  {href && (
-                    <div className="text-xs text-gray-500 group-hover:underline">
-                      Open product page
-                    </div>
-                  )}
-                </div>
-
-                {priceLabel && (
-                  <div className="shrink-0 text-sm font-semibold text-black">
-                    {priceLabel}
-                  </div>
-                )}
-              </div>
-            </a>
-          );
-        })}
-      </div>
+      {/* Resultados carregados no cliente para evitar issues de SSR/cache */}
+      <ResultsClient initialQuery={query} />
     </div>
   );
 }
