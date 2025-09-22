@@ -1,16 +1,18 @@
 // src/app/api/search/route.ts
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /* ================= utils ================= */
 
+/** Remove acentos/diacríticos e normaliza espaços */
 function normalize(s: string) {
-  return s
-    .normalize("NFKD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim();
+  return s.normalize("NFKD").replace(/\p{Diacritic}/gu, "").trim();
 }
+
+/** Parte a query em tokens simples e seguros */
 function splitTokens(q: string) {
   const s = normalize(q)
     .toLowerCase()
@@ -20,12 +22,14 @@ function splitTokens(q: string) {
     .trim();
   return s ? s.split(" ") : [];
 }
+
+/** Converte cêntimos para euros */
 function centsToEur(v?: number | null) {
   if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
   return Math.round(v) / 100;
 }
 
-/** Seleção do Prisma */
+/** Seleção do Prisma (ajusta se mudares o select) */
 type Row = {
   id: string;
   slug: string;
@@ -36,6 +40,7 @@ type Row = {
   description: string | null;
   updatedAt: Date;
 };
+
 /** Payload para o UI */
 type UIProduct = {
   id: string;
@@ -45,7 +50,7 @@ type UIProduct = {
   price?: number;
 };
 
-/* Match em JS (fallback ultra robusto) */
+/** Match em JS (fallback ultra robusto) */
 function matchesRow(p: Row, qFull: string, tokens: string[]) {
   const hay = normalize(
     `${p.name} ${p.slug} ${p.team} ${p.description ?? ""}`
@@ -53,7 +58,7 @@ function matchesRow(p: Row, qFull: string, tokens: string[]) {
 
   if (qFull && hay.includes(qFull)) return true;
   if (tokens.length === 0) return false;
-  return tokens.every((t) => hay.includes(t));
+  return tokens.every((t: string) => hay.includes(t));
 }
 
 /* ================= handler ================= */
@@ -67,10 +72,6 @@ export async function GET(req: Request) {
   const tokens = splitTokens(qRaw);
 
   try {
-    const { PrismaClient } = await import("@prisma/client");
-    const prisma = (globalThis as any).__prisma ?? new PrismaClient();
-    (globalThis as any).__prisma = prisma;
-
     // ---------- Tentativa 1: WHERE no Prisma ----------
     const fullMatch = {
       OR: [
@@ -80,6 +81,7 @@ export async function GET(req: Request) {
         { description: { contains: qRaw, mode: "insensitive" as const } },
       ],
     };
+
     const tokensMatch =
       tokens.length > 0
         ? {
@@ -94,7 +96,8 @@ export async function GET(req: Request) {
           }
         : undefined;
 
-    const where = tokensMatch && tokens.length > 1 ? { OR: [fullMatch, tokensMatch] } : fullMatch;
+    const where =
+      tokensMatch && tokens.length > 1 ? { OR: [fullMatch, tokensMatch] } : fullMatch;
 
     let rows = (await prisma.product.findMany({
       where,
@@ -129,10 +132,10 @@ export async function GET(req: Request) {
         },
       })) as Row[];
 
-      rows = all.filter((p) => matchesRow(p, qFull, tokens));
+      rows = all.filter((p: Row) => matchesRow(p, qFull, tokens));
     }
 
-    const products: UIProduct[] = rows.map((p) => ({
+    const products: UIProduct[] = rows.map((p: Row) => ({
       id: p.id,
       name: p.name,
       slug: p.slug,
@@ -142,6 +145,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ products });
   } catch {
+    // Em caso de erro, devolve vazio (evita quebrar a página)
     return NextResponse.json({ products: [] });
   }
 }
