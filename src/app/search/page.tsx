@@ -1,54 +1,36 @@
 // src/app/search/page.tsx
-import { headers } from "next/headers";
 import { Search } from "lucide-react";
 
 /* =========================== helpers =========================== */
 
-/** Converte vários formatos de preço para número (euros).
- *  - já em euros: 89.99 -> 89.99
- *  - em string com vírgula: "89,99" -> 89.99
- *  - em cêntimos (inteiro): 8999 -> 89.99
- */
 function normalizePrice(input: unknown): number | undefined {
   if (input == null) return undefined;
-
-  // já number
   if (typeof input === "number") {
-    // Heurística: se vier em cêntimos (ex.: 8999), converte para euros
     if (input >= 1000) return Math.round(input) / 100;
     return input;
   }
-
-  // string -> remove espaços, troca vírgula por ponto
   if (typeof input === "string") {
     const raw = input.trim().replace(/\s/g, "");
-    if (/^\d+$/.test(raw)) {
-      // só dígitos => muito provavelmente cêntimos
-      return Number(raw) / 100;
-    }
+    if (/^\d+$/.test(raw)) return Number(raw) / 100;
     const n = Number(raw.replace(",", "."));
     return Number.isFinite(n) ? n : undefined;
   }
-
-  // objetos tipo Decimal do Prisma
   if (typeof (input as any)?.toNumber === "function") {
     try {
       const n = (input as any).toNumber();
-      if (typeof n === "number") return normalizePrice(n);
+      return normalizePrice(n);
     } catch {}
   }
   if (typeof (input as any)?.toString === "function") {
     return normalizePrice((input as any).toString());
   }
-
   return undefined;
 }
 
-/** Formata em EUR (pt-PT) e remove o espaço NBSP para ficar 89,99€ */
 function formatEUR(value: number) {
   return value
     .toLocaleString("pt-PT", { style: "currency", currency: "EUR" })
-    .replace(/\s/g, ""); // remove NBSP entre número e símbolo
+    .replace(/\s/g, "");
 }
 
 /* =========================== tipos =========================== */
@@ -58,57 +40,50 @@ type UIProduct = {
   name: string;
   slug?: string;
   img?: string;
-  price?: number; // em euros
+  price?: number; // EUR
 };
-
-/* =========================== page =========================== */
 
 export const revalidate = 0;
 
 type PageProps = {
-  searchParams: Promise<{ q?: string }>;
+  searchParams?: { q?: string };
 };
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const { q = "" } = await searchParams;
-  const query = q.trim();
-
-  // Construir URL absoluta para a API (Next 15: headers() é async)
-  const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000";
-  const proto = h.get("x-forwarded-proto") || "http";
-  const base = `${proto}://${host}`;
-  const apiURL = new URL("/api/search", base);
-  if (query) apiURL.searchParams.set("q", query);
+  const query = (searchParams?.q ?? "").toString().trim();
 
   let results: UIProduct[] = [];
-  try {
-    const res = await fetch(apiURL.toString(), { cache: "no-store" });
-    if (res.ok) {
-      const json = await res.json();
-      const arr: any[] = Array.isArray(json?.products) ? json.products : [];
-
-      results = arr.map((p: any): UIProduct => {
-        const price = normalizePrice(
-          p.price ?? p.basePrice ?? p.price_eur ?? p.amount ?? p.value
-        );
-        const img =
-          p.img ??
-          p.image ??
-          p.imageUrl ??
-          (Array.isArray(p.images) ? (p.images[0]?.url ?? p.images[0]) : undefined);
-
-        return {
-          id: p.id ?? p.slug ?? p.name,
-          name: p.name ?? p.title ?? p.productName ?? "Product",
-          slug: p.slug,
-          img,
-          price,
-        };
+  if (query) {
+    try {
+      // URL relativa — corre em RSC no servidor
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+        cache: "no-store",
       });
+      if (res.ok) {
+        const json = await res.json();
+        const arr: any[] = Array.isArray(json?.products) ? json.products : [];
+        results = arr.map((p: any): UIProduct => {
+          const price = normalizePrice(
+            p.price ?? p.basePrice ?? p.price_eur ?? p.amount ?? p.value
+          );
+          const img =
+            p.img ??
+            p.image ??
+            p.imageUrl ??
+            (Array.isArray(p.images) ? (p.images[0]?.url ?? p.images[0]) : undefined);
+
+          return {
+            id: p.id ?? p.slug ?? p.name,
+            name: p.name ?? p.title ?? p.productName ?? "Product",
+            slug: p.slug,
+            img,
+            price,
+          };
+        });
+      }
+    } catch {
+      // mantém results=[]
     }
-  } catch {
-    // mantém results como []
   }
 
   return (
@@ -140,7 +115,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
       {/* Resultados */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {results.length === 0 && (
+        {!!query && results.length === 0 && (
           <p className="text-gray-500 col-span-full">
             No products found. Try another term.
           </p>
