@@ -143,7 +143,8 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (random order, sem flash, Ken Burns, preload, timeout em cadeia)
+   2) HERO IMAGE CYCLER (random order, sem flash, Ken Burns, preload)
+   >>> Corrigido: garante MINÍMO 1 intervalo entre trocas, inclusive a 2.ª imagem.
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -398,11 +399,12 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * Cross-fade suave com Ken Burns + preload + fallback.
- * Usa setTimeout em cadeia (um único “loop”) e só começa depois da primeira imagem carregar.
+ * Cross-fade suave com Ken Burns + preload + **garantia de intervalo mínimo**.
+ * Implementa um *único* setTimeout em cadeia e controla o tempo via timestamp,
+ * evitando trocas “duplas” (especialmente a 2.ª imagem).
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
-  // ordem baralhada e início aleatório
+  // ordem baralhada + índice inicial aleatório
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(Math.floor(Math.random() * orderRef.current.length))
 
@@ -411,8 +413,12 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const [previous, setPrevious] = useState<number | null>(null)
   const [firstReady, setFirstReady] = useState(false)
 
-  // ref para ler current dentro do timeout sem dependências
+  // refs utilitários
   const currentRef = useRef(current)
+  const startedRef = useRef(false)
+  const timerRef = useRef<number | null>(null)
+  const lastSwitchRef = useRef<number>(0)
+
   useEffect(() => {
     currentRef.current = current
   }, [current])
@@ -432,35 +438,51 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // timeout em cadeia (só começa após a 1.ª imagem estar pronta)
+  const clearTimer = () => {
+    if (timerRef.current != null) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+  }
+
+  const scheduleNext = () => {
+    clearTimer()
+    const now = performance.now()
+    const elapsed = now - lastSwitchRef.current
+    const wait = Math.max(0, interval - elapsed)
+    timerRef.current = window.setTimeout(run, wait)
+  }
+
+  const run = () => {
+    // atualiza ponteiro e rebaralha ao rodar
+    ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
+    if (ptrRef.current === 0) {
+      orderRef.current = shuffle(orderRef.current)
+    }
+    const nextIdx = orderRef.current[ptrRef.current]
+
+    setPrevious(currentRef.current)
+    setCurrent(nextIdx)
+
+    // regista o momento da troca e prepara preload do seguinte
+    lastSwitchRef.current = performance.now()
+    const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
+    preload(after)
+
+    // agenda a próxima troca garantindo o intervalo completo
+    scheduleNext()
+  }
+
+  // Início do ciclo: só depois da 1.ª imagem estar pronta
   useEffect(() => {
     if (!firstReady) return
-    let t: number | null = null
-
-    const run = () => {
-      // avança ponteiro; se rodar, baralha de novo
-      ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
-      if (ptrRef.current === 0) {
-        orderRef.current = shuffle(orderRef.current)
-      }
-      const nextIdx = orderRef.current[ptrRef.current]
-      setPrevious(currentRef.current)
-      setCurrent(nextIdx)
-
-      // preload do seguinte
-      const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
-      preload(after)
-
-      t = window.setTimeout(run, interval)
-    }
-
-    // agenda a primeira troca após o intervalo completo
-    t = window.setTimeout(run, interval)
-
-    return () => {
-      if (t != null) window.clearTimeout(t)
-    }
-  }, [interval, firstReady])
+    if (startedRef.current) return
+    startedRef.current = true
+    lastSwitchRef.current = performance.now()
+    scheduleNext()
+    return clearTimer
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstReady, interval])
 
   // Ken Burns: origem aleatória por slide
   const [kbSeed, setKbSeed] = useState(() => Math.random())
@@ -502,7 +524,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
             if ((img as any)._fallbackApplied) return
             ;(img as any)._fallbackApplied = true
             img.src = FALLBACK_IMG
-            setFirstReady(true)
           }}
         />
       )}
@@ -516,13 +537,22 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         initial={{ opacity: 0, scale: 1.04, filter: 'blur(6px)' }}
         animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
         transition={{ duration: 0.9, ease: 'easeOut' }}
-        onLoad={() => setFirstReady(true)}
+        onLoad={() => {
+          // marca o início real do ciclo
+          if (!firstReady) {
+            setFirstReady(true)
+            lastSwitchRef.current = performance.now()
+          }
+        }}
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement
           if ((img as any)._fallbackApplied) return
           ;(img as any)._fallbackApplied = true
           img.src = FALLBACK_IMG
-          setFirstReady(true)
+          if (!firstReady) {
+            setFirstReady(true)
+            lastSwitchRef.current = performance.now()
+          }
         }}
       />
 
