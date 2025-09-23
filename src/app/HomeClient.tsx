@@ -398,71 +398,77 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * Cross-fade SUAVE (sem flash) com efeito Ken Burns (zoom/pan subtil).
- * Mantemos a imagem anterior por baixo enquanto a nova aparece.
- * Também fazemos preload da próxima e fallback se der erro.
+ * Cross-fade suave com Ken Burns + preload + fallback.
+ * Agora começa SEMPRE numa imagem aleatória (e ordem aleatória).
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
-  const [current, setCurrent] = useState(0)
+  // ordem baralhada e ponteiro inicial aleatório
+  const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
+  const ptrRef = useRef<number>(Math.floor(Math.random() * orderRef.current.length))
+
+  const [current, setCurrent] = useState<number>(orderRef.current[ptrRef.current])
   const [previous, setPrevious] = useState<number | null>(null)
   const [firstReady, setFirstReady] = useState(false)
-
-  const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
-  const ptrRef = useRef(0)
 
   // Preload helper
   const preload = (idx: number) => {
     const img = new Image()
     img.src = heroImages[idx].src
-    if ('decode' in img) {
-      ;(img as any).decode?.().catch(() => void 0)
-    }
+    ;(img as any).decode?.().catch(() => void 0)
   }
 
-  // Inicial: garantir preload do primeiro e do próximo
+  // preload inicial (imagem atual + próxima)
   useEffect(() => {
-    preload(orderRef.current[0])
-    preload(orderRef.current[1])
+    preload(orderRef.current[ptrRef.current])
+    const nextIdx = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
+    preload(nextIdx)
   }, [])
 
   useEffect(() => {
     const id = setInterval(() => {
-      const order = orderRef.current
-      ptrRef.current = (ptrRef.current + 1) % order.length
+      // avança ponteiro; se voltar ao início, volta a baralhar
+      ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
       if (ptrRef.current === 0) {
         orderRef.current = shuffle(orderRef.current)
       }
       const nextIdx = orderRef.current[ptrRef.current]
       setPrevious(current)
       setCurrent(nextIdx)
-      // Precarregar o seguinte
+
+      // precarrega a seguinte
       const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
       preload(after)
     }, interval)
     return () => clearInterval(id)
   }, [interval, current])
 
-  // Ken Burns: origem aleatória para cada nova imagem
+  // Ken Burns: origem aleatória
   const [kbSeed, setKbSeed] = useState(() => Math.random())
   useEffect(() => {
     setKbSeed(Math.random())
   }, [current])
 
-  // origem (transform-origin) muda: cantos/lados aleatórios
-  const originList = ['center', 'left top', 'right top', 'left bottom', 'right bottom', 'center top', 'center bottom', 'left center', 'right center']
+  const originList = [
+    'center',
+    'left top',
+    'right top',
+    'left bottom',
+    'right bottom',
+    'center top',
+    'center bottom',
+    'left center',
+    'right center',
+  ]
   const origin = originList[Math.floor(kbSeed * originList.length)]
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
-      {/* Overlay suave para dar profundidade e esconder qualquer “edge” */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {/* Placeholder/skeleton até a primeira imagem carregar */}
       {!firstReady && (
         <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 to-slate-50" />
       )}
 
-      {/* Imagem anterior (a desaparecer) */}
       {previous !== null && (
         <motion.img
           key={`prev-${previous}`}
@@ -481,7 +487,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         />
       )}
 
-      {/* Imagem atual (a aparecer com Ken Burns) */}
       <motion.img
         key={`curr-${current}`}
         src={heroImages[current].src}
@@ -500,7 +505,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         }}
       />
 
-      {/* brilho de borda muito subtil */}
       <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-black/5" />
     </div>
   )
