@@ -6,17 +6,17 @@ import { useMemo, useState, useTransition } from "react";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 
-/* ====================== Tipos (UI) ====================== */
+/* ====================== UI Types ====================== */
 type OptionValueUI = {
   id: string;
   value: string;
   label: string;
-  priceDelta: number;
+  priceDelta: number; // cents
 };
 
 type OptionGroupUI = {
   id: string;
-  key: string;
+  key: string; // e.g., "customization", "shorts", "socks"
   label: string;
   type: "SIZE" | "RADIO" | "ADDON";
   required: boolean;
@@ -25,7 +25,7 @@ type OptionGroupUI = {
 
 type SizeUI = {
   id: string;
-  size: string;
+  size: string; // e.g., "XS", "S", "M", "10Y"
   stock: number;
 };
 
@@ -35,9 +35,19 @@ type ProductUI = {
   name: string;
   team?: string | null;
   description?: string | null;
-  basePrice: number;
+  basePrice: number; // cents
   images: string[];
+
+  /** Adult sizes (required, backward-compatible with your DB) */
   sizes: SizeUI[];
+
+  /** Kids sizes (optional). If present, the Adult/Kids toggle appears. */
+  kidsSizes?: SizeUI[];
+
+  /** Optional delta in cents applied when Kids is selected (can be negative). */
+  kidsPriceDelta?: number;
+
+  /** Other option groups (customization, shorts, socks, etc.) */
   optionGroups: OptionGroupUI[];
 };
 
@@ -45,31 +55,7 @@ type Props = {
   product: ProductUI;
 };
 
-/* =============== helpers =============== */
-/** Garante que o seletor de tamanhos tenha XS, S, M, L, XL, 2XL, 3XL. */
-function ensureUpTo3XL(values: OptionValueUI[]): OptionValueUI[] {
-  const wanted = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
-  const byVal = new Map(values.map((v) => [v.value.toUpperCase(), v]));
-  const result: OptionValueUI[] = [];
-
-  for (const w of wanted) {
-    const existing = byVal.get(w);
-    if (existing) {
-      result.push(existing);
-    } else {
-      // cria opção simples sem custo
-      result.push({
-        id: `extra-${w}`,
-        value: w,
-        label: w,
-        priceDelta: 0,
-      });
-    }
-  }
-  return result;
-}
-
-/* ====================== Componente ====================== */
+/* ====================== Component ====================== */
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<Record<string, string | null>>({});
   const [custName, setCustName] = useState("");
@@ -81,12 +67,45 @@ export default function ProductConfigurator({ product }: Props) {
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
 
-  const sizeGroupRaw = product.optionGroups.find((g) => g.key === "size");
-  const sizeGroup = useMemo<OptionGroupUI | null>(() => {
-    if (!sizeGroupRaw) return null;
-    return { ...sizeGroupRaw, values: ensureUpTo3XL(sizeGroupRaw.values || []) };
-  }, [sizeGroupRaw]);
+  /* ---------- Adult/Kids logic ---------- */
+  type SizeCategory = "ADULT" | "KIDS";
+  const hasKids = (product.kidsSizes?.length ?? 0) > 0;
+  const [category, setCategory] = useState<SizeCategory>("ADULT");
 
+  const adultSizes = useMemo<SizeUI[]>(() => product.sizes ?? [], [product.sizes]);
+  const kidsSizes = useMemo<SizeUI[]>(() => product.kidsSizes ?? [], [product.kidsSizes]);
+
+  // Track selected size per category so switching tabs preserves the choice
+  const [selectedAdultSize, setSelectedAdultSize] = useState<string | null>(
+    adultSizes[0]?.size ?? null
+  );
+  const [selectedKidsSize, setSelectedKidsSize] = useState<string | null>(
+    kidsSizes[0]?.size ?? null
+  );
+
+  const activeSizes = category === "ADULT" ? adultSizes : kidsSizes;
+  const selectedSize = category === "ADULT" ? selectedAdultSize : selectedKidsSize;
+
+  const stockForSelected = useMemo(() => {
+    if (!selectedSize) return 0;
+    const match = activeSizes.find((s) => s.size === selectedSize);
+    return match?.stock ?? 0;
+  }, [activeSizes, selectedSize]);
+
+  // choose size
+  const pickSize = (size: string) => {
+    if (category === "ADULT") setSelectedAdultSize(size);
+    else setSelectedKidsSize(size);
+    setSelected((s) => ({ ...s, size }));
+  };
+
+  const switchCategory = (next: SizeCategory) => {
+    setCategory(next);
+    const size = next === "ADULT" ? selectedAdultSize : selectedKidsSize;
+    setSelected((s) => ({ ...s, size: size ?? null }));
+  };
+
+  /* ---------- Other option groups ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
   const shortsGroup = product.optionGroups.find((g) => g.key === "shorts");
   const socksGroup = product.optionGroups.find((g) => g.key === "socks");
@@ -95,47 +114,73 @@ export default function ProductConfigurator({ product }: Props) {
   );
 
   const customization = selected["customization"] ?? "";
-  const showNameNumber = customization.includes("name-number");
+  const showNameNumber = typeof customization === "string" && customization.includes("name-number");
 
-  /* Total */
-  const finalPrice = useMemo(() => {
-    let total = product.basePrice;
+  // simple setter for onPick (fixes TS error)
+  const setOption = (key: string, value: string) => {
+    setSelected((s) => ({ ...s, [key]: value || null }));
+  };
+
+  /* ---------- Price ---------- */
+  const unitPrice = useMemo(() => {
+    let price = product.basePrice;
+
+    // Kids price delta (if any)
+    if (category === "KIDS" && typeof product.kidsPriceDelta === "number") {
+      price += product.kidsPriceDelta;
+    }
+
+    // Add deltas from selected options (RADIO/ADDON)
     for (const g of product.optionGroups) {
+      if (g.type === "SIZE") continue; // we now control size via separate UI
       const chosen = selected[g.key];
       if (!chosen) continue;
       const v = g.values.find((x) => x.value === chosen);
-      if (v) total += v.priceDelta;
+      if (v) price += v.priceDelta;
     }
-    return total * qty;
-  }, [product.basePrice, product.optionGroups, selected, qty]);
 
-  const onPick = (groupKey: string, value: string) => {
-    setSelected((s) => ({ ...s, [groupKey]: value || null }));
-  };
+    return price;
+  }, [product.basePrice, product.kidsPriceDelta, category, product.optionGroups, selected]);
 
-  /* Normalização de inputs da personalização */
+  const finalPrice = unitPrice * qty;
+
+  /* ---------- Inputs sanitize ---------- */
   const safeName = useMemo(
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
     [custName]
   );
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
-  /* Add to cart (server action) */
+  /* ---------- Add to cart ---------- */
   const addToCart = () => {
+    if (!selectedSize) {
+      alert("Please choose a size first.");
+      return;
+    }
+    if (qty < 1) {
+      alert("Quantity must be at least 1.");
+      return;
+    }
+    if (qty > stockForSelected) {
+      alert(`Only ${stockForSelected} in stock for size ${selectedSize}.`);
+      return;
+    }
+
     startTransition(async () => {
       await addToCartAction({
         productId: product.id,
         qty,
-        options: selected,
+        options: selected, // includes { size: "M", customization: "...", ... }
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
-      // aqui podes abrir um drawer/toast ou navegar para o carrinho
+      // toast or open cart drawer here if you want
     });
   };
 
+  /* ---------- UI ---------- */
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      {/* Galeria */}
+      {/* Gallery */}
       <div className="rounded-2xl border bg-white p-4 w-full lg:w-[560px] flex-none lg:self-start">
         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white">
           <Image
@@ -167,7 +212,7 @@ export default function ProductConfigurator({ product }: Props) {
         )}
       </div>
 
-      {/* Configurador */}
+      {/* Configurator */}
       <div className="card p-6 space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
@@ -177,15 +222,91 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </header>
 
-        {/* Size */}
-        {sizeGroup && <GroupBlock group={sizeGroup} selected={selected} onPick={onPick} />}
+        {/* --- Size category toggle (Adult / Kids) --- */}
+        {hasKids && (
+          <div className="rounded-2xl border p-4 bg-white/70 space-y-2">
+            <div className="text-sm text-gray-700">Category *</div>
+            <div className="inline-flex items-center rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => switchCategory("ADULT")}
+                className={`px-4 py-2 rounded-lg text-sm transition ${
+                  category === "ADULT" ? "bg-blue-600 text-white shadow" : "hover:bg-white"
+                }`}
+                aria-pressed={category === "ADULT"}
+              >
+                Adult
+              </button>
+              <button
+                type="button"
+                onClick={() => switchCategory("KIDS")}
+                className={`px-4 py-2 rounded-lg text-sm transition ${
+                  category === "KIDS" ? "bg-blue-600 text-white shadow" : "hover:bg-white"
+                }`}
+                aria-pressed={category === "KIDS"}
+              >
+                Kids
+              </button>
+            </div>
 
-        {/* Customization */}
-        {customizationGroup && (
-          <GroupBlock group={customizationGroup} selected={selected} onPick={onPick} />
+            {category === "KIDS" && typeof product.kidsPriceDelta === "number" && (
+              <p
+                className={`text-xs ${
+                  product.kidsPriceDelta < 0 ? "text-emerald-600" : "text-gray-700"
+                }`}
+              >
+                {product.kidsPriceDelta < 0
+                  ? `Kids special price: ${money(product.kidsPriceDelta)}`
+                  : `Kids surcharge: +${money(product.kidsPriceDelta)}`}
+              </p>
+            )}
+          </div>
         )}
 
-        {/* Personalization (sem “Choose a player”) */}
+        {/* --- Size selector (per category) --- */}
+        <div className="rounded-2xl border p-4 bg-white/70">
+          <div className="mb-2 text-sm text-gray-700">
+            Size ({category === "ADULT" ? "Adult" : "Kids"}) <span className="text-red-500">*</span>
+          </div>
+
+          {activeSizes.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {activeSizes.map((s) => {
+                const isActive = selectedSize === s.size;
+                const outOfStock = (s.stock ?? 0) <= 0;
+                return (
+                  <button
+                    key={`${category}-${s.size}`}
+                    type="button"
+                    disabled={outOfStock}
+                    onClick={() => pickSize(s.size)}
+                    className={`rounded-xl px-3 py-2 border text-sm transition ${
+                      isActive ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
+                    } ${outOfStock ? "opacity-40 cursor-not-allowed line-through" : ""}`}
+                    aria-pressed={isActive}
+                  >
+                    {s.size}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No sizes available for this category.</div>
+          )}
+
+          {selectedSize && (
+            <div className="text-xs text-gray-600 mt-1">
+              Stock for <b>{selectedSize}</b>: {stockForSelected}
+            </div>
+          )}
+        </div>
+
+        {/* --- Customization (RADIO) --- */}
+        {customizationGroup && (
+          <GroupBlock group={customizationGroup} selected={selected} onPick={setOption} />
+        )}
+
+        {/* --- Personalization (Name & Number) --- */}
         {showNameNumber && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">Personalization</div>
@@ -221,14 +342,13 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* Add-ons */}
-        {shortsGroup && <GroupBlock group={shortsGroup} selected={selected} onPick={onPick} />}
-        {socksGroup && <GroupBlock group={socksGroup} selected={selected} onPick={onPick} />}
+        {/* --- Add-ons and other groups --- */}
+        {shortsGroup && <GroupBlock group={shortsGroup} selected={selected} onPick={setOption} />}
+        {socksGroup && <GroupBlock group={socksGroup} selected={selected} onPick={setOption} />}
         {otherGroups.map((g) => (
-          <GroupBlock key={g.id} group={g} selected={selected} onPick={onPick} />
+          <GroupBlock key={g.id} group={g} selected={selected} onPick={setOption} />
         ))}
-
-        {/* Qty + Total */}
+        {/* Qty + Totals */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
@@ -242,7 +362,7 @@ export default function ProductConfigurator({ product }: Props) {
             <span className="min-w-[2ch] text-center">{qty}</span>
             <button
               className="rounded-xl border px-3 py-2 hover:bg-gray-50"
-              onClick={() => setQty((q) => q + 1)}
+              onClick={() => setQty((q) => Math.min(q + 1, stockForSelected || 99))}
               aria-label="Increase quantity"
               disabled={pending}
             >
@@ -250,14 +370,21 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
           </div>
 
-          <div className="text-xl font-semibold">{money(finalPrice)}</div>
+          <div className="text-right">
+            <div className="text-sm text-gray-600">Unit</div>
+            <div className="text-lg font-semibold">{money(unitPrice)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-600">Total</div>
+            <div className="text-lg font-semibold">{money(finalPrice)}</div>
+          </div>
         </div>
 
         {/* CTA */}
         <button
           onClick={addToCart}
           className="btn-primary w-full sm:w-auto disabled:opacity-60"
-          disabled={pending}
+          disabled={pending || !selectedSize || qty < 1 || qty > stockForSelected}
         >
           {pending ? "Adding…" : "Add to cart"}
         </button>
@@ -266,7 +393,7 @@ export default function ProductConfigurator({ product }: Props) {
   );
 }
 
-/* ====================== Sub-componente de Grupo ====================== */
+/* ====================== Group Subcomponent ====================== */
 function GroupBlock({
   group,
   selected,
@@ -277,6 +404,7 @@ function GroupBlock({
   onPick: (key: string, value: string) => void;
 }) {
   if (group.type === "SIZE") {
+    // (Kept for compatibility if you ever pass a SIZE group. It will render as pills.)
     return (
       <div className="rounded-2xl border p-4 bg-white/70">
         <div className="mb-2 text-sm text-gray-700">
