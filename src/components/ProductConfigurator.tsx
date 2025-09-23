@@ -26,7 +26,7 @@ type OptionGroupUI = {
 type SizeUI = {
   id: string;
   size: string; // e.g., "XS", "S", "M", "10Y"
-  stock: number;
+  stock: number; // kept in the type for admin/backend use, but NOT used here
 };
 
 type ProductUI = {
@@ -35,7 +35,7 @@ type ProductUI = {
   name: string;
   team?: string | null;
   description?: string | null;
-  basePrice: number; // cents
+  basePrice: number;     // cents
   images: string[];
 
   /** Adult sizes (required, backward-compatible with your DB) */
@@ -72,8 +72,14 @@ export default function ProductConfigurator({ product }: Props) {
   const hasKids = (product.kidsSizes?.length ?? 0) > 0;
   const [category, setCategory] = useState<SizeCategory>("ADULT");
 
-  const adultSizes = useMemo<SizeUI[]>(() => product.sizes ?? [], [product.sizes]);
-  const kidsSizes = useMemo<SizeUI[]>(() => product.kidsSizes ?? [], [product.kidsSizes]);
+  const adultSizes = useMemo<SizeUI[]>(
+    () => product.sizes ?? [],
+    [product.sizes]
+  );
+  const kidsSizes = useMemo<SizeUI[]>(
+    () => product.kidsSizes ?? [],
+    [product.kidsSizes]
+  );
 
   // Track selected size per category so switching tabs preserves the choice
   const [selectedAdultSize, setSelectedAdultSize] = useState<string | null>(
@@ -86,13 +92,7 @@ export default function ProductConfigurator({ product }: Props) {
   const activeSizes = category === "ADULT" ? adultSizes : kidsSizes;
   const selectedSize = category === "ADULT" ? selectedAdultSize : selectedKidsSize;
 
-  const stockForSelected = useMemo(() => {
-    if (!selectedSize) return 0;
-    const match = activeSizes.find((s) => s.size === selectedSize);
-    return match?.stock ?? 0;
-  }, [activeSizes, selectedSize]);
-
-  // choose size
+  // choose size (no stock logic here)
   const pickSize = (size: string) => {
     if (category === "ADULT") setSelectedAdultSize(size);
     else setSelectedKidsSize(size);
@@ -116,7 +116,7 @@ export default function ProductConfigurator({ product }: Props) {
   const customization = selected["customization"] ?? "";
   const showNameNumber = typeof customization === "string" && customization.includes("name-number");
 
-  // simple setter for onPick (fixes TS error)
+  // simple setter for onPick
   const setOption = (key: string, value: string) => {
     setSelected((s) => ({ ...s, [key]: value || null }));
   };
@@ -132,7 +132,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     // Add deltas from selected options (RADIO/ADDON)
     for (const g of product.optionGroups) {
-      if (g.type === "SIZE") continue; // we now control size via separate UI
+      if (g.type === "SIZE") continue; // size handled separately
       const chosen = selected[g.key];
       if (!chosen) continue;
       const v = g.values.find((x) => x.value === chosen);
@@ -161,10 +161,6 @@ export default function ProductConfigurator({ product }: Props) {
       alert("Quantity must be at least 1.");
       return;
     }
-    if (qty > stockForSelected) {
-      alert(`Only ${stockForSelected} in stock for size ${selectedSize}.`);
-      return;
-    }
 
     startTransition(async () => {
       await addToCartAction({
@@ -173,7 +169,7 @@ export default function ProductConfigurator({ product }: Props) {
         options: selected, // includes { size: "M", customization: "...", ... }
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
-      // toast or open cart drawer here if you want
+      // toast / cart drawer here if you want
     });
   };
 
@@ -273,16 +269,14 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="flex flex-wrap gap-2">
               {activeSizes.map((s) => {
                 const isActive = selectedSize === s.size;
-                const outOfStock = (s.stock ?? 0) <= 0;
                 return (
                   <button
                     key={`${category}-${s.size}`}
                     type="button"
-                    disabled={outOfStock}
                     onClick={() => pickSize(s.size)}
                     className={`rounded-xl px-3 py-2 border text-sm transition ${
                       isActive ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
-                    } ${outOfStock ? "opacity-40 cursor-not-allowed line-through" : ""}`}
+                    }`}
                     aria-pressed={isActive}
                   >
                     {s.size}
@@ -292,12 +286,6 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
           ) : (
             <div className="text-sm text-gray-500">No sizes available for this category.</div>
-          )}
-
-          {selectedSize && (
-            <div className="text-xs text-gray-600 mt-1">
-              Stock for <b>{selectedSize}</b>: {stockForSelected}
-            </div>
           )}
         </div>
 
@@ -348,6 +336,7 @@ export default function ProductConfigurator({ product }: Props) {
         {otherGroups.map((g) => (
           <GroupBlock key={g.id} group={g} selected={selected} onPick={setOption} />
         ))}
+
         {/* Qty + Totals */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -362,7 +351,7 @@ export default function ProductConfigurator({ product }: Props) {
             <span className="min-w-[2ch] text-center">{qty}</span>
             <button
               className="rounded-xl border px-3 py-2 hover:bg-gray-50"
-              onClick={() => setQty((q) => Math.min(q + 1, stockForSelected || 99))}
+              onClick={() => setQty((q) => q + 1)}
               aria-label="Increase quantity"
               disabled={pending}
             >
@@ -384,7 +373,7 @@ export default function ProductConfigurator({ product }: Props) {
         <button
           onClick={addToCart}
           className="btn-primary w-full sm:w-auto disabled:opacity-60"
-          disabled={pending || !selectedSize || qty < 1 || qty > stockForSelected}
+          disabled={pending || !selectedSize || qty < 1}
         >
           {pending ? "Adding…" : "Add to cart"}
         </button>
@@ -404,7 +393,7 @@ function GroupBlock({
   onPick: (key: string, value: string) => void;
 }) {
   if (group.type === "SIZE") {
-    // (Kept for compatibility if you ever pass a SIZE group. It will render as pills.)
+    // Kept only for compatibility; not used for stock or caps.
     return (
       <div className="rounded-2xl border p-4 bg-white/70">
         <div className="mb-2 text-sm text-gray-700">
