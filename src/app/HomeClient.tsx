@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (random order, fix do 2º slide, no white flash, Ken Burns, preload)
+   2) HERO IMAGE CYCLER (random order, sem flash, Ken Burns, preload, timeout em cadeia)
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -399,11 +399,10 @@ function shuffle<T>(arr: T[]) {
 
 /**
  * Cross-fade suave com Ken Burns + preload + fallback.
- * Começa sempre numa imagem aleatória e mantém um ÚNICO timer,
- * evitando que a 2ª imagem troque logo a seguir.
+ * Usa setTimeout em cadeia (um único “loop”) e só começa depois da primeira imagem carregar.
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
-  // ordem baralhada e ponteiro inicial aleatório
+  // ordem baralhada e início aleatório
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(Math.floor(Math.random() * orderRef.current.length))
 
@@ -412,7 +411,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const [previous, setPrevious] = useState<number | null>(null)
   const [firstReady, setFirstReady] = useState(false)
 
-  // ref para ler o "current" dentro do setInterval sem dependências
+  // ref para ler current dentro do timeout sem dependências
   const currentRef = useRef(current)
   useEffect(() => {
     currentRef.current = current
@@ -425,7 +424,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     ;(img as any).decode?.().catch(() => void 0)
   }
 
-  // preload inicial (imagem atual + próxima)
+  // preload inicial (atual + próximo)
   useEffect(() => {
     preload(orderRef.current[ptrRef.current])
     const nextIdx = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
@@ -433,12 +432,13 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ÚNICO timer (não depende de "current")
+  // timeout em cadeia (só começa após a 1.ª imagem estar pronta)
   useEffect(() => {
-    let id: number | null = null
+    if (!firstReady) return
+    let t: number | null = null
 
-    const tick = () => {
-      // avança ponteiro; se voltar ao início, volta a baralhar
+    const run = () => {
+      // avança ponteiro; se rodar, baralha de novo
       ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
       if (ptrRef.current === 0) {
         orderRef.current = shuffle(orderRef.current)
@@ -447,23 +447,26 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
       setPrevious(currentRef.current)
       setCurrent(nextIdx)
 
-      // precarrega a seguinte
+      // preload do seguinte
       const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
       preload(after)
+
+      t = window.setTimeout(run, interval)
     }
 
-    id = window.setInterval(tick, interval)
+    // agenda a primeira troca após o intervalo completo
+    t = window.setTimeout(run, interval)
+
     return () => {
-      if (id != null) window.clearInterval(id)
+      if (t != null) window.clearTimeout(t)
     }
-  }, [interval])
+  }, [interval, firstReady])
 
-  // Ken Burns: origem aleatória
+  // Ken Burns: origem aleatória por slide
   const [kbSeed, setKbSeed] = useState(() => Math.random())
   useEffect(() => {
     setKbSeed(Math.random())
   }, [current])
-
   const originList = [
     'center',
     'left top',
