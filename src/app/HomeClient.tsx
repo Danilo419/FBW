@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (random order, no white flash, Ken Burns, preload, fallback)
+   2) HERO IMAGE CYCLER (random order, fix do 2º slide, no white flash, Ken Burns, preload)
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -399,16 +399,24 @@ function shuffle<T>(arr: T[]) {
 
 /**
  * Cross-fade suave com Ken Burns + preload + fallback.
- * Agora começa SEMPRE numa imagem aleatória (e ordem aleatória).
+ * Começa sempre numa imagem aleatória e mantém um ÚNICO timer,
+ * evitando que a 2ª imagem troque logo a seguir.
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   // ordem baralhada e ponteiro inicial aleatório
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(Math.floor(Math.random() * orderRef.current.length))
 
+  // estado visual
   const [current, setCurrent] = useState<number>(orderRef.current[ptrRef.current])
   const [previous, setPrevious] = useState<number | null>(null)
   const [firstReady, setFirstReady] = useState(false)
+
+  // ref para ler o "current" dentro do setInterval sem dependências
+  const currentRef = useRef(current)
+  useEffect(() => {
+    currentRef.current = current
+  }, [current])
 
   // Preload helper
   const preload = (idx: number) => {
@@ -422,25 +430,33 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     preload(orderRef.current[ptrRef.current])
     const nextIdx = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
     preload(nextIdx)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ÚNICO timer (não depende de "current")
   useEffect(() => {
-    const id = setInterval(() => {
+    let id: number | null = null
+
+    const tick = () => {
       // avança ponteiro; se voltar ao início, volta a baralhar
       ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
       if (ptrRef.current === 0) {
         orderRef.current = shuffle(orderRef.current)
       }
       const nextIdx = orderRef.current[ptrRef.current]
-      setPrevious(current)
+      setPrevious(currentRef.current)
       setCurrent(nextIdx)
 
       // precarrega a seguinte
       const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
       preload(after)
-    }, interval)
-    return () => clearInterval(id)
-  }, [interval, current])
+    }
+
+    id = window.setInterval(tick, interval)
+    return () => {
+      if (id != null) window.clearInterval(id)
+    }
+  }, [interval])
 
   // Ken Burns: origem aleatória
   const [kbSeed, setKbSeed] = useState(() => Math.random())
@@ -483,6 +499,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
             if ((img as any)._fallbackApplied) return
             ;(img as any)._fallbackApplied = true
             img.src = FALLBACK_IMG
+            setFirstReady(true)
           }}
         />
       )}
@@ -502,6 +519,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
           if ((img as any)._fallbackApplied) return
           ;(img as any)._fallbackApplied = true
           img.src = FALLBACK_IMG
+          setFirstReady(true)
         }}
       />
 
