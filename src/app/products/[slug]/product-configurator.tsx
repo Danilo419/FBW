@@ -2,9 +2,36 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Plus, Minus, ShoppingCart } from "lucide-react";
+import { Check, Plus, Minus, ShoppingCart, Users } from "lucide-react";
+
+/**
+ * ✅ Opção 1 implementada: Adulto | Criança na MESMA página de produto
+ *
+ * Este componente mantém retrocompatibilidade com a tua estrutura atual
+ * e adiciona suporte nativo a um seletor de categoria de tamanho (Adulto/Kids).
+ *
+ * ➜ Como usar (mínimo):
+ *   - Mantém os campos existentes (id, slug, name, basePrice, images, sizes, optionGroups)
+ *   - Para ativares a aba "Criança", passa `kidsSizes` (array de tamanhos kids)
+ *   - Se quiseres preço diferente para Kids, define `kidsPriceDelta` (em cêntimos, pode ser negativo)
+ *
+ * Exemplo de product:
+ * {
+ *   id: "1",
+ *   slug: "camisola-real-25-26",
+ *   name: "Camisola Real Madrid 25/26",
+ *   basePrice: 8990,
+ *   images: ["/rm1.jpg", "/rm2.jpg"],
+ *   sizes: [{ size: "S", stock: 5 }, { size: "M", stock: 8 }, ...], // ADULTO
+ *   kidsSizes: [{ size: "6Y", stock: 3 }, { size: "8Y", stock: 2 }, ...], // opcional -> ativa a aba Criança
+ *   kidsPriceDelta: -1000, // opcional (aqui -10€ para Kids)
+ *   optionGroups: [...]
+ * }
+ */
 
 type OptionType = "SIZE" | "RADIO" | "ADDON";
+
+export type SizeItem = { size: string; stock: number };
 
 type ProductClient = {
   id: string;
@@ -12,7 +39,12 @@ type ProductClient = {
   name: string;
   basePrice: number; // cents
   images: string[];
-  sizes: { size: string; stock: number }[];
+  // Tamanhos Adulto (obrigatório, mantém compatibilidade)
+  sizes: SizeItem[];
+  // Tamanhos Criança (opcional – ativa a aba Criança)
+  kidsSizes?: SizeItem[];
+  // Delta de preço para Kids (ex.: -1000 => -10€ face a basePrice)
+  kidsPriceDelta?: number;
   optionGroups: {
     id: number;
     key: string;
@@ -27,18 +59,44 @@ function eur(cents: number) {
   return (cents / 100).toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 }
 
+// Ordenações úteis
+const ADULT_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+const KIDS_ORDER = ["4Y", "6Y", "8Y", "10Y", "12Y", "14Y"]; 
+
+function sortSizes(list: SizeItem[], isKids: boolean) {
+  const order = isKids ? KIDS_ORDER : ADULT_ORDER;
+  return [...list].sort((a, b) => order.indexOf(a.size) - order.indexOf(b.size));
+}
+
 export default function ProductConfigurator({ product }: { product: ProductClient }) {
-  // Descobrir grupos
-  const sizeGroup = product.optionGroups.find((g) => g.type === "SIZE");
+  // Descobrir grupos (mantém o teu comportamento atual)
   const radioGroups = product.optionGroups.filter((g) => g.type === "RADIO");
   const addonGroups = product.optionGroups.filter((g) => g.type === "ADDON");
 
+  // Está disponível Kids?
+  const hasKids = (product.kidsSizes?.length ?? 0) > 0;
+
   // Estado
+  type SizeCategory = "ADULT" | "KIDS";
+  const [category, setCategory] = useState<SizeCategory>("ADULT");
   const [qty, setQty] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string | null>(() => {
-    const first = sizeGroup?.values?.[0]?.value ?? product.sizes?.[0]?.size ?? null;
-    return first;
-  });
+
+  const adultSizes = useMemo(() => sortSizes(product.sizes || [], false), [product.sizes]);
+  const kidsSizes = useMemo(() => sortSizes(product.kidsSizes || [], true), [product.kidsSizes]);
+
+  // Tamanho selecionado (por categoria)
+  const [selectedAdultSize, setSelectedAdultSize] = useState<string | null>(adultSizes[0]?.size ?? null);
+  const [selectedKidsSize, setSelectedKidsSize] = useState<string | null>(kidsSizes[0]?.size ?? null);
+
+  const selectedSize = category === "ADULT" ? selectedAdultSize : selectedKidsSize;
+
+  const stockForSize = useMemo(() => {
+    if (!selectedSize) return 0;
+    const pool = category === "ADULT" ? adultSizes : kidsSizes;
+    return pool.find((s) => s.size === selectedSize)?.stock ?? 0;
+  }, [adultSizes, kidsSizes, category, selectedSize]);
+
+  // Estado dos radios e addons (mantém igual)
   const [selectedRadios, setSelectedRadios] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {};
     radioGroups.forEach((g) => {
@@ -48,13 +106,13 @@ export default function ProductConfigurator({ product }: { product: ProductClien
   });
   const [selectedAddons, setSelectedAddons] = useState<Record<number, boolean>>({});
 
-  const stockForSize = useMemo(() => {
-    if (!selectedSize) return 0;
-    return product.sizes.find((s) => s.size === selectedSize)?.stock ?? 0;
-  }, [product.sizes, selectedSize]);
-
+  // Preço por unidade (base + delta kids + radios + addons)
   const unitPrice = useMemo(() => {
     let price = product.basePrice;
+
+    if (category === "KIDS" && typeof product.kidsPriceDelta === "number") {
+      price += product.kidsPriceDelta; // pode ser negativo
+    }
 
     for (const g of radioGroups) {
       const chosen = selectedRadios[g.id];
@@ -71,7 +129,7 @@ export default function ProductConfigurator({ product }: { product: ProductClien
     }
 
     return price;
-  }, [product.basePrice, radioGroups, addonGroups, selectedRadios, selectedAddons]);
+  }, [product.basePrice, product.kidsPriceDelta, category, radioGroups, addonGroups, selectedRadios, selectedAddons]);
 
   const total = unitPrice * qty;
 
@@ -85,15 +143,15 @@ export default function ProductConfigurator({ product }: { product: ProductClien
 
   function addToCart() {
     if (!selectedSize) {
-      alert("Choose a size first.");
+      alert("Escolhe um tamanho primeiro.");
       return;
     }
     if (qty < 1) {
-      alert("Quantity must be at least 1.");
+      alert("A quantidade deve ser pelo menos 1.");
       return;
     }
     if (qty > stockForSize) {
-      alert(`Only ${stockForSize} in stock for size ${selectedSize}.`);
+      alert(`Só há ${stockForSize} em stock para o tamanho ${selectedSize}.`);
       return;
     }
 
@@ -102,48 +160,87 @@ export default function ProductConfigurator({ product }: { product: ProductClien
       productId: product.id,
       slug: product.slug,
       qty,
+      category,
       size: selectedSize,
       radios: selectedRadios,
       addons: selectedAddons,
       unitPrice,
       total,
     });
-    alert("Added to cart (demo).");
+    alert("Adicionado ao carrinho (demo).");
   }
+
+  // UI helpers
+  const activeSizes = category === "ADULT" ? adultSizes : kidsSizes;
 
   return (
     <div className="card p-6 space-y-6">
-      {/* SIZE */}
-      {sizeGroup && (
-        <div>
-          <div className="font-semibold mb-2">{sizeGroup.label}</div>
-          <div className="flex flex-wrap gap-2">
-            {sizeGroup.values.map((v) => {
-              const isActive = selectedSize === v.value;
-              const outOfStock =
-                (product.sizes.find((s) => s.size === v.value)?.stock ?? 0) <= 0;
+      {/* Seletor Adulto | Criança */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-semibold">Categoria de tamanho</div>
+          <div className="text-xs text-gray-500 flex items-center gap-1"><Users className="h-4 w-4"/> Adulto e Criança na mesma página</div>
+        </div>
+        <div className="flex gap-2 rounded-2xl bg-gray-100 p-1">
+          <button
+            type="button"
+            onClick={() => setCategory("ADULT")}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm transition ${category === "ADULT" ? "bg-white shadow" : "opacity-70 hover:opacity-100"}`}
+          >
+            Adulto
+          </button>
+          <button
+            type="button"
+            onClick={() => hasKids && setCategory("KIDS")}
+            disabled={!hasKids}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm transition ${category === "KIDS" ? "bg-white shadow" : "opacity-70 hover:opacity-100"} ${!hasKids ? "cursor-not-allowed opacity-40" : ""}`}
+          >
+            Criança
+          </button>
+        </div>
+        {category === "KIDS" && typeof product.kidsPriceDelta === "number" && (
+          <div className={`mt-2 text-xs ${product.kidsPriceDelta < 0 ? "text-emerald-600" : "text-gray-700"}`}>
+            {product.kidsPriceDelta < 0
+              ? `Preço especial Kids: ${eur(product.kidsPriceDelta)}`
+              : `Acréscimo Kids: +${eur(product.kidsPriceDelta)}`}
+          </div>
+        )}
+      </div>
 
+      {/* SIZE (por categoria) */}
+      <div>
+        <div className="font-semibold mb-2">Tamanho ({category === "ADULT" ? "Adulto" : "Criança"})</div>
+        {activeSizes.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {activeSizes.map((v) => {
+              const isActive = (category === "ADULT" ? selectedAdultSize : selectedKidsSize) === v.size;
+              const outOfStock = (v.stock ?? 0) <= 0;
               return (
                 <button
-                  key={v.value}
+                  key={`${category}-${v.size}`}
                   disabled={outOfStock}
-                  onClick={() => setSelectedSize(v.value)}
+                  onClick={() => {
+                    if (category === "ADULT") setSelectedAdultSize(v.size);
+                    else setSelectedKidsSize(v.size);
+                  }}
                   className={`px-4 py-2 rounded-xl border text-sm transition ${
                     isActive ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
-                  } ${outOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
+                  } ${outOfStock ? "opacity-40 cursor-not-allowed line-through" : ""}`}
                 >
-                  {v.label}
+                  {v.size}
                 </button>
               );
             })}
           </div>
-          {selectedSize && (
-            <div className="text-xs text-gray-600 mt-1">
-              Stock for <b>{selectedSize}</b>: {stockForSize}
-            </div>
-          )}
-        </div>
-      )}
+        ) : (
+          <div className="text-sm text-gray-500">Sem tamanhos disponíveis para esta categoria.</div>
+        )}
+        {selectedSize && (
+          <div className="text-xs text-gray-600 mt-1">
+            Stock para <b>{selectedSize}</b>: {stockForSize}
+          </div>
+        )}
+      </div>
 
       {/* RADIOS */}
       {radioGroups.map((g) => (
@@ -255,7 +352,7 @@ export default function ProductConfigurator({ product }: { product: ProductClien
         disabled={!selectedSize || qty < 1 || qty > stockForSize}
       >
         <ShoppingCart className="h-4 w-4" />
-        Add to cart
+        Adicionar ao carrinho
       </button>
     </div>
   );
