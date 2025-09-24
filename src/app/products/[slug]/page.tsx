@@ -37,11 +37,11 @@ type ProductUI = {
   name: string;
   team?: string | null;
   description?: string | null;
-  basePrice: number;           // cents
+  basePrice: number; // cents
   images: string[];
-  // Adult sizes go here (kept for backwards compatibility)
+  // Adult sizes (kept for backwards compatibility with the UI)
   sizes: SizeUI[];
-  // ✅ Option 1 (single page): Kids sizes are provided separately
+  // Kids sizes (enable Adult/Kids toggle when present)
   kidsSizes?: SizeUI[];
   // Optional delta for kids price (in cents). If omitted, same as basePrice.
   kidsPriceDelta?: number;
@@ -118,13 +118,30 @@ function ensureUpTo3XLIfNeeded(adult: SizeUI[]): SizeUI[] {
   return merged;
 }
 
-/** Split DB sizes into Adult vs Kids.
- *  If your schema does not store a group, we detect Kids by the pattern like "6Y", "8Y", "10Y", etc.
- */
+/** Kids detector: supports "6Y", "8 yrs", "10 years", "12 anos", "14 años", "Junior", "Kids", etc. */
+function isKidsLabel(s: string) {
+  const t = s.trim().toUpperCase();
+
+  // 6Y, 8Y, 10Y, 12Y, 14Y, 16Y
+  if (/^\d+\s*Y$/.test(t)) return true;
+
+  // 6YR, 8YRS, 10 YEAR(S), 12YEAR(S)
+  if (/^\d+\s*(YR|YRS|YEAR|YEARS)$/.test(t)) return true;
+
+  // PT/ES: 6 ANOS, 8 AÑOS
+  if (/^\d+\s*(ANOS|AÑOS)$/.test(t)) return true;
+
+  // Prefix/suffix labels
+  if (/^(KID|KIDS|CHILD|JUNIOR|JR)\b/.test(t)) return true;
+  if (/\b(JR|JUNIOR|KID|KIDS)$/.test(t)) return true;
+
+  return false;
+}
+
+/** Split DB sizes into Adult vs Kids. */
 function splitAdultKids(all: SizeUI[]): { adult: SizeUI[]; kids: SizeUI[] } {
-  const isKids = (s: string) => /\d+\s*Y$/i.test(s.trim()) || s.toUpperCase().endsWith("Y");
-  const adult = all.filter((s) => !isKids(s.size));
-  const kids = all.filter((s) => isKids(s.size));
+  const adult = all.filter((s) => !isKidsLabel(s.size));
+  const kids = all.filter((s) => isKidsLabel(s.size));
   return {
     adult: sortByOrder(ensureUpTo3XLIfNeeded(adult), ADULT_ORDER),
     kids: sortByOrder(kids, KIDS_ORDER),
@@ -152,7 +169,7 @@ function buildUIProduct(args: {
     name: string;
     team: string | null;
     description: string | null;
-    basePrice: number;   // cents
+    basePrice: number; // cents
     images: string[] | null;
   };
   adultSizes: SizeUI[];
@@ -169,14 +186,13 @@ function buildUIProduct(args: {
     description: core.description ?? null,
     basePrice: core.basePrice,
     images: ensureArray(core.images),
-    sizes: adultSizes,             // Adult sizes
+    sizes: adultSizes,
     optionGroups,
   };
 
   if (kidsSizes.length) {
     ui.kidsSizes = kidsSizes;
     // If you later store a kids base price, compute a delta and set ui.kidsPriceDelta.
-    // For now we omit it; ProductConfigurator will treat kids as same price if undefined.
   }
 
   return ui;
@@ -209,7 +225,7 @@ export default async function ProductPage({ params }: PageProps) {
       team: true,
       description: true,
       basePrice: true, // cents
-      images: true,    // string[]
+      images: true, // string[]
     },
   });
   if (!core) notFound();
@@ -218,7 +234,7 @@ export default async function ProductPage({ params }: PageProps) {
     prisma.sizeStock.findMany({
       where: { productId: core.id },
       orderBy: { id: "asc" },
-      select: { id: true, size: true, stock: true }, // keep schema-agnostic; no group field assumed
+      select: { id: true, size: true, stock: true }, // schema-agnostic
     }),
     prisma.optionGroup.findMany({
       where: { productId: core.id },
