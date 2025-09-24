@@ -33,12 +33,12 @@ type ProductUI = {
   id: string;
   slug: string;
   name: string;
-  team?: string | null; // not shown anymore
+  team?: string | null; // not shown
   description?: string | null;
   basePrice: number; // cents
   images: string[];
 
-  /** Adult sizes (required, backward-compatible) */
+  /** Adult sizes (required) */
   sizes: SizeUI[];
 
   /** Kids sizes (optional). If present, the Adult/Kids toggle appears. */
@@ -112,26 +112,44 @@ export default function ProductConfigurator({ product }: Props) {
   const setOption = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
 
-  /* ---------- Price ---------- */
-  const unitPrice = useMemo(() => {
-    let price = product.basePrice;
+  /* ---------- Price logic (split jersey vs addons) ---------- */
+  const { unitJerseyPrice, unitAddonsPrice, unitWithAddons, finalPrice } = useMemo(() => {
+    let jersey = product.basePrice;
 
+    // Kids delta applies to the jersey only
     if (category === "KIDS" && typeof product.kidsPriceDelta === "number") {
-      price += product.kidsPriceDelta;
+      jersey += product.kidsPriceDelta;
     }
 
+    // Add RADIO option deltas (e.g., customization) to the jersey price
     for (const g of product.optionGroups) {
-      if (g.type === "SIZE") continue;
+      if (g.type !== "RADIO") continue;
       const chosen = selected[g.key];
       if (!chosen) continue;
       const v = g.values.find((x) => x.value === chosen);
-      if (v) price += v.priceDelta;
+      if (v) jersey += v.priceDelta;
     }
 
-    return price;
-  }, [product.basePrice, product.kidsPriceDelta, category, product.optionGroups, selected]);
+    // ADDON groups (shorts, socks) – keep them OUT of the jersey price
+    let addons = 0;
+    for (const g of product.optionGroups) {
+      if (g.type !== "ADDON") continue;
+      const chosen = selected[g.key];
+      if (!chosen) continue;
+      const v = g.values.find((x) => x.value === chosen);
+      if (v) addons += v.priceDelta;
+    }
 
-  const finalPrice = unitPrice * qty;
+    const unit = jersey + addons;
+    const total = unit * qty;
+
+    return {
+      unitJerseyPrice: jersey,
+      unitAddonsPrice: addons,
+      unitWithAddons: unit,
+      finalPrice: total,
+    };
+  }, [product.basePrice, product.kidsPriceDelta, category, product.optionGroups, selected, qty]);
 
   /* ---------- Inputs sanitize ---------- */
   const safeName = useMemo(
@@ -201,8 +219,8 @@ export default function ProductConfigurator({ product }: Props) {
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
 
-          {/* Replaced team name with the current unit price */}
-          <div className="text-xl font-semibold">{money(unitPrice)}</div>
+          {/* Show only the jersey price here (does NOT include addons like shorts/socks) */}
+          <div className="text-xl font-semibold">{money(unitJerseyPrice)}</div>
 
           {product.description && (
             <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
@@ -235,22 +253,10 @@ export default function ProductConfigurator({ product }: Props) {
                 Kids
               </button>
             </div>
-
-            {category === "KIDS" && typeof product.kidsPriceDelta === "number" && (
-              <p
-                className={`text-xs ${
-                  product.kidsPriceDelta < 0 ? "text-emerald-600" : "text-gray-700"
-                }`}
-              >
-                {product.kidsPriceDelta < 0
-                  ? `Kids special price: ${money(product.kidsPriceDelta)}`
-                  : `Kids surcharge: +${money(product.kidsPriceDelta)}`}
-              </p>
-            )}
           </div>
         )}
 
-        {/* === Size options (switches with the category above) === */}
+        {/* === Size options === */}
         <div className="rounded-2xl border p-4 bg-white/70">
           <div className="mb-2 text-sm text-gray-700">
             Size ({category === "ADULT" ? "Adult" : "Kids"}) <span className="text-red-500">*</span>
@@ -328,7 +334,7 @@ export default function ProductConfigurator({ product }: Props) {
           <GroupBlock key={g.id} group={g} selected={selected} onPick={setOption} />
         ))}
 
-        {/* Qty + Total (removed the "Unit" block) */}
+        {/* Qty + Total (Unit removed; Total uses jersey + addons) */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
@@ -350,7 +356,6 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
           </div>
 
-          {/* Only Total */}
           <div className="text-right">
             <div className="text-sm text-gray-600">Total</div>
             <div className="text-lg font-semibold">{money(finalPrice)}</div>
