@@ -33,7 +33,7 @@ type ProductUI = {
   id: string;
   slug: string;
   name: string;
-  team?: string | null;
+  team?: string | null; // not shown anymore
   description?: string | null;
   basePrice: number; // cents
   images: string[];
@@ -200,7 +200,10 @@ export default function ProductConfigurator({ product }: Props) {
       <div className="card p-6 space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
-          {product.team && <div className="text-gray-600">{product.team}</div>}
+
+          {/* Replaced team name with the current unit price */}
+          <div className="text-xl font-semibold">{money(unitPrice)}</div>
+
           {product.description && (
             <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
           )}
@@ -325,7 +328,7 @@ export default function ProductConfigurator({ product }: Props) {
           <GroupBlock key={g.id} group={g} selected={selected} onPick={setOption} />
         ))}
 
-        {/* Qty + Totals */}
+        {/* Qty + Total (removed the "Unit" block) */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
@@ -347,10 +350,7 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
           </div>
 
-          <div className="text-right">
-            <div className="text-sm text-gray-600">Unit</div>
-            <div className="text-lg font-semibold">{money(unitPrice)}</div>
-          </div>
+          {/* Only Total */}
           <div className="text-right">
             <div className="text-sm text-gray-600">Total</div>
             <div className="text-lg font-semibold">{money(finalPrice)}</div>
