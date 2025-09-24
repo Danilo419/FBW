@@ -86,9 +86,10 @@ model Product {
   slug        String     @unique
   name        String
   team        String
-  basePrice   Int        // cents
-  images      String[]   // URLs
-  description String?    // opcional para evitar falhas no seed
+  season      String?          // e.g. "25/26"
+  basePrice   Int              // cents
+  images      String[]         // URLs
+  description String?          // texto livre por produto
 
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
@@ -100,6 +101,7 @@ model Product {
   updatedAt DateTime @updatedAt
 
   @@index([team])
+  @@index([season])
 }
 
 model SizeStock {

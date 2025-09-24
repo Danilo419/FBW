@@ -33,6 +33,7 @@ async function createProduct(
   slug: string,
   name: string,
   team: string,
+  season: string,      // e.g., "25/26"
   images: string[],
   priceCents: number
 ) {
@@ -44,13 +45,15 @@ async function createProduct(
       slug,
       name,
       team,
+      season,
       basePrice: priceCents, // cents
       images,
-      description: `Official ${team} jersey 25/26. Breathable and comfortable fabric for fans and athletes.`,
+      // Description auto-uses the given season (works for any year)
+      description: `Official ${team} jersey ${season}. Breathable and comfortable fabric for fans and athletes.`,
     },
   });
 
-  // Insert sizes (Adult + Kids). Stock is just seed data; your admin will manage it later.
+  // Insert sizes (Adult + Kids). Seed-only; in production you'll manage stock in the admin.
   await prisma.sizeStock.createMany({
     data: [
       // Adult
@@ -148,6 +151,7 @@ async function main() {
     "jersey-real-madrid-25-26",
     "Real Madrid Jersey 25/26",
     "Real Madrid",
+    "25/26",
     ["/img/rm-front-25-26.png", "/img/rm-back-25-26.png"],
     10000
   );
@@ -156,6 +160,7 @@ async function main() {
     "jersey-barcelona-25-26",
     "FC Barcelona Jersey 25/26",
     "FC Barcelona",
+    "25/26",
     ["/img/fcb-front-25-26.png", "/img/fcb-back-25-26.png"],
     8999
   );
@@ -164,6 +169,7 @@ async function main() {
     "jersey-atm-25-26",
     "Atlético de Madrid Jersey 25/26",
     "Atlético de Madrid",
+    "25/26",
     ["/img/atm-front-25-26.png", "/img/atm-back-25-26.png"],
     8999
   );
@@ -172,6 +178,7 @@ async function main() {
     "jersey-betis-25-26",
     "Real Betis Jersey 25/26",
     "Real Betis",
+    "25/26",
     ["/img/betis-front-25-26.png", "/img/betis-back-25-26.png"],
     8499
   );
@@ -180,6 +187,7 @@ async function main() {
     "jersey-sevilla-25-26",
     "Sevilla FC Jersey 25/26",
     "Sevilla FC",
+    "25/26",
     ["/img/sevilla-front-25-26.png", "/img/sevilla-back-25-26.png"],
     8499
   );
@@ -188,6 +196,7 @@ async function main() {
     "jersey-realsociedad-25-26",
     "Real Sociedad Jersey 25/26",
     "Real Sociedad",
+    "25/26",
     ["/img/realsociedad-front-25-26.png", "/img/realsociedad-back-25-26.png"],
     8499
   );
@@ -196,6 +205,7 @@ async function main() {
     "jersey-villarreal-25-26",
     "Villarreal Jersey 25/26",
     "Villarreal",
+    "25/26",
     ["/img/villarreal-front-25-26.png", "/img/villarreal-back-25-26.png"],
     8499
   );
@@ -204,6 +214,7 @@ async function main() {
     "jersey-athletic-25-26",
     "Athletic Club Jersey 25/26",
     "Athletic Club",
+    "25/26",
     ["/img/athletic-front-25-26.png", "/img/athletic-back-25-26.png"],
     8299
   );
@@ -212,6 +223,7 @@ async function main() {
     "jersey-getafe-25-26",
     "Getafe CF Jersey 25/26",
     "Getafe CF",
+    "25/26",
     ["/img/getafe-front-25-26.png", "/img/getafe-back-25-26.png"],
     8999
   );
@@ -220,6 +232,7 @@ async function main() {
     "jersey-elche-25-26",
     "Elche CF Jersey 25/26",
     "Elche CF",
+    "25/26",
     ["/img/elche-front-25-26.png", "/img/elche-back-25-26.png"],
     8999
   );
@@ -228,6 +241,7 @@ async function main() {
     "jersey-valencia-25-26",
     "Valencia CF Jersey 25/26",
     "Valencia CF",
+    "25/26",
     ["/img/valencia-front-25-26.png", "/img/valencia-back-25-26.png"],
     8999
   );
@@ -236,6 +250,7 @@ async function main() {
     "jersey-espanyol-25-26",
     "RCD Espanyol Jersey 25/26",
     "RCD Espanyol",
+    "25/26",
     ["/img/espanyol-front-25-26.png", "/img/espanyol-back-25-26.png"],
     8999
   );
@@ -244,6 +259,7 @@ async function main() {
     "jersey-alaves-25-26",
     "Alavés Jersey 25/26",
     "Alavés",
+    "25/26",
     ["/img/alaves-front-25-26.png", "/img/alaves-back-25-26.png"],
     8999
   );
@@ -253,6 +269,7 @@ async function main() {
     "jersey-benfica-25-26",
     "SL Benfica Jersey 25/26",
     "SL Benfica",
+    "25/26",
     ["/img/slb-front-25-26.png", "/img/slb-back-25-26.png"],
     8499
   );
@@ -261,6 +278,7 @@ async function main() {
     "jersey-sporting-25-26",
     "Sporting CP Jersey 25/26",
     "Sporting CP",
+    "25/26",
     ["/img/scp-front-25-26.png", "/img/scp-back-25-26.png"],
     8499
   );
@@ -269,6 +287,7 @@ async function main() {
     "jersey-porto-25-26",
     "FC Porto Jersey 25/26",
     "FC Porto",
+    "25/26",
     ["/img/fcp-front-25-26.png", "/img/fcp-back-25-26.png"],
     8499
   );
@@ -277,6 +296,7 @@ async function main() {
     "jersey-braga-25-26",
     "SC Braga Jersey 25/26",
     "SC Braga",
+    "25/26",
     ["/img/braga-front-25-26.png", "/img/braga-back-25-26.png"],
     7999
   );
@@ -285,6 +305,7 @@ async function main() {
     "jersey-vitoria-25-26",
     "Vitória SC Jersey 25/26",
     "Vitória SC",
+    "25/26",
     ["/img/vsc-front-25-26.png", "/img/vsc-back-25-26.png"],
     7999
   );
