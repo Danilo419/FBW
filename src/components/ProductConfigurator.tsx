@@ -26,7 +26,7 @@ type OptionGroupUI = {
 type SizeUI = {
   id: string;
   size: string; // e.g., "XS", "S", "M", "10Y"
-  stock: number; // kept in the type for admin/backend use, but NOT used here
+  stock: number; // ignored on UI
 };
 
 type ProductUI = {
@@ -35,16 +35,16 @@ type ProductUI = {
   name: string;
   team?: string | null;
   description?: string | null;
-  basePrice: number;     // cents
+  basePrice: number; // cents
   images: string[];
 
-  /** Adult sizes (required, backward-compatible with your DB) */
+  /** Adult sizes (required, backward-compatible) */
   sizes: SizeUI[];
 
   /** Kids sizes (optional). If present, the Adult/Kids toggle appears. */
   kidsSizes?: SizeUI[];
 
-  /** Optional delta in cents applied when Kids is selected (can be negative). */
+  /** Optional delta (in cents) applied when Kids is selected. Can be negative. */
   kidsPriceDelta?: number;
 
   /** Other option groups (customization, shorts, socks, etc.) */
@@ -72,16 +72,10 @@ export default function ProductConfigurator({ product }: Props) {
   const hasKids = (product.kidsSizes?.length ?? 0) > 0;
   const [category, setCategory] = useState<SizeCategory>("ADULT");
 
-  const adultSizes = useMemo<SizeUI[]>(
-    () => product.sizes ?? [],
-    [product.sizes]
-  );
-  const kidsSizes = useMemo<SizeUI[]>(
-    () => product.kidsSizes ?? [],
-    [product.kidsSizes]
-  );
+  const adultSizes = useMemo<SizeUI[]>(() => product.sizes ?? [], [product.sizes]);
+  const kidsSizes = useMemo<SizeUI[]>(() => product.kidsSizes ?? [], [product.kidsSizes]);
 
-  // Track selected size per category so switching tabs preserves the choice
+  // Keep a selected size per category
   const [selectedAdultSize, setSelectedAdultSize] = useState<string | null>(
     adultSizes[0]?.size ?? null
   );
@@ -92,7 +86,6 @@ export default function ProductConfigurator({ product }: Props) {
   const activeSizes = category === "ADULT" ? adultSizes : kidsSizes;
   const selectedSize = category === "ADULT" ? selectedAdultSize : selectedKidsSize;
 
-  // choose size (no stock logic here)
   const pickSize = (size: string) => {
     if (category === "ADULT") setSelectedAdultSize(size);
     else setSelectedKidsSize(size);
@@ -116,23 +109,19 @@ export default function ProductConfigurator({ product }: Props) {
   const customization = selected["customization"] ?? "";
   const showNameNumber = typeof customization === "string" && customization.includes("name-number");
 
-  // simple setter for onPick
-  const setOption = (key: string, value: string) => {
+  const setOption = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
-  };
 
   /* ---------- Price ---------- */
   const unitPrice = useMemo(() => {
     let price = product.basePrice;
 
-    // Kids price delta (if any)
     if (category === "KIDS" && typeof product.kidsPriceDelta === "number") {
       price += product.kidsPriceDelta;
     }
 
-    // Add deltas from selected options (RADIO/ADDON)
     for (const g of product.optionGroups) {
-      if (g.type === "SIZE") continue; // size handled separately
+      if (g.type === "SIZE") continue;
       const chosen = selected[g.key];
       if (!chosen) continue;
       const v = g.values.find((x) => x.value === chosen);
@@ -166,10 +155,9 @@ export default function ProductConfigurator({ product }: Props) {
       await addToCartAction({
         productId: product.id,
         qty,
-        options: selected, // includes { size: "M", customization: "...", ... }
+        options: selected, // includes { size, customization, ... }
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
-      // toast / cart drawer here if you want
     });
   };
 
@@ -218,7 +206,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </header>
 
-        {/* --- Size category toggle (Adult / Kids) --- */}
+        {/* === Category (Adult / Kids) ABOVE the size options === */}
         {hasKids && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-2">
             <div className="text-sm text-gray-700">Category *</div>
@@ -259,7 +247,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* --- Size selector (per category) --- */}
+        {/* === Size options (switches with the category above) === */}
         <div className="rounded-2xl border p-4 bg-white/70">
           <div className="mb-2 text-sm text-gray-700">
             Size ({category === "ADULT" ? "Adult" : "Kids"}) <span className="text-red-500">*</span>
@@ -289,12 +277,12 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* --- Customization (RADIO) --- */}
+        {/* Customization (radio) */}
         {customizationGroup && (
           <GroupBlock group={customizationGroup} selected={selected} onPick={setOption} />
         )}
 
-        {/* --- Personalization (Name & Number) --- */}
+        {/* Personalization fields */}
         {showNameNumber && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">Personalization</div>
@@ -330,7 +318,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* --- Add-ons and other groups --- */}
+        {/* Add-ons and other groups */}
         {shortsGroup && <GroupBlock group={shortsGroup} selected={selected} onPick={setOption} />}
         {socksGroup && <GroupBlock group={socksGroup} selected={selected} onPick={setOption} />}
         {otherGroups.map((g) => (
@@ -393,7 +381,7 @@ function GroupBlock({
   onPick: (key: string, value: string) => void;
 }) {
   if (group.type === "SIZE") {
-    // Kept only for compatibility; not used for stock or caps.
+    // Kept for compatibility if some products still pass a SIZE group.
     return (
       <div className="rounded-2xl border p-4 bg-white/70">
         <div className="mb-2 text-sm text-gray-700">
