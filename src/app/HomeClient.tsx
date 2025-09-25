@@ -144,7 +144,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 
 /* ======================================================================================
    2) HERO IMAGE CYCLER (random order, sem flash, Ken Burns, preload)
-   >>> Corrigido: garante MINÍMO 1 intervalo entre trocas, inclusive a 2.ª imagem.
+   >>> Corrigido de forma robusta: 2 camadas, preload e cross-fade por CSS.
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -398,164 +398,164 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * Cross-fade suave com Ken Burns + preload + **garantia de intervalo mínimo**.
- * Implementa um *único* setTimeout em cadeia e controla o tempo via timestamp,
- * evitando trocas “duplas” (especialmente a 2.ª imagem).
+ * NOVO: 2 camadas <img>, preload antes de trocar, cross-fade por CSS e Ken Burns via WAAPI.
+ * Mantém a mesma API (interval) e o resto do ficheiro intacto.
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
-  // ordem baralhada + índice inicial aleatório
+  const fade = 800 // duração do cross-fade
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
-  const ptrRef = useRef<number>(Math.floor(Math.random() * orderRef.current.length))
+  const ptrRef = useRef<number>(0)
 
-  // estado visual
-  const [current, setCurrent] = useState<number>(orderRef.current[ptrRef.current])
-  const [previous, setPrevious] = useState<number | null>(null)
-  const [firstReady, setFirstReady] = useState(false)
-
-  // refs utilitários
-  const currentRef = useRef(current)
-  const startedRef = useRef(false)
+  const aRef = useRef<HTMLImageElement>(null)
+  const bRef = useRef<HTMLImageElement>(null)
+  const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
-  const lastSwitchRef = useRef<number>(0)
+  const [booted, setBooted] = useState(false)
 
-  useEffect(() => {
-    currentRef.current = current
-  }, [current])
-
-  // Preload helper
-  const preload = (idx: number) => {
-    const img = new Image()
-    img.src = heroImages[idx].src
-    ;(img as any).decode?.().catch(() => void 0)
+  const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
+    if (!img) return
+    try {
+      const ox = ['center', 'left', 'right'][Math.floor(Math.random() * 3)]
+      const oy = ['center', 'top', 'bottom'][Math.floor(Math.random() * 3)]
+      img.style.transformOrigin = `${ox} ${oy}`
+      ;(img as any).getAnimations?.().forEach((a: Animation) => a.cancel())
+      img.animate(
+        [
+          { transform: 'scale(1.04)', filter: 'blur(3px)' },
+          { transform: 'scale(1.0)', filter: 'blur(0px)' },
+        ],
+        { duration: Math.max(1000, dur), easing: 'ease-out', fill: 'forwards' }
+      )
+    } catch {}
   }
 
-  // preload inicial (atual + próximo)
-  useEffect(() => {
-    preload(orderRef.current[ptrRef.current])
-    const nextIdx = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
-    preload(nextIdx)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const loadImage = (src: string) =>
+    new Promise<void>((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve()
+      img.onerror = () => resolve()
+      img.src = src
+    })
 
-  const clearTimer = () => {
-    if (timerRef.current != null) {
-      window.clearTimeout(timerRef.current)
-      timerRef.current = null
+  const swapTo = async (nextIndex: number) => {
+    const nextSrc = heroImages[nextIndex]?.src || FALLBACK_IMG
+    await loadImage(nextSrc)
+
+    const frontIsA = frontIsARef.current
+    const front = frontIsA ? aRef.current : bRef.current
+    const back = frontIsA ? bRef.current : aRef.current
+    if (!front || !back) return
+
+    back.src = nextSrc
+    back.alt = heroImages[nextIndex]?.alt || 'image'
+    back.style.transitionDuration = `${fade}ms`
+    // força reflow
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    back.offsetHeight
+
+    back.classList.add('is-visible')
+    front.classList.remove('is-visible')
+
+    playKenBurns(back, interval - fade)
+    frontIsARef.current = !frontIsA
+  }
+
+  useEffect(() => {
+    let killed = false
+
+    const start = async () => {
+      // preparar duas primeiras
+      const i0 = orderRef.current[ptrRef.current]
+      const i1 = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
+
+      if (aRef.current) {
+        aRef.current.src = heroImages[i0]?.src || FALLBACK_IMG
+        aRef.current.alt = heroImages[i0]?.alt || 'image'
+        aRef.current.classList.add('is-visible')
+        playKenBurns(aRef.current, interval - fade)
+      }
+      if (bRef.current) {
+        bRef.current.src = heroImages[i1]?.src || FALLBACK_IMG
+        bRef.current.alt = heroImages[i1]?.alt || 'image'
+        bRef.current.classList.remove('is-visible')
+      }
+      setBooted(true)
+
+      // o próximo passo começará em i1
+      ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
+
+      const tick = async () => {
+        if (killed) return
+        // avança ponteiro e rebaralha quando volta ao início
+        ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
+        if (ptrRef.current === 0) orderRef.current = shuffle(orderRef.current)
+        const nextIdx = orderRef.current[ptrRef.current]
+        await swapTo(nextIdx)
+        timerRef.current = window.setTimeout(tick, interval) as any
+      }
+
+      timerRef.current = window.setTimeout(tick, interval) as any
     }
-  }
 
-  const scheduleNext = () => {
-    clearTimer()
-    const now = performance.now()
-    const elapsed = now - lastSwitchRef.current
-    const wait = Math.max(0, interval - elapsed)
-    timerRef.current = window.setTimeout(run, wait)
-  }
+    start()
 
-  const run = () => {
-    // atualiza ponteiro e rebaralha ao rodar
-    ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
-    if (ptrRef.current === 0) {
-      orderRef.current = shuffle(orderRef.current)
+    return () => {
+      killed = true
+      if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-    const nextIdx = orderRef.current[ptrRef.current]
-
-    setPrevious(currentRef.current)
-    setCurrent(nextIdx)
-
-    // regista o momento da troca e prepara preload do seguinte
-    lastSwitchRef.current = performance.now()
-    const after = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
-    preload(after)
-
-    // agenda a próxima troca garantindo o intervalo completo
-    scheduleNext()
-  }
-
-  // Início do ciclo: só depois da 1.ª imagem estar pronta
-  useEffect(() => {
-    if (!firstReady) return
-    if (startedRef.current) return
-    startedRef.current = true
-    lastSwitchRef.current = performance.now()
-    scheduleNext()
-    return clearTimer
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstReady, interval])
-
-  // Ken Burns: origem aleatória por slide
-  const [kbSeed, setKbSeed] = useState(() => Math.random())
-  useEffect(() => {
-    setKbSeed(Math.random())
-  }, [current])
-  const originList = [
-    'center',
-    'left top',
-    'right top',
-    'left bottom',
-    'right bottom',
-    'center top',
-    'center bottom',
-    'left center',
-    'right center',
-  ]
-  const origin = originList[Math.floor(kbSeed * originList.length)]
+  }, [interval])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {!firstReady && (
+      {!booted && (
         <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 to-slate-50" />
       )}
 
-      {previous !== null && (
-        <motion.img
-          key={`prev-${previous}`}
-          src={heroImages[previous].src}
-          alt={heroImages[previous].alt}
-          className="absolute inset-0 h-full w-full object-cover"
-          initial={{ opacity: 1, scale: 1 }}
-          animate={{ opacity: 0, scale: 1.02, filter: 'blur(2px)' }}
-          transition={{ duration: 0.9, ease: 'easeInOut' }}
-          onError={(e: any) => {
-            const img = e.currentTarget as HTMLImageElement
-            if ((img as any)._fallbackApplied) return
-            ;(img as any)._fallbackApplied = true
-            img.src = FALLBACK_IMG
-          }}
-        />
-      )}
-
-      <motion.img
-        key={`curr-${current}`}
-        src={heroImages[current].src}
-        alt={heroImages[current].alt}
-        className="absolute inset-0 h-full w-full object-cover will-change-transform"
-        style={{ transformOrigin: origin }}
-        initial={{ opacity: 0, scale: 1.04, filter: 'blur(6px)' }}
-        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-        transition={{ duration: 0.9, ease: 'easeOut' }}
-        onLoad={() => {
-          // marca o início real do ciclo
-          if (!firstReady) {
-            setFirstReady(true)
-            lastSwitchRef.current = performance.now()
-          }
-        }}
+      <img
+        ref={aRef}
+        className="hero-layer"
+        src=""
+        alt=""
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement
           if ((img as any)._fallbackApplied) return
           ;(img as any)._fallbackApplied = true
           img.src = FALLBACK_IMG
-          if (!firstReady) {
-            setFirstReady(true)
-            lastSwitchRef.current = performance.now()
-          }
+        }}
+      />
+      <img
+        ref={bRef}
+        className="hero-layer"
+        src=""
+        alt=""
+        onError={(e: any) => {
+          const img = e.currentTarget as HTMLImageElement
+          if ((img as any)._fallbackApplied) return
+          ;(img as any)._fallbackApplied = true
+          img.src = FALLBACK_IMG
         }}
       />
 
       <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-black/5" />
+
+      <style jsx>{`
+        .hero-layer {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: 0;
+          transition-property: opacity, transform, filter;
+          transition-timing-function: ease-in-out;
+          will-change: opacity, transform, filter;
+        }
+        .hero-layer.is-visible {
+          opacity: 1;
+        }
+      `}</style>
     </div>
   )
 }
