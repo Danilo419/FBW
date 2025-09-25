@@ -18,7 +18,7 @@ datasource db {
  */
 model User {
   id            String    @id @default(cuid())
-  name          String?   @unique // opcional: garante unicidade do nome (DB); múltiplos NULL são permitidos
+  name          String?   @unique
   email         String?   @unique
   emailVerified DateTime?
   image         String?
@@ -118,7 +118,7 @@ model SizeStock {
 model OptionGroup {
   id        String     @id @default(cuid())
   productId String
-  key       String // "size", "customization", "shorts", "socks", ...
+  key       String // "size", "customization", "shorts", "socks", "badges", ...
   label     String
   type      OptionType
   required  Boolean    @default(false)
@@ -190,7 +190,7 @@ model Cart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // @@unique([userId]) // optional: enforce one cart per logged user
+  // @@unique([userId]) // opcional
   @@index([userId])
 }
 
@@ -238,15 +238,15 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   sessionId String?
-  status    String  @default("pending") // (mantido como String para compatibilidade)
+  status    String  @default("pending") // mantido como String para compatibilidade
   currency  String  @default("eur")
 
-  // Totals
+  // Totais
   subtotal Int @default(0)
   shipping Int @default(0)
   tax      Int @default(0)
 
-  // Alternatives (if present in your app)
+  // Alternativas (se usadas na app)
   total      Float?
   totalCents Int?
 
@@ -255,16 +255,16 @@ model Order {
   stripePaymentIntentId String?
   paypalOrderId         String?
   paypalCaptured        Boolean?
-  paypalCaptureId       String?   // store capture id
+  paypalCaptureId       String?
 
   // Payment bookkeeping
-  paymentStatus String? // ex.: "paid" | "pending" | "failed" | "refunded" | "canceled"
-  paidAt        DateTime?    // set when order becomes paid
+  paymentStatus String?
+  paidAt        DateTime?
 
   // Shipping snapshot (legacy / fallback)
   shippingJson Json?
 
-  // Canonical shipping columns (preferred)
+  // Canonical shipping columns (preferidas)
   shippingFullName   String?
   shippingEmail      String?
   shippingPhone      String?
@@ -348,7 +348,7 @@ model Visit {
   visitorId String // anonymous id by cookie
   path      String
   referrer  String?
-  ua        String? // user-agent
+  ua        String?
   createdAt DateTime @default(now())
 
   @@index([createdAt])

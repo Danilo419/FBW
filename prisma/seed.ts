@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-/** Remove tudo de um produto pelo slug (reseed seguro) */
+/** Remove tudo de um produto pelo slug (em ordem segura, evitando FKs) */
 async function removeProductBySlug(slug: string) {
   const existing = await prisma.product.findUnique({
     where: { slug },
@@ -10,22 +10,29 @@ async function removeProductBySlug(slug: string) {
   });
   if (!existing) return;
 
-  // 1) apagar OptionValues
-  const groups = await prisma.optionGroup.findMany({
-    where: { productId: existing.id },
-    select: { id: true },
+  await prisma.$transaction(async (tx) => {
+    // 0) dependências diretas (para não violar FKs)
+    await tx.cartItem.deleteMany({ where: { productId: existing.id } });
+    await tx.orderItem.deleteMany({ where: { productId: existing.id } });
+    await tx.review.deleteMany({ where: { productId: existing.id } });
+
+    // 1) apagar OptionValues/Groups
+    const groups = await tx.optionGroup.findMany({
+      where: { productId: existing.id },
+      select: { id: true },
+    });
+    const groupIds = groups.map((g) => g.id);
+    if (groupIds.length) {
+      await tx.optionValue.deleteMany({ where: { groupId: { in: groupIds } } });
+      await tx.optionGroup.deleteMany({ where: { id: { in: groupIds } } });
+    }
+
+    // 2) apagar SizeStock
+    await tx.sizeStock.deleteMany({ where: { productId: existing.id } });
+
+    // 3) apagar Product
+    await tx.product.delete({ where: { id: existing.id } });
   });
-  const groupIds = groups.map((g) => g.id);
-  if (groupIds.length) {
-    await prisma.optionValue.deleteMany({ where: { groupId: { in: groupIds } } });
-  }
-
-  // 2) apagar OptionGroups e SizeStock
-  await prisma.optionGroup.deleteMany({ where: { productId: existing.id } });
-  await prisma.sizeStock.deleteMany({ where: { productId: existing.id } });
-
-  // 3) apagar Product
-  await prisma.product.delete({ where: { id: existing.id } });
 }
 
 /* ------------------------------------------------------------------ */
@@ -42,7 +49,7 @@ async function createProduct(
   season: string,      // e.g., "25/26"
   images: string[],
   priceCents: number,
-  badges: BadgeSeed[] = [] // <-- NOVO: competition badges (multi add-on)
+  badges: BadgeSeed[] = [] // competition badges (multi add-on)
 ) {
   // limpar qualquer produto com o mesmo slug
   await removeProductBySlug(slug);
@@ -53,7 +60,7 @@ async function createProduct(
       name,
       team,
       season,
-      basePrice: priceCents, // em cêntimos
+      basePrice: priceCents, // cêntimos
       images,
       description: `Official ${team} jersey ${season}. Breathable and comfortable fabric for fans and athletes.`,
     },
@@ -103,7 +110,7 @@ async function createProduct(
     },
   });
 
-  // Grupo Customization (RADIO)
+  // Customization (RADIO)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -113,10 +120,10 @@ async function createProduct(
       required: true,
       values: {
         create: [
-          { value: "none",               label: "No customization",                         priceDelta: 0 },
-          { value: "name-number",        label: "Name & Number",                             priceDelta: 1500 },
-          { value: "badge",              label: "Competition Badge",                         priceDelta: 800 },
-          { value: "name-number-badge",  label: "Name & Number + Competition Badge",         priceDelta: 2100 },
+          { value: "none",              label: "No customization",                         priceDelta: 0 },
+          { value: "name-number",       label: "Name & Number",                             priceDelta: 1500 },
+          { value: "badge",             label: "Competition Badge",                         priceDelta: 800 },
+          { value: "name-number-badge", label: "Name & Number + Competition Badge",         priceDelta: 2100 },
         ],
       },
     },
@@ -159,7 +166,7 @@ async function createProduct(
           create: badges.map((b) => ({
             value: b.value,   // ex.: "laliga", "ucl", "ucl-winners"
             label: b.label,   // ex.: "La Liga Patch"
-            priceDelta: b.priceDelta, // em cêntimos
+            priceDelta: b.priceDelta, // cêntimos
           })),
         },
       },
@@ -327,8 +334,8 @@ async function main() {
     ["/img/slb-front-25-26.png", "/img/slb-back-25-26.png"],
     8499,
     [
-      { value: "ligaportugal", label: "Liga Portugal Patch",               priceDelta: 500 },
-      { value: "ucl",          label: "UEFA Champions League Patch",       priceDelta: 700 },
+      { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
 
