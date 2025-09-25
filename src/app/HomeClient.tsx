@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (2 camadas, sem blur)
+   2) HERO IMAGE CYCLER (2 camadas, sem blur) — mostra imagem logo no 1.º paint
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -397,18 +397,21 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * 2 camadas <img>, preload antes de trocar, cross-fade por CSS e Ken Burns **sem blur**.
+ * 2 camadas <img>, primeira já visível no HTML (sem JS), cross-fade e Ken Burns **sem blur**.
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
-  const fade = 800 // cross-fade
+  const fade = 800
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
+
+  // Escolhas imediatas para o 1º paint (sem esperar efeitos)
+  const firstIndex = orderRef.current[ptrRef.current]
+  const secondIndex = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
 
   const aRef = useRef<HTMLImageElement>(null)
   const bRef = useRef<HTMLImageElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
-  const [booted, setBooted] = useState(false)
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -417,13 +420,11 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
       const oy = ['center', 'top', 'bottom'][Math.floor(Math.random() * 3)]
       img.style.transformOrigin = `${ox} ${oy}`
       ;(img as any).getAnimations?.().forEach((a: Animation) => a.cancel())
-      img.animate(
-        [
-          { transform: 'scale(1.03)' }, // início ligeiramente ampliado
-          { transform: 'scale(1.0)' },  // termina natural
-        ],
-        { duration: Math.max(1000, dur), easing: 'ease-out', fill: 'forwards' }
-      )
+      img.animate([{ transform: 'scale(1.03)' }, { transform: 'scale(1.0)' }], {
+        duration: Math.max(1000, dur),
+        easing: 'ease-out',
+        fill: 'forwards',
+      })
     } catch {}
   }
 
@@ -447,7 +448,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     back.src = nextSrc
     back.alt = heroImages[nextIndex]?.alt || 'image'
     back.style.transitionDuration = `${fade}ms`
-    // força reflow
+    // reflow
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
 
@@ -462,28 +463,14 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     let killed = false
 
     const start = async () => {
-      const i0 = orderRef.current[ptrRef.current]
-      const i1 = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
+      // já renderizámos a primeira e segunda; só tocar animação + cronómetro
+      playKenBurns(aRef.current, interval - fade)
 
-      if (aRef.current) {
-        aRef.current.src = heroImages[i0]?.src || FALLBACK_IMG
-        aRef.current.alt = heroImages[i0]?.alt || 'image'
-        aRef.current.classList.add('is-visible')
-        playKenBurns(aRef.current, interval - fade)
-      }
-      if (bRef.current) {
-        bRef.current.src = heroImages[i1]?.src || FALLBACK_IMG
-        bRef.current.alt = heroImages[i1]?.alt || 'image'
-        bRef.current.classList.remove('is-visible')
-      }
-      setBooted(true)
-
-      // o próximo passo começará em i1
+      // ponteiro avança para “second”
       ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
 
       const tick = async () => {
         if (killed) return
-        // avança ponteiro e rebaralha quando volta
         ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
         if (ptrRef.current === 0) orderRef.current = shuffle(orderRef.current)
         const nextIdx = orderRef.current[ptrRef.current]
@@ -495,7 +482,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     }
 
     start()
-
     return () => {
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
@@ -506,15 +492,13 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {!booted && (
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 to-slate-50" />
-      )}
-
+      {/* IMAGENS: primeira já visível no HTML, nada de placeholder branco */}
       <img
         ref={aRef}
-        className="hero-layer"
-        src=""
-        alt=""
+        className="hero-layer is-visible"
+        src={heroImages[firstIndex]?.src || FALLBACK_IMG}
+        alt={heroImages[firstIndex]?.alt || 'image'}
+        decoding="async"
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement
           if ((img as any)._fallbackApplied) return
@@ -525,8 +509,9 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
       <img
         ref={bRef}
         className="hero-layer"
-        src=""
-        alt=""
+        src={heroImages[secondIndex]?.src || FALLBACK_IMG}
+        alt={heroImages[secondIndex]?.alt || 'image'}
+        decoding="async"
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement
           if ((img as any)._fallbackApplied) return
