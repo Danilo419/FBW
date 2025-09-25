@@ -143,8 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (random order, sem flash, Ken Burns, preload)
-   >>> Corrigido de forma robusta: 2 camadas, preload e cross-fade por CSS.
+   2) HERO IMAGE CYCLER (2 camadas, sem blur)
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -398,11 +397,10 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * NOVO: 2 camadas <img>, preload antes de trocar, cross-fade por CSS e Ken Burns via WAAPI.
- * Mantém a mesma API (interval) e o resto do ficheiro intacto.
+ * 2 camadas <img>, preload antes de trocar, cross-fade por CSS e Ken Burns **sem blur**.
  */
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
-  const fade = 800 // duração do cross-fade
+  const fade = 800 // cross-fade
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
 
@@ -421,8 +419,8 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
       ;(img as any).getAnimations?.().forEach((a: Animation) => a.cancel())
       img.animate(
         [
-          { transform: 'scale(1.04)', filter: 'blur(3px)' },
-          { transform: 'scale(1.0)', filter: 'blur(0px)' },
+          { transform: 'scale(1.03)' }, // início ligeiramente ampliado
+          { transform: 'scale(1.0)' },  // termina natural
         ],
         { duration: Math.max(1000, dur), easing: 'ease-out', fill: 'forwards' }
       )
@@ -464,7 +462,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     let killed = false
 
     const start = async () => {
-      // preparar duas primeiras
       const i0 = orderRef.current[ptrRef.current]
       const i1 = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
 
@@ -486,7 +483,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
 
       const tick = async () => {
         if (killed) return
-        // avança ponteiro e rebaralha quando volta ao início
+        // avança ponteiro e rebaralha quando volta
         ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
         if (ptrRef.current === 0) orderRef.current = shuffle(orderRef.current)
         const nextIdx = orderRef.current[ptrRef.current]
@@ -548,9 +545,11 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
           height: 100%;
           object-fit: cover;
           opacity: 0;
-          transition-property: opacity, transform, filter;
+          transform: scale(1.0);
+          transition-property: opacity, transform;
           transition-timing-function: ease-in-out;
-          will-change: opacity, transform, filter;
+          transition-duration: 800ms;
+          will-change: opacity, transform;
         }
         .hero-layer.is-visible {
           opacity: 1;
