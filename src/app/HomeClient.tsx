@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (2 camadas, sem blur), com 1º slide mantido mais tempo
+   2) HERO IMAGE CYCLER (2 camadas, sem blur) — 1º slide mantido mais tempo
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -398,7 +398,7 @@ function shuffle<T>(arr: T[]) {
 
 /**
  * 2 camadas <img>, primeira já visível no HTML, cross-fade sem blur.
- * A 1.ª imagem fica mais tempo usando `firstHold` (default ~1.4× do `interval`).
+ * `firstHold` controla quanto tempo a 1ª imagem fica antes da 1ª troca.
  */
 function HeroImageCycler({
   interval = 4200,
@@ -409,7 +409,8 @@ function HeroImageCycler({
   firstHold?: number
 }) {
   const fade = 800
-  const firstDelay = Math.max(interval, firstHold ?? Math.round(interval * 1.4))
+  // default agressivo: 2.5× o intervalo ou 7s, o que for MAIOR
+  const firstDelay = firstHold ?? Math.max(Math.round(interval * 2.5), 7000)
 
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
@@ -472,14 +473,13 @@ function HeroImageCycler({
     let killed = false
 
     const start = async () => {
-      // 1º slide fica visível já no HTML; animamos apenas o Ken Burns
+      // 1º slide visível já no HTML
       playKenBurns(aRef.current, firstDelay - fade)
 
-      // avança ponteiro para o “segundo” sem trocar ainda
-      ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
-
+      // prepara o ciclo
       const tick = async () => {
         if (killed) return
+        // avança ponteiro
         ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
         if (ptrRef.current === 0) orderRef.current = shuffle(orderRef.current)
         const nextIdx = orderRef.current[ptrRef.current]
@@ -487,7 +487,7 @@ function HeroImageCycler({
         timerRef.current = window.setTimeout(tick, interval) as any
       }
 
-      // a primeira troca só acontece após firstDelay
+      // 1ª troca só após firstDelay
       timerRef.current = window.setTimeout(tick, firstDelay) as any
     }
 
@@ -643,7 +643,8 @@ export default function Home() {
                 className="relative"
               >
                 <TiltCard className="shadow-glow overflow-hidden">
-                  <HeroImageCycler interval={4200} />
+                  {/* >>> mantém a 1ª imagem ~10s antes de trocar */}
+                  <HeroImageCycler interval={4200} firstHold={10000} />
                 </TiltCard>
               </motion.div>
             </div>
