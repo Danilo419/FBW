@@ -31,18 +31,36 @@ export const revalidate = 0; // sem cache
 
 /* ---------- carrega estatísticas no servidor ---------- */
 async function loadInitialStats() {
-  const [usersCount, shippedOrders, distinctCountries, reviewAgg] = await Promise.all([
+  // Orders shipped = encomendas pagas
+  const shippedOrders = await prisma.order.count({
+    where: {
+      OR: [
+        { paidAt: { not: null } },
+        { status: { in: ["paid", "shipped", "delivered"] } as any },
+      ],
+    },
+  });
+
+  // Countries served = países distintos (shippingCountry) em encomendas pagas
+  const paidRows = await prisma.order.findMany({
+    where: {
+      OR: [
+        { paidAt: { not: null } },
+        { status: { in: ["paid", "shipped", "delivered"] } as any },
+      ],
+      shippingCountry: { not: null },
+    },
+    select: { shippingCountry: true },
+  });
+  const distinctCountries = new Set(
+    paidRows
+      .map((r) => (r.shippingCountry ?? "").trim().toLowerCase())
+      .filter(Boolean)
+  ).size;
+
+  // Community e rating médio
+  const [usersCount, reviewAgg] = await Promise.all([
     prisma.user.count(),
-    prisma.order.count({ where: { status: { in: ["shipped", "delivered"] } } }),
-    prisma.order
-      .groupBy({
-        by: ["shippingCountry"],
-        where: {
-          shippingCountry: { not: null },
-          status: { in: ["paid", "shipped", "delivered"] },
-        },
-      })
-      .then((g) => g.length),
     prisma.review.aggregate({ _avg: { rating: true }, _count: { _all: true } }),
   ]);
 
