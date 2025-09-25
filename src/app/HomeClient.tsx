@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (2 camadas, sem blur) — 1º slide mantido mais tempo
+   2) HERO IMAGE CYCLER — placeholder PRETO enquanto carrega, sem blur
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -397,20 +397,17 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * 2 camadas <img>, primeira já visível no HTML, cross-fade sem blur.
- * `firstHold` controla quanto tempo a 1ª imagem fica antes da 1ª troca.
+ * Placeholder preto até a 1ª imagem estar **pré-carregada**,
+ * depois cross-fade (sem blur). A 1ª imagem permanece `firstHold` ms.
  */
 function HeroImageCycler({
   interval = 4200,
-  firstHold,
+  firstHold = 10000, // 10s por defeito
 }: {
   interval?: number
-  /** tempo (ms) que a primeira imagem permanece antes da 1ª troca */
   firstHold?: number
 }) {
   const fade = 800
-  // default agressivo: 2.5× o intervalo ou 7s, o que for MAIOR
-  const firstDelay = firstHold ?? Math.max(Math.round(interval * 2.5), 7000)
 
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
@@ -422,6 +419,7 @@ function HeroImageCycler({
   const bRef = useRef<HTMLImageElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
+  const [firstShown, setFirstShown] = useState(false) // controla o overlay preto
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -438,18 +436,17 @@ function HeroImageCycler({
     } catch {}
   }
 
-  const loadImage = (src: string) =>
+  const load = (src: string) =>
     new Promise<void>((resolve) => {
-      const img = new Image()
-      img.onload = () => resolve()
-      img.onerror = () => resolve()
-      img.src = src
+      const i = new Image()
+      i.onload = () => resolve()
+      i.onerror = () => resolve()
+      i.src = src
     })
 
   const swapTo = async (nextIndex: number) => {
     const nextSrc = heroImages[nextIndex]?.src || FALLBACK_IMG
-    await loadImage(nextSrc)
-
+    await load(nextSrc)
     const frontIsA = frontIsARef.current
     const front = frontIsA ? aRef.current : bRef.current
     const back = frontIsA ? bRef.current : aRef.current
@@ -461,10 +458,8 @@ function HeroImageCycler({
     // reflow
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
-
     back.classList.add('is-visible')
     front.classList.remove('is-visible')
-
     playKenBurns(back, interval - fade)
     frontIsARef.current = !frontIsA
   }
@@ -473,13 +468,23 @@ function HeroImageCycler({
     let killed = false
 
     const start = async () => {
-      // 1º slide visível já no HTML
-      playKenBurns(aRef.current, firstDelay - fade)
+      const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
+      const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
+      // pré-carrega 1ª e 2ª
+      await Promise.all([load(firstSrc), load(secondSrc)])
+      if (killed) return
 
-      // prepara o ciclo
+      // mostra 1ª (tira o overlay preto)
+      if (aRef.current) {
+        aRef.current.src = firstSrc
+        aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
+        aRef.current.classList.add('is-visible')
+        setFirstShown(true)
+        playKenBurns(aRef.current, firstHold - fade)
+      }
+
       const tick = async () => {
         if (killed) return
-        // avança ponteiro
         ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
         if (ptrRef.current === 0) orderRef.current = shuffle(orderRef.current)
         const nextIdx = orderRef.current[ptrRef.current]
@@ -487,8 +492,8 @@ function HeroImageCycler({
         timerRef.current = window.setTimeout(tick, interval) as any
       }
 
-      // 1ª troca só após firstDelay
-      timerRef.current = window.setTimeout(tick, firstDelay) as any
+      // 1ª troca após firstHold
+      timerRef.current = window.setTimeout(tick, firstHold) as any
     }
 
     start()
@@ -496,18 +501,23 @@ function HeroImageCycler({
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval, firstDelay])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interval, firstHold])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
+      {/* overlay decorativo (pode manter) */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {/* IMAGENS: primeira já visível no HTML, sem placeholder branco */}
+      {/* PLACEHOLDER PRETO enquanto a 1ª imagem não foi mostrada */}
+      {!firstShown && <div className="absolute inset-0 bg-black" />}
+
+      {/* camadas */}
       <img
         ref={aRef}
-        className="hero-layer is-visible"
-        src={heroImages[firstIndex]?.src || FALLBACK_IMG}
-        alt={heroImages[firstIndex]?.alt || 'image'}
+        className="hero-layer"
+        src="" // preenchido no start()
+        alt="image"
         decoding="async"
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement
@@ -519,8 +529,8 @@ function HeroImageCycler({
       <img
         ref={bRef}
         className="hero-layer"
-        src={heroImages[secondIndex]?.src || FALLBACK_IMG}
-        alt={heroImages[secondIndex]?.alt || 'image'}
+        src="" // será definido no swapTo
+        alt="image"
         decoding="async"
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement
@@ -635,7 +645,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* right mockup com animação pro */}
+              {/* right mockup com animação */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -643,7 +653,7 @@ export default function Home() {
                 className="relative"
               >
                 <TiltCard className="shadow-glow overflow-hidden">
-                  {/* >>> mantém a 1ª imagem ~10s antes de trocar */}
+                  {/* 1ª imagem só aparece quando estiver pronta; até lá fica PRETO */}
                   <HeroImageCycler interval={4200} firstHold={10000} />
                 </TiltCard>
               </motion.div>
