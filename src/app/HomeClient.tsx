@@ -350,7 +350,6 @@ const heroImages: { src: string; alt: string }[] = [
   { src: '/images/players/Dortmund/Dortmund9.png', alt: 'image' },
   { src: '/images/players/Dortmund/Dortmund10.png', alt: 'image' },
   { src: '/images/players/Dortmund/Dortmund11.png', alt: 'image' },
-  { src: '/images/players/Dortmund/Dortmund12.png', alt: 'image' },
   { src: '/images/players/Leverkusen/Leverkusen1.png', alt: 'image' },
   { src: '/images/players/Leverkusen/Leverkusen2.png', alt: 'image' },
   { src: '/images/players/Leverkusen/Leverkusen3.png', alt: 'image' },
