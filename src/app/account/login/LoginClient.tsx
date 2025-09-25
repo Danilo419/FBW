@@ -7,15 +7,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 /**
- * Sem auto-redirect agressivo:
- * - Não redireciona ao entrar na página mesmo que a sessão esteja autenticada.
- * - Só decide o destino depois de um login bem-sucedido.
+ * Regras:
+ * - Não redireciona automaticamente ao entrar na página, mesmo autenticado.
+ * - Decide o destino só depois de um login bem-sucedido.
  * - Respeita next/from/callbackUrl (sanitizados).
  */
 export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status, data: session } = useSession(); // usamos status só p/ loading e UX
+  const { status } = useSession(); // só para UX (loading)
 
   // Form state
   const [identifier, setIdentifier] = useState("");
@@ -65,7 +65,7 @@ export default function LoginClient() {
     if (isAdmin && (clean === "/" || clean === "/account")) return "/admin";
 
     return clean;
-    };
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -102,30 +102,17 @@ export default function LoginClient() {
     }
   };
 
-  const isAuthenticated = status === "authenticated";
+  if (status === "loading") {
+    return (
+      <div className="container-fw py-16">
+        <p>Loading…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container-fw py-16 max-w-md">
       <h1 className="text-3xl font-extrabold mb-6">Log in</h1>
-
-      {/* Se já estiver autenticado, NÃO redirecionamos automaticamente.
-          Mostramos uma nota e um atalho manual (evita "ping-pong"). */}
-      {isAuthenticated && (
-        <div className="mb-4 rounded-md border bg-green-50 px-3 py-2 text-sm">
-          You are already logged in.
-          <div className="mt-2 flex gap-2">
-            <Link
-              href={(session?.user as any)?.isAdmin ? "/admin" : "/account"}
-              className="btn-primary px-3 py-2"
-            >
-              Go to dashboard
-            </Link>
-            <Link href="/account/logout" className="btn-outline px-3 py-2">
-              Logout
-            </Link>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={onSubmit} className="space-y-4">
         {err && (
@@ -182,11 +169,9 @@ export default function LoginClient() {
           <button
             onClick={() =>
               signIn("google", {
-                // Usa o callback preferido se existir; caso contrário,
-                // envia para /admin ou /account com base no papel atual (se houver)
-                callbackUrl: preferredCallback
-                  ? preferredCallback
-                  : ((session?.user as any)?.isAdmin ? "/admin" : "/account"),
+                // Usa o callback preferido se existir; caso contrário envia para /account
+                // (o role será decidido no callback server, se precisares)
+                callbackUrl: preferredCallback || "/account",
               })
             }
             className="w-full btn-outline justify-center"

@@ -7,12 +7,12 @@ type Props = {
   redirectTo?: string;
 };
 
-export default function LogoutButton({ redirectTo = '/account/login' }: Props) {
+export default function LogoutButton({ redirectTo = '/account/login?loggedOut=1' }: Props) {
   const handleClick = async () => {
     try {
-      // ⚡ Importante: não usar router.push, só deixar o NextAuth redirecionar
+      // ⚡ Não usar router.push — deixa o NextAuth invalidar cookies e redirecionar
       await signOut({
-        redirect: true,          // força navegação completa (hard reload)
+        redirect: true,          // navegação completa (hard reload)
         callbackUrl: redirectTo, // destino após sair
       });
     } catch (err) {
