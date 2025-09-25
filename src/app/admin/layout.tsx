@@ -1,10 +1,16 @@
-// src/app/admin/(panel)/layout.tsx
+// src/app/admin/layout.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
-import ClientAdminLayout from "./ClientAdminLayout";
+// Este layout raiz protege TODAS as rotas dentro de /admin.
+// Ele envolve o conteúdo do grupo (panel) com o AdminGuard (cliente).
+import AdminGuard from "./AdminGuard";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <ClientAdminLayout>{children}</ClientAdminLayout>;
+export default function AdminRootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <AdminGuard>{children}</AdminGuard>;
 }

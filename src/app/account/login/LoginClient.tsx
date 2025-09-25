@@ -6,45 +6,69 @@ import { useSession, signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+/**
+ * Regras principais:
+ * - Evita redirect automático agressivo que empurra sempre para /admin.
+ * - Se houver `next`, `from` ou `callbackUrl`, respeita-o (com saneamento).
+ * - Caso contrário, usa destino seguro: /admin para admins; /account para utilizadores normais.
+ * - No submit com credentials, usa redirect: false para decidir com base no papel do user.
+ */
 export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Evita destructuring direto (SSR safe)
   const s = useSession();
-  const status = s?.status;
+  const status = s?.status; // 'loading' | 'authenticated' | 'unauthenticated'
   const session = s?.data;
 
-  // Name OR Email
+  // Name OR Email (identifier aceita username OU email)
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const rawCallbackUrl = searchParams.get("callbackUrl") || "/account";
+  // Alvos de redireção possíveis vindos da query
+  const qpNext = searchParams.get("next");
+  const qpFrom = searchParams.get("from");
+  const qpCallback = searchParams.get("callbackUrl");
+  const preferredCallback = qpNext || qpFrom || qpCallback || "";
 
-  // Decide para onde ir com base em ser admin e no callbackUrl
-  const decideNext = (isAdmin: boolean, cb: string) => {
-    // se não for admin e o callback levar para /admin, manda para /account
-    if (!isAdmin && cb?.startsWith("/admin")) return "/account";
-    // se for admin, envia para /admin (a não ser que o callback seja outra coisa explícita tua)
-    if (isAdmin && (cb === "/account" || cb === "/")) return "/admin";
-    return cb || (isAdmin ? "/admin" : "/account");
+  // Decide para onde ir com base no papel e no callback pretendido
+  const decideNext = (isAdmin: boolean, cb?: string | null) => {
+    const clean = (cb || "").trim();
+
+    // Proteção: não permitir empurrar não-admin para /admin
+    if (!isAdmin && clean.startsWith("/admin")) return "/account";
+
+    // Se não há callback explícito, destinos padrão seguros:
+    if (!clean) return isAdmin ? "/admin" : "/account";
+
+    // Evita redirecionamentos externos (só paths relativos)
+    if (clean.startsWith("http://") || clean.startsWith("https://")) {
+      return isAdmin ? "/admin" : "/account";
+    }
+
+    // Se admin e callback padrão for / ou /account, subir para /admin
+    if (isAdmin && (clean === "/" || clean === "/account")) return "/admin";
+
+    return clean;
   };
 
-  // Se já estiver autenticado e aterrar no /account/login, redireciona logo
+  // Já autenticado e aterrou no /account/login → empurrar com critério
   useEffect(() => {
     if (status === "authenticated") {
       const isAdmin = (session?.user as any)?.isAdmin === true;
-      const next = decideNext(isAdmin, rawCallbackUrl);
+      const next = decideNext(isAdmin, preferredCallback);
       router.replace(next);
     }
-  }, [status, session, rawCallbackUrl, router]);
+  }, [status, session, preferredCallback, router]);
 
-  // Mostra erros do NextAuth (?error=...)
+  // Mostrar mensagens de erro do NextAuth (?error=...)
   useEffect(() => {
     const e = searchParams.get("error");
     if (!e) return;
+
     const map: Record<string, string> = {
       CredentialsSignin: "Invalid credentials.",
       OAuthAccountNotLinked:
@@ -53,6 +77,7 @@ export default function LoginClient() {
       Configuration: "Auth configuration error. Please try again later.",
       Default: "Unable to sign in. Please try again.",
     };
+
     setErr(map[e] || "Unable to sign in. Please try again.");
   }, [searchParams]);
 
@@ -62,6 +87,7 @@ export default function LoginClient() {
     setLoading(true);
 
     try {
+      // Autentica sem redirect para decidirmos o destino com base em isAdmin
       const res = await signIn("credentials", {
         redirect: false,
         identifier, // name OR email
@@ -77,10 +103,10 @@ export default function LoginClient() {
         };
         setErr(map[res.error] || "Unable to sign in. Please try again.");
       } else {
-        // Lê sessão atualizada para ver se é admin
+        // Sessão fresca para ver papel
         const s = await getSession();
         const isAdmin = (s?.user as any)?.isAdmin === true;
-        const next = decideNext(isAdmin, rawCallbackUrl);
+        const next = decideNext(isAdmin, preferredCallback);
         router.replace(next);
       }
     } catch {
@@ -142,7 +168,11 @@ export default function LoginClient() {
           />
         </div>
 
-        <button type="submit" disabled={loading} className="w-full btn-primary justify-center">
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full btn-primary justify-center"
+        >
           {loading ? "Logging in…" : "Log in"}
         </button>
       </form>
@@ -153,7 +183,13 @@ export default function LoginClient() {
           <button
             onClick={() =>
               signIn("google", {
-                callbackUrl: rawCallbackUrl,
+                // Aqui podemos permitir redirect direto porque no OAuth o NextAuth
+                // já devolve controle via callbackUrl; usar o preferido se existir
+                callbackUrl:
+                  preferredCallback ||
+                  (session?.user as any)?.isAdmin
+                    ? "/admin"
+                    : "/account",
               })
             }
             className="w-full btn-outline justify-center"
