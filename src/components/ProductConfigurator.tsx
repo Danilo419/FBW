@@ -37,7 +37,7 @@ type ProductUI = {
   description?: string | null;
   basePrice: number; // cents
   images: string[];
-  sizes: SizeUI[];     // Adult
+  sizes: SizeUI[];      // Adult
   kidsSizes?: SizeUI[]; // Kids (optional)
   kidsPriceDelta?: number;
   optionGroups: OptionGroupUI[];
@@ -93,14 +93,17 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Groups ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
+  const badgesGroup = product.optionGroups.find((g) => g.key === "badges"); // <— novo
   const shortsGroup = product.optionGroups.find((g) => g.key === "shorts");
   const socksGroup = product.optionGroups.find((g) => g.key === "socks");
   const otherGroups = product.optionGroups.filter(
-    (g) => !["size", "customization", "shorts", "socks"].includes(g.key)
+    (g) => !["size", "customization", "shorts", "socks", "badges"].includes(g.key)
   );
 
   const customization = selected["customization"] ?? "";
   const showNameNumber = typeof customization === "string" && customization.includes("name-number");
+  const showBadgePicker =
+    typeof customization === "string" && customization.includes("badge") && !!badgesGroup;
 
   const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -178,8 +181,7 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
-    // 🔧 Converter arrays para string (ex.: "ucl,la-liga") para bater com
-    // o tipo esperado por addToCartAction: Record<string, string | null>
+    // Converter arrays para string (ex.: "ucl,la-liga") para bater com a action
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
       Object.entries(selected).map(([k, v]) => [
         k,
@@ -304,6 +306,16 @@ export default function ProductConfigurator({ product }: Props) {
         {customizationGroup && (
           <GroupBlock
             group={customizationGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
+        )}
+
+        {/* Competition Badges (ADDON) — só aparece se o cliente escolher uma opção com "badge" */}
+        {showBadgePicker && badgesGroup && (
+          <GroupBlock
+            group={badgesGroup}
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
@@ -487,7 +499,7 @@ function GroupBlock({
     );
   }
 
-  // ADDON (checkbox multi)
+  // ADDON (checkbox - pode ser usado para "badges", "shorts", "socks", etc.)
   const chosen = selected[group.key];
   const isActive = (value: string) =>
     Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
