@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER (2 camadas, sem blur) — mostra imagem logo no 1.º paint
+   2) HERO IMAGE CYCLER (2 camadas, sem blur), com 1º slide mantido mais tempo
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -397,14 +397,23 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * 2 camadas <img>, primeira já visível no HTML (sem JS), cross-fade e Ken Burns **sem blur**.
+ * 2 camadas <img>, primeira já visível no HTML, cross-fade sem blur.
+ * A 1.ª imagem fica mais tempo usando `firstHold` (default ~1.4× do `interval`).
  */
-function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
+function HeroImageCycler({
+  interval = 4200,
+  firstHold,
+}: {
+  interval?: number
+  /** tempo (ms) que a primeira imagem permanece antes da 1ª troca */
+  firstHold?: number
+}) {
   const fade = 800
+  const firstDelay = Math.max(interval, firstHold ?? Math.round(interval * 1.4))
+
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
 
-  // Escolhas imediatas para o 1º paint (sem esperar efeitos)
   const firstIndex = orderRef.current[ptrRef.current]
   const secondIndex = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
 
@@ -463,10 +472,10 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     let killed = false
 
     const start = async () => {
-      // já renderizámos a primeira e segunda; só tocar animação + cronómetro
-      playKenBurns(aRef.current, interval - fade)
+      // 1º slide fica visível já no HTML; animamos apenas o Ken Burns
+      playKenBurns(aRef.current, firstDelay - fade)
 
-      // ponteiro avança para “second”
+      // avança ponteiro para o “segundo” sem trocar ainda
       ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
 
       const tick = async () => {
@@ -478,7 +487,8 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         timerRef.current = window.setTimeout(tick, interval) as any
       }
 
-      timerRef.current = window.setTimeout(tick, interval) as any
+      // a primeira troca só acontece após firstDelay
+      timerRef.current = window.setTimeout(tick, firstDelay) as any
     }
 
     start()
@@ -486,13 +496,13 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval])
+  }, [interval, firstDelay])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {/* IMAGENS: primeira já visível no HTML, nada de placeholder branco */}
+      {/* IMAGENS: primeira já visível no HTML, sem placeholder branco */}
       <img
         ref={aRef}
         className="hero-layer is-visible"
