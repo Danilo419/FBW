@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-/** Remove everything for a product by slug (safe re-seed) */
+/** Remove tudo de um produto pelo slug (reseed seguro) */
 async function removeProductBySlug(slug: string) {
   const existing = await prisma.product.findUnique({
     where: { slug },
@@ -10,7 +10,7 @@ async function removeProductBySlug(slug: string) {
   });
   if (!existing) return;
 
-  // 1) delete OptionValues for this product
+  // 1) apagar OptionValues
   const groups = await prisma.optionGroup.findMany({
     where: { productId: existing.id },
     select: { id: true },
@@ -20,24 +20,31 @@ async function removeProductBySlug(slug: string) {
     await prisma.optionValue.deleteMany({ where: { groupId: { in: groupIds } } });
   }
 
-  // 2) delete OptionGroups and SizeStock
+  // 2) apagar OptionGroups e SizeStock
   await prisma.optionGroup.deleteMany({ where: { productId: existing.id } });
   await prisma.sizeStock.deleteMany({ where: { productId: existing.id } });
 
-  // 3) delete the Product
+  // 3) apagar Product
   await prisma.product.delete({ where: { id: existing.id } });
 }
 
-/** Create a product with adult + kids sizes and basic option groups */
+/* ------------------------------------------------------------------ */
+/*                          Seed helpers                              */
+/* ------------------------------------------------------------------ */
+
+type BadgeSeed = { value: string; label: string; priceDelta: number };
+
+/** Cria um produto com tamanhos adulto+criança e grupos de opções. */
 async function createProduct(
   slug: string,
   name: string,
   team: string,
   season: string,      // e.g., "25/26"
   images: string[],
-  priceCents: number
+  priceCents: number,
+  badges: BadgeSeed[] = [] // <-- NOVO: competition badges (multi add-on)
 ) {
-  // wipe any previous product with same slug
+  // limpar qualquer produto com o mesmo slug
   await removeProductBySlug(slug);
 
   const product = await prisma.product.create({
@@ -46,28 +53,27 @@ async function createProduct(
       name,
       team,
       season,
-      basePrice: priceCents, // cents
+      basePrice: priceCents, // em cêntimos
       images,
-      // Description auto-uses the given season (works for any year)
       description: `Official ${team} jersey ${season}. Breathable and comfortable fabric for fans and athletes.`,
     },
   });
 
-  // Insert sizes (Adult + Kids). Seed-only; in production you'll manage stock in the admin.
+  // Tamanhos (Adult + Kids). Seed-only; no live o admin gere os stocks.
   await prisma.sizeStock.createMany({
     data: [
       // Adult
       { productId: product.id, size: "XS", stock: 8 },
-      { productId: product.id, size: "S", stock: 12 },
-      { productId: product.id, size: "M", stock: 15 },
-      { productId: product.id, size: "L", stock: 12 },
+      { productId: product.id, size: "S",  stock: 12 },
+      { productId: product.id, size: "M",  stock: 15 },
+      { productId: product.id, size: "L",  stock: 12 },
       { productId: product.id, size: "XL", stock: 10 },
       { productId: product.id, size: "2XL", stock: 6 },
       { productId: product.id, size: "3XL", stock: 4 },
 
       // Kids
-      { productId: product.id, size: "6Y", stock: 10 },
-      { productId: product.id, size: "8Y", stock: 10 },
+      { productId: product.id, size: "6Y",  stock: 10 },
+      { productId: product.id, size: "8Y",  stock: 10 },
       { productId: product.id, size: "10Y", stock: 10 },
       { productId: product.id, size: "12Y", stock: 10 },
       { productId: product.id, size: "14Y", stock: 10 },
@@ -75,7 +81,7 @@ async function createProduct(
     skipDuplicates: true,
   });
 
-  // Option groups
+  // Grupo SIZE (baseline adulto; o UI já troca para Kids)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -84,13 +90,12 @@ async function createProduct(
       type: "SIZE",
       required: true,
       values: {
-        // Keep a simple adult baseline; UI handles Adult/Kids switching
         create: [
-          { value: "XS", label: "XS", priceDelta: 0 },
-          { value: "S", label: "S", priceDelta: 0 },
-          { value: "M", label: "M", priceDelta: 0 },
-          { value: "L", label: "L", priceDelta: 0 },
-          { value: "XL", label: "XL", priceDelta: 0 },
+          { value: "XS",  label: "XS",  priceDelta: 0 },
+          { value: "S",   label: "S",   priceDelta: 0 },
+          { value: "M",   label: "M",   priceDelta: 0 },
+          { value: "L",   label: "L",   priceDelta: 0 },
+          { value: "XL",  label: "XL",  priceDelta: 0 },
           { value: "2XL", label: "2XL", priceDelta: 0 },
           { value: "3XL", label: "3XL", priceDelta: 0 },
         ],
@@ -98,6 +103,7 @@ async function createProduct(
     },
   });
 
+  // Grupo Customization (RADIO)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -107,19 +113,16 @@ async function createProduct(
       required: true,
       values: {
         create: [
-          { value: "none", label: "No customization", priceDelta: 0 },
-          { value: "name-number", label: "Name & Number", priceDelta: 1500 },
-          { value: "badge", label: "Competition Badge", priceDelta: 800 },
-          {
-            value: "name-number-badge",
-            label: "Name & Number + Competition Badge",
-            priceDelta: 2100,
-          },
+          { value: "none",               label: "No customization",                         priceDelta: 0 },
+          { value: "name-number",        label: "Name & Number",                             priceDelta: 1500 },
+          { value: "badge",              label: "Competition Badge",                         priceDelta: 800 },
+          { value: "name-number-badge",  label: "Name & Number + Competition Badge",         priceDelta: 2100 },
         ],
       },
     },
   });
 
+  // Shorts (ADDON)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -131,6 +134,7 @@ async function createProduct(
     },
   });
 
+  // Socks (ADDON)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -142,8 +146,32 @@ async function createProduct(
     },
   });
 
+  // Competition Badges (ADDON, multi-select)
+  if (badges.length) {
+    await prisma.optionGroup.create({
+      data: {
+        productId: product.id,
+        key: "badges",
+        label: "Competition Badges",
+        type: "ADDON",
+        required: false,
+        values: {
+          create: badges.map((b) => ({
+            value: b.value,   // ex.: "laliga", "ucl", "ucl-winners"
+            label: b.label,   // ex.: "La Liga Patch"
+            priceDelta: b.priceDelta, // em cêntimos
+          })),
+        },
+      },
+    });
+  }
+
   console.log("Seed OK:", product.slug);
 }
+
+/* ------------------------------------------------------------------ */
+/*                               main                                  */
+/* ------------------------------------------------------------------ */
 
 async function main() {
   // ------------------------------- LA LIGA -------------------------------
@@ -153,7 +181,12 @@ async function main() {
     "Real Madrid",
     "25/26",
     ["/img/rm-front-25-26.png", "/img/rm-back-25-26.png"],
-    10000
+    10000,
+    [
+      { value: "laliga",      label: "La Liga Patch",                    priceDelta: 500 },
+      { value: "ucl",         label: "UEFA Champions League Patch",      priceDelta: 700 },
+      { value: "ucl-winners", label: "UCL Winners Patch",                priceDelta: 900 },
+    ]
   );
 
   await createProduct(
@@ -162,7 +195,11 @@ async function main() {
     "FC Barcelona",
     "25/26",
     ["/img/fcb-front-25-26.png", "/img/fcb-back-25-26.png"],
-    8999
+    8999,
+    [
+      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
   );
 
   await createProduct(
@@ -171,7 +208,8 @@ async function main() {
     "Atlético de Madrid",
     "25/26",
     ["/img/atm-front-25-26.png", "/img/atm-back-25-26.png"],
-    8999
+    8999,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -180,7 +218,8 @@ async function main() {
     "Real Betis",
     "25/26",
     ["/img/betis-front-25-26.png", "/img/betis-back-25-26.png"],
-    8499
+    8499,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -189,7 +228,11 @@ async function main() {
     "Sevilla FC",
     "25/26",
     ["/img/sevilla-front-25-26.png", "/img/sevilla-back-25-26.png"],
-    8499
+    8499,
+    [
+      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
   );
 
   await createProduct(
@@ -198,7 +241,8 @@ async function main() {
     "Real Sociedad",
     "25/26",
     ["/img/realsociedad-front-25-26.png", "/img/realsociedad-back-25-26.png"],
-    8499
+    8499,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -207,7 +251,11 @@ async function main() {
     "Villarreal",
     "25/26",
     ["/img/villarreal-front-25-26.png", "/img/villarreal-back-25-26.png"],
-    8499
+    8499,
+    [
+      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
   );
 
   await createProduct(
@@ -216,7 +264,8 @@ async function main() {
     "Athletic Club",
     "25/26",
     ["/img/athletic-front-25-26.png", "/img/athletic-back-25-26.png"],
-    8299
+    8299,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -225,7 +274,8 @@ async function main() {
     "Getafe CF",
     "25/26",
     ["/img/getafe-front-25-26.png", "/img/getafe-back-25-26.png"],
-    8999
+    8999,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -234,7 +284,8 @@ async function main() {
     "Elche CF",
     "25/26",
     ["/img/elche-front-25-26.png", "/img/elche-back-25-26.png"],
-    8999
+    8999,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -243,7 +294,8 @@ async function main() {
     "Valencia CF",
     "25/26",
     ["/img/valencia-front-25-26.png", "/img/valencia-back-25-26.png"],
-    8999
+    8999,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -252,7 +304,8 @@ async function main() {
     "RCD Espanyol",
     "25/26",
     ["/img/espanyol-front-25-26.png", "/img/espanyol-back-25-26.png"],
-    8999
+    8999,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -261,7 +314,8 @@ async function main() {
     "Alavés",
     "25/26",
     ["/img/alaves-front-25-26.png", "/img/alaves-back-25-26.png"],
-    8999
+    8999,
+    [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
   // ----------------------- PRIMEIRA LIGA PORTUGAL -----------------------
@@ -271,7 +325,11 @@ async function main() {
     "SL Benfica",
     "25/26",
     ["/img/slb-front-25-26.png", "/img/slb-back-25-26.png"],
-    8499
+    8499,
+    [
+      { value: "ligaportugal", label: "Liga Portugal Patch",               priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch",       priceDelta: 700 },
+    ]
   );
 
   await createProduct(
@@ -280,7 +338,11 @@ async function main() {
     "Sporting CP",
     "25/26",
     ["/img/scp-front-25-26.png", "/img/scp-back-25-26.png"],
-    8499
+    8499,
+    [
+      { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
   );
 
   await createProduct(
@@ -289,7 +351,11 @@ async function main() {
     "FC Porto",
     "25/26",
     ["/img/fcp-front-25-26.png", "/img/fcp-back-25-26.png"],
-    8499
+    8499,
+    [
+      { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
   );
 
   await createProduct(
@@ -298,7 +364,8 @@ async function main() {
     "SC Braga",
     "25/26",
     ["/img/braga-front-25-26.png", "/img/braga-back-25-26.png"],
-    7999
+    7999,
+    [{ value: "ligaportugal", label: "Liga Portugal Patch", priceDelta: 500 }]
   );
 
   await createProduct(
@@ -307,7 +374,8 @@ async function main() {
     "Vitória SC",
     "25/26",
     ["/img/vsc-front-25-26.png", "/img/vsc-back-25-26.png"],
-    7999
+    7999,
+    [{ value: "ligaportugal", label: "Liga Portugal Patch", priceDelta: 500 }]
   );
 }
 

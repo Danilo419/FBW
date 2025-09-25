@@ -16,7 +16,7 @@ type OptionValueUI = {
 
 type OptionGroupUI = {
   id: string;
-  key: string; // e.g., "customization", "shorts", "socks"
+  key: string; // e.g., "customization", "shorts", "socks", "badges"
   label: string;
   type: "SIZE" | "RADIO" | "ADDON";
   required: boolean;
@@ -33,23 +33,17 @@ type ProductUI = {
   id: string;
   slug: string;
   name: string;
-  team?: string | null; // not shown
+  team?: string | null;
   description?: string | null;
   basePrice: number; // cents
   images: string[];
-
-  /** Adult sizes (required) */
-  sizes: SizeUI[];
-
-  /** Kids sizes (optional). If present, the Adult/Kids toggle appears. */
-  kidsSizes?: SizeUI[];
-
-  /** Optional delta (in cents) applied when Kids is selected. Can be negative. */
+  sizes: SizeUI[];     // Adult
+  kidsSizes?: SizeUI[]; // Kids (optional)
   kidsPriceDelta?: number;
-
-  /** Other option groups (customization, shorts, socks, etc.) */
   optionGroups: OptionGroupUI[];
 };
+
+type SelectedState = Record<string, string | string[] | null>;
 
 type Props = {
   product: ProductUI;
@@ -57,7 +51,7 @@ type Props = {
 
 /* ====================== Component ====================== */
 export default function ProductConfigurator({ product }: Props) {
-  const [selected, setSelected] = useState<Record<string, string | null>>({});
+  const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
   const [custNumber, setCustNumber] = useState("");
   const [qty, setQty] = useState(1);
@@ -75,7 +69,6 @@ export default function ProductConfigurator({ product }: Props) {
   const adultSizes = useMemo<SizeUI[]>(() => product.sizes ?? [], [product.sizes]);
   const kidsSizes = useMemo<SizeUI[]>(() => product.kidsSizes ?? [], [product.kidsSizes]);
 
-  // Keep a selected size per category
   const [selectedAdultSize, setSelectedAdultSize] = useState<string | null>(
     adultSizes[0]?.size ?? null
   );
@@ -98,7 +91,7 @@ export default function ProductConfigurator({ product }: Props) {
     setSelected((s) => ({ ...s, size: size ?? null }));
   };
 
-  /* ---------- Other option groups ---------- */
+  /* ---------- Groups ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
   const shortsGroup = product.optionGroups.find((g) => g.key === "shorts");
   const socksGroup = product.optionGroups.find((g) => g.key === "socks");
@@ -109,45 +102,61 @@ export default function ProductConfigurator({ product }: Props) {
   const customization = selected["customization"] ?? "";
   const showNameNumber = typeof customization === "string" && customization.includes("name-number");
 
-  const setOption = (key: string, value: string) =>
+  const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
 
-  /* ---------- Price logic (split jersey vs addons) ---------- */
-  const { unitJerseyPrice, unitAddonsPrice, unitWithAddons, finalPrice } = useMemo(() => {
+  // suporta múltiplas seleções num grupo ADDON
+  function toggleAddon(key: string, value: string, checked: boolean) {
+    setSelected((prev) => {
+      const current = prev[key];
+      let arr: string[] = Array.isArray(current)
+        ? [...current]
+        : typeof current === "string" && current
+        ? [current]
+        : [];
+      if (checked) {
+        if (!arr.includes(value)) arr.push(value);
+      } else {
+        arr = arr.filter((v) => v !== value);
+      }
+      return { ...prev, [key]: arr.length ? arr : null };
+    });
+  }
+
+  /* ---------- Price logic ---------- */
+  const { unitJerseyPrice, finalPrice } = useMemo(() => {
     let jersey = product.basePrice;
 
-    // Kids delta applies to the jersey only
     if (category === "KIDS" && typeof product.kidsPriceDelta === "number") {
       jersey += product.kidsPriceDelta;
     }
 
-    // Add RADIO option deltas (e.g., customization) to the jersey price
     for (const g of product.optionGroups) {
       if (g.type !== "RADIO") continue;
       const chosen = selected[g.key];
-      if (!chosen) continue;
+      if (!chosen || typeof chosen !== "string") continue;
       const v = g.values.find((x) => x.value === chosen);
       if (v) jersey += v.priceDelta;
     }
 
-    // ADDON groups (shorts, socks) – keep them OUT of the jersey price
     let addons = 0;
     for (const g of product.optionGroups) {
       if (g.type !== "ADDON") continue;
       const chosen = selected[g.key];
-      if (!chosen) continue;
-      const v = g.values.find((x) => x.value === chosen);
-      if (v) addons += v.priceDelta;
+      if (Array.isArray(chosen)) {
+        for (const val of chosen) {
+          const v = g.values.find((x) => x.value === val);
+          if (v) addons += v.priceDelta;
+        }
+      } else if (typeof chosen === "string" && chosen) {
+        const v = g.values.find((x) => x.value === chosen);
+        if (v) addons += v.priceDelta;
+      }
     }
-
-    const unit = jersey + addons;
-    const total = unit * qty;
 
     return {
       unitJerseyPrice: jersey,
-      unitAddonsPrice: addons,
-      unitWithAddons: unit,
-      finalPrice: total,
+      finalPrice: (jersey + addons) * qty,
     };
   }, [product.basePrice, product.kidsPriceDelta, category, product.optionGroups, selected, qty]);
 
@@ -169,11 +178,20 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
+    // 🔧 Converter arrays para string (ex.: "ucl,la-liga") para bater com
+    // o tipo esperado por addToCartAction: Record<string, string | null>
+    const optionsForCart: Record<string, string | null> = Object.fromEntries(
+      Object.entries(selected).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? (v.length ? v.join(",") : null) : (v ?? null),
+      ])
+    );
+
     startTransition(async () => {
       await addToCartAction({
         productId: product.id,
         qty,
-        options: selected, // includes { size, customization, ... }
+        options: optionsForCart,
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
     });
@@ -218,16 +236,12 @@ export default function ProductConfigurator({ product }: Props) {
       <div className="card p-6 space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
-
-          {/* Show only the jersey price here (does NOT include addons like shorts/socks) */}
           <div className="text-xl font-semibold">{money(unitJerseyPrice)}</div>
-
           {product.description && (
             <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
           )}
         </header>
 
-        {/* === Category (Adult / Kids) ABOVE the size options === */}
         {hasKids && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-2">
             <div className="text-sm text-gray-700">Category *</div>
@@ -256,7 +270,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* === Size options === */}
+        {/* Size */}
         <div className="rounded-2xl border p-4 bg-white/70">
           <div className="mb-2 text-sm text-gray-700">
             Size ({category === "ADULT" ? "Adult" : "Kids"}) <span className="text-red-500">*</span>
@@ -288,14 +302,18 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Customization (radio) */}
         {customizationGroup && (
-          <GroupBlock group={customizationGroup} selected={selected} onPick={setOption} />
+          <GroupBlock
+            group={customizationGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
         )}
 
-        {/* Personalization fields */}
+        {/* Personalization */}
         {showNameNumber && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">Personalization</div>
-
             <div className="grid sm:grid-cols-2 gap-4">
               <label className="block">
                 <span className="text-xs text-gray-600">Name (uppercase)</span>
@@ -307,7 +325,6 @@ export default function ProductConfigurator({ product }: Props) {
                   maxLength={20}
                 />
               </label>
-
               <label className="block">
                 <span className="text-xs text-gray-600">Number (0–99)</span>
                 <input
@@ -320,21 +337,40 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
             </div>
-
             <p className="text-xs text-gray-500">
               Personalization will be printed in the club’s official style.
             </p>
           </div>
         )}
 
-        {/* Add-ons and other groups */}
-        {shortsGroup && <GroupBlock group={shortsGroup} selected={selected} onPick={setOption} />}
-        {socksGroup && <GroupBlock group={socksGroup} selected={selected} onPick={setOption} />}
+        {/* Add-ons & others */}
+        {shortsGroup && (
+          <GroupBlock
+            group={shortsGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
+        )}
+        {socksGroup && (
+          <GroupBlock
+            group={socksGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
+        )}
         {otherGroups.map((g) => (
-          <GroupBlock key={g.id} group={g} selected={selected} onPick={setOption} />
+          <GroupBlock
+            key={g.id}
+            group={g}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
         ))}
 
-        {/* Qty + Total (Unit removed; Total uses jersey + addons) */}
+        {/* Qty + Total */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
@@ -362,7 +398,6 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         </div>
 
-        {/* CTA */}
         <button
           onClick={addToCart}
           className="btn-primary w-full sm:w-auto disabled:opacity-60"
@@ -379,14 +414,15 @@ export default function ProductConfigurator({ product }: Props) {
 function GroupBlock({
   group,
   selected,
-  onPick,
+  onPickRadio,
+  onToggleAddon,
 }: {
   group: OptionGroupUI;
-  selected: Record<string, string | null>;
-  onPick: (key: string, value: string) => void;
+  selected: SelectedState;
+  onPickRadio: (key: string, value: string) => void;
+  onToggleAddon: (key: string, value: string, checked: boolean) => void;
 }) {
   if (group.type === "SIZE") {
-    // Kept for compatibility if some products still pass a SIZE group.
     return (
       <div className="rounded-2xl border p-4 bg-white/70">
         <div className="mb-2 text-sm text-gray-700">
@@ -399,11 +435,11 @@ function GroupBlock({
               <button
                 key={v.id}
                 type="button"
-                onClick={() => onPick(group.key, v.value)}
+                onClick={() => onPickRadio(group.key, v.value)}
                 className={`rounded-xl px-3 py-2 border text-sm transition ${
                   active ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
                 }`}
-                aria-pressed={active}
+                aria-pressed={!!active}
               >
                 {v.label}
               </button>
@@ -435,8 +471,8 @@ function GroupBlock({
                     type="radio"
                     name={group.key}
                     className="accent-blue-600"
-                    checked={active}
-                    onChange={() => onPick(group.key, v.value)}
+                    checked={!!active}
+                    onChange={() => onPickRadio(group.key, v.value)}
                   />
                   <span>{v.label}</span>
                 </div>
@@ -451,7 +487,11 @@ function GroupBlock({
     );
   }
 
-  // ADDON (checkbox)
+  // ADDON (checkbox multi)
+  const chosen = selected[group.key];
+  const isActive = (value: string) =>
+    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
+
   return (
     <div className="rounded-2xl border p-4 bg-white/70">
       <div className="mb-2 text-sm text-gray-700">
@@ -459,7 +499,7 @@ function GroupBlock({
       </div>
       <div className="grid gap-2">
         {group.values.map((v) => {
-          const active = selected[group.key] === v.value;
+          const active = isActive(v.value);
           return (
             <label
               key={v.id}
@@ -471,8 +511,8 @@ function GroupBlock({
                 <input
                   type="checkbox"
                   className="accent-blue-600"
-                  checked={active}
-                  onChange={(e) => onPick(group.key, e.target.checked ? v.value : "")}
+                  checked={!!active}
+                  onChange={(e) => onToggleAddon(group.key, v.value, e.target.checked)}
                 />
                 <span>{v.label}</span>
               </div>
