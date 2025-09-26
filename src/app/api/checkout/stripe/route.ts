@@ -59,6 +59,7 @@ function shippingToMetadata(s?: Shipping | null) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Stripe client
     let stripe;
     try {
       stripe = getStripe();
@@ -72,10 +73,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method;
 
-    // 🔑 domínio dinâmico (preview/prod/local)
+    // Domínio dinâmico (preview/prod/local)
     const APP = await getServerBaseUrl();
 
-    // sessão
+    // Cookie de sessão (Next 15: async)
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
@@ -95,13 +96,15 @@ export async function POST(req: NextRequest) {
       return acc + line;
     }, 0);
 
-    // shipping cookie (base64 JSON)
+    // Shipping guardado no step /checkout/address (cookie base64 JSON)
     let shippingFromCookie: Shipping | null = null;
     const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
         shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
-      } catch {}
+      } catch {
+        shippingFromCookie = null;
+      }
     }
 
     // Fluxo Link (Elements)
@@ -135,7 +138,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url, sessionId: null });
     }
 
-    // Cria ordem local
+    // Cria ordem local (pending)
     const createdOrder = await prisma.order.create({
       data: {
         sessionId: cart.sessionId ?? null,
@@ -161,9 +164,11 @@ export async function POST(req: NextRequest) {
       include: { items: true },
     });
 
-    const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe`;
+    // Inclui {CHECKOUT_SESSION_ID} para confirmar na success page
+    const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${APP}/cart`;
 
+    // Map para Stripe line_items
     const line_items = createdOrder.items.map((it) => {
       const img = toAbsoluteImage(it.image, APP);
       const product_data: any = { name: it.name };
@@ -188,6 +193,7 @@ export async function POST(req: NextRequest) {
       params.customer_email = String(shippingFromCookie.email).slice(0, 200);
     }
 
+    // Força um método específico, se indicado
     switch (method) {
       case "card":
         params.payment_method_types = ["card"];
