@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
+import { getServerBaseUrl } from "@/lib/origin";
 
 export const runtime = "nodejs";
 
@@ -32,17 +33,6 @@ type Shipping = {
 
 /* -------------------------- helpers -------------------------- */
 
-function buildAppBase(): string {
-  const raw = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
-  if (!raw) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
-  if (!/^https?:\/\//i.test(raw)) {
-    throw new Error(
-      `NEXT_PUBLIC_APP_URL must start with http:// or https:// (got "${raw}")`
-    );
-  }
-  return raw.replace(/\/+$/, "");
-}
-
 function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
   if (!url) return null;
   const t = url.trim();
@@ -52,7 +42,7 @@ function toAbsoluteImage(url: string | null | undefined, APP: string): string | 
   return null;
 }
 
-/** Flatten shipping into Stripe-friendly metadata keys (<= 500 chars each). */
+/** Flatten shipping into Stripe-friendly metadata keys (<= 500 chars cada). */
 function shippingToMetadata(s?: Shipping | null) {
   const clip = (v?: string) => (v ?? "").toString().slice(0, 500);
   return s
@@ -74,7 +64,7 @@ function shippingToMetadata(s?: Shipping | null) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Ensure Stripe is configured (lazy init to avoid build-time crash)
+    // Stripe client
     let stripe;
     try {
       stripe = getStripe();
@@ -88,10 +78,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method;
 
-    const APP = buildAppBase();
+    // ⚠️ Next 15: get base URL de forma assíncrona
+    const APP = await getServerBaseUrl();
 
-    // Identify cart by session cookie
-    const jar = await cookies();            // ✅ use await with Next 15 types
+    // Cookie de sessão (Next 15: também é async, já está com await)
+    const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
     const cart = await prisma.cart.findFirst({
@@ -113,20 +104,18 @@ export async function POST(req: NextRequest) {
       return acc + line;
     }, 0);
 
-    // Read shipping from cookie created at /checkout/address (base64 JSON)
+    // Morada do step address (cookie base64 JSON)
     let shippingFromCookie: Shipping | null = null;
     const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
-        shippingFromCookie = JSON.parse(
-          Buffer.from(rawShip, "base64").toString("utf8")
-        );
+        shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
       } catch {
         shippingFromCookie = null;
       }
     }
 
-    // If user chose Link, send to Link-only page (Elements) and create pending order
+    // Método Link especial (Elements)
     if (method === "link") {
       const createdForLink = await prisma.order.create({
         data: {
@@ -157,7 +146,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url, sessionId: null });
     }
 
-    // Create local order (persist shippingJson now)
+    // Cria ordem local
     const createdOrder = await prisma.order.create({
       data: {
         sessionId: cart.sessionId ?? null,
@@ -186,7 +175,7 @@ export async function POST(req: NextRequest) {
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe`;
     const cancel_url = `${APP}/cart`;
 
-    // Map to Stripe line_items
+    // line_items p/ Stripe
     const line_items = createdOrder.items.map((it) => {
       const img = toAbsoluteImage(it.image, APP);
       const product_data: any = { name: it.name };
@@ -202,7 +191,6 @@ export async function POST(req: NextRequest) {
       ...shippingToMetadata(shippingFromCookie),
     };
 
-    // Base Checkout params — do NOT use shipping_address_collection
     const params: any = {
       mode: "payment",
       success_url,
@@ -211,12 +199,10 @@ export async function POST(req: NextRequest) {
       metadata,
     };
 
-    // Prefill customer email in Checkout if available
     if (shippingFromCookie?.email) {
       params.customer_email = String(shippingFromCookie.email).slice(0, 200);
     }
 
-    // Force specific payment method if explicitly chosen
     switch (method) {
       case "card":
         params.payment_method_types = ["card"];
@@ -238,7 +224,6 @@ export async function POST(req: NextRequest) {
         break;
       case "automatic":
       default:
-        // Let Checkout decide based on your Stripe settings
         break;
     }
 
@@ -251,10 +236,7 @@ export async function POST(req: NextRequest) {
 
     if (!session.url) {
       return NextResponse.json(
-        {
-          error: "Stripe did not return a hosted checkout URL.",
-          sessionId: session.id,
-        },
+        { error: "Stripe did not return a hosted checkout URL.", sessionId: session.id },
         { status: 500 }
       );
     }
@@ -262,9 +244,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: String(session.url), sessionId: session.id });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);
-    return NextResponse.json(
-      { error: err?.message ?? "Stripe error" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
   }
 }

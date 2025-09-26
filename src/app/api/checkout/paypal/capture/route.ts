@@ -83,7 +83,7 @@ function isEmptyShipping(s?: ShippingJson | null) {
 }
 
 function prefer<A>(primary: A | null | undefined, fallback: A | null | undefined): A | null {
-  return primary != null && !(typeof primary === "string" && primary.trim() === "")
+  return primary != null && !(typeof primary === "string" && (primary as any).trim?.() === "")
     ? (primary as A)
     : (fallback ?? null);
 }
@@ -191,8 +191,13 @@ async function markPaid(
   });
 
   if (!alreadyFinal) {
-    const { finalizePaidOrder } = await import("@/lib/checkout");
-    await finalizePaidOrder(orderId);
+    // Se tiveres lógica pós-pagamento (limpar carrinho, enviar email, etc.)
+    try {
+      const { finalizePaidOrder } = await import("@/lib/checkout");
+      await finalizePaidOrder(orderId);
+    } catch {
+      /* noop: util opcional */
+    }
   }
 
   return { transitioned: !alreadyFinal };
@@ -209,7 +214,11 @@ async function markFailed(orderId: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { paypalOrderId, orderId } = (await req.json().catch(() => ({}))) as CaptureBody;
+    // Aceita dados no body e/ou via query (?token=paypalOrderId&order=localId)
+    const body = (await req.json().catch(() => ({}))) as CaptureBody;
+    const url = new URL(req.url);
+    const paypalOrderId = body.paypalOrderId || url.searchParams.get("token") || undefined;
+    const orderId = body.orderId || url.searchParams.get("order") || undefined;
 
     if (!paypalOrderId || !orderId) {
       return NextResponse.json(
@@ -218,14 +227,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    // Verifica envs (aceita PAYPAL_CLIENT_SECRET ou PAYPAL_SECRET)
+    if (
+      !process.env.PAYPAL_CLIENT_ID ||
+      !(process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET)
+    ) {
       return NextResponse.json(
         { error: "PayPal is not configured on this environment." },
         { status: 501 }
       );
     }
 
-    // Importes dinâmicos para evitar problemas de build
+    // Importes dinâmicos para evitar problemas de build em ambientes sem PayPal
     const { paypalClient, paypal } = await import("@/lib/paypal");
 
     const capReq = new (paypal as any).orders.OrdersCaptureRequest(paypalOrderId);
@@ -264,7 +277,9 @@ export async function POST(req: NextRequest) {
             value: 1,
           });
         }
-      } catch {}
+      } catch {
+        /* noop */
+      }
 
       return NextResponse.json({
         ok: true,

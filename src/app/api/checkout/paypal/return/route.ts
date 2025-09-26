@@ -1,74 +1,62 @@
-import { NextResponse } from 'next/server';
+// src/app/api/checkout/paypal/return/route.ts
+import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-const ENV = (process.env.PAYPAL_ENV ?? 'live').trim().toLowerCase();
-const BASE =
-  ENV === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
-
-const CLIENT_ID = (process.env.PAYPAL_CLIENT_ID ?? '').trim();
-const CLIENT_SECRET = (process.env.PAYPAL_SECRET ?? '').trim();
-
-async function getAccessToken() {
-  const basic = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`, 'utf8').toString('base64');
-  const res = await fetch(`${BASE}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${basic}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Accept: 'application/json',
-    },
-    body: 'grant_type=client_credentials',
-    cache: 'no-store',
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(
-      data?.error_description || data?.error || `OAuth ${res.status}`
-    );
-  }
-  return data.access_token as string;
+// helper para criar URLs absolutas com base no pedido atual
+function toUrl(req: NextRequest, path: string) {
+  return new URL(path, req.url);
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const token = await getAccessToken();
-    const orderId = url.searchParams.get('token'); // PayPal sends ?token=<orderId>
 
-    if (!orderId) {
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/cart?paypal=missing_token`);
-    }
+    // PayPal envia ?token=<paypalOrderId>; no create definimos também ?order=<id_local>
+    const paypalOrderId = url.searchParams.get("token");
+    const localOrderId = url.searchParams.get("order");
 
-    const res = await fetch(`${BASE}/v2/checkout/orders/${orderId}/capture`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const msg =
-        data?.details?.[0]?.description ||
-        data?.message ||
-        `Capture failed (status ${res.status})`;
+    if (!paypalOrderId) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/cart?paypal_error=${encodeURIComponent(msg)}`
+        toUrl(req, "/cart?paypal_error=missing_token")
       );
     }
 
-    // TODO: persist order/payment in your DB here
-
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?paypal_order=${orderId}`
+    // Chama o nosso endpoint de captura (POST) com os mesmos parâmetros
+    const captureUrl = toUrl(
+      req,
+      `/api/checkout/paypal/capture?token=${encodeURIComponent(
+        paypalOrderId
+      )}${localOrderId ? `&order=${encodeURIComponent(localOrderId)}` : ""}`
     );
+
+    const res = await fetch(captureUrl, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || data?.ok !== true) {
+      const msg =
+        data?.error ||
+        data?.status ||
+        `capture_failed_${res.status ?? "unknown"}`;
+      return NextResponse.redirect(
+        toUrl(req, `/cart?paypal_error=${encodeURIComponent(String(msg))}`)
+      );
+    }
+
+    // Sucesso → leva o cliente para a página de sucesso do checkout
+    const success = toUrl(
+      req,
+      `/checkout/success?provider=paypal&paypal_order=${encodeURIComponent(
+        paypalOrderId
+      )}${localOrderId ? `&order=${encodeURIComponent(localOrderId)}` : ""}`
+    );
+    return NextResponse.redirect(success);
   } catch (e: any) {
-    console.error('[PayPal return]', e?.message);
+    const msg = e?.message || "paypal_return_error";
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/cart?paypal_error=${encodeURIComponent(e?.message || 'PayPal error')}`
+      toUrl(req, `/cart?paypal_error=${encodeURIComponent(String(msg))}`)
     );
   }
 }
