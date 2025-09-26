@@ -27,11 +27,9 @@ type Shipping = {
     city?: string;
     state?: string;
     postal_code?: string;
-    country?: string; // ISO-3166 alpha-2
+    country?: string;
   };
 };
-
-/* -------------------------- helpers -------------------------- */
 
 function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
   if (!url) return null;
@@ -42,7 +40,6 @@ function toAbsoluteImage(url: string | null | undefined, APP: string): string | 
   return null;
 }
 
-/** Flatten shipping into Stripe-friendly metadata keys (<= 500 chars cada). */
 function shippingToMetadata(s?: Shipping | null) {
   const clip = (v?: string) => (v ?? "").toString().slice(0, 500);
   return s
@@ -60,11 +57,8 @@ function shippingToMetadata(s?: Shipping | null) {
     : {};
 }
 
-/* --------------------------- route --------------------------- */
-
 export async function POST(req: NextRequest) {
   try {
-    // Stripe client
     let stripe;
     try {
       stripe = getStripe();
@@ -78,22 +72,19 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method;
 
-    // ⚠️ Next 15: get base URL de forma assíncrona
+    // 🔑 domínio dinâmico (preview/prod/local)
     const APP = await getServerBaseUrl();
 
-    // Cookie de sessão (Next 15: também é async, já está com await)
+    // sessão
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid ?? undefined },
       include: {
-        items: {
-          include: { product: { select: { name: true, images: true } } },
-        },
+        items: { include: { product: { select: { name: true, images: true } } } },
       },
     });
-
     if (!cart || cart.items.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
@@ -104,18 +95,16 @@ export async function POST(req: NextRequest) {
       return acc + line;
     }, 0);
 
-    // Morada do step address (cookie base64 JSON)
+    // shipping cookie (base64 JSON)
     let shippingFromCookie: Shipping | null = null;
     const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
         shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
-      } catch {
-        shippingFromCookie = null;
-      }
+      } catch {}
     }
 
-    // Método Link especial (Elements)
+    // Fluxo Link (Elements)
     if (method === "link") {
       const createdForLink = await prisma.order.create({
         data: {
@@ -175,7 +164,6 @@ export async function POST(req: NextRequest) {
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe`;
     const cancel_url = `${APP}/cart`;
 
-    // line_items p/ Stripe
     const line_items = createdOrder.items.map((it) => {
       const img = toAbsoluteImage(it.image, APP);
       const product_data: any = { name: it.name };
@@ -186,10 +174,7 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const metadata = {
-      orderId: createdOrder.id,
-      ...shippingToMetadata(shippingFromCookie),
-    };
+    const metadata = { orderId: createdOrder.id, ...shippingToMetadata(shippingFromCookie) };
 
     const params: any = {
       mode: "payment",
