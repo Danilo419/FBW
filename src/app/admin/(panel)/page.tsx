@@ -4,22 +4,16 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
+import {
+  getOrdersShippedCount,
+  getCountriesServedCount,
+  getTotalRevenuePaidCents,
+} from "@/lib/kpis";
+import { formatMoney, moneyFromOrder } from "@/lib/money";
 
 /* ---------- helpers ---------- */
 function fmtInt(n: number) {
   return new Intl.NumberFormat("en-GB").format(n);
-}
-function fmtMoney(amount: number, currency = "EUR") {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
-}
-function normalizeTotal(o: any): number {
-  if (typeof o.total === "number") return o.total;
-  if (typeof o.totalCents === "number") return o.totalCents / 100;
-  const s = Number(o.subtotal ?? 0);
-  const sh = Number(o.shipping ?? 0);
-  const t = Number(o.tax ?? 0);
-  const sum = s + sh + t;
-  return sum < 10000 ? sum / 100 : sum;
 }
 
 /* ---------- metrics ---------- */
@@ -37,37 +31,20 @@ async function getStats() {
 
   let shippedOrders = 0;
   try {
-    shippedOrders = await prisma.order.count({ where: { status: "SHIPPED" } } as any);
-  } catch {
-    try {
-      shippedOrders = await prisma.order.count({ where: { NOT: { stripeSessionId: null } } } as any);
-    } catch {}
-  }
+    shippedOrders = await getOrdersShippedCount();
+  } catch {}
 
   let countriesServed = 0;
   try {
-    const rows = await prisma.order.findMany({
-      select: { shippingCountry: true },
-      where: { shippingCountry: { not: null } } as any,
-      distinct: ["shippingCountry"] as any,
-      take: 2000,
-    } as any);
-    countriesServed = rows.length;
+    countriesServed = await getCountriesServedCount();
   } catch {}
 
-  // Align with Analytics: consider paid orders if paidAt is set OR status === "PAID" OR paymentStatus === "paid"
-  let revenue = 0;
+  let revenueCents = 0;
   try {
-    const paidOrders = await prisma.order.findMany({
-      where: {
-        OR: [{ paidAt: { not: null } }, { status: "PAID" }, { paymentStatus: "paid" }],
-      } as any,
-      select: { total: true, totalCents: true, subtotal: true, shipping: true, tax: true } as any,
-    } as any);
-    revenue = paidOrders.reduce((acc, o) => acc + normalizeTotal(o), 0);
+    revenueCents = await getTotalRevenuePaidCents();
   } catch {}
 
-  return { usersCount, avgRating, shippedOrders, countriesServed, revenue };
+  return { usersCount, avgRating, shippedOrders, countriesServed, revenueCents };
 }
 
 /* ---------- analytics: visitors ---------- */
@@ -126,6 +103,7 @@ async function getRecentOrders(limit = 10) {
         tax: true,
         total: true,
         totalCents: true,
+        items: { select: { totalPrice: true } }, // <- needed to compute robust totals
         // canonical columns (when present)
         shippingFullName: true,
         shippingEmail: true,
@@ -295,7 +273,7 @@ function fromOrder(o: any) {
 
 /* ---------- page ---------- */
 export default async function AdminDashboardPage() {
-  const [{ usersCount, avgRating, shippedOrders, countriesServed, revenue }, traffic, orders] =
+  const [{ usersCount, avgRating, shippedOrders, countriesServed, revenueCents }, traffic, orders] =
     await Promise.all([getStats(), getTrafficStats(), getRecentOrders(12)]);
 
   return (
@@ -319,7 +297,7 @@ export default async function AdminDashboardPage() {
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl bg-white p-5 shadow border">
           <h3 className="font-semibold mb-2">Total revenue (paid)</h3>
-          <p className="text-3xl font-extrabold">{fmtMoney(revenue, "EUR")}</p>
+          <p className="text-3xl font-extrabold">{formatMoney(revenueCents, "EUR")}</p>
           <p className="text-xs text-gray-500 mt-1">Sum of paid/settled orders.</p>
         </div>
 
@@ -374,9 +352,7 @@ export default async function AdminDashboardPage() {
               )}
               {orders.map((o) => {
                 const ship = fromOrder(o);
-                const total = normalizeTotal(o);
-                const currency = (o?.currency || "EUR").toString().toUpperCase();
-
+                const money = moneyFromOrder(o, (o?.currency || "EUR").toString());
                 return (
                   <tr key={o.id} className="border-b last:border-0 align-top">
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{o.id}</td>
@@ -390,7 +366,7 @@ export default async function AdminDashboardPage() {
                     <td className="py-2 pr-3">{ship.postalCode ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.country ?? "—"}</td>
                     <td className="py-2 pr-3">{o?.status ?? "—"}</td>
-                    <td className="py-2 pr-3">{fmtMoney(total, currency)}</td>
+                    <td className="py-2 pr-3">{money.label}</td>
                     <td className="py-2 pr-3 whitespace-nowrap">
                       {o?.createdAt ? new Date(o.createdAt).toLocaleString("en-GB") : "—"}
                     </td>
