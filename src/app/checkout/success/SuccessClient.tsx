@@ -38,8 +38,6 @@ function moneyCents(cents: number | null | undefined) {
 }
 
 const FINAL_STATUSES = new Set(["paid", "shipped", "delivered"]);
-
-/** aguarda ms */
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function SuccessClient() {
@@ -66,7 +64,7 @@ export default function SuccessClient() {
     setLoading(true);
     setLoadingMsg("Finalizing your payment…");
 
-    // Tenta algumas vezes (pagamentos podem demorar segundos a ficarem "paid")
+    // Alguns métodos demoram segundos a ficarem "paid" → retries
     const MAX_TRIES = 6;
     for (let i = 0; i < MAX_TRIES; i++) {
       try {
@@ -107,12 +105,13 @@ export default function SuccessClient() {
     setError(null);
 
     try {
-      // Try RESTful first
+      // Tenta RESTful primeiro
       let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
         method: "GET",
         cache: "no-store",
       });
 
+      // Fallback para /api/orders?id=
       if (!res.ok) {
         res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, {
           method: "GET",
@@ -136,7 +135,6 @@ export default function SuccessClient() {
 
           // Se ainda não estiver final (ex.: webhooks lentos), faz um pequeno polling
           if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
-            // tenta mais 2 vezes a cada 1.5s
             for (let i = 0; i < 2; i++) {
               await wait(1500);
               const again = await fetch(
@@ -189,7 +187,7 @@ export default function SuccessClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, provider, sessionId]);
 
-  // Compute total
+  // Total calculado
   const computedTotalCents = useMemo(() => {
     if (!order) return 0;
     if (typeof order.totalCents === "number") return order.totalCents;
