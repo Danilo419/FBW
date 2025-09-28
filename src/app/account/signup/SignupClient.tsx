@@ -1,35 +1,95 @@
 // src/app/account/signup/SignupClient.tsx
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
+
+/* ------------------------ password strength ------------------------ */
+type Strength = {
+  score: 0 | 1 | 2 | 3 | 4; // 0=very weak … 4=very strong
+  label: "Weak" | "Fair" | "Strong" | "Very strong" | "Very weak";
+  barClass: string;
+  textClass: string;
+};
+
+function passwordStrength(pw: string): Strength {
+  const len = pw.length;
+  const sets = [
+    /[a-z]/.test(pw), // lower
+    /[A-Z]/.test(pw), // upper
+    /\d/.test(pw), // digit
+    /[^A-Za-z0-9]/.test(pw), // symbol
+  ].filter(Boolean).length;
+
+  // usar number e só no fim transformar para o union 0|1|2|3|4
+  let scoreNum = 0;
+  if (len >= 8) scoreNum++;
+  if (len >= 12) scoreNum++;
+  if (sets >= 2) scoreNum++;
+  if (sets >= 4) scoreNum++;
+
+  const score = Math.max(0, Math.min(4, scoreNum)) as 0 | 1 | 2 | 3 | 4;
+
+  const map: Record<number, Omit<Strength, "score">> = {
+    0: { label: "Very weak", barClass: "bg-red-200", textClass: "text-red-600" },
+    1: { label: "Weak", barClass: "bg-red-300", textClass: "text-red-600" },
+    2: { label: "Fair", barClass: "bg-amber-300", textClass: "text-amber-700" },
+    3: { label: "Strong", barClass: "bg-green-400", textClass: "text-green-700" },
+    4: { label: "Very strong", barClass: "bg-emerald-500", textClass: "text-emerald-700" },
+  };
+
+  const { label, barClass, textClass } = map[score];
+  return { score, label, barClass, textClass };
+}
 
 export default function SignupClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Evitar crash em build se o hook não estiver disponível em algum momento
-  const s = useSession();
+  const s = useSession(); // safe on build
   const status = s?.status;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
+
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Se já estiver autenticado, mandar para /account
+  // If already authenticated, go to /account
   useEffect(() => {
     if (status === "authenticated") {
       router.replace("/account");
     }
   }, [status, router]);
 
+  const strength = useMemo(() => passwordStrength(password), [password]);
+  const canSubmit =
+    !busy &&
+    name.trim().length > 0 &&
+    email.trim().length > 0 &&
+    password.length >= 8 &&
+    confirm === password;
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
+
+    // client validations
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setErr("Passwords do not match.");
+      return;
+    }
 
     setErr(null);
     setBusy(true);
@@ -46,7 +106,7 @@ export default function SignupClient() {
     };
 
     try {
-      // 1) Criar conta
+      // 1) Create account
       const res = await fetch("/api/account/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,8 +114,7 @@ export default function SignupClient() {
       });
 
       if (res.status === 201) {
-        // 2) Login automático (NextAuth Credentials)
-        //   O teu provider aceita "identifier" (nome ou email) + password
+        // 2) Auto login (NextAuth Credentials)
         const result = await signIn("credentials", {
           identifier: payload.email,
           password: payload.password,
@@ -63,12 +122,11 @@ export default function SignupClient() {
           callbackUrl: next,
         });
 
-        // Fallback no caso raro de não haver redirect
-        if (!result) router.replace(next);
+        if (!result) router.replace(next); // rare fallback
         return;
       }
 
-      // Erros conhecidos do endpoint /api/account/register
+      // handle API errors
       const data = await res.json().catch(() => ({}));
       if (data?.code === "USERNAME_TAKEN") {
         setErr("A user with this name already exists. Please choose another name.");
@@ -88,7 +146,7 @@ export default function SignupClient() {
 
   return (
     <div className="container-fw py-16 max-w-md">
-      <h1 className="text-3xl font-extrabold mb-6">Create your account</h1>
+      <h1 className="text-3xl font-extrabold mb-6">Sign up</h1>
 
       <form onSubmit={onSubmit} className="space-y-4" aria-busy={busy}>
         {err && (
@@ -97,6 +155,7 @@ export default function SignupClient() {
           </p>
         )}
 
+        {/* Name */}
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium">
             Name
@@ -114,6 +173,7 @@ export default function SignupClient() {
           />
         </div>
 
+        {/* Email */}
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
@@ -135,28 +195,101 @@ export default function SignupClient() {
           />
         </div>
 
+        {/* Password */}
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium">
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            minLength={6}
-            disabled={busy}
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPw ? "text" : "password"}
+              className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+              disabled={busy}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+              aria-label={showPw ? "Hide password" : "Show password"}
+              tabIndex={0}
+            >
+              {showPw ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          {/* Strength meter */}
+          <div className="mt-2">
+            <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+              <div
+                className={`h-2 ${strength.barClass} transition-all`}
+                style={{
+                  width:
+                    strength.score === 0
+                      ? "10%"
+                      : strength.score === 1
+                      ? "25%"
+                      : strength.score === 2
+                      ? "50%"
+                      : strength.score === 3
+                      ? "75%"
+                      : "100%",
+                }}
+              />
+            </div>
+            <div className={`mt-1 text-xs ${strength.textClass}`}>
+              {strength.label}
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
+            </p>
+          </div>
         </div>
 
+        {/* Confirm password */}
+        <div className="space-y-2">
+          <label htmlFor="confirm" className="text-sm font-medium">
+            Confirm password
+          </label>
+          <div className="relative">
+            <input
+              id="confirm"
+              type={showPw2 ? "text" : "password"}
+              className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Repeat your password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+              disabled={busy}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw2((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+              aria-label={showPw2 ? "Hide password" : "Show password"}
+              tabIndex={0}
+            >
+              {showPw2 ? "Hide" : "Show"}
+            </button>
+          </div>
+          {confirm.length > 0 && confirm !== password && (
+            <p className="text-xs text-red-600">Passwords do not match.</p>
+          )}
+        </div>
+
+        {/* Submit */}
         <button
           type="submit"
-          disabled={busy}
-          className="w-full btn-primary justify-center"
+          disabled={!canSubmit}
+          className="w-full btn-primary justify-center disabled:opacity-60"
         >
           {busy ? "Creating account…" : "Create account"}
         </button>
