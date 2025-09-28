@@ -30,7 +30,7 @@ export default function LiveStats({
   const [avgRating, setAvgRating] = useState(initialAverage);
   const [ratingsCount, setRatingsCount] = useState(initialRatingsCount);
 
-  // buscar média/contagem se não vierem do SSR
+  // fetch average/count if not provided by SSR
   useEffect(() => {
     if (initialAverage > 0 || initialRatingsCount > 0) return;
     (async () => {
@@ -40,12 +40,12 @@ export default function LiveStats({
         setAvgRating(Number(data.avg ?? data.average ?? 0));
         setRatingsCount(Number(data.count ?? data.total ?? 0));
       } catch {
-        /* ignore */
+        /* ignore network errors */
       }
     })();
   }, [initialAverage, initialRatingsCount]);
 
-  // Realtime
+  // Realtime updates
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
@@ -55,9 +55,12 @@ export default function LiveStats({
     const ch = pusher.subscribe("stats");
 
     ch.bind("metric:update", (payload: any) => {
-      if (payload?.metric === "orders") setOrders((v) => v + Number(payload.value || 0));
-      if (payload?.metric === "users") setCommunity((v) => v + Number(payload.value || 0));
-      if (payload?.metric === "countries") setCountries((v) => v + Number(payload.value || 0));
+      const v = Number(payload?.value || 0);
+      if (payload?.metric === "orders") setOrders((x) => x + v);
+      if (payload?.metric === "users") setCommunity((x) => x + v);
+      if (payload?.metric === "countries" || payload?.metric === "countriesMaybeChanged") {
+        setCountries((x) => x + (v || 1));
+      }
     });
 
     ch.bind("rating:update", (data: { avg: number; count: number } | any) => {
@@ -84,7 +87,7 @@ export default function LiveStats({
         icon={<Stars className="h-5 w-5 text-amber-600" />}
         label="Average rating"
         value={`${avgRating.toFixed(1)}/5`}
-        sub={`(${ratingsCount})`}
+        sub={`(${formatInt(ratingsCount)})`}
       />
     ),
     community: (
@@ -92,7 +95,7 @@ export default function LiveStats({
         key="community"
         icon={<Users2 className="h-5 w-5 text-purple-600" />}
         label="Community"
-        value={formatK(community)}
+        value={formatInt(community)}
       />
     ),
     orders: (
@@ -100,7 +103,7 @@ export default function LiveStats({
         key="orders"
         icon={<Truck className="h-5 w-5 text-cyan-600" />}
         label="Orders shipped"
-        value={formatK(orders)}
+        value={formatInt(orders)}
       />
     ),
     countries: (
@@ -108,7 +111,7 @@ export default function LiveStats({
         key="countries"
         icon={<Globe2 className="h-5 w-5 text-blue-600" />}
         label="Countries served"
-        value={formatK(countries)}
+        value={formatInt(countries)}
       />
     ),
   };
@@ -143,7 +146,7 @@ function Stat({
   );
 }
 
-function formatK(n: number) {
-  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k+`;
-  return String(n);
+/** Inteiro com separador de milhares usando ponto (ex.: 1.000, 25.430). */
+function formatInt(n: number) {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(n);
 }

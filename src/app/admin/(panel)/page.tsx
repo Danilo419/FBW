@@ -12,8 +12,9 @@ import {
 import { formatMoney, moneyFromOrder } from "@/lib/money";
 
 /* ---------- helpers ---------- */
+// Use a locale que usa ponto como separador de milhar (pt-BR).
 function fmtInt(n: number) {
-  return new Intl.NumberFormat("en-GB").format(n);
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(n);
 }
 
 /* ---------- metrics ---------- */
