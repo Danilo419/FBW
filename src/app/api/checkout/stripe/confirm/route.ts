@@ -33,7 +33,9 @@ const nz = (v: unknown) => {
 };
 
 const isFinal = (s?: string | null) =>
-  s === "paid" || s === "shipped" || s === "delivered";
+  (s ?? "").toLowerCase() === "paid" ||
+  (s ?? "").toLowerCase() === "shipped" ||
+  (s ?? "").toLowerCase() === "delivered";
 
 function prefer<A>(primary: A | null | undefined, fallback: A | null | undefined): A | null {
   return primary != null && !(typeof primary === "string" && primary.trim() === "")
@@ -61,10 +63,28 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
   };
 }
 
+/** Converte um ShippingJson em colunas canónicas da Order. */
+function canonFromShipping(s?: ShippingJson) {
+  const a = s?.address ?? null;
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+  return {
+    shippingFullName: nz(s?.name),
+    shippingEmail: nz(s?.email),
+    shippingPhone: nz(s?.phone),
+    shippingAddress1: nz(a?.line1),
+    shippingAddress2: nz(a?.line2),
+    shippingCity: nz(a?.city),
+    shippingRegion: nz(a?.state),
+    shippingPostalCode: nz(a?.postal_code),
+    shippingCountry: up(nz(a?.country)),
+  };
+}
+
 /** Extrai morada de shipping/customer da Stripe Session (se existir). */
 function shippingFromStripe(session: any): ShippingJson {
-  const ship = session?.shipping_details;
-  const cust = session?.customer_details;
+  // Stripe pode expor shipping tanto em `shipping_details` como em `shipping`
+  const ship = session?.shipping_details || session?.shipping || null;
+  const cust = session?.customer_details || null;
 
   const addressSrc = ship?.address || cust?.address || null;
 
@@ -138,7 +158,9 @@ export async function POST(req: NextRequest) {
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ["payment_intent", "payment_link", "customer"],
+      // `shipping_details` costuma vir sem expand; `customer_details` também.
+      // Expandimos o payment_intent para obter id e eventualmente detalhes adicionais.
+      expand: ["payment_intent", "customer"],
     });
 
     // Alguns métodos podem demorar a marcar "paid"; devolve 202 para retry
@@ -154,8 +176,9 @@ export async function POST(req: NextRequest) {
     // Merge de morada/e-mail vindos da Stripe (se houver)
     const newShipping = shippingFromStripe(session);
     const mergedShipping = mergeShipping(existing.shippingJson as ShippingJson, newShipping);
+    const canon = canonFromShipping(mergedShipping);
     const country =
-      upper(mergedShipping?.address?.country || existing.shippingCountry || null) || null;
+      canon.shippingCountry || upper(existing.shippingCountry || null) || null;
 
     await prisma.order.update({
       where: { id: orderId },
@@ -167,8 +190,10 @@ export async function POST(req: NextRequest) {
         stripePaymentIntentId: pi?.id ?? undefined,
         totalCents: amountCents ?? undefined,
         currency: currency ?? undefined,
-        ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+        shippingJson: (mergedShipping as any) ?? undefined,
         ...(country ? { shippingCountry: country } : {}),
+        // ✅ grava também as colunas canónicas (para painel/admin e exports)
+        ...canon,
       },
     });
 

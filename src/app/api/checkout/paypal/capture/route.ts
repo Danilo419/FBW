@@ -147,6 +147,23 @@ function shippingFromPayPal(res: PayPalCaptureResult): ShippingJson {
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
+/** Converte ShippingJson em colunas canónicas da Order. */
+function canonFromShipping(s?: ShippingJson) {
+  const a = s?.address ?? null;
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+  return {
+    shippingFullName: nz(s?.name),
+    shippingEmail: nz(s?.email),
+    shippingPhone: nz(s?.phone),
+    shippingAddress1: nz(a?.line1),
+    shippingAddress2: nz(a?.line2),
+    shippingCity: nz(a?.city),
+    shippingRegion: nz(a?.state),
+    shippingPostalCode: nz(a?.postal_code),
+    shippingCountry: up(nz(a?.country)),
+  };
+}
+
 /* -------------------------- mutations --------------------------- */
 
 async function markPaid(
@@ -168,8 +185,8 @@ async function markPaid(
     existing?.status === "paid" || existing?.status === "shipped" || existing?.status === "delivered";
 
   const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, opts.newShipping ?? null);
-  const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
+  const canon = canonFromShipping(mergedShipping);
+  const country = canon.shippingCountry || upper(existing?.shippingCountry || null) || null;
 
   await prisma.order.update({
     where: { id: orderId },
@@ -185,8 +202,10 @@ async function markPaid(
         typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
           ? Math.round(opts.totalCents)
           : undefined,
-      ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+      shippingJson: (mergedShipping as any) ?? undefined,
       ...(country ? { shippingCountry: country } : {}),
+      // ✅ grava também as colunas canónicas para o painel/admin
+      ...canon,
     },
   });
 
