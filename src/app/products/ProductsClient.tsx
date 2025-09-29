@@ -236,7 +236,8 @@ export default function ProductsClient() {
           {leaguesOrder.map((lg) => (
             <motion.a
               key={lg.key}
-              href={`/clubs?league=${encodeURIComponent(lg.key)}`}
+              // ✅ agora aponta para a página da liga
+              href={`/leagues/${encodeURIComponent(lg.key)}`}
               whileHover={{ y: -6 }}
               className="group"
             >
