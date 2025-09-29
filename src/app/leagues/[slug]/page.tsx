@@ -1,16 +1,7 @@
 // src/app/leagues/[slug]/page.tsx
 import Link from "next/link";
 
-/**
- * Page: /leagues/[slug]
- * - Não depende de Prisma (evita "prisma.club" inexistente).
- * - Mostra clubes a partir de um mapa estático de slugs.
- * - Linka cada clube para /products/team/[club].
- * - Usa imagens em /assets/clubs/[league]/[club].png (igual ao resto do site).
- */
-
-type Props = { params: { slug: string } };
-
+/** -------------------- helpers -------------------- */
 const TITLES: Record<string, string> = {
   "premier-league": "Premier League",
   "la-liga": "La Liga",
@@ -23,8 +14,35 @@ const TITLES: Record<string, string> = {
   brasileirao: "Brasileirão",
 };
 
-// Mapa estático (mesmos slugs usados no catálogo)
-const CLUBS_BY_LEAGUE: Record<string, string[]> = {
+function titleFromSlug(slug: string) {
+  return (
+    TITLES[slug] ??
+    slug
+      .split("-")
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(" ")
+  );
+}
+
+function logoPath(league: string, club: string) {
+  return `/assets/clubs/${league}/${club}.png`;
+}
+
+function prettyNameFromSlug(slug: string) {
+  const parts = slug.split("-");
+  // Pequenas exceções/abreviações comuns
+  const UPPER = new Set(["fc", "ac", "sc", "st", "psg", "rb", "vfb", "sv"]);
+  return parts
+    .map((p) => {
+      if (UPPER.has(p)) return p.toUpperCase();
+      if (p.length <= 3 && p !== "usa") return p.toUpperCase();
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    })
+    .join(" ");
+}
+
+/** -------------------- dados (slugs por liga) -------------------- */
+const CLUB_SLUGS: Record<string, string[]> = {
   "premier-league": [
     "arsenal","aston-villa","bournemouth","brentford","brighton",
     "chelsea","crystal-palace","everton","fulham","leeds-united",
@@ -43,7 +61,7 @@ const CLUBS_BY_LEAGUE: Record<string, string[]> = {
     "genoa","monza","udinese","empoli","lecce",
     "cagliari","hellas-verona","como","venezia","parma",
   ],
-  "bundesliga": [
+  bundesliga: [
     "bayern-munich","borussia-dortmund","rb-leipzig","bayer-leverkusen","vfb-stuttgart",
     "eintracht-frankfurt","sc-freiburg","union-berlin","wolfsburg","mainz-05",
     "augsburg","borussia-monchengladbach","bochum","heidenheim","werder-bremen",
@@ -55,7 +73,7 @@ const CLUBS_BY_LEAGUE: Record<string, string[]> = {
     "reims","toulouse","lens","brest","angers",
     "saint-etienne","auxerre","metz",
   ],
-  "eredivisie": [
+  eredivisie: [
     "ajax","psv","feyenoord","az-alkmaar","fc-twente",
     "utrecht","heerenveen","nec-nijmegen","sparta-rotterdam","go-ahead-eagles",
     "pec-zwolle","heracles","fortuna-sittard","rkc-waalwijk","vitesse",
@@ -80,34 +98,24 @@ const CLUBS_BY_LEAGUE: Record<string, string[]> = {
   ],
 };
 
-function titleFromSlug(slug: string) {
-  return (
-    TITLES[slug] ??
-    slug
-      .split("-")
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-      .join(" ")
-  );
+type ClubCard = { slug: string; name: string; logo: string };
+
+function getClubsForLeague(leagueSlug: string): ClubCard[] {
+  const slugs = CLUB_SLUGS[leagueSlug] ?? [];
+  return slugs.map((s) => ({
+    slug: s,
+    name: prettyNameFromSlug(s),
+    logo: logoPath(leagueSlug, s),
+  }));
 }
 
-function humanizeSlug(s: string) {
-  // Pequenas exceções comuns
-  if (s.toLowerCase() === "psg") return "Paris Saint-Germain";
-  return s
-    .split("-")
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ");
-}
-
-function clubImg(league: string, club: string) {
-  return `/assets/clubs/${league}/${club}.png`;
-}
+/** -------------------- page -------------------- */
+type Props = { params: { slug: string } };
 
 export default async function LeaguePage({ params }: Props) {
-  const slug = (params.slug || "").toLowerCase();
+  const slug = params.slug.toLowerCase();
   const title = titleFromSlug(slug);
-
-  const clubs: string[] = CLUBS_BY_LEAGUE[slug] ?? [];
+  const clubs = getClubsForLeague(slug);
 
   return (
     <div className="container-fw py-10">
@@ -120,24 +128,23 @@ export default async function LeaguePage({ params }: Props) {
 
       {clubs.length > 0 ? (
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {clubs.map((clubSlug: string) => (
+          {clubs.map((c) => (
             <Link
-              key={clubSlug}
-              href={`/products/team/${encodeURIComponent(clubSlug)}`}
-              className="group rounded-2xl border bg-white p-4 hover:shadow"
+              key={c.slug}
+              href={`/players?club=${encodeURIComponent(c.slug)}`}
+              className="group rounded-2xl border bg-white p-4 hover:shadow transition"
             >
-              <div className="aspect-square rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
-                {/* usa next/image se preferires */}
+              <div className="aspect-[3/4] rounded-xl bg-gray-50 ring-1 ring-black/5 overflow-hidden flex items-center justify-center">
+                {/* Mantemos <img> simples; se usares next/image podes trocar. */}
+                {/* object-contain + padding → encaixa qualquer proporção */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={clubImg(slug, clubSlug)}
-                  alt={humanizeSlug(clubSlug)}
-                  className="max-h-24"
+                  src={c.logo}
+                  alt={c.name}
+                  className="h-full w-full object-contain p-6"
                 />
               </div>
-              <div className="mt-2 font-semibold truncate">
-                {humanizeSlug(clubSlug)}
-              </div>
+              <div className="mt-2 font-semibold truncate text-center">{c.name}</div>
             </Link>
           ))}
         </div>
