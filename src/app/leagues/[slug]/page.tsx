@@ -30,7 +30,6 @@ function logoPath(league: string, club: string) {
 
 function prettyNameFromSlug(slug: string) {
   const parts = slug.split("-");
-  // Pequenas exceções/abreviações comuns
   const UPPER = new Set(["fc", "ac", "sc", "st", "psg", "rb", "vfb", "sv"]);
   return parts
     .map((p) => {
@@ -134,16 +133,17 @@ export default async function LeaguePage({ params }: Props) {
               href={`/players?club=${encodeURIComponent(c.slug)}`}
               className="group rounded-2xl border bg-white p-4 hover:shadow transition"
             >
-              <div className="aspect-[3/4] rounded-xl bg-gray-50 ring-1 ring-black/5 overflow-hidden flex items-center justify-center">
-                {/* Mantemos <img> simples; se usares next/image podes trocar. */}
-                {/* object-contain + padding → encaixa qualquer proporção */}
+              {/* Cartão do logo */}
+              <div className="relative aspect-[3/4] rounded-xl overflow-hidden ring-1 ring-black/5 bg-gray-50">
+                {/* Preencher todo o espaço cinzento */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={c.logo}
                   alt={c.name}
-                  className="h-full w-full object-contain p-6"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
+
               <div className="mt-2 font-semibold truncate text-center">{c.name}</div>
             </Link>
           ))}
