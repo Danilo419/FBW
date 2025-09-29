@@ -130,12 +130,11 @@ export default async function LeaguePage({ params }: Props) {
           {clubs.map((c) => (
             <Link
               key={c.slug}
-              href={`/players?club=${encodeURIComponent(c.slug)}`}
+              href={`/products/team/${encodeURIComponent(c.slug)}`}
               className="group rounded-2xl border bg-white p-4 hover:shadow transition"
             >
-              {/* Cartão do logo */}
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden ring-1 ring-black/5 bg-gray-50">
-                {/* Preencher todo o espaço cinzento */}
+                {/* Preencher TODO o espaço cinzento */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={c.logo}
@@ -143,7 +142,6 @@ export default async function LeaguePage({ params }: Props) {
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
-
               <div className="mt-2 font-semibold truncate text-center">{c.name}</div>
             </Link>
           ))}
