@@ -60,6 +60,7 @@ export default function MetricChart({
     return () => controller.abort();
   }, [metric, period, from, to]);
 
+  /* -------------------- formatters -------------------- */
   const unit = useMemo<"" | "€" | "%">(() => {
     if (metric === "sales") return "€";
     if (metric === "conversion") return "%";
@@ -103,29 +104,43 @@ export default function MetricChart({
     });
   };
 
-  // X axis ticks
+  /* -------------------- X axis ticks (anti-overlap) -------------------- */
+  // Escolhemos no máximo ~12 rótulos para períodos longos.
   const xTicks = useMemo(() => {
+    const len = data.length;
+
+    // Horário (hoje): pode mostrar todos (geralmente <= 24).
     if (granularity === "hour") return data.map((p) => p.date);
-    if (data.length <= 31) return data.map((p) => p.date);
-    const step = Math.ceil(data.length / 12);
+
+    // Até 14 pontos é seguro mostrar todos.
+    if (len <= 14) return data.map((p) => p.date);
+
+    // Para séries maiores (ex.: 30d/90d), limitar a ~10–12 ticks.
+    const desired = 12;
+    const step = Math.max(1, Math.ceil(len / desired));
     const ticks: string[] = [];
-    for (let i = 0; i < data.length; i += step) ticks.push(data[i].date);
-    if (ticks[ticks.length - 1] !== data[data.length - 1].date) {
-      ticks.push(data[data.length - 1].date);
-    }
+    for (let i = 0; i < len; i += step) ticks.push(data[i].date);
+    // garantir o último
+    const last = data[len - 1]?.date;
+    if (last && ticks[ticks.length - 1] !== last) ticks.push(last);
     return ticks;
   }, [data, granularity]);
 
   const xTickStyle = useMemo(
     () => ({
-      fontSize: granularity === "hour" || data.length > 20 ? 10 : 12,
+      fontSize: granularity === "hour" || data.length <= 20 ? 12 : 10,
       fill: "#475569",
     }),
     [granularity, data.length]
   );
   const yTickStyle = useMemo(() => ({ fontSize: 11, fill: "#475569" }), []);
 
-  // Card label for conversion vs others
+  // Rotacionar rótulos quando a série é muito longa (ex.: 90d)
+  const xAngle = useMemo(() => {
+    if (granularity === "hour") return 0;
+    return data.length > 40 ? -30 : 0;
+  }, [granularity, data.length]);
+
   const avgLabel =
     metric === "conversion"
       ? granularity === "hour"
@@ -217,20 +232,32 @@ export default function MetricChart({
             <XAxis
               dataKey="date"
               ticks={xTicks}
-              interval={0}
+              // Só mostramos os ticks que escolhemos acima; não forçar todos.
+              // interval={0}  // <- REMOVIDO para não colar rótulos
               tick={xTickStyle}
-              tickMargin={8}
+              minTickGap={22}
+              tickMargin={10}
               padding={{ left: 0, right: 30 }}
               tickFormatter={fmtXAxis}
+              angle={xAngle}
+              textAnchor={xAngle ? "end" : "middle"}
+              tickLine={false}
             />
-            <YAxis tick={yTickStyle} tickFormatter={fmtYAxis} />
+            <YAxis tick={yTickStyle} tickFormatter={fmtYAxis} tickLine={false} axisLine={false} />
             <Tooltip
               formatter={(v: number) =>
                 metric === "conversion" ? `${(v as number).toFixed(2)}%` : fmtTooltipVal(v as number)
               }
               labelFormatter={(d: string) => fmtTooltipLabel(d)}
             />
-            <Line type="monotone" dataKey="value" dot={false} strokeWidth={3} activeDot={{ r: 5 }} />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#2563eb"
+              dot={false}
+              strokeWidth={3}
+              activeDot={{ r: 5 }}
+            />
           </LineChart>
         </ResponsiveContainer>
         {loading && (
