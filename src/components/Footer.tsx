@@ -16,7 +16,8 @@ import {
 
 export default function Footer() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "ok" | "err" | "loading">("idle");
+  const [status, setStatus] =
+    useState<"idle" | "ok" | "err" | "loading">("idle");
   const [showTop, setShowTop] = useState(false);
 
   useEffect(() => {
@@ -66,14 +67,21 @@ export default function Footer() {
           <div>
             <h3 className="text-xl font-semibold">Join our newsletter</h3>
             <p className="text-gray-600 text-sm">
-              New drops, discounts and featured products. No spam — unsubscribe anytime.
+              New drops, discounts and featured products. No spam — unsubscribe
+              anytime.
             </p>
             <div className="mt-2 flex gap-3 text-xs text-gray-500">
-              <Badge icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}>
+              <Badge
+                icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}
+              >
                 Secure checkout
               </Badge>
-              <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>Global shipping</Badge>
-              <Badge icon={<BadgePercent className="h-3.5 w-3.5 text-amber-600" />}>
+              <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>
+                Global shipping
+              </Badge>
+              <Badge
+                icon={<BadgePercent className="h-3.5 w-3.5 text-amber-600" />}
+              >
                 Fair prices
               </Badge>
             </div>
@@ -102,10 +110,14 @@ export default function Footer() {
             {status === "loading" ? "Subscribing…" : "Subscribe"}
           </button>
           {status === "ok" && (
-            <div className="text-green-700 text-sm self-center">Subscribed! 🎉</div>
+            <div className="text-green-700 text-sm self-center">
+              Subscribed! 🎉
+            </div>
           )}
           {status === "err" && (
-            <div className="text-red-600 text-sm self-center">Something went wrong.</div>
+            <div className="text-red-600 text-sm self-center">
+              Something went wrong.
+            </div>
           )}
         </form>
       </div>
@@ -127,8 +139,8 @@ export default function Footer() {
               <span className="sr-only">FootballWorld</span>
             </Link>
             <p className="mt-3 text-sm text-gray-600 max-w-xs">
-              Concept football kits with a focus on design and quality. Built-to-order,
-              global tracked shipping and secure payments.
+              Concept football kits with a focus on design and quality.
+              Built-to-order, global tracked shipping and secure payments.
             </p>
 
             {/* Socials */}
@@ -142,7 +154,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Shop — navegação (inclui Search e All Collections para evitar “info” aqui) */}
+          {/* Shop */}
           <FooterCol title="Shop">
             <FooterLink href="/products">Products</FooterLink>
             <FooterLink href="/players">Players</FooterLink>
@@ -151,7 +163,7 @@ export default function Footer() {
             <FooterLink href="/faq">FAQ</FooterLink>
           </FooterCol>
 
-          {/* Support — apenas recursos que ajudam o cliente */}
+          {/* Support */}
           <FooterCol title="Support">
             <FooterLink href="/shipping">Shipping & Tracking</FooterLink>
             <FooterLink href="/returns">Returns & Exchanges</FooterLink>
@@ -159,33 +171,62 @@ export default function Footer() {
             <FooterLink href="/contact">Contact us</FooterLink>
           </FooterCol>
 
-          {/* Contact — dados directos (evita duplicar em Information) */}
+          {/* Contact */}
           <FooterCol title="Contact">
-            <FooterContact icon={<Mail className="h-4 w-4" />} text="myfootballworldshop@gmail.com" />
-            <FooterContact icon={<MapPin className="h-4 w-4" />} text="Worldwide shipping" />
+            <FooterContact
+              icon={<Mail className="h-4 w-4" />}
+              text="myfootballworldshop@gmail.com"
+              href="mailto:myfootballworldshop@gmail.com"
+            />
+            <FooterContact
+              icon={<MapPin className="h-4 w-4" />}
+              text="Worldwide shipping"
+            />
           </FooterCol>
 
-          {/* Information — somente páginas informativas/políticas, sem itens já presentes em Support/Contact */}
+          {/* Information */}
           <FooterCol title="Information">
             <FooterLink href="/privacy-policy">Privacy Policy</FooterLink>
             <FooterLink href="/terms-of-service">Terms of Service</FooterLink>
             <FooterLink href="/shipping-policy">Shipping Policy</FooterLink>
-            <FooterLink href="/return-and-refund-policy">Return and Refund Policy</FooterLink>
+            <FooterLink href="/return-and-refund-policy">
+              Return and Refund Policy
+            </FooterLink>
             <FooterLink href="/about">About Us</FooterLink>
           </FooterCol>
 
-          {/* Payment marks — linha completa */}
+          {/* Payment marks */}
           <div className="lg:col-span-5 sm:col-span-2 flex items-center justify-end flex-wrap gap-2 mt-1">
-            <PayMark title="Visa"><VisaSvg /></PayMark>
-            <PayMark title="Mastercard"><MastercardSvg /></PayMark>
-            <PayMark title="American Express"><AmexSvg /></PayMark>
-            <PayMark title="PayPal"><PayPalSvg /></PayMark>
-            <PayMark title="Amazon Pay"><AmazonPaySvg /></PayMark>
-            <PayMark title="Multibanco"><MultibancoSvg /></PayMark>
-            <PayMark title="Revolut Pay"><RevolutSvg /></PayMark>
-            <PayMark title="Klarna"><KlarnaSvg /></PayMark>
-            <PayMark title="Satispay"><SatispaySvg /></PayMark>
-            <PayMark title="Link"><LinkSvg /></PayMark>
+            <PayMark title="Visa">
+              <VisaSvg />
+            </PayMark>
+            <PayMark title="Mastercard">
+              <MastercardSvg />
+            </PayMark>
+            <PayMark title="American Express">
+              <AmexSvg />
+            </PayMark>
+            <PayMark title="PayPal">
+              <PayPalSvg />
+            </PayMark>
+            <PayMark title="Amazon Pay">
+              <AmazonPaySvg />
+            </PayMark>
+            <PayMark title="Multibanco">
+              <MultibancoSvg />
+            </PayMark>
+            <PayMark title="Revolut Pay">
+              <RevolutSvg />
+            </PayMark>
+            <PayMark title="Klarna">
+              <KlarnaSvg />
+            </PayMark>
+            <PayMark title="Satispay">
+              <SatispaySvg />
+            </PayMark>
+            <PayMark title="Link">
+              <LinkSvg />
+            </PayMark>
           </div>
         </div>
       </div>
@@ -202,7 +243,9 @@ export default function Footer() {
         aria-label="Back to top"
         onClick={scrollTop}
         className={`fixed bottom-6 right-6 z-[60] inline-flex items-center justify-center rounded-full border bg-white shadow-lg p-3 transition-all ${
-          showTop ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none translate-y-3"
+          showTop
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 pointer-events-none translate-y-3"
         }`}
       >
         <ArrowUp className="h-5 w-5" />
@@ -212,31 +255,68 @@ export default function Footer() {
 }
 
 /* =============== small UI helpers =============== */
-function FooterCol({ title, children }: { title: string; children: React.ReactNode }) {
+function FooterCol({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <div className="font-semibold mb-3">{title}</div>
-      <ul className="space-y-2 text-sm">{children}</ul>
+      {/* Removemos bullets e margens de lista para evitar o “•” e desalinhamentos */}
+      <ul className="space-y-2 text-sm list-none p-0 m-0">{children}</ul>
     </div>
   );
 }
 
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+function FooterLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
     <li>
-      <Link href={href} className="text-gray-600 hover:text-black hover:underline">
+      <Link
+        href={href}
+        className="text-gray-600 hover:text-black hover:underline"
+      >
         {children}
       </Link>
     </li>
   );
 }
 
-function FooterContact({ icon, text }: { icon: React.ReactNode; text: string }) {
+/** Item de contacto em <li>, com alinhamento no topo e quebra de linha */
+function FooterContact({
+  icon,
+  text,
+  href,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  href?: string;
+}) {
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-600">
-      {icon}
-      <span>{text}</span>
-    </div>
+    <li className="list-none">
+      <div className="flex items-start gap-2 text-sm text-gray-600 leading-snug">
+        <span className="mt-0.5">{icon}</span>
+        {href ? (
+          <a
+            href={href}
+            className="hover:underline break-words"
+            rel="nofollow noopener noreferrer"
+          >
+            {text}
+          </a>
+        ) : (
+          <span className="break-words">{text}</span>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -260,7 +340,13 @@ function Social({
   );
 }
 
-function Badge({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
+function Badge({
+  icon,
+  children,
+}: {
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 bg-white/80">
       {icon}
@@ -270,7 +356,13 @@ function Badge({ icon, children }: { icon?: React.ReactNode; children: React.Rea
 }
 
 /* ===== payment mark wrapper ===== */
-function PayMark({ title, children }: { title: string; children: React.ReactNode }) {
+function PayMark({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <span
       aria-label={title}
@@ -304,7 +396,13 @@ function AmazonPaySvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#232F3E" />
-      <path d="M6 13c4.3 2.8 9.7 2.8 14 0" stroke="#FF9900" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path
+        d="M6 13c4.3 2.8 9.7 2.8 14 0"
+        stroke="#FF9900"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -313,7 +411,15 @@ function MultibancoSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#0B1E3B" />
-      <text x="16" y="13" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="10" fill="#fff" fontWeight="700">
+      <text
+        x="16"
+        y="13"
+        textAnchor="middle"
+        fontFamily="Arial, sans-serif"
+        fontSize="10"
+        fill="#fff"
+        fontWeight="700"
+      >
         MB
       </text>
     </svg>
@@ -324,7 +430,15 @@ function RevolutSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#00E1A1" />
-      <text x="16" y="13" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="10" fill="#001B2E" fontWeight="900">
+      <text
+        x="16"
+        y="13"
+        textAnchor="middle"
+        fontFamily="Arial, sans-serif"
+        fontSize="10"
+        fill="#001B2E"
+        fontWeight="900"
+      >
         R
       </text>
     </svg>
@@ -335,7 +449,15 @@ function KlarnaSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#FFB3C7" />
-      <text x="16" y="13" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="10" fill="#111" fontWeight="900">
+      <text
+        x="16"
+        y="13"
+        textAnchor="middle"
+        fontFamily="Arial, sans-serif"
+        fontSize="10"
+        fill="#111"
+        fontWeight="900"
+      >
         K
       </text>
     </svg>
@@ -346,7 +468,13 @@ function SatispaySvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#FF3D2E" />
-      <path d="M11 6l5 4-5 4M21 6l-5 4 5 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none" />
+      <path
+        d="M11 6l5 4-5 4M21 6l-5 4 5 4"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
     </svg>
   );
 }
@@ -368,7 +496,14 @@ function VisaSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#1A1F71" />
-      <text x="16" y="13" textAnchor="middle" fontFamily="Arial Black, Arial, sans-serif" fontSize="9" fill="#fff">
+      <text
+        x="16"
+        y="13"
+        textAnchor="middle"
+        fontFamily="Arial Black, Arial, sans-serif"
+        fontSize="9"
+        fill="#fff"
+      >
         VISA
       </text>
     </svg>
@@ -389,7 +524,14 @@ function AmexSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
       <rect width="32" height="20" rx="4" fill="#2E77BC" />
-      <text x="16" y="13" textAnchor="middle" fontFamily="Arial Black, Arial, sans-serif" fontSize="9" fill="#fff">
+      <text
+        x="16"
+        y="13"
+        textAnchor="middle"
+        fontFamily="Arial Black, Arial, sans-serif"
+        fontSize="9"
+        fill="#fff"
+      >
         AMEX
       </text>
     </svg>
