@@ -51,8 +51,19 @@ export default function MetricChart({
     fetch(`/api/analytics/series?${q.toString()}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((json: SeriesResponse) => {
-        setData(json.series || []);
-        setSummary({ total: json.total, average: json.average });
+        let series = json.series || [];
+        let total = json.total ?? undefined;
+        let average = json.average ?? undefined;
+
+        // ✅ Corrige valores de "sales" (centavos -> euros)
+        if (metric === "sales") {
+          series = series.map((p) => ({ ...p, value: p.value / 100 }));
+          if (typeof total === "number") total = total / 100;
+          if (typeof average === "number") average = average / 100;
+        }
+
+        setData(series);
+        setSummary({ total, average });
         setGranularity(json.granularity || "day");
       })
       .catch(() => {})
@@ -105,22 +116,16 @@ export default function MetricChart({
   };
 
   /* -------------------- X axis ticks (anti-overlap) -------------------- */
-  // Escolhemos no máximo ~12 rótulos para períodos longos.
+  // No máximo ~12 rótulos para períodos longos.
   const xTicks = useMemo(() => {
     const len = data.length;
-
-    // Horário (hoje): pode mostrar todos (geralmente <= 24).
     if (granularity === "hour") return data.map((p) => p.date);
-
-    // Até 14 pontos é seguro mostrar todos.
     if (len <= 14) return data.map((p) => p.date);
 
-    // Para séries maiores (ex.: 30d/90d), limitar a ~10–12 ticks.
     const desired = 12;
     const step = Math.max(1, Math.ceil(len / desired));
     const ticks: string[] = [];
     for (let i = 0; i < len; i += step) ticks.push(data[i].date);
-    // garantir o último
     const last = data[len - 1]?.date;
     if (last && ticks[ticks.length - 1] !== last) ticks.push(last);
     return ticks;
@@ -135,11 +140,8 @@ export default function MetricChart({
   );
   const yTickStyle = useMemo(() => ({ fontSize: 11, fill: "#475569" }), []);
 
-  // Rotacionar rótulos quando a série é muito longa (ex.: 90d)
-  const xAngle = useMemo(() => {
-    if (granularity === "hour") return 0;
-    return data.length > 40 ? -30 : 0;
-  }, [granularity, data.length]);
+  // ⚙️ Rótulos SEM rotação (sempre retos)
+  const xAngle = 0 as const;
 
   const avgLabel =
     metric === "conversion"
@@ -232,15 +234,15 @@ export default function MetricChart({
             <XAxis
               dataKey="date"
               ticks={xTicks}
-              // Só mostramos os ticks que escolhemos acima; não forçar todos.
-              // interval={0}  // <- REMOVIDO para não colar rótulos
+              // não forçar todos os rótulos; o 'ticks' já limita
+              // interval={0}
               tick={xTickStyle}
               minTickGap={22}
               tickMargin={10}
               padding={{ left: 0, right: 30 }}
               tickFormatter={fmtXAxis}
               angle={xAngle}
-              textAnchor={xAngle ? "end" : "middle"}
+              textAnchor="middle"
               tickLine={false}
             />
             <YAxis tick={yTickStyle} tickFormatter={fmtYAxis} tickLine={false} axisLine={false} />
