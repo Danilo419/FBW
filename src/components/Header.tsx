@@ -3,8 +3,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   LogOut,
@@ -392,7 +393,18 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   );
 }
 
-/* ===== Search component (new visual) ===== */
+/* ===== Search component (with live preview) ===== */
+
+type ProductSearchItem = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  imageUrl?: string | null;
+  clubName?: string | null;
+};
+
+const SEARCH_API = "/api/search/products";
 
 function SearchBar({
   className = "",
@@ -401,42 +413,276 @@ function SearchBar({
   className?: string;
   onSubmitted?: () => void;
 }) {
+  const router = useRouter();
   const [term, setTerm] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<ProductSearchItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [active, setActive] = useState<number>(-1); // keyboard highlight
+
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<number | null>(null);
+
+  // Close when clicking outside
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(t)) {
+        setOpen(false);
+        setActive(-1);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const fetchResults = useCallback((q: string) => {
+    if (abortRef.current) abortRef.current.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    setLoading(true);
+    setError(null);
+
+    const url = `${SEARCH_API}?q=${encodeURIComponent(q)}&limit=8`;
+    fetch(url, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
+        setItems(arr);
+        setOpen(true);
+      })
+      .catch((err) => {
+        if (err.name === "AbortError") return;
+        setError("Falha a carregar resultados");
+        setItems([]);
+        setOpen(true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (term.trim().length < 2) {
+      setItems([]);
+      setOpen(Boolean(term.trim().length)); // fecha quando apaga
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    debounceRef.current = window.setTimeout(() => {
+      fetchResults(term.trim());
+    }, 250);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [term, fetchResults]);
+
+  // Handle submit
+  const onSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setOpen(false);
+    setActive(-1);
+    onSubmitted?.();
+    const q = term.trim();
+    if (!q) return;
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+  };
+
+  // Keyboard nav
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => {
+        const next = Math.min(i + 1, (items?.length ?? 0) - 1);
+        return next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => Math.max(i - 1, -1));
+    } else if (e.key === "Enter") {
+      if (active >= 0 && items[active]) {
+        e.preventDefault();
+        const it = items[active];
+        setOpen(false);
+        setActive(-1);
+        onSubmitted?.();
+        router.push(`/product/${it.slug}`);
+      }
+      // else will submit the form default
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setActive(-1);
+    }
+  };
 
   return (
-    <form
-      role="search"
-      aria-label="Site-wide"
-      action="/search"
-      method="GET"
-      onSubmit={() => onSubmitted?.()}
-      className={`group relative ${className}`}
-    >
-      {/* Gradient border wrapper */}
-      <div className="p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
-        <div className="relative rounded-full bg-white/80 backdrop-blur ring-1 ring-black/5 hover:ring-gray-300 focus-within:ring-blue-500 transition">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="search"
-            name="q"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="Search products…"
-            className="w-72 lg:w-80 xl:w-96 group-focus-within:w-[28rem] transition-[width] duration-300 rounded-full bg-transparent pl-9 pr-24 py-2 text-sm outline-none"
-            aria-label="Search products"
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
-            aria-label="Submit search"
-          >
-            Search
-          </button>
+    <div ref={wrapRef} className={`relative ${className}`}>
+      <form
+        role="search"
+        aria-label="Site-wide"
+        action="/search"
+        method="GET"
+        onSubmit={onSubmit}
+        className={`group relative`}
+      >
+        {/* Gradient border wrapper */}
+        <div className="p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
+          <div className="relative rounded-full bg-white/80 backdrop-blur ring-1 ring-black/5 hover:ring-gray-300 focus-within:ring-blue-500 transition">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              ref={inputRef}
+              type="search"
+              name="q"
+              value={term}
+              onChange={(e) => {
+                setTerm(e.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => term.trim().length >= 2 && setOpen(true)}
+              onKeyDown={onKeyDown}
+              placeholder="Search products…"
+              className="w-72 lg:w-80 xl:w-96 group-focus-within:w-[28rem] transition-[width] duration-300 rounded-full bg-transparent pl-9 pr-24 py-2 text-sm outline-none"
+              aria-label="Search products"
+              aria-expanded={open}
+              aria-controls="search-popover"
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+              aria-label="Submit search"
+            >
+              Search
+            </button>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+
+      {/* Popover */}
+      {open && (
+        <div
+          id="search-popover"
+          role="listbox"
+          aria-label="Search suggestions"
+          className="absolute z-50 mt-2 w-[min(30rem,92vw)] rounded-2xl border bg-white/95 backdrop-blur shadow-2xl ring-1 ring-black/5 overflow-hidden"
+        >
+          {loading && (
+            <div className="p-4 text-sm text-gray-500">A procurar…</div>
+          )}
+
+          {!loading && error && (
+            <div className="p-4 text-sm text-red-600">{error}</div>
+          )}
+
+          {!loading && !error && term.trim().length >= 2 && items.length === 0 && (
+            <div className="p-4 text-sm text-gray-600">
+              Sem resultados para “<span className="font-semibold">{term}</span>”.
+            </div>
+          )}
+
+          {!loading && !error && items.length > 0 && (
+            <ul className="max-h-[70vh] overflow-auto">
+              {items.map((it, idx) => (
+                <li key={it.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={active === idx}
+                    onMouseEnter={() => setActive(idx)}
+                    onMouseLeave={() => setActive(-1)}
+                    onClick={() => {
+                      setOpen(false);
+                      setActive(-1);
+                      onSubmitted?.();
+                      router.push(`/product/${it.slug}`);
+                    }}
+                    className={`w-full flex items-center gap-3 p-2.5 text-left transition ${
+                      active === idx ? "bg-blue-50" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="relative h-12 w-12 rounded-xl overflow-hidden border bg-white">
+                      <Image
+                        src={it.imageUrl || "/placeholder.png"}
+                        alt={it.name}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        <Highlight text={it.name} query={term} />
+                      </div>
+                      <div className="truncate text-xs text-gray-500">
+                        {it.clubName ? <Highlight text={it.clubName} query={term} /> : "Product"}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-sm font-semibold">
+                      {formatPrice(it.price)}
+                    </div>
+                  </button>
+                </li>
+              ))}
+
+              {/* See all results */}
+              <li className="border-t">
+                <Link
+                  href={`/search?q=${encodeURIComponent(term.trim())}`}
+                  onClick={() => {
+                    setOpen(false);
+                    setActive(-1);
+                    onSubmitted?.();
+                  }}
+                  className="flex items-center justify-center gap-2 p-2.5 text-sm font-medium hover:bg-gray-50"
+                >
+                  Ver todos os resultados para “{term.trim()}”
+                </Link>
+              </li>
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
+}
+
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const q = query.trim();
+  try {
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return <>{text}</>;
+    const before = text.slice(0, idx);
+    const match = text.slice(idx, idx + q.length);
+    const after = text.slice(idx + q.length);
+    return (
+      <>
+        {before}
+        <mark className="bg-yellow-200/80 rounded px-0.5">{match}</mark>
+        {after}
+      </>
+    );
+  } catch {
+    return <>{text}</>;
+  }
+}
+
+function formatPrice(price: number) {
+  try {
+    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(price);
+  } catch {
+    return `${price}€`;
+  }
 }
 
 /* ===== Helpers / UI ===== */
