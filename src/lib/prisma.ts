@@ -2,8 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 
 /**
- * Evita criar múltiplas instâncias do Prisma em dev (HMR do Next).
- * Guardamos a instância no escopo global.
+ * Singleton do Prisma para evitar múltiplas conexões em dev (HMR).
  */
 declare global {
   // eslint-disable-next-line no-var
@@ -13,33 +12,48 @@ declare global {
 const isProd = process.env.NODE_ENV === "production";
 
 /**
- * Controla os logs via env PRISMA_LOG:
+ * Logs configuráveis via PRISMA_LOG:
  *  - "query" | "info" | "warn" | "error"
- *  - default: warn em dev, error em prod
+ *  - default: "warn" em dev, "error" em prod
+ *
+ * (Sem depender de tipos do @prisma/client que podem não existir)
  */
-const level = (process.env.PRISMA_LOG || (isProd ? "error" : "warn")).toLowerCase();
-const log =
-  level === "query"
-    ? (["query", "warn", "error"] as const)
-    : level === "info"
-    ? (["info", "warn", "error"] as const)
-    : level === "warn"
-    ? (["warn", "error"] as const)
-    : (["error"] as const);
+type LogLiteral = "query" | "info" | "warn" | "error";
+type LogConfig =
+  | LogLiteral
+  | { level: LogLiteral; emit: "stdout" | "event" };
+
+const level = (process.env.PRISMA_LOG || (isProd ? "error" : "warn")).toLowerCase() as LogLiteral;
+
+const log: LogConfig[] = [];
+if (level === "query") {
+  log.push("query", "info", "warn", "error");
+} else if (level === "info") {
+  log.push("info", "warn", "error");
+} else if (level === "warn") {
+  log.push("warn", "error");
+} else {
+  log.push("error");
+}
 
 export const prisma =
   globalThis.__PRISMA__ ??
   new PrismaClient({
-    log: [...log],
+    // Prisma aceita um array de literais ("query" | "info" | "warn" | "error")
+    // ou objetos { level, emit }. Aqui usamos apenas literais.
+    log,
     errorFormat: isProd ? "minimal" : "pretty",
-    // Se quiseres forçar a URL do datasource (opcional):
-    // datasources: { db: { url: process.env.DATABASE_URL! } },
+    // Opcional: força datasource por código (normalmente desnecessário):
+    // datasources: { db: { url: process.env.POSTGRES_POSTGRES_PRISMA_URL! } },
   });
 
-// Em produção, cada processo tem a sua instância;
-// em dev, reutilizamos entre HMRs.
 if (!isProd) {
   globalThis.__PRISMA__ = prisma;
 }
 
 export default prisma;
+
+/**
+ * Dica: em rotas do App Router que usem Prisma,
+ * define `export const runtime = "nodejs";` (Prisma não funciona no Edge).
+ */
