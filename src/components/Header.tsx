@@ -440,6 +440,28 @@ function SearchBar({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  const sortByRelevance = (arr: ProductSearchItem[], q: string) => {
+    const phrase = q.toLowerCase();
+    return [...arr].sort((a, b) => {
+      const an = (a.name + " " + (a.clubName || "")).toLowerCase();
+      const bn = (b.name + " " + (b.clubName || "")).toLowerCase();
+
+      const aExact = an === phrase ? 1 : 0;
+      const bExact = bn === phrase ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
+
+      const aStarts = an.startsWith(phrase) ? 1 : 0;
+      const bStarts = bn.startsWith(phrase) ? 1 : 0;
+      if (aStarts !== bStarts) return bStarts - aStarts;
+
+      const aIdx = an.indexOf(phrase);
+      const bIdx = bn.indexOf(phrase);
+      if (aIdx !== bIdx) return (aIdx === -1 ? 1 : aIdx) - (bIdx === -1 ? 1 : bIdx);
+
+      return a.name.localeCompare(b.name);
+    });
+  };
+
   const fetchResults = useCallback((q: string) => {
     if (abortRef.current) abortRef.current.abort();
     const ctrl = new AbortController();
@@ -448,17 +470,26 @@ function SearchBar({
     setLoading(true);
     setError(null);
 
-    const url = `${SEARCH_API}?q=${encodeURIComponent(q)}&limit=8`;
+    const url = `${SEARCH_API}?q=${encodeURIComponent(q)}&limit=12`;
     fetch(url, { signal: ctrl.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
         const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
-        setItems(arr);
+
+        // 🔎 Afinar no cliente: todas as palavras têm de existir em name/clubName
+        const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+        const narrowed = arr.filter((it) => {
+          const hay = (it.name + " " + (it.clubName || "")).toLowerCase();
+          return terms.every((t) => hay.includes(t));
+        });
+
+        const sorted = sortByRelevance(narrowed, q);
+        setItems(sorted);
         setOpen(true);
       })
       .catch((err) => {
-        if (err.name === "AbortError") return;
+        if ((err as any).name === "AbortError") return;
         setError("Falha a carregar resultados");
         setItems([]);
         setOpen(true);
@@ -516,7 +547,8 @@ function SearchBar({
         setOpen(false);
         setActive(-1);
         onSubmitted?.();
-        router.push(`/product/${it.slug}`);
+        // ✅ caminho correto
+        router.push(`/products/${it.slug}`);
       }
       // else will submit the form default
     } else if (e.key === "Escape") {
@@ -604,7 +636,8 @@ function SearchBar({
                       setOpen(false);
                       setActive(-1);
                       onSubmitted?.();
-                      router.push(`/product/${it.slug}`);
+                      // ✅ caminho correto
+                      router.push(`/products/${it.slug}`);
                     }}
                     className={`w-full flex items-center gap-3 p-2.5 text-left transition ${
                       active === idx ? "bg-blue-50" : "hover:bg-gray-50"
