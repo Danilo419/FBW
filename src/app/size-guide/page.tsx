@@ -3,102 +3,156 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { Metadata } from "next";
-
-// Opcional (só funciona em Server Components):
-// export const metadata: Metadata = {
-//   title: "Size Guide | FootballWorld",
-//   description: "Find your perfect fit. Adult, Women and Kids football jerseys size charts with cm/in conversion and measurement tips.",
-// };
 
 type Unit = "cm" | "in";
 
-type SizeRow = {
-  size: string;
-  chestCircumference: [number, number]; // cm
-  bodyLength: [number, number];         // cm
+// ========= DATA (all base values in CM) =========
+type Range = [number, number] | number; // allow single numbers for kids
+type AdultRowKey = "Length" | "Width" | "Height" | "Weight";
+type AdultSizeKey = "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "4XL";
+
+// Allow rows to be partial so "4XL" is not required for Player table
+type AdultRows = Record<AdultRowKey, Partial<Record<AdultSizeKey, Range>>>;
+
+type AdultTable = {
+  sizes: AdultSizeKey[];
+  rows: AdultRows;
 };
 
-const MEN_ROWS: SizeRow[] = [
-  { size: "XS",  chestCircumference: [84, 89],  bodyLength: [66, 68] },
-  { size: "S",   chestCircumference: [89, 94],  bodyLength: [68, 70] },
-  { size: "M",   chestCircumference: [94, 99],  bodyLength: [70, 72] },
-  { size: "L",   chestCircumference: [99, 104], bodyLength: [72, 74] },
-  { size: "XL",  chestCircumference: [104, 109], bodyLength: [74, 76] },
-  { size: "2XL", chestCircumference: [109, 114], bodyLength: [76, 78] },
-  { size: "3XL", chestCircumference: [114, 120], bodyLength: [78, 80] },
+// PLAYER (adult)
+const ADULT_PLAYER: AdultTable = {
+  sizes: ["S", "M", "L", "XL", "2XL", "3XL"],
+  rows: {
+    Length: { S: [67, 69], M: [69, 71], L: [71, 73], XL: [73, 76], "2XL": [76, 78], "3XL": [78, 79] },
+    Width:  { S: [49, 51], M: [51, 53], L: [53, 55], XL: [55, 57], "2XL": [57, 60], "3XL": [60, 63] },
+    Height: { S: [162, 170], M: [170, 175], L: [175, 180], XL: [180, 185], "2XL": [185, 190], "3XL": [190, 195] },
+    Weight: { S: [50, 62], M: [62, 75], L: [75, 80], XL: [80, 85], "2XL": [85, 90], "3XL": [90, 95] },
+  },
+};
+
+// FAN (adult)
+const ADULT_FAN: AdultTable = {
+  sizes: ["S", "M", "L", "XL", "2XL", "3XL", "4XL"],
+  rows: {
+    Length: { S: [69, 71], M: [71, 73], L: [73, 75], XL: [75, 78], "2XL": [78, 81], "3XL": [81, 83], "4XL": [83, 85] },
+    Width:  { S: [53, 55], M: [55, 57], L: [57, 58], XL: [58, 60], "2XL": [60, 62], "3XL": [62, 64], "4XL": [64, 65] },
+    Height: { S: [162, 170], M: [170, 176], L: [176, 182], XL: [182, 190], "2XL": [190, 195], "3XL": [192, 197], "4XL": [197, 200] },
+    Weight: { S: [50, 62], M: [62, 78], L: [78, 83], XL: [83, 90], "2XL": [90, 97], "3XL": [97, 104], "4XL": [104, 110] },
+  },
+};
+
+// KIDS
+type KidsRow = {
+  size: string; // e.g. #16
+  length: number; // cm
+  bust: number; // cm
+  height: [number, number]; // cm
+  age: string; // label
+  shortsLength: number; // cm
+};
+
+const KIDS_ROWS: KidsRow[] = [
+  { size: "#16", length: 43, bust: 32, height: [95, 105],  age: "2–3",  shortsLength: 32 },
+  { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4",  shortsLength: 34 },
+  { size: "#20", length: 50, bust: 36, height: [115, 125], age: "4–5",  shortsLength: 36 },
+  { size: "#22", length: 53, bust: 38, height: [125, 135], age: "6–7",  shortsLength: 38 },
+  { size: "#24", length: 56, bust: 40, height: [135, 145], age: "8–9",  shortsLength: 39 },
+  { size: "#26", length: 58, bust: 42, height: [145, 155], age: "10–11", shortsLength: 40 },
+  { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
 ];
 
-const WOMEN_ROWS: SizeRow[] = [
-  { size: "XS",  chestCircumference: [76, 82],  bodyLength: [60, 62] },
-  { size: "S",   chestCircumference: [82, 88],  bodyLength: [62, 64] },
-  { size: "M",   chestCircumference: [88, 94],  bodyLength: [64, 66] },
-  { size: "L",   chestCircumference: [94, 100], bodyLength: [66, 68] },
-  { size: "XL",  chestCircumference: [100, 106], bodyLength: [68, 70] },
-  { size: "2XL", chestCircumference: [106, 112], bodyLength: [70, 72] },
-];
-
-const KIDS_ROWS: SizeRow[] = [
-  { size: "4-5Y", chestCircumference: [54, 58], bodyLength: [44, 48] },
-  { size: "6-7Y", chestCircumference: [58, 62], bodyLength: [48, 52] },
-  { size: "8-9Y", chestCircumference: [62, 66], bodyLength: [52, 56] },
-  { size: "10-11Y", chestCircumference: [66, 72], bodyLength: [56, 60] },
-  { size: "12-13Y", chestCircumference: [72, 78], bodyLength: [60, 64] },
-  { size: "14-15Y", chestCircumference: [78, 84], bodyLength: [64, 68] },
-];
-
-function toUnit(v: number, unit: Unit) {
-  return unit === "cm" ? v : +(v / 2.54).toFixed(1);
+// ========= Helpers =========
+function toInches(v: number) {
+  return +(v / 2.54).toFixed(1);
 }
 
-function Range({ value, unit }: { value: [number, number]; unit: Unit }) {
-  const [a, b] = value;
+function renderRange(value: Range | undefined, unit: Unit) {
+  if (value === undefined) return "–";
+  if (Array.isArray(value)) {
+    const [a, b] = value;
+    return unit === "cm" ? `${a}–${b} cm` : `${toInches(a)}–${toInches(b)} in`;
+  }
+  return unit === "cm" ? `${value} cm` : `${toInches(value)} in`;
+}
+
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <span>
-      {toUnit(a, unit)}–{toUnit(b, unit)} {unit}
-    </span>
+    <header className="mb-3">
+      <h2 className="text-lg md:text-xl font-semibold">{title}</h2>
+      {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+    </header>
   );
 }
 
-function SizeTable({
-  title,
-  rows,
-  unit,
-}: {
-  title: string;
-  rows: SizeRow[];
-  unit: Unit;
-}) {
+function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-50 to-cyan-50 border-b">
-        <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
+      <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
+        Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="text-left px-4 sm:px-6 py-3 font-medium">Measurement</th>
+              {data.sizes.map((s) => (
+                <th key={s} className="text-left px-4 sm:px-6 py-3 font-medium">{s}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
+              <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
+                <td className="px-4 sm:px-6 py-3 font-semibold">{key}</td>
+                {data.sizes.map((s) => (
+                  <td key={s} className="px-4 sm:px-6 py-3">
+                    {renderRange(data.rows[key][s], unit)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="px-4 sm:px-6 py-3 text-xs text-gray-500 border-t">
+        * Values refer to the garment laid flat (manufacturing tolerances may occur).
+      </p>
+    </div>
+  );
+}
+
+function KidsTableView({ unit }: { unit: Unit }) {
+  return (
+    <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
+        Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
               <th className="text-left px-4 sm:px-6 py-3 font-medium">Size</th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">
-                Chest circumference
-              </th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">
-                Body length
-              </th>
+              <th className="text-left px-4 sm:px-6 py-3 font-medium">Jersey length</th>
+              <th className="text-left px-4 sm:px-6 py-3 font-medium">Chest (bust)</th>
+              <th className="text-left px-4 sm:px-6 py-3 font-medium">Height</th>
+              <th className="text-left px-4 sm:px-6 py-3 font-medium">Age</th>
+              <th className="text-left px-4 sm:px-6 py-3 font-medium">Shorts length</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr
-                key={r.size}
-                className={i % 2 ? "bg-white" : "bg-gray-50/40"}
-              >
+            {KIDS_ROWS.map((r, i) => (
+              <tr key={r.size} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
                 <td className="px-4 sm:px-6 py-3 font-semibold">{r.size}</td>
+                <td className="px-4 sm:px-6 py-3">{unit === "cm" ? `${r.length} cm` : `${toInches(r.length)} in`}</td>
+                <td className="px-4 sm:px-6 py-3">{unit === "cm" ? `${r.bust} cm` : `${toInches(r.bust)} in`}</td>
                 <td className="px-4 sm:px-6 py-3">
-                  <Range value={r.chestCircumference} unit={unit} />
+                  {unit === "cm"
+                    ? `${r.height[0]}–${r.height[1]} cm`
+                    : `${toInches(r.height[0])}–${toInches(r.height[1])} in`}
                 </td>
+                <td className="px-4 sm:px-6 py-3">{r.age} yrs</td>
                 <td className="px-4 sm:px-6 py-3">
-                  <Range value={r.bodyLength} unit={unit} />
+                  {unit === "cm" ? `${r.shortsLength} cm` : `${toInches(r.shortsLength)} in`}
                 </td>
               </tr>
             ))}
@@ -106,22 +160,19 @@ function SizeTable({
         </table>
       </div>
       <p className="px-4 sm:px-6 py-3 text-xs text-gray-500 border-t">
-        * Medidas referem-se à camisola deitada numa superfície plana e
-        representam intervalos aproximados de fabrico. Pequenas variações são
-        normais.
+        * Approximations; if between sizes, choose the larger one.
       </p>
     </div>
   );
 }
 
 export default function SizeGuidePage() {
-  const [unit, setUnit] = useState<Unit>("cm");
-  const [tab, setTab] = useState<"men" | "women" | "kids">("men");
+  const [tab, setTab] = useState<"player" | "fan" | "kids">("player");
 
-  const rows = useMemo(() => {
-    if (tab === "women") return WOMEN_ROWS;
-    if (tab === "kids") return KIDS_ROWS;
-    return MEN_ROWS;
+  const adultData = useMemo(() => {
+    if (tab === "fan") return ADULT_FAN;
+    if (tab === "player") return ADULT_PLAYER;
+    return null;
   }, [tab]);
 
   return (
@@ -134,169 +185,56 @@ export default function SizeGuidePage() {
       </nav>
 
       <header className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-          Size Guide
-        </h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Size Guide</h1>
         <p className="mt-2 text-gray-600">
-          Encontra o teu tamanho perfeito. Converte entre <b>cm</b> e{" "}
-          <b>inches</b> e segue as dicas de medição abaixo.
+          Choose between <b>Adult (Player)</b>, <b>Adult (Fan)</b> and <b>Kids</b>.
+          Each section shows tables in <b>cm</b> and <b>inches</b>.
         </p>
       </header>
 
-      {/* Unit & Tabs */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              tab === "men" ? "bg-blue-600 text-white" : "hover:bg-gray-50"
-            }`}
-            onClick={() => setTab("men")}
-          >
-            Adult (Men)
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              tab === "women" ? "bg-blue-600 text-white" : "hover:bg-gray-50"
-            }`}
-            onClick={() => setTab("women")}
-          >
-            Women
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              tab === "kids" ? "bg-blue-600 text-white" : "hover:bg-gray-50"
-            }`}
-            onClick={() => setTab("kids")}
-          >
-            Kids
-          </button>
-        </div>
-
-        <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              unit === "cm" ? "bg-cyan-600 text-white" : "hover:bg-gray-50"
-            }`}
-            onClick={() => setUnit("cm")}
-            aria-pressed={unit === "cm"}
-          >
-            cm
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              unit === "in" ? "bg-cyan-600 text-white" : "hover:bg-gray-50"
-            }`}
-            onClick={() => setUnit("in")}
-            aria-pressed={unit === "in"}
-          >
-            inches
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="mb-5 inline-flex rounded-xl border p-1 bg-white shadow-sm">
+        <button
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "player" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
+          onClick={() => setTab("player")}
+        >
+          Adult (Player)
+        </button>
+        <button
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "fan" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
+          onClick={() => setTab("fan")}
+        >
+          Adult (Fan)
+        </button>
+        <button
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "kids" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
+          onClick={() => setTab("kids")}
+        >
+          Kids
+        </button>
       </div>
 
       {/* Tables */}
       <section className="space-y-6">
-        <SizeTable
-          title={
-            tab === "men"
-              ? "Adult (Men) — Jerseys"
-              : tab === "women"
-              ? "Women — Jerseys"
-              : "Kids — Jerseys"
-          }
-          rows={rows}
-          unit={unit}
-        />
-      </section>
+        {tab !== "kids" && adultData && (
+          <>
+            <SectionHeader title="Adult size chart (cm)" subtitle="Garment measurements" />
+            <AdultTableView data={adultData} unit="cm" />
 
-      {/* How to measure */}
-      <section className="mt-10 grid gap-6 md:grid-cols-2">
-        <div className="rounded-2xl border bg-white shadow-sm p-5">
-          <h2 className="text-lg font-semibold mb-3">Como medir</h2>
-          <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700">
-            <li>
-              <b>Peito (Chest):</b> mede à volta da parte mais larga do peito,
-              mantendo a fita horizontal e relaxada (não demasiado justa).
-            </li>
-            <li>
-              <b>Comprimento (Body Length):</b> da parte mais alta do ombro até
-              ao fundo da camisola.
-            </li>
-            <li>
-              <b>Ajuste desejado:</b> se queres um look mais{" "}
-              <i>slim</i>, escolhe o intervalo inferior; para um look mais{" "}
-              <i>relaxed</i>, o superior.
-            </li>
-          </ol>
+            <SectionHeader title="Adult size chart (inches)" />
+            <AdultTableView data={adultData} unit="in" />
+          </>
+        )}
 
-          {/* pequeno diagrama SVG */}
-          <div className="mt-5 grid place-items-center">
-            <svg
-              viewBox="0 0 220 220"
-              className="w-56 h-56 text-gray-700"
-              role="img"
-              aria-label="Measurement diagram"
-            >
-              <rect x="55" y="35" width="110" height="150" rx="14" fill="none" stroke="currentColor" strokeWidth="2"/>
-              {/* chest line */}
-              <line x1="55" y1="95" x2="165" y2="95" stroke="currentColor" strokeWidth="2"/>
-              <text x="110" y="88" textAnchor="middle" fontSize="10" fill="currentColor">Chest</text>
-              {/* length line */}
-              <line x1="175" y1="35" x2="175" y2="185" stroke="currentColor" strokeWidth="2"/>
-              <text x="178" y="110" transform="rotate(-90 178,110)" textAnchor="middle" fontSize="10" fill="currentColor">Body Length</text>
-            </svg>
-          </div>
-        </div>
+        {tab === "kids" && (
+          <>
+            <SectionHeader title="Kids size chart (cm)" subtitle="Jersey & shorts measurements" />
+            <KidsTableView unit="cm" />
 
-        <div className="rounded-2xl border bg-white shadow-sm p-5">
-          <h2 className="text-lg font-semibold mb-3">Dicas rápidas</h2>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li>✔ Se estiveres entre dois tamanhos, considera subir um.</li>
-            <li>✔ Lembra-te de que peças personalizadas podem ter ajuste ligeiramente diferente.</li>
-            <li>✔ Lava a peça do avesso e segue a etiqueta para manter o caimento.</li>
-            <li>✔ As medidas correspondem à peça, não ao corpo.</li>
-          </ul>
-          <div className="mt-4 text-xs text-gray-500">
-            Última atualização: {new Date().toLocaleDateString("pt-PT")}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ simples */}
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold mb-3">Perguntas frequentes</h2>
-        <div className="space-y-3">
-          <details className="rounded-xl border bg-white shadow-sm p-4">
-            <summary className="cursor-pointer font-medium">As medidas são iguais para todas as marcas?</summary>
-            <p className="mt-2 text-sm text-gray-700">
-              São <b>genéricas</b> e baseadas no nosso fornecedor. Pequenas variações podem ocorrer entre
-              coleções. Se já tens uma camisola que gostes, mede-a e compara com a tabela.
-            </p>
-          </details>
-          <details className="rounded-xl border bg-white shadow-sm p-4">
-            <summary className="cursor-pointer font-medium">Como escolho o tamanho para Kids?</summary>
-            <p className="mt-2 text-sm text-gray-700">
-              Usa a idade como referência inicial e confirma com as medidas de peito/comprimento. Crianças
-              crescem rápido — se estiver no limite, sobe um tamanho.
-            </p>
-          </details>
-          <details className="rounded-xl border bg-white shadow-sm p-4">
-            <summary className="cursor-pointer font-medium">Posso trocar se não servir?</summary>
-            <p className="mt-2 text-sm text-gray-700">
-              Sim, segue a nossa política de trocas/devoluções. Peças <i>personalizadas</i> podem ter restrições.
-            </p>
-          </details>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="mt-12 flex items-center justify-center">
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow"
-        >
-          Ver produtos
-        </Link>
+            <SectionHeader title="Kids size chart (inches)" />
+            <KidsTableView unit="in" />
+          </>
+        )}
       </section>
     </main>
   );
