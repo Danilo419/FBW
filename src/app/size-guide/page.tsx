@@ -79,9 +79,14 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
           </colgroup>
           <thead>
             <tr className="bg-gray-50">
-              <th className="text-left px-4 sm:px-6 py-3 font-medium border border-gray-200">Measurement</th>
+              <th className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300">
+                Measurement
+              </th>
               {data.sizes.map((s) => (
-                <th key={s} className="text-left px-4 sm:px-6 py-3 font-medium border border-gray-200 bg-gray-50">
+                <th
+                  key={s}
+                  className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50"
+                >
                   {s}
                 </th>
               ))}
@@ -90,9 +95,14 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
           <tbody>
             {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
               <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-200">{key}</td>
+                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-300 text-center">
+                  {key}
+                </td>
                 {data.sizes.map((s) => (
-                  <td key={s} className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                  <td
+                    key={s}
+                    className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center"
+                  >
                     {renderRange(data.rows[key][s], unit)}
                   </td>
                 ))}
@@ -101,6 +111,7 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
           </tbody>
         </table>
       </div>
+      {/* Nota de rodapé — mantida à esquerda */}
       <p className="px-4 sm:px-6 py-3 text-xs text-gray-500 border-t">
         * Values refer to the garment laid flat (manufacturing tolerances may occur).
       </p>
@@ -127,7 +138,7 @@ function KidsTableView({ unit }: { unit: Unit }) {
           <thead className="bg-gray-50">
             <tr>
               {["Size","Jersey length","Chest (bust)","Height","Age","Shorts length"].map((h) => (
-                <th key={h} className="text-left px-4 sm:px-6 py-3 font-medium border border-gray-200 bg-gray-50">
+                <th key={h} className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50">
                   {h}
                 </th>
               ))}
@@ -136,22 +147,22 @@ function KidsTableView({ unit }: { unit: Unit }) {
           <tbody>
             {KIDS_ROWS.map((r, i) => (
               <tr key={r.size} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-200">{r.size}</td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-300 text-center">{r.size}</td>
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
                   {unit === "cm" ? `${r.length} cm` : `${toInches(r.length)} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
                   {unit === "cm" ? `${r.bust} cm` : `${toInches(r.bust)} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
                   {unit === "cm"
                     ? `${r.height[0]}–${r.height[1]} cm`
                     : `${toInches(r.height[0])}–${toInches(r.height[1])} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
                   {r.age} yrs
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
                   {unit === "cm" ? `${r.shortsLength} cm` : `${toInches(r.shortsLength)} in`}
                 </td>
               </tr>
@@ -159,6 +170,7 @@ function KidsTableView({ unit }: { unit: Unit }) {
           </tbody>
         </table>
       </div>
+      {/* Nota de rodapé — mantida à esquerda */}
       <p className="px-4 sm:px-6 py-3 text-xs text-gray-500 border-t">
         * Approximations; if between sizes, choose the larger one.
       </p>
