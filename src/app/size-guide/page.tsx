@@ -6,20 +6,12 @@ import Link from "next/link";
 
 type Unit = "cm" | "in";
 
-// ========= DATA (all base values in CM) =========
-type Range = [number, number] | number; // allow single numbers for kids
+type Range = [number, number] | number;
 type AdultRowKey = "Length" | "Width" | "Height" | "Weight";
 type AdultSizeKey = "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "4XL";
-
-// rows are partial so a table doesn't need to include every size
 type AdultRows = Record<AdultRowKey, Partial<Record<AdultSizeKey, Range>>>;
+type AdultTable = { sizes: AdultSizeKey[]; rows: AdultRows };
 
-type AdultTable = {
-  sizes: AdultSizeKey[];
-  rows: AdultRows;
-};
-
-// ADULT (renamed from FAN)
 const ADULT: AdultTable = {
   sizes: ["S", "M", "L", "XL", "2XL", "3XL", "4XL"],
   rows: {
@@ -30,14 +22,13 @@ const ADULT: AdultTable = {
   },
 };
 
-// KIDS
 type KidsRow = {
-  size: string;          // e.g. #16
-  length: number;        // cm
-  bust: number;          // cm
-  height: [number, number]; // cm
-  age: string;           // label
-  shortsLength: number;  // cm
+  size: string;
+  length: number;
+  bust: number;
+  height: [number, number];
+  age: string;
+  shortsLength: number;
 };
 
 const KIDS_ROWS: KidsRow[] = [
@@ -50,7 +41,7 @@ const KIDS_ROWS: KidsRow[] = [
   { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
 ];
 
-// ========= Helpers =========
+// ---------- helpers ----------
 function toInches(v: number) {
   return +(v / 2.54).toFixed(1);
 }
@@ -60,15 +51,14 @@ function renderRange(value: Range | undefined, unit: Unit) {
   if (Array.isArray(value)) {
     const [a, b] = value;
     return unit === "cm" ? `${a}–${b} cm` : `${toInches(a)}–${toInches(b)} in`;
-    }
+  }
   return unit === "cm" ? `${value} cm` : `${toInches(value)} in`;
 }
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionHeader({ title }: { title: string }) {
   return (
     <header className="mb-3">
       <h2 className="text-lg md:text-xl font-semibold">{title}</h2>
-      {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
     </header>
   );
 }
@@ -94,7 +84,7 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
               <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
                 <td className="px-4 sm:px-6 py-3 font-semibold">{key}</td>
                 {data.sizes.map((s) => (
-                  <td key={s} className="px-4 sm:px-6 py-3">
+                  <td key={s} className="px-4 sm:px-6 py-3 whitespace-nowrap">
                     {renderRange(data.rows[key][s], unit)}
                   </td>
                 ))}
@@ -132,15 +122,19 @@ function KidsTableView({ unit }: { unit: Unit }) {
             {KIDS_ROWS.map((r, i) => (
               <tr key={r.size} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
                 <td className="px-4 sm:px-6 py-3 font-semibold">{r.size}</td>
-                <td className="px-4 sm:px-6 py-3">{unit === "cm" ? `${r.length} cm` : `${toInches(r.length)} in`}</td>
-                <td className="px-4 sm:px-6 py-3">{unit === "cm" ? `${r.bust} cm` : `${toInches(r.bust)} in`}</td>
-                <td className="px-4 sm:px-6 py-3">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                  {unit === "cm" ? `${r.length} cm` : `${toInches(r.length)} in`}
+                </td>
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                  {unit === "cm" ? `${r.bust} cm` : `${toInches(r.bust)} in`}
+                </td>
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
                   {unit === "cm"
                     ? `${r.height[0]}–${r.height[1]} cm`
                     : `${toInches(r.height[0])}–${toInches(r.height[1])} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3">{r.age} yrs</td>
-                <td className="px-4 sm:px-6 py-3">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">{r.age} yrs</td>
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
                   {unit === "cm" ? `${r.shortsLength} cm` : `${toInches(r.shortsLength)} in`}
                 </td>
               </tr>
@@ -157,12 +151,10 @@ function KidsTableView({ unit }: { unit: Unit }) {
 
 export default function SizeGuidePage() {
   const [tab, setTab] = useState<"adult" | "kids">("adult");
-
   const adultData = useMemo(() => (tab === "adult" ? ADULT : null), [tab]);
 
   return (
     <main className="container-fw max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-12">
-      {/* Breadcrumbs */}
       <nav className="mb-4 text-sm text-gray-500">
         <Link href="/" className="hover:text-blue-700">Home</Link>
         <span className="mx-2">/</span>
@@ -176,7 +168,6 @@ export default function SizeGuidePage() {
         </p>
       </header>
 
-      {/* Tabs (Adult + Kids) */}
       <div className="mb-5 inline-flex rounded-xl border p-1 bg-white shadow-sm">
         <button
           className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "adult" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
@@ -192,11 +183,10 @@ export default function SizeGuidePage() {
         </button>
       </div>
 
-      {/* Tables */}
       <section className="space-y-6">
         {tab === "adult" && adultData && (
           <>
-            <SectionHeader title="Adult size chart (cm)" subtitle="Garment measurements" />
+            <SectionHeader title="Adult size chart (cm)" />
             <AdultTableView data={adultData} unit="cm" />
 
             <SectionHeader title="Adult size chart (inches)" />
@@ -206,7 +196,7 @@ export default function SizeGuidePage() {
 
         {tab === "kids" && (
           <>
-            <SectionHeader title="Kids size chart (cm)" subtitle="Jersey & shorts measurements" />
+            <SectionHeader title="Kids size chart (cm)" />
             <KidsTableView unit="cm" />
 
             <SectionHeader title="Kids size chart (inches)" />
