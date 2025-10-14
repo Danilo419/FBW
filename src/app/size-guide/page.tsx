@@ -69,8 +69,19 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
       <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
         Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      {/* remove horizontal scroll */}
+      <div className="overflow-x-visible">
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col className="w-40" />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+          </colgroup>
           <thead>
             <tr className="bg-gray-50">
               <th className="text-left px-4 sm:px-6 py-3 font-medium">Measurement</th>
@@ -106,8 +117,17 @@ function KidsTableView({ unit }: { unit: Unit }) {
       <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
         Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      {/* remove horizontal scroll */}
+      <div className="overflow-x-visible">
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col className="w-24" />
+            <col />
+            <col />
+            <col />
+            <col className="w-24" />
+            <col />
+          </colgroup>
           <thead className="bg-gray-50">
             <tr>
               <th className="text-left px-4 sm:px-6 py-3 font-medium">Size</th>
@@ -154,7 +174,7 @@ export default function SizeGuidePage() {
   const adultData = useMemo(() => (tab === "adult" ? ADULT : null), [tab]);
 
   return (
-    <main className="container-fw max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-12">
+    <main className="container-fw max-w-6xl mx-auto px-4 sm:px-6 py-8 md:py-12">
       <nav className="mb-4 text-sm text-gray-500">
         <Link href="/" className="hover:text-blue-700">Home</Link>
         <span className="mx-2">/</span>
@@ -188,7 +208,6 @@ export default function SizeGuidePage() {
           <>
             <SectionHeader title="Adult size chart (cm)" />
             <AdultTableView data={adultData} unit="cm" />
-
             <SectionHeader title="Adult size chart (inches)" />
             <AdultTableView data={adultData} unit="in" />
           </>
@@ -198,7 +217,6 @@ export default function SizeGuidePage() {
           <>
             <SectionHeader title="Kids size chart (cm)" />
             <KidsTableView unit="cm" />
-
             <SectionHeader title="Kids size chart (inches)" />
             <KidsTableView unit="in" />
           </>
