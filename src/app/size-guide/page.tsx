@@ -111,10 +111,6 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
           </tbody>
         </table>
       </div>
-      {/* Nota de rodapé — mantida à esquerda */}
-      <p className="px-4 sm:px-6 py-3 text-xs text-gray-500 border-t">
-        * Values refer to the garment laid flat (manufacturing tolerances may occur).
-      </p>
     </div>
   );
 }
@@ -170,10 +166,6 @@ function KidsTableView({ unit }: { unit: Unit }) {
           </tbody>
         </table>
       </div>
-      {/* Nota de rodapé — mantida à esquerda */}
-      <p className="px-4 sm:px-6 py-3 text-xs text-gray-500 border-t">
-        * Approximations; if between sizes, choose the larger one.
-      </p>
     </div>
   );
 }
