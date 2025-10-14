@@ -12,6 +12,7 @@ type AdultSizeKey = "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "4XL";
 type AdultRows = Record<AdultRowKey, Partial<Record<AdultSizeKey, Range>>>;
 type AdultTable = { sizes: AdultSizeKey[]; rows: AdultRows };
 
+// ===== Adult (Fan) data in cm =====
 const ADULT: AdultTable = {
   sizes: ["S", "M", "L", "XL", "2XL", "3XL", "4XL"],
   rows: {
@@ -22,6 +23,7 @@ const ADULT: AdultTable = {
   },
 };
 
+// ===== Kids data in cm =====
 type KidsRow = {
   size: string;
   length: number;
@@ -41,11 +43,10 @@ const KIDS_ROWS: KidsRow[] = [
   { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
 ];
 
-// ---------- helpers ----------
+// ===== Helpers =====
 function toInches(v: number) {
   return +(v / 2.54).toFixed(1);
 }
-
 function renderRange(value: Range | undefined, unit: Unit) {
   if (value === undefined) return "–";
   if (Array.isArray(value)) {
@@ -63,39 +64,35 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// ===== Tables =====
 function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
       <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
         Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
-      {/* remove horizontal scroll */}
       <div className="overflow-x-visible">
-        <table className="w-full text-sm table-fixed">
+        <table className="w-full text-sm table-fixed border-collapse">
           <colgroup>
             <col className="w-40" />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
-            <col />
+            {data.sizes.map((_, i) => <col key={i} />)}
           </colgroup>
           <thead>
             <tr className="bg-gray-50">
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Measurement</th>
+              <th className="text-left px-4 sm:px-6 py-3 font-medium border border-gray-200">Measurement</th>
               {data.sizes.map((s) => (
-                <th key={s} className="text-left px-4 sm:px-6 py-3 font-medium">{s}</th>
+                <th key={s} className="text-left px-4 sm:px-6 py-3 font-medium border border-gray-200 bg-gray-50">
+                  {s}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
               <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                <td className="px-4 sm:px-6 py-3 font-semibold">{key}</td>
+                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-200">{key}</td>
                 {data.sizes.map((s) => (
-                  <td key={s} className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                  <td key={s} className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
                     {renderRange(data.rows[key][s], unit)}
                   </td>
                 ))}
@@ -117,9 +114,8 @@ function KidsTableView({ unit }: { unit: Unit }) {
       <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
         Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
-      {/* remove horizontal scroll */}
       <div className="overflow-x-visible">
-        <table className="w-full text-sm table-fixed">
+        <table className="w-full text-sm table-fixed border-collapse">
           <colgroup>
             <col className="w-24" />
             <col />
@@ -130,31 +126,32 @@ function KidsTableView({ unit }: { unit: Unit }) {
           </colgroup>
           <thead className="bg-gray-50">
             <tr>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Size</th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Jersey length</th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Chest (bust)</th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Height</th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Age</th>
-              <th className="text-left px-4 sm:px-6 py-3 font-medium">Shorts length</th>
+              {["Size","Jersey length","Chest (bust)","Height","Age","Shorts length"].map((h) => (
+                <th key={h} className="text-left px-4 sm:px-6 py-3 font-medium border border-gray-200 bg-gray-50">
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {KIDS_ROWS.map((r, i) => (
               <tr key={r.size} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                <td className="px-4 sm:px-6 py-3 font-semibold">{r.size}</td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-200">{r.size}</td>
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
                   {unit === "cm" ? `${r.length} cm` : `${toInches(r.length)} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
                   {unit === "cm" ? `${r.bust} cm` : `${toInches(r.bust)} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
                   {unit === "cm"
                     ? `${r.height[0]}–${r.height[1]} cm`
                     : `${toInches(r.height[0])}–${toInches(r.height[1])} in`}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">{r.age} yrs</td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
+                  {r.age} yrs
+                </td>
+                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-200">
                   {unit === "cm" ? `${r.shortsLength} cm` : `${toInches(r.shortsLength)} in`}
                 </td>
               </tr>
@@ -169,6 +166,7 @@ function KidsTableView({ unit }: { unit: Unit }) {
   );
 }
 
+// ===== Page =====
 export default function SizeGuidePage() {
   const [tab, setTab] = useState<"adult" | "kids">("adult");
   const adultData = useMemo(() => (tab === "adult" ? ADULT : null), [tab]);
@@ -208,6 +206,7 @@ export default function SizeGuidePage() {
           <>
             <SectionHeader title="Adult size chart (cm)" />
             <AdultTableView data={adultData} unit="cm" />
+
             <SectionHeader title="Adult size chart (inches)" />
             <AdultTableView data={adultData} unit="in" />
           </>
@@ -217,6 +216,7 @@ export default function SizeGuidePage() {
           <>
             <SectionHeader title="Kids size chart (cm)" />
             <KidsTableView unit="cm" />
+
             <SectionHeader title="Kids size chart (inches)" />
             <KidsTableView unit="in" />
           </>
