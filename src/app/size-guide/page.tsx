@@ -23,9 +23,9 @@ const ADULT: AdultTable = {
   },
 };
 
-// ===== Kids data in cm =====
+// ===== Kids data em cm =====
 type KidsRow = {
-  size: string;              // fabricante (não mostrado)
+  size: string;              // código fabricante (não mostrado)
   length: number;            // cm
   bust: number;              // cm
   height: [number, number];  // cm
@@ -64,7 +64,7 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// ===== Tables =====
+// ===== Adult table (igual) =====
 function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
@@ -79,9 +79,7 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
           </colgroup>
           <thead>
             <tr className="bg-gray-50">
-              <th className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300">
-                Measurement
-              </th>
+              <th className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300">Measurement</th>
               {data.sizes.map((s) => (
                 <th key={s} className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50">
                   {s}
@@ -107,7 +105,32 @@ function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
   );
 }
 
+// ===== Kids table: agora com idades no topo (horizontal) =====
+type KidsRowKey = "Jersey length" | "Chest (bust)" | "Height" | "Shorts length";
+type KidsTableShape = { sizes: string[]; rows: Record<KidsRowKey, Partial<Record<string, Range>>> };
+
+function makeKidsTable(): KidsTableShape {
+  const sizes = KIDS_ROWS.map((r) => `${r.age} yrs`);
+  const rows: KidsTableShape["rows"] = {
+    "Jersey length": {},
+    "Chest (bust)": {},
+    Height: {},
+    "Shorts length": {},
+  };
+
+  KIDS_ROWS.forEach((r) => {
+    const key = `${r.age} yrs`;
+    rows["Jersey length"][key] = r.length; // cm
+    rows["Chest (bust)"][key] = r.bust;    // cm
+    rows["Height"][key] = [r.height[0], r.height[1]]; // range cm
+    rows["Shorts length"][key] = r.shortsLength;      // cm
+  });
+
+  return { sizes, rows };
+}
+
 function KidsTableView({ unit }: { unit: Unit }) {
+  const data = useMemo(() => makeKidsTable(), []);
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
       <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
@@ -115,44 +138,31 @@ function KidsTableView({ unit }: { unit: Unit }) {
       </div>
       <div className="overflow-x-visible">
         <table className="w-full text-sm table-fixed border-collapse">
-          {/* 5 col: Size (idade), Jersey length, Chest, Height, Shorts length */}
           <colgroup>
-            <col className="w-28" />
-            <col />
-            <col />
-            <col />
-            <col />
+            <col className="w-40" />
+            {data.sizes.map((_, i) => <col key={i} />)}
           </colgroup>
           <thead className="bg-gray-50">
             <tr>
-              {["Size", "Jersey length", "Chest (bust)", "Height", "Shorts length"].map((h) => (
-                <th key={h} className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50">
-                  {h}
+              <th className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300">Measurement</th>
+              {data.sizes.map((s) => (
+                <th key={s} className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50">
+                  {s}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {KIDS_ROWS.map((r, i) => (
-              <tr key={r.size} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                {/* Size mostra idade; códigos #16/#18 não aparecem */}
+            {(["Jersey length","Chest (bust)","Height","Shorts length"] as KidsRowKey[]).map((rowKey, idx) => (
+              <tr key={rowKey} className={idx % 2 ? "bg-white" : "bg-gray-50/40"}>
                 <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-300 text-center">
-                  {r.age} yrs
+                  {rowKey}
                 </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
-                  {unit === "cm" ? `${r.length} cm` : `${toInches(r.length)} in`}
-                </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
-                  {unit === "cm" ? `${r.bust} cm` : `${toInches(r.bust)} in`}
-                </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
-                  {unit === "cm"
-                    ? `${r.height[0]}–${r.height[1]} cm`
-                    : `${toInches(r.height[0])}–${toInches(r.height[1])} in`}
-                </td>
-                <td className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
-                  {unit === "cm" ? `${r.shortsLength} cm` : `${toInches(r.shortsLength)} in`}
-                </td>
+                {data.sizes.map((s) => (
+                  <td key={s} className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center">
+                    {renderRange(data.rows[rowKey][s], unit)}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
