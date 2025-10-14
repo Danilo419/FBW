@@ -11,7 +11,7 @@ type Range = [number, number] | number; // allow single numbers for kids
 type AdultRowKey = "Length" | "Width" | "Height" | "Weight";
 type AdultSizeKey = "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "4XL";
 
-// Allow rows to be partial so "4XL" is not required for Player table
+// rows are partial so a table doesn't need to include every size
 type AdultRows = Record<AdultRowKey, Partial<Record<AdultSizeKey, Range>>>;
 
 type AdultTable = {
@@ -19,19 +19,8 @@ type AdultTable = {
   rows: AdultRows;
 };
 
-// PLAYER (adult)
-const ADULT_PLAYER: AdultTable = {
-  sizes: ["S", "M", "L", "XL", "2XL", "3XL"],
-  rows: {
-    Length: { S: [67, 69], M: [69, 71], L: [71, 73], XL: [73, 76], "2XL": [76, 78], "3XL": [78, 79] },
-    Width:  { S: [49, 51], M: [51, 53], L: [53, 55], XL: [55, 57], "2XL": [57, 60], "3XL": [60, 63] },
-    Height: { S: [162, 170], M: [170, 175], L: [175, 180], XL: [180, 185], "2XL": [185, 190], "3XL": [190, 195] },
-    Weight: { S: [50, 62], M: [62, 75], L: [75, 80], XL: [80, 85], "2XL": [85, 90], "3XL": [90, 95] },
-  },
-};
-
-// FAN (adult)
-const ADULT_FAN: AdultTable = {
+// ADULT (renamed from FAN)
+const ADULT: AdultTable = {
   sizes: ["S", "M", "L", "XL", "2XL", "3XL", "4XL"],
   rows: {
     Length: { S: [69, 71], M: [71, 73], L: [73, 75], XL: [75, 78], "2XL": [78, 81], "3XL": [81, 83], "4XL": [83, 85] },
@@ -43,12 +32,12 @@ const ADULT_FAN: AdultTable = {
 
 // KIDS
 type KidsRow = {
-  size: string; // e.g. #16
-  length: number; // cm
-  bust: number; // cm
+  size: string;          // e.g. #16
+  length: number;        // cm
+  bust: number;          // cm
   height: [number, number]; // cm
-  age: string; // label
-  shortsLength: number; // cm
+  age: string;           // label
+  shortsLength: number;  // cm
 };
 
 const KIDS_ROWS: KidsRow[] = [
@@ -71,7 +60,7 @@ function renderRange(value: Range | undefined, unit: Unit) {
   if (Array.isArray(value)) {
     const [a, b] = value;
     return unit === "cm" ? `${a}–${b} cm` : `${toInches(a)}–${toInches(b)} in`;
-  }
+    }
   return unit === "cm" ? `${value} cm` : `${toInches(value)} in`;
 }
 
@@ -167,13 +156,9 @@ function KidsTableView({ unit }: { unit: Unit }) {
 }
 
 export default function SizeGuidePage() {
-  const [tab, setTab] = useState<"player" | "fan" | "kids">("player");
+  const [tab, setTab] = useState<"adult" | "kids">("adult");
 
-  const adultData = useMemo(() => {
-    if (tab === "fan") return ADULT_FAN;
-    if (tab === "player") return ADULT_PLAYER;
-    return null;
-  }, [tab]);
+  const adultData = useMemo(() => (tab === "adult" ? ADULT : null), [tab]);
 
   return (
     <main className="container-fw max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-12">
@@ -187,24 +172,17 @@ export default function SizeGuidePage() {
       <header className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Size Guide</h1>
         <p className="mt-2 text-gray-600">
-          Choose between <b>Adult (Player)</b>, <b>Adult (Fan)</b> and <b>Kids</b>.
-          Each section shows tables in <b>cm</b> and <b>inches</b>.
+          Choose between <b>Adult</b> and <b>Kids</b>. Each section shows tables in <b>cm</b> and <b>inches</b>.
         </p>
       </header>
 
-      {/* Tabs */}
+      {/* Tabs (Adult + Kids) */}
       <div className="mb-5 inline-flex rounded-xl border p-1 bg-white shadow-sm">
         <button
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "player" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
-          onClick={() => setTab("player")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "adult" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
+          onClick={() => setTab("adult")}
         >
-          Adult (Player)
-        </button>
-        <button
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "fan" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
-          onClick={() => setTab("fan")}
-        >
-          Adult (Fan)
+          Adult
         </button>
         <button
           className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === "kids" ? "bg-blue-600 text-white" : "hover:bg-gray-50"}`}
@@ -216,7 +194,7 @@ export default function SizeGuidePage() {
 
       {/* Tables */}
       <section className="space-y-6">
-        {tab !== "kids" && adultData && (
+        {tab === "adult" && adultData && (
           <>
             <SectionHeader title="Adult size chart (cm)" subtitle="Garment measurements" />
             <AdultTableView data={adultData} unit="cm" />
