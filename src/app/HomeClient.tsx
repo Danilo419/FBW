@@ -26,9 +26,6 @@ import {
   HeartHandshake,
   Clock,
   Shirt,
-  Baby,
-  History,
-  Sparkles,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -405,7 +402,7 @@ function shuffle<T>(arr: T[]) {
  */
 function HeroImageCycler({
   interval = 4200,
-  firstHold = 10000,
+  firstHold = 10000, // 10s por defeito
 }: {
   interval?: number
   firstHold?: number
@@ -422,7 +419,7 @@ function HeroImageCycler({
   const bRef = useRef<HTMLImageElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
-  const [firstShown, setFirstShown] = useState(false)
+  const [firstShown, setFirstShown] = useState(false) // controla o overlay preto
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -473,9 +470,11 @@ function HeroImageCycler({
     const start = async () => {
       const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
       const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
+      // pré-carrega 1ª e 2ª
       await Promise.all([load(firstSrc), load(secondSrc)])
       if (killed) return
 
+      // mostra 1ª (tira o overlay preto)
       if (aRef.current) {
         aRef.current.src = firstSrc
         aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
@@ -493,6 +492,7 @@ function HeroImageCycler({
         timerRef.current = window.setTimeout(tick, interval) as any
       }
 
+      // 1ª troca após firstHold
       timerRef.current = window.setTimeout(tick, firstHold) as any
     }
 
@@ -506,14 +506,17 @@ function HeroImageCycler({
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
+      {/* overlay decorativo (pode manter) */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
+      {/* PLACEHOLDER PRETO enquanto a 1ª imagem não foi mostrada */}
       {!firstShown && <div className="absolute inset-0 bg-black" />}
 
+      {/* camadas */}
       <img
         ref={aRef}
         className="hero-layer"
-        src=""
+        src="" // preenchido no start()
         alt="image"
         decoding="async"
         onError={(e: any) => {
@@ -526,7 +529,7 @@ function HeroImageCycler({
       <img
         ref={bRef}
         className="hero-layer"
-        src=""
+        src="" // será definido no swapTo
         alt="image"
         decoding="async"
         onError={(e: any) => {
@@ -584,51 +587,94 @@ const products: Product[] = [
 const eur = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })
 
 /* ======================================================================================
-   4) SMALL UI: CATEGORY PILLS (for Highlights)
+   4) HIGHLIGHT SPACES — BANNERS COM IMAGEM
+   Coloca as tuas imagens nas paths abaixo ou altera-as.
 ====================================================================================== */
-const highlightCategories = [
+type HighlightSpace = {
+  key: 'adult' | 'kids' | 'retro' | 'concept'
+  label: string
+  href: string
+  img: string
+  alt?: string
+  subtitle?: string
+}
+
+const highlightSpaces: HighlightSpace[] = [
   {
     key: 'adult',
-    label: 'Adulto',
+    label: 'Adult',
     href: '/products?group=adult',
-    Icon: Shirt,
+    img: '/images/spaces/adult.png',
+    alt: 'Adult Collection',
+    subtitle: 'Sizes S–4XL',
   },
   {
     key: 'kids',
-    label: 'Criança',
+    label: 'Kids',
     href: '/products?group=kids',
-    Icon: Baby,
+    img: '/images/spaces/kids.png',
+    alt: 'Kids Collection',
+    subtitle: 'Ages 2–13',
   },
   {
     key: 'retro',
     label: 'Retro',
     href: '/products?group=retro',
-    Icon: History,
+    img: '/images/spaces/retro.png',
+    alt: 'Retro Collection',
+    subtitle: 'Timeless classics',
   },
   {
     key: 'concept',
     label: 'Concept Kits',
     href: '/products?group=concept-kits',
-    Icon: Sparkles,
+    img: '/images/spaces/concept.png',
+    alt: 'Concept Kits',
+    subtitle: 'Original designs',
   },
-] as const
+]
 
-function CategoryPills() {
+function ImageSpaces() {
   return (
-    <div className="mb-6 flex flex-wrap gap-3">
-      {highlightCategories.map(({ key, label, href, Icon }) => (
+    <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {highlightSpaces.map((s) => (
         <motion.a
-          key={key}
-          href={href}
-          whileHover={{ y: -2, scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="group inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm backdrop-blur-sm hover:shadow-md transition bg-white/70"
+          key={s.key}
+          href={s.href}
+          whileHover={{ y: -4 }}
+          className="group relative overflow-hidden rounded-3xl ring-1 ring-black/5"
         >
-          <span className="rounded-md bg-blue-50 p-1.5 ring-1 ring-blue-100">
-            <Icon className="h-4 w-4 text-blue-600" />
-          </span>
-          <span className="font-medium">{label}</span>
-          <ArrowRight className="ml-0.5 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition" />
+          <div className="relative aspect-[16/10] sm:aspect-[5/6]">
+            <img
+              src={s.img}
+              alt={s.alt || s.label}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement
+                if ((img as any)._fallbackApplied) return
+                ;(img as any)._fallbackApplied = true
+                img.src = FALLBACK_IMG
+                img.style.objectPosition = 'center'
+              }}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+            <div className="absolute inset-x-0 bottom-0 p-4">
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <h3 className="text-white font-semibold tracking-tight">
+                    {s.label}
+                  </h3>
+                  {s.subtitle && (
+                    <p className="text-white/80 text-xs">{s.subtitle}</p>
+                  )}
+                </div>
+                <div className="shrink-0 rounded-full bg-white/90 p-2 backdrop-blur-sm ring-1 ring-black/5 group-hover:bg-white transition">
+                  <ArrowRight className="h-4 w-4 text-blue-700" />
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.a>
       ))}
     </div>
@@ -702,6 +748,7 @@ export default function Home() {
                 className="relative"
               >
                 <TiltCard className="shadow-glow overflow-hidden">
+                  {/* 1ª imagem só aparece quando estiver pronta; até lá fica PRETO */}
                   <HeroImageCycler interval={4200} firstHold={10000} />
                 </TiltCard>
               </motion.div>
@@ -728,8 +775,8 @@ export default function Home() {
           <a href="/products" className="text-sm text-blue-700 hover:underline">See all →</a>
         </div>
 
-        {/* ESPAÇOS/CATEGORIAS (Adulto / Criança / Retro / Concept Kits) */}
-        <CategoryPills />
+        {/* ESPAÇOS COM IMAGENS (Adulto / Criança / Retro / Concept Kits) */}
+        <ImageSpaces />
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.map((p) => (
