@@ -158,8 +158,8 @@ export default function TermsOfServicePage() {
               .
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <Stat label="Average production" value="3–7 days" />
-              <Stat label="Typical transit" value="5–12 days" />
+              <Stat label="Average production" value="3–5 days" />
+              <Stat label="Typical transit" value="7-9 working days" />
               <Stat label="Coverage" value="Worldwide" />
             </div>
           </Section>
