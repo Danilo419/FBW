@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import {
   Truck,
-  Plane,
   Timer,
   ShieldCheck,
   Globe2,
@@ -20,7 +19,7 @@ export const revalidate = 3600; // revalidates every hour
 export const metadata: Metadata = {
   title: "Shipping & Tracking – FootballWorld",
   description:
-    "Handling times, shipping options, worldwide delivery windows and how to track your order.",
+    "Worldwide tracked shipping. Single delivery window of 5–7 business days after dispatch, plus handling times and how to track your order.",
 };
 
 export default function ShippingPage() {
@@ -32,56 +31,29 @@ export default function ShippingPage() {
           Shipping & Tracking
         </h1>
         <p className="mt-3 text-gray-600 max-w-3xl">
-          We ship worldwide with tracked delivery. Below you’ll find handling
-          times, delivery windows and how to track your order once it’s on the
-          way.
+          We ship worldwide with tracked delivery. There is a single delivery window:
+          <b> 5–7 business days after dispatch</b>. Below you’ll find handling times and how to
+          track your order once it’s on the way.
         </p>
       </header>
 
-      {/* Shipping options */}
+      {/* Single shipping method */}
       <section className="grid gap-6 lg:grid-cols-3">
         <Card>
           <div className="flex items-center gap-3">
             <span className="rounded-xl bg-blue-50 p-2">
               <Truck className="h-5 w-5 text-blue-600" />
             </span>
-            <h2 className="font-semibold">Economy</h2>
+            <h2 className="font-semibold">Standard Tracked Delivery</h2>
           </div>
           <p className="mt-2 text-sm text-gray-600">
-            Most affordable option. Fully tracked where available.
+            One reliable, fully tracked service for all destinations.
           </p>
-          <DetailRow icon={<Timer className="h-4 w-4" />} text="Typical transit: 15–30 business days" />
+          <DetailRow
+            icon={<Timer className="h-4 w-4" />}
+            text="Typical transit: 5–7 business days"
+          />
           <DetailRow icon={<Globe2 className="h-4 w-4" />} text="Available worldwide" />
-          <DetailRow icon={<BadgePercent className="h-4 w-4" />} text="Price shown at checkout" />
-        </Card>
-
-        <Card>
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-cyan-50 p-2">
-              <Plane className="h-5 w-5 text-cyan-600" />
-            </span>
-            <h2 className="font-semibold">Priority</h2>
-          </div>
-          <p className="mt-2 text-sm text-gray-600">
-            Faster routing on popular lanes, tracked end-to-end.
-          </p>
-          <DetailRow icon={<Timer className="h-4 w-4" />} text="Typical transit: 7–14 business days" />
-          <DetailRow icon={<Globe2 className="h-4 w-4" />} text="Many destinations" />
-          <DetailRow icon={<BadgePercent className="h-4 w-4" />} text="Price shown at checkout" />
-        </Card>
-
-        <Card>
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-emerald-50 p-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
-            </span>
-            <h2 className="font-semibold">Express</h2>
-          </div>
-          <p className="mt-2 text-sm text-gray-600">
-            Premium delivery where supported. Signature may be required.
-          </p>
-          <DetailRow icon={<Timer className="h-4 w-4" />} text="Typical transit: 3–7 business days" />
-          <DetailRow icon={<Globe2 className="h-4 w-4" />} text="Selected countries" />
           <DetailRow icon={<BadgePercent className="h-4 w-4" />} text="Price shown at checkout" />
         </Card>
       </section>
@@ -96,7 +68,9 @@ export default function ShippingPage() {
             <h2 className="font-semibold">Handling & Production</h2>
           </div>
           <ul className="mt-3 space-y-2 text-sm text-gray-700">
-            <li>• Our kits are made to order. Production time is typically <b>2–5 business days</b>.</li>
+            <li>
+              • Our kits are made to order. Production time is typically <b>2–5 business days</b>.
+            </li>
             <li>• Orders placed on weekends/holidays are processed the next business day.</li>
             <li>• You’ll receive an email with your tracking number immediately after dispatch.</li>
           </ul>
@@ -111,7 +85,10 @@ export default function ShippingPage() {
           </div>
           <ul className="mt-3 space-y-2 text-sm text-gray-700">
             <li>• Need to change your address? Contact us <b>before</b> the order ships.</li>
-            <li>• Once in transit, address changes are subject to the carrier’s policy and may not be possible.</li>
+            <li>
+              • Once in transit, address changes are subject to the carrier’s policy and may not be
+              possible.
+            </li>
           </ul>
         </Card>
       </section>
@@ -169,8 +146,14 @@ export default function ShippingPage() {
           </div>
           <ul className="mt-3 space-y-2 text-sm text-gray-700">
             <li>• Weather, customs inspections and peak seasons can extend delivery times.</li>
-            <li>• If your tracking hasn’t updated for 10+ business days, please reach out — we’ll investigate with the carrier.</li>
-            <li>• Declared lost: usually after the carrier’s investigation window (often 30–45 days from dispatch).</li>
+            <li>
+              • If your tracking hasn’t updated for 10+ business days, please reach out — we’ll
+              investigate with the carrier.
+            </li>
+            <li>
+              • Declared lost: usually after the carrier’s investigation window (often 30–45 days
+              from dispatch).
+            </li>
           </ul>
         </Card>
       </section>
@@ -185,7 +168,8 @@ export default function ShippingPage() {
             <div>
               <h3 className="font-semibold">Need help with your shipment?</h3>
               <p className="text-sm text-gray-600">
-                Check our <Link href="/faq" className="text-blue-700 hover:underline">FAQ</Link> or contact us with your order number and tracking code.
+                Check our <Link href="/faq" className="text-blue-700 hover:underline">FAQ</Link> or
+                contact us with your order number and tracking code.
               </p>
             </div>
           </div>

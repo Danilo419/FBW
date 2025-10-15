@@ -621,7 +621,7 @@ export default function Home() {
                   Authentic &amp; Concept Football Jerseys
                 </h1>
                 <p className="mt-4 text-gray-600 max-w-prose">
-                  We sell existing club and national-team jerseys, as well as original concept jerseys — made to order with reliable worldwide tracked shipping.
+                  We sell existing club and national-team jerseys, as well as original concept jerseys, made to order with reliable worldwide tracked shipping.
                 </p>
                 <div className="mt-6 flex items-center gap-3">
                   <MagneticButton href="/products">
@@ -635,7 +635,7 @@ export default function Home() {
                     { Icon: Truck, t: 'Worldwide shipping' },
                     { Icon: BadgePercent, t: 'Fair pricing' },
                     { Icon: Shield, t: 'Secure checkout' },
-                    { Icon: Globe2, t: 'Support English' },
+                    { Icon: Globe2, t: 'English Support' },
                   ].map(({ Icon, t }) => (
                     <div key={t} className="flex items-center gap-2 rounded-xl border glass px-3 py-2">
                       <Icon className="h-4 w-4 text-blue-600" />
@@ -738,7 +738,7 @@ export default function Home() {
               },
               { icon: <MousePointer2 className="h-5 w-5 text-blue-600" />, t: 'Pick a design', s: 'Explore concepts and choose your favorite.' },
               { icon: <Send className="h-5 w-5 text-blue-600" />, t: 'Made-to-order', s: 'Produced on demand with wonderful quality.' },
-              { icon: <Truck className="h-5 w-5 text-blue-600" />, t: 'Global shipping', s: 'Economy option (15–30 days) and tracking on every order.' },
+              { icon: <Truck className="h-5 w-5 text-blue-600" />, t: 'Global shipping', s: 'Worldwide delivery in 5–7 business days, with tracking on every order.' },
             ].map((f, i) => (
               <motion.div
                 key={i}
@@ -787,7 +787,7 @@ export default function Home() {
             <div>
               <h3 className="text-2xl font-bold">Choose your next jersey with confidence</h3>
               <p className="mt-2 text-gray-600">
-                Discover authentic club and national-team kits alongside our original concept designs — then pick your next favorite.
+                Discover authentic club and national-team kits alongside our original concept designs, then pick your next favorite.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600"/> Name & number personalization</li>
@@ -815,7 +815,7 @@ export default function Home() {
             {
               Icon: CreditCard,
               title: 'Secure checkout',
-              desc: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link — processed securely via Stripe.',
+              desc: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link, all processed securely via Stripe.',
             },
             {
               Icon: Package,
@@ -845,15 +845,15 @@ export default function Home() {
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">Frequently asked questions</h2>
         <div className="grid md:grid-cols-2 gap-4">
           {[
-            { q: 'How long does economy shipping take?', a: 'Usually 15–30 days, with tracking code on every order.' },
+            { q: 'How long does shipping take?', a: 'It takes 5–7 business days, with tracking code on every order.' },
             { q: 'Can I personalize name and number?', a: 'Yes!' },
             {
               q: 'Which payment methods are accepted?',
               a: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way.',
             },
-            { q: 'What if the size does not fit?', a: 'You can exchange within the first 14 days (policy applies).' },
+            { q: 'How can I track my order?', a: 'Once your order has been shipped, you will receive an email with your tracking code and a link to track it online. You can track your order at any time through 17track.net or on your national postal website. All orders include worldwide tracked shipping.' },
             { q: 'Which countries do you ship to?', a: 'We ship worldwide. Delivery times vary by destination.' },
-            { q: 'How do I pick the size?', a: 'We will provide a detailed size chart and measurement tips.' },
+            { q: 'How do I pick the size?', a: 'We will provide a detailed size chart and measurement tips in the Size Guide page.' },
           ].map((f, i) => (
             <details key={i} className="group card px-5 py-4 open:shadow-md">
               <summary className="flex cursor-pointer items-center justify-between font-medium">
