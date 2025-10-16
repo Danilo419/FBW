@@ -10,9 +10,10 @@ import {
   getTotalRevenuePaidCents,
 } from "@/lib/kpis";
 import { formatMoney, moneyFromOrder } from "@/lib/money";
+import { Eye } from "lucide-react";
 
 /* ---------- helpers ---------- */
-// Use a locale que usa ponto como separador de milhar (pt-BR).
+// Use a locale that uses dot as thousands separator (pt-BR).
 function fmtInt(n: number) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(n);
 }
@@ -341,12 +342,13 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-3">Status</th>
                 <th className="py-2 pr-3">Total</th>
                 <th className="py-2 pr-3">Created</th>
+                <th className="py-2 pr-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {orders.length === 0 && (
                 <tr>
-                  <td className="py-3 text-gray-500" colSpan={13}>
+                  <td className="py-3 text-gray-500" colSpan={14}>
                     No data to display.
                   </td>
                 </tr>
@@ -370,6 +372,17 @@ export default async function AdminDashboardPage() {
                     <td className="py-2 pr-3">{money.label}</td>
                     <td className="py-2 pr-3 whitespace-nowrap">
                       {o?.createdAt ? new Date(o.createdAt).toLocaleString("en-GB") : "—"}
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      <a
+                        href={`/admin/orders/${o.id}`}
+                        className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                        aria-label={`View order ${o.id}`}
+                        title="View details"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </a>
                     </td>
                   </tr>
                 );
