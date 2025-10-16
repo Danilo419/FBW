@@ -4,7 +4,6 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import {
   ArrowLeft,
@@ -13,6 +12,7 @@ import {
   User2,
   MapPin,
   Package,
+  AlertTriangle,
 } from "lucide-react";
 
 /* ========================= Helpers ========================= */
@@ -22,7 +22,8 @@ const toCurrency = (s?: string | null): Currency =>
   (String(s || "EUR").toUpperCase() as Currency);
 
 function money(cents: number, currency: Currency = "EUR") {
-  return (cents / 100).toLocaleString("en-US", { style: "currency", currency });
+  const safe = Number.isFinite(cents) ? cents : 0;
+  return (safe / 100).toLocaleString("en-US", { style: "currency", currency });
 }
 
 function safeParseJSON(input: any): Record<string, any> {
@@ -39,6 +40,7 @@ function safeParseJSON(input: any): Record<string, any> {
 }
 
 function pickStr(o: any, keys: string[]): string | null {
+  if (!o || typeof o !== "object") return null;
   for (const k of keys) {
     const v = (o as any)?.[k];
     if (v != null && String(v).trim() !== "") return String(v);
@@ -47,169 +49,205 @@ function pickStr(o: any, keys: string[]): string | null {
 }
 
 function extractShipping(order: any) {
-  const canonical = {
-    fullName: order.shippingFullName ?? order?.user?.name ?? null,
-    email: order.shippingEmail ?? order?.user?.email ?? null,
-    phone: order.shippingPhone ?? null,
-    address1: order.shippingAddress1 ?? null,
-    address2: order.shippingAddress2 ?? null,
-    city: order.shippingCity ?? null,
-    region: order.shippingRegion ?? null,
-    postalCode: order.shippingPostalCode ?? null,
-    country: order.shippingCountry ?? null,
-  };
+  try {
+    const canonical = {
+      fullName: order?.shippingFullName ?? order?.user?.name ?? null,
+      email: order?.shippingEmail ?? order?.user?.email ?? null,
+      phone: order?.shippingPhone ?? null,
+      address1: order?.shippingAddress1 ?? null,
+      address2: order?.shippingAddress2 ?? null,
+      city: order?.shippingCity ?? null,
+      region: order?.shippingRegion ?? null,
+      postalCode: order?.shippingPostalCode ?? null,
+      country: order?.shippingCountry ?? null,
+    };
 
-  if (
-    canonical.fullName ||
-    canonical.email ||
-    canonical.phone ||
-    canonical.address1 ||
-    canonical.city ||
-    canonical.postalCode ||
-    canonical.country
-  ) {
-    return canonical;
+    if (
+      canonical.fullName ||
+      canonical.email ||
+      canonical.phone ||
+      canonical.address1 ||
+      canonical.city ||
+      canonical.postalCode ||
+      canonical.country
+    ) {
+      return canonical;
+    }
+
+    const j = safeParseJSON(order?.shippingJson);
+    const g = (...alts: string[]) => pickStr(j, alts);
+
+    return {
+      fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
+      email: g("email") ?? order?.user?.email ?? null,
+      phone: g("phone", "telephone"),
+      address1: g("address1", "addressLine1", "line1", "street"),
+      address2: g("address2", "addressLine2", "line2", "street2"),
+      city: g("city", "locality", "town"),
+      region: g("region", "state", "province"),
+      postalCode: g(
+        "postalCode",
+        "postal_code",
+        "postcode",
+        "zip",
+        "zipCode",
+        "zipcode",
+        "codigoPostal",
+        "cep",
+        "pincode",
+        "eircode"
+      ),
+      country: g("country", "countryCode", "shippingCountry"),
+    };
+  } catch {
+    return {
+      fullName: order?.user?.name ?? null,
+      email: order?.user?.email ?? null,
+      phone: null,
+      address1: null,
+      address2: null,
+      city: null,
+      region: null,
+      postalCode: null,
+      country: null,
+    };
   }
+}
 
-  const j = safeParseJSON(order.shippingJson);
-  const g = (...alts: string[]) => pickStr(j, alts);
-
-  return {
-    fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
-    email: g("email") ?? order?.user?.email ?? null,
-    phone: g("phone", "telephone"),
-    address1: g("address1", "addressLine1", "line1", "street"),
-    address2: g("address2", "addressLine2", "line2", "street2"),
-    city: g("city", "locality", "town"),
-    region: g("region", "state", "province"),
-    postalCode: g(
-      "postalCode",
-      "postal_code",
-      "postcode",
-      "zip",
-      "zipCode",
-      "zipcode",
-      "codigoPostal",
-      "cep",
-      "pincode",
-      "eircode"
-    ),
-    country: g("country", "countryCode", "shippingCountry"),
-  };
+function ensureArray<T>(v: any): T[] {
+  return Array.isArray(v) ? v : [];
 }
 
 /* ========================= Data ========================= */
 
 async function fetchOrder(id: string) {
-  const order = (await prisma.order.findUnique({
-    where: { id },
-    include: {
-      user: { select: { name: true, email: true } },
-      items: {
-        // ⚠️ OrderItem não tem createdAt no teu schema — usar id/omitir
-        orderBy: { id: "asc" },
-        include: {
-          product: { select: { id: true, slug: true, images: true } },
+  try {
+    const order = (await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { name: true, email: true } },
+        items: {
+          // ⚠️ OrderItem no teu schema não tem createdAt
+          // para evitar erros em pedidos antigos, não ordenar por um campo inexistente
+          orderBy: { id: "asc" },
+          include: {
+            product: { select: { id: true, slug: true, images: true, name: true } },
+          },
         },
       },
-    },
-  } as any)) as any;
+    } as any)) as any | null;
 
-  if (!order) return null;
+    if (!order) return { order: null, error: null };
 
-  const currency = toCurrency(order.currency);
+    const currency = toCurrency(order.currency);
+    const subtotalCents = Number(order.subtotal ?? 0);
+    const shippingCents = Number(order.shipping ?? 0);
+    const taxCents = Number(order.tax ?? 0);
+    const totalCents =
+      typeof order.totalCents === "number"
+        ? Number(order.totalCents)
+        : typeof order.total === "number"
+        ? Math.round(Number(order.total) * 100)
+        : subtotalCents + shippingCents + taxCents;
 
-  const subtotalCents = Number(order.subtotal ?? 0);
-  const shippingCents = Number(order.shipping ?? 0);
-  const taxCents = Number(order.tax ?? 0);
-  const totalCents =
-    typeof order.totalCents === "number"
-      ? order.totalCents
-      : typeof order.total === "number"
-      ? Math.round(order.total * 100)
-      : subtotalCents + shippingCents + taxCents;
+    const itemsRaw = ensureArray<any>(order.items);
 
-  const items = Array.isArray(order.items)
-    ? order.items.map((it: any) => {
-        const snap = safeParseJSON(it.snapshotJson);
-        const options =
-          safeParseJSON(snap?.optionsJson) ||
-          safeParseJSON(snap?.options) ||
-          safeParseJSON(snap?.selected) ||
-          {};
-        const personalization =
-            snap?.personalization && typeof snap.personalization === "object"
-              ? snap.personalization
-              : null;
+    const items = itemsRaw.map((it) => {
+      const snap = safeParseJSON(it?.snapshotJson);
+      const optionsObj =
+        safeParseJSON(snap?.optionsJson) ||
+        safeParseJSON(snap?.options) ||
+        safeParseJSON(snap?.selected) ||
+        {};
 
-        const imageFromProduct =
-          it.image ??
-          (Array.isArray(it.product?.images) && it.product.images[0]) ??
-          "/placeholder.png";
+      // Personalization
+      const personalization =
+        snap?.personalization && typeof snap.personalization === "object"
+          ? {
+              name:
+                snap.personalization.name != null
+                  ? String(snap.personalization.name)
+                  : null,
+              number:
+                snap.personalization.number != null
+                  ? String(snap.personalization.number)
+                  : null,
+            }
+          : null;
 
-        const size =
-          options.size ??
-          snap?.size ??
-          pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
-          null;
+      // Size (vários formatos legacy)
+      const size =
+        optionsObj.size ??
+        snap?.size ??
+        pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
+        null;
 
-        let badges: string | null = null;
-        const rawBadges = options.badges ?? snap?.badges ?? null;
-        if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
-        else if (rawBadges) badges = String(rawBadges);
+      // Badges podem vir como array/string/objeto
+      let badges: string | null = null;
+      const rawBadges = optionsObj.badges ?? snap?.badges ?? null;
+      if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
+      else if (rawBadges && typeof rawBadges === "object") {
+        badges = Object.values(rawBadges).join(", ");
+      } else if (rawBadges) badges = String(rawBadges);
 
-        const customization =
-          options.customization ?? snap?.customization ?? null;
+      // Imagem
+      const productImages = ensureArray<string>(it?.product?.images);
+      const image =
+        it?.image ??
+        productImages[0] ??
+        "/placeholder.png";
 
-        return {
-          id: String(it.id),
-          name: String(it.name ?? it.product?.name ?? "Product"),
-          slug: it.product?.slug ?? null,
-          image: imageFromProduct,
-          qty: Number(it.qty ?? 1),
-          unitPriceCents: Number(it.unitPrice ?? 0),
-          totalPriceCents: Number(it.totalPrice ?? 0),
-          size,
-          options: {
-            ...(options || {}),
-            ...(badges ? { badges } : {}),
-            ...(customization ? { customization } : {}),
-          } as Record<string, string>,
-          personalization:
-            personalization && (personalization.name || personalization.number)
-              ? {
-                  name:
-                    personalization.name != null
-                      ? String(personalization.name)
-                      : null,
-                  number:
-                    personalization.number != null
-                      ? String(personalization.number)
-                      : null,
-                }
-              : null,
-        };
-      })
-    : [];
+      const unitPriceCents = Number(it?.unitPrice ?? 0);
+      const totalPriceCents = Number(it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1));
 
-  return {
-    id: String(order.id),
-    status: String(order.status ?? "pending"),
-    createdAt: order.createdAt as Date,
-    currency,
-    subtotalCents,
-    shippingCents,
-    taxCents,
-    totalCents,
-    user: order.user ?? null,
-    shipping: extractShipping(order),
-    stripeSessionId: order.stripeSessionId ?? null,
-    stripePaymentIntentId: order.stripePaymentIntentId ?? null,
-    paypalOrderId: order.paypalOrderId ?? null,
-    paypalCaptureId: order.paypalCaptureId ?? null,
-    paidAt: order.paidAt ?? null,
-    items,
-  };
+      // “Opções bonitas” para a UI
+      const options: Record<string, string> = {};
+      for (const [k, v] of Object.entries(optionsObj)) {
+        if (v == null || v === "") continue;
+        if (Array.isArray(v)) options[k] = v.join(", ");
+        else if (typeof v === "object") options[k] = Object.values(v as any).join(", ");
+        else options[k] = String(v);
+      }
+      if (badges) options.badges = badges;
+
+      return {
+        id: String(it?.id ?? crypto.randomUUID()),
+        name: String(it?.name ?? it?.product?.name ?? "Product"),
+        slug: it?.product?.slug ?? null,
+        image,
+        qty: Number(it?.qty ?? 1),
+        unitPriceCents,
+        totalPriceCents,
+        size,
+        options,
+        personalization,
+      };
+    });
+
+    return {
+      order: {
+        id: String(order.id),
+        status: String(order.status ?? "pending"),
+        createdAt: order?.createdAt ? new Date(order.createdAt) : null,
+        currency,
+        subtotalCents,
+        shippingCents,
+        taxCents,
+        totalCents,
+        user: order.user ?? null,
+        shipping: extractShipping(order),
+        stripeSessionId: order.stripeSessionId ?? null,
+        stripePaymentIntentId: order.stripePaymentIntentId ?? null,
+        paypalOrderId: order.paypalOrderId ?? null,
+        paypalCaptureId: order.paypalCaptureId ?? null,
+        paidAt: order.paidAt ?? null,
+        items,
+      },
+      error: null,
+    };
+  } catch (e: any) {
+    return { order: null, error: String(e?.message || e) };
+  }
 }
 
 /* ========================= Page ========================= */
@@ -219,30 +257,24 @@ export default async function AdminOrderViewPage({
 }: {
   params: { id: string };
 }) {
-  const order = await fetchOrder(params.id);
-  if (!order) notFound();
+  const { order, error } = await fetchOrder(params.id);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold">
-            Order #{order.id.slice(0, 7)}
+            {order ? `Order #${order.id.slice(0, 7)}` : "Order"}
           </h1>
           <p className="text-sm text-gray-500">
-            Created {new Date(order.createdAt).toLocaleString("en-GB")} • Status:{" "}
-            <span className="font-medium">{order.status}</span>
+            {order?.createdAt
+              ? `Created ${new Date(order.createdAt).toLocaleString("en-GB")}`
+              : "Created —"}
+            {" • "}
+            Status: <span className="font-medium">{order?.status ?? "—"}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => typeof window !== "undefined" && window.print()}
-            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Printer className="h-4 w-4" /> Print
-            </span>
-          </button>
           <Link
             href="/admin/(panel)"
             className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -251,114 +283,142 @@ export default async function AdminOrderViewPage({
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
           </Link>
+          <button
+            onClick={() => typeof window !== "undefined" && window.print()}
+            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Printer className="h-4 w-4" /> Print
+            </span>
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* LEFT */}
-        <div className="space-y-4 lg:col-span-2">
-          <section className="rounded-2xl border bg-white p-4">
-            <div className="text-xs text-gray-500">Order ID</div>
-            <div className="font-mono text-sm">{order.id}</div>
+      {error && (
+        <div className="rounded-2xl border bg-amber-50 p-4 text-amber-900">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 mt-0.5" />
+            <div>
+              <div className="font-semibold">We couldn’t load some data</div>
+              <div className="text-sm opacity-90">
+                The page is still displayed with what we could parse. Error: {error}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-            <div className="mt-3 text-xs text-gray-500">Payment</div>
-            <div className="text-sm">
-              {order.paidAt ? (
-                <span className="font-medium">Paid</span>
-              ) : (
-                <span>Unpaid</span>
-              )}
-            </div>
-            {order.stripePaymentIntentId && (
-              <div className="text-xs text-gray-500">
-                Stripe PI: {order.stripePaymentIntentId}
-              </div>
-            )}
-            {order.stripeSessionId && (
-              <div className="text-xs text-gray-500">
-                Stripe Session: {order.stripeSessionId}
-              </div>
-            )}
-            {order.paypalOrderId && (
-              <div className="text-xs text-gray-500">
-                PayPal Order: {order.paypalOrderId}
-              </div>
-            )}
-            {order.paypalCaptureId && (
-              <div className="text-xs text-gray-500">
-                PayPal Capture: {order.paypalCaptureId}
-              </div>
-            )}
-          </section>
+      {!order ? (
+        <div className="rounded-2xl border bg-white p-6">
+          Order not found.
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-5">
+          {/* LEFT */}
+          <div className="space-y-4 lg:col-span-2">
+            <section className="rounded-2xl border bg-white p-4">
+              <div className="text-xs text-gray-500">Order ID</div>
+              <div className="font-mono text-sm break-all">{order.id}</div>
 
-          <section className="rounded-2xl border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <User2 className="h-4 w-4" /> Customer
-            </div>
-            <div className="text-sm">
-              {order.shipping.fullName ?? order.user?.name ?? "—"}
-            </div>
-            <div className="text-xs text-gray-500">
-              {order.shipping.email ?? order.user?.email ?? "—"}
-            </div>
-            {order.shipping.phone && (
-              <div className="text-xs text-gray-500">{order.shipping.phone}</div>
-            )}
-          </section>
-
-          <section className="rounded-2xl border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <MapPin className="h-4 w-4" /> Shipping address
-            </div>
-            <AddressBlock {...order.shipping} />
-          </section>
-
-          <section className="rounded-2xl border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <BadgeCheck className="h-4 w-4" /> Totals
-            </div>
-            <dl className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-gray-600">Subtotal</dt>
-                <dd>{money(order.subtotalCents, order.currency)}</dd>
+              <div className="mt-3 text-xs text-gray-500">Payment</div>
+              <div className="text-sm">
+                {order.paidAt ? (
+                  <span className="font-medium">Paid</span>
+                ) : (
+                  <span>Unpaid</span>
+                )}
               </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-600">Shipping</dt>
-                <dd>{money(order.shippingCents, order.currency)}</dd>
-              </div>
-              {order.taxCents ? (
-                <div className="flex justify-between">
-                  <dt className="text-gray-600">Tax</dt>
-                  <dd>{money(order.taxCents, order.currency)}</dd>
+              {order.stripePaymentIntentId && (
+                <div className="text-xs text-gray-500">
+                  Stripe PI: {order.stripePaymentIntentId}
                 </div>
-              ) : null}
-              <div className="flex justify-between font-semibold">
-                <dt>Total</dt>
-                <dd>{money(order.totalCents, order.currency)}</dd>
-              </div>
-            </dl>
-          </section>
-        </div>
+              )}
+              {order.stripeSessionId && (
+                <div className="text-xs text-gray-500">
+                  Stripe Session: {order.stripeSessionId}
+                </div>
+              )}
+              {order.paypalOrderId && (
+                <div className="text-xs text-gray-500">
+                  PayPal Order: {order.paypalOrderId}
+                </div>
+              )}
+              {order.paypalCaptureId && (
+                <div className="text-xs text-gray-500">
+                  PayPal Capture: {order.paypalCaptureId}
+                </div>
+              )}
+            </section>
 
-        {/* RIGHT */}
-        <div className="space-y-4 lg:col-span-3">
-          <section className="rounded-2xl border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <Package className="h-4 w-4" /> Items
-            </div>
-
-            {order.items.length === 0 ? (
-              <div className="text-sm text-gray-500">No items.</div>
-            ) : (
-              <div className="space-y-4">
-                {order.items.map((it: any) => (
-                  <ItemRow key={it.id} currency={order.currency} item={it} />
-                ))}
+            <section className="rounded-2xl border bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 font-semibold">
+                <User2 className="h-4 w-4" /> Customer
               </div>
-            )}
-          </section>
+              <div className="text-sm">
+                {order.shipping.fullName ?? order.user?.name ?? "—"}
+              </div>
+              <div className="text-xs text-gray-500">
+                {order.shipping.email ?? order.user?.email ?? "—"}
+              </div>
+              {order.shipping.phone && (
+                <div className="text-xs text-gray-500">{order.shipping.phone}</div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 font-semibold">
+                <MapPin className="h-4 w-4" /> Shipping address
+              </div>
+              <AddressBlock {...order.shipping} />
+            </section>
+
+            <section className="rounded-2xl border bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 font-semibold">
+                <BadgeCheck className="h-4 w-4" /> Totals
+              </div>
+              <dl className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Subtotal</dt>
+                  <dd>{money(order.subtotalCents, order.currency)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Shipping</dt>
+                  <dd>{money(order.shippingCents, order.currency)}</dd>
+                </div>
+                {order.taxCents ? (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Tax</dt>
+                    <dd>{money(order.taxCents, order.currency)}</dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between font-semibold">
+                  <dt>Total</dt>
+                  <dd>{money(order.totalCents, order.currency)}</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+
+          {/* RIGHT */}
+          <div className="space-y-4 lg:col-span-3">
+            <section className="rounded-2xl border bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 font-semibold">
+                <Package className="h-4 w-4" /> Items
+              </div>
+
+              {order.items.length === 0 ? (
+                <div className="text-sm text-gray-500">No items.</div>
+              ) : (
+                <div className="space-y-4">
+                  {order.items.map((it) => (
+                    <ItemRow key={it.id} currency={order.currency} item={it} />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
