@@ -1,6 +1,8 @@
 // src/app/(store)/cart/actions.ts
 'use server';
 
+export const runtime = 'nodejs';
+
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
@@ -26,12 +28,12 @@ async function getOrCreateCart() {
   const jar = await cookies();
   let sid = jar.get('sid')?.value ?? null;
 
-  // (se tiveres auth, podes carregar userId aqui)
+  // (Se tiveres auth, carrega aqui o userId)
   const userId: string | null = null;
 
-  // 1) tenta carrinho existente por sessionId
+  // 1) tenta carrinho existente (usa findFirst; não assume UNIQUE)
   if (sid) {
-    const found = await prisma.cart.findUnique({ where: { sessionId: sid } });
+    const found = await prisma.cart.findFirst({ where: { sessionId: sid } });
     if (found) return found;
   }
 
@@ -46,7 +48,10 @@ async function getOrCreateCart() {
   });
 
   return prisma.cart.create({
-    data: { sessionId: sid, userId: userId ?? null },
+    data: {
+      sessionId: sid,
+      userId: userId ?? null,
+    },
   });
 }
 
@@ -60,7 +65,7 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
   return product.basePrice;
 }
 
-/** Normaliza opções (apenas informativas) para JSON determinístico */
+/** Normaliza opções (só informativas) para JSON determinístico */
 function normalizeOptions(obj?: Record<string, string | null>) {
   if (!obj) return {};
   const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '');
@@ -73,14 +78,14 @@ export async function addToCartAction(raw: AddToCartInput) {
 
   const cart = await getOrCreateCart();
 
-  // ⛔️ Sem custos de personalização/opções:
+  // ✅ sem custos de personalização/opções
   const unitPrice = await getBaseUnitPrice(input.productId);
   const totalPrice = unitPrice * input.qty;
 
   const optionsJson = normalizeOptions(input.options ?? undefined);
   const personalization = input.personalization ?? null;
 
-  // (Opcional) juntar linhas iguais: mesmo produto + mesmas opções/personalização
+  // Junta linhas iguais (mesmo produto + mesmas opções/personalização)
   const existing = await prisma.cartItem.findFirst({
     where: {
       cartId: cart.id,
@@ -97,8 +102,8 @@ export async function addToCartAction(raw: AddToCartInput) {
       where: { id: existing.id },
       data: {
         qty: newQty,
-        unitPrice,                  // mantém sempre o base
-        totalPrice: unitPrice * newQty,
+        unitPrice,                         // fica sempre o base
+        totalPrice: unitPrice * newQty,    // base * qty
         optionsJson: optionsJson as any,
         personalization: personalization as any,
       },
@@ -109,10 +114,10 @@ export async function addToCartAction(raw: AddToCartInput) {
         cartId: cart.id,
         productId: input.productId,
         qty: input.qty,
-        unitPrice,                  // ✅ preço base
-        totalPrice,                 // ✅ base * qty
-        optionsJson: optionsJson as any,      // só informativo
-        personalization: personalization as any, // só informativo
+        unitPrice,                         // ✅ base
+        totalPrice,                        // ✅ base * qty
+        optionsJson: optionsJson as any,   // informativo
+        personalization: personalization as any, // informativo
       },
     });
   }
@@ -123,7 +128,7 @@ export async function addToCartAction(raw: AddToCartInput) {
     ok: true as const,
     cartId: cart.id,
     count,
-    totalPrice, // total da última operação (não do carrinho inteiro)
+    totalPrice, // total desta operação
   };
 }
 
