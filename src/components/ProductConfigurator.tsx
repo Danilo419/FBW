@@ -16,7 +16,7 @@ type OptionValueUI = {
 
 type OptionGroupUI = {
   id: string;
-  key: string; // e.g., "customization", "shorts", "socks", "badges"
+  key: string; // e.g., "customization", "badges"
   label: string;
   type: "SIZE" | "RADIO" | "ADDON";
   required: boolean;
@@ -25,8 +25,8 @@ type OptionGroupUI = {
 
 type SizeUI = {
   id: string;
-  size: string; // e.g., "XS", "S", "M", "10Y"
-  stock: number; // ignored on UI
+  size: string; // e.g., "S", "M", "L", "10-11"
+  stock: number;
 };
 
 type ProductUI = {
@@ -37,8 +37,9 @@ type ProductUI = {
   description?: string | null;
   basePrice: number; // cents
   images: string[];
-  sizes: SizeUI[];      // Adult
-  kidsSizes?: SizeUI[]; // Kids (optional)
+  // (Adult/Kids handled by product name; these are kept for backward compatibility but ignored)
+  sizes?: SizeUI[];
+  kidsSizes?: SizeUI[];
   kidsPriceDelta?: number;
   optionGroups: OptionGroupUI[];
 };
@@ -48,6 +49,21 @@ type SelectedState = Record<string, string | string[] | null>;
 type Props = {
   product: ProductUI;
 };
+
+/* ====================== Helpers ====================== */
+const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
+const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
+
+function isAdultProduct(name: string) {
+  return /adult/i.test(name);
+}
+function isKidProduct(name: string) {
+  return /kid/i.test(name);
+}
+
+function classNames(...c: (string | false | null | undefined)[]) {
+  return c.filter(Boolean).join(" ");
+}
 
 /* ====================== Component ====================== */
 export default function ProductConfigurator({ product }: Props) {
@@ -61,41 +77,25 @@ export default function ProductConfigurator({ product }: Props) {
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
 
-  /* ---------- Adult/Kids logic ---------- */
-  type SizeCategory = "ADULT" | "KIDS";
-  const hasKids = (product.kidsSizes?.length ?? 0) > 0;
-  const [category, setCategory] = useState<SizeCategory>("ADULT");
+  /* ---------- Size logic from product name ---------- */
+  const adult = isAdultProduct(product.name);
+  const kid = isKidProduct(product.name);
 
-  const adultSizes = useMemo<SizeUI[]>(() => product.sizes ?? [], [product.sizes]);
-  const kidsSizes = useMemo<SizeUI[]>(() => product.kidsSizes ?? [], [product.kidsSizes]);
+  const computedSizes = useMemo<SizeUI[]>(() => {
+    const base = kid ? KID_SIZES : ADULT_SIZES;
+    return base.map((s) => ({ id: s, size: s, stock: 999 }));
+  }, [kid]);
 
-  const [selectedAdultSize, setSelectedAdultSize] = useState<string | null>(
-    adultSizes[0]?.size ?? null
-  );
-  const [selectedKidsSize, setSelectedKidsSize] = useState<string | null>(
-    kidsSizes[0]?.size ?? null
-  );
-
-  const activeSizes = category === "ADULT" ? adultSizes : kidsSizes;
-  const selectedSize = category === "ADULT" ? selectedAdultSize : selectedKidsSize;
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const pickSize = (size: string) => {
-    if (category === "ADULT") setSelectedAdultSize(size);
-    else setSelectedKidsSize(size);
+    setSelectedSize(size);
     setSelected((s) => ({ ...s, size }));
   };
 
-  const switchCategory = (next: SizeCategory) => {
-    setCategory(next);
-    const size = next === "ADULT" ? selectedAdultSize : selectedKidsSize;
-    setSelected((s) => ({ ...s, size: size ?? null }));
-  };
-
-  /* ---------- Groups ---------- */
+  /* ---------- Groups (NO shorts/socks anymore) ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
-  const badgesGroup = product.optionGroups.find((g) => g.key === "badges"); // <— novo
-  const shortsGroup = product.optionGroups.find((g) => g.key === "shorts");
-  const socksGroup = product.optionGroups.find((g) => g.key === "socks");
+  const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "shorts", "socks", "badges"].includes(g.key)
   );
@@ -108,7 +108,7 @@ export default function ProductConfigurator({ product }: Props) {
   const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
 
-  // suporta múltiplas seleções num grupo ADDON
+  // supports multiple selections in an ADDON group
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
@@ -126,13 +126,9 @@ export default function ProductConfigurator({ product }: Props) {
     });
   }
 
-  /* ---------- Price logic ---------- */
+  /* ---------- Price logic (no kids delta, no shorts/socks) ---------- */
   const { unitJerseyPrice, finalPrice } = useMemo(() => {
     let jersey = product.basePrice;
-
-    if (category === "KIDS" && typeof product.kidsPriceDelta === "number") {
-      jersey += product.kidsPriceDelta;
-    }
 
     for (const g of product.optionGroups) {
       if (g.type !== "RADIO") continue;
@@ -145,6 +141,9 @@ export default function ProductConfigurator({ product }: Props) {
     let addons = 0;
     for (const g of product.optionGroups) {
       if (g.type !== "ADDON") continue;
+      // Ignore shorts/socks explicitly if they still arrive from old data
+      if (g.key === "shorts" || g.key === "socks") continue;
+
       const chosen = selected[g.key];
       if (Array.isArray(chosen)) {
         for (const val of chosen) {
@@ -161,7 +160,7 @@ export default function ProductConfigurator({ product }: Props) {
       unitJerseyPrice: jersey,
       finalPrice: (jersey + addons) * qty,
     };
-  }, [product.basePrice, product.kidsPriceDelta, category, product.optionGroups, selected, qty]);
+  }, [product.basePrice, product.optionGroups, selected, qty]);
 
   /* ---------- Inputs sanitize ---------- */
   const safeName = useMemo(
@@ -181,7 +180,7 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
-    // Converter arrays para string (ex.: "ucl,la-liga") para bater com a action
+    // Convert arrays to comma-separated strings for the action
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
       Object.entries(selected).map(([k, v]) => [
         k,
@@ -244,47 +243,19 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </header>
 
-        {hasKids && (
-          <div className="rounded-2xl border p-4 bg-white/70 space-y-2">
-            <div className="text-sm text-gray-700">Category *</div>
-            <div className="inline-flex items-center rounded-xl bg-gray-100 p-1">
-              <button
-                type="button"
-                onClick={() => switchCategory("ADULT")}
-                className={`px-4 py-2 rounded-lg text-sm transition ${
-                  category === "ADULT" ? "bg-blue-600 text-white shadow" : "hover:bg-white"
-                }`}
-                aria-pressed={category === "ADULT"}
-              >
-                Adult
-              </button>
-              <button
-                type="button"
-                onClick={() => switchCategory("KIDS")}
-                className={`px-4 py-2 rounded-lg text-sm transition ${
-                  category === "KIDS" ? "bg-blue-600 text-white shadow" : "hover:bg-white"
-                }`}
-                aria-pressed={category === "KIDS"}
-              >
-                Kids
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Size */}
+        {/* Size (derived from product name) */}
         <div className="rounded-2xl border p-4 bg-white/70">
           <div className="mb-2 text-sm text-gray-700">
-            Size ({category === "ADULT" ? "Adult" : "Kids"}) <span className="text-red-500">*</span>
+            Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
-          {activeSizes.length > 0 ? (
+          {computedSizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {activeSizes.map((s) => {
+              {computedSizes.map((s) => {
                 const isActive = selectedSize === s.size;
                 return (
                   <button
-                    key={`${category}-${s.size}`}
+                    key={s.id}
                     type="button"
                     onClick={() => pickSize(s.size)}
                     className={`rounded-xl px-3 py-2 border text-sm transition ${
@@ -298,7 +269,13 @@ export default function ProductConfigurator({ product }: Props) {
               })}
             </div>
           ) : (
-            <div className="text-sm text-gray-500">No sizes available for this category.</div>
+            <div className="text-sm text-gray-500">No sizes available.</div>
+          )}
+
+          {kid && (
+            <p className="mt-2 text-xs text-gray-500">
+              Ages shown are approximate. If in between, we recommend sizing up.
+            </p>
           )}
         </div>
 
@@ -312,7 +289,7 @@ export default function ProductConfigurator({ product }: Props) {
           />
         )}
 
-        {/* Competition Badges (ADDON) — só aparece se o cliente escolher uma opção com "badge" */}
+        {/* Competition Badges (ADDON) — only if a customization option with "badge" is chosen */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
@@ -355,23 +332,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* Add-ons & others */}
-        {shortsGroup && (
-          <GroupBlock
-            group={shortsGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-          />
-        )}
-        {socksGroup && (
-          <GroupBlock
-            group={socksGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-          />
-        )}
+        {/* Other add-ons (shorts/socks removed by request) */}
         {otherGroups.map((g) => (
           <GroupBlock
             key={g.id}
@@ -435,31 +396,8 @@ function GroupBlock({
   onToggleAddon: (key: string, value: string, checked: boolean) => void;
 }) {
   if (group.type === "SIZE") {
-    return (
-      <div className="rounded-2xl border p-4 bg-white/70">
-        <div className="mb-2 text-sm text-gray-700">
-          {group.label} {group.required && <span className="text-red-500">*</span>}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {group.values.map((v) => {
-            const active = selected[group.key] === v.value;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => onPickRadio(group.key, v.value)}
-                className={`rounded-xl px-3 py-2 border text-sm transition ${
-                  active ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
-                }`}
-                aria-pressed={!!active}
-              >
-                {v.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
+    // (Not used in this setup; size comes from name)
+    return null;
   }
 
   if (group.type === "RADIO") {
@@ -499,7 +437,7 @@ function GroupBlock({
     );
   }
 
-  // ADDON (checkbox - pode ser usado para "badges", "shorts", "socks", etc.)
+  // ADDON
   const chosen = selected[group.key];
   const isActive = (value: string) =>
     Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
