@@ -143,7 +143,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER — placeholder PRETO enquanto carrega, sem blur
+   2) HERO IMAGE CYCLER — black placeholder while loading, no blur
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -397,12 +397,12 @@ function shuffle<T>(arr: T[]) {
 }
 
 /**
- * Placeholder preto até a 1ª imagem estar **pré-carregada**,
- * depois cross-fade (sem blur). A 1ª imagem permanece `firstHold` ms.
+ * Black placeholder until first image is preloaded,
+ * then cross-fade (no blur). The first image holds `firstHold` ms.
  */
 function HeroImageCycler({
   interval = 4200,
-  firstHold = 10000, // 10s por defeito
+  firstHold = 10000,
 }: {
   interval?: number
   firstHold?: number
@@ -419,7 +419,7 @@ function HeroImageCycler({
   const bRef = useRef<HTMLImageElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
-  const [firstShown, setFirstShown] = useState(false) // controla o overlay preto
+  const [firstShown, setFirstShown] = useState(false)
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -427,7 +427,7 @@ function HeroImageCycler({
       const ox = ['center', 'left', 'right'][Math.floor(Math.random() * 3)]
       const oy = ['center', 'top', 'bottom'][Math.floor(Math.random() * 3)]
       img.style.transformOrigin = `${ox} ${oy}`
-      ;(img as any).getAnimations?.().forEach((a: Animation) => a.cancel())
+      ;(img as any).getAnimations?.forEach((a: Animation) => a.cancel())
       img.animate([{ transform: 'scale(1.03)' }, { transform: 'scale(1.0)' }], {
         duration: Math.max(1000, dur),
         easing: 'ease-out',
@@ -470,11 +470,9 @@ function HeroImageCycler({
     const start = async () => {
       const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
       const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
-      // pré-carrega 1ª e 2ª
       await Promise.all([load(firstSrc), load(secondSrc)])
       if (killed) return
 
-      // mostra 1ª (tira o overlay preto)
       if (aRef.current) {
         aRef.current.src = firstSrc
         aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
@@ -492,7 +490,6 @@ function HeroImageCycler({
         timerRef.current = window.setTimeout(tick, interval) as any
       }
 
-      // 1ª troca após firstHold
       timerRef.current = window.setTimeout(tick, firstHold) as any
     }
 
@@ -501,22 +498,17 @@ function HeroImageCycler({
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interval, firstHold])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
-      {/* overlay decorativo (pode manter) */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
-
-      {/* PLACEHOLDER PRETO enquanto a 1ª imagem não foi mostrada */}
       {!firstShown && <div className="absolute inset-0 bg-black" />}
 
-      {/* camadas */}
       <img
         ref={aRef}
         className="hero-layer"
-        src="" // preenchido no start()
+        src=""
         alt="image"
         decoding="async"
         onError={(e: any) => {
@@ -529,7 +521,7 @@ function HeroImageCycler({
       <img
         ref={bRef}
         className="hero-layer"
-        src="" // será definido no swapTo
+        src=""
         alt="image"
         decoding="async"
         onError={(e: any) => {
@@ -565,7 +557,7 @@ function HeroImageCycler({
 }
 
 /* ======================================================================================
-   3) MOCK DATA — LOCAL IMAGENS (cards)
+   3) MOCK DATA — local images (cards)
 ====================================================================================== */
 type Product = {
   id: string
@@ -587,8 +579,7 @@ const products: Product[] = [
 const eur = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })
 
 /* ======================================================================================
-   4) HIGHLIGHT SPACES — BANNERS COM IMAGEM
-   Coloca as tuas imagens nas paths abaixo ou altera-as.
+   4) HIGHLIGHT SPACES — image banners
 ====================================================================================== */
 type HighlightSpace = {
   key: 'adult' | 'kids' | 'retro' | 'concept'
@@ -682,6 +673,70 @@ function ImageSpaces() {
 }
 
 /* ======================================================================================
+   4.1) CREATIVE SEPARATOR between spaces and products
+        — Wavy gradient ribbon with parallax dots
+====================================================================================== */
+
+function WavySeparator() {
+  return (
+    <div className="relative -mx-4 sm:mx-0 mb-10">
+      {/* Ribbon background */}
+      <div className="absolute inset-0 blur-xl opacity-40 bg-gradient-to-r from-blue-200 via-cyan-200 to-blue-300 rounded-3xl" />
+      <div className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-gradient-to-r from-white to-white/70">
+        {/* Wave SVG */}
+        <svg viewBox="0 0 1440 180" className="w-full h-24 sm:h-28 md:h-32">
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="50%" stopColor="#22d3ee" />
+              <stop offset="100%" stopColor="#3b82f6" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0,120 C180,60 360,60 540,120 C720,180 900,180 1080,120 C1260,60 1440,60 1440,60 L1440,180 L0,180 Z"
+            fill="url(#g1)"
+            opacity="0.15"
+          />
+          <path
+            d="M0,100 C180,40 360,40 540,100 C720,160 900,160 1080,100 C1260,40 1440,40 1440,40"
+            stroke="url(#g1)"
+            strokeWidth="3"
+            fill="none"
+            opacity="0.45"
+          />
+        </svg>
+
+        {/* Floating dots with subtle motion */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(8)].map((_, i) => (
+            <motion.span
+              key={i}
+              className="absolute h-2 w-2 rounded-full bg-blue-400/50"
+              initial={{ x: Math.random() * 100 + '%', y: 60 + Math.random() * 20 + '%' }}
+              animate={{ y: [ '60%', '58%', '60%' ] }}
+              transition={{ duration: 2.2 + Math.random(), repeat: Infinity, repeatType: 'mirror' }}
+              style={{ left: `${10 + i * 12}%` }}
+            />
+          ))}
+        </div>
+
+        {/* Labels */}
+        <div className="flex items-center justify-between px-4 pb-4 -mt-2">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-200">
+              Shop by theme
+            </span>
+            <span className="text-gray-400 text-xs">—</span>
+            <span className="text-xs text-gray-500">Scroll for products</span>
+          </div>
+          <div className="text-xs text-gray-500 hidden sm:block">Curated picks below</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ======================================================================================
    5) PAGE
 ====================================================================================== */
 export default function Home() {
@@ -740,7 +795,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* right mockup com animação */}
+              {/* right mockup */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -748,7 +803,6 @@ export default function Home() {
                 className="relative"
               >
                 <TiltCard className="shadow-glow overflow-hidden">
-                  {/* 1ª imagem só aparece quando estiver pronta; até lá fica PRETO */}
                   <HeroImageCycler interval={4200} firstHold={10000} />
                 </TiltCard>
               </motion.div>
@@ -775,52 +829,66 @@ export default function Home() {
           <a href="/products" className="text-sm text-blue-700 hover:underline">See all →</a>
         </div>
 
-        {/* ESPAÇOS COM IMAGENS (Adulto / Criança / Retro / Concept Kits) */}
+        {/* Spaces: Adult / Kids / Retro / Concept Kits */}
         <ImageSpaces />
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((p) => (
-            <motion.a
-              key={p.id}
-              href={`/products/${p.id}`}
-              whileHover={{ y: -6 }}
-              className="group product-hover transition"
-            >
-              <div className="relative aspect-[4/5] overflow-hidden rounded-3xl">
-                <img
-                  src={p.img}
-                  alt={p.name}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  onError={(e) => {
-                    const img = e.currentTarget
-                    if ((img as any)._fallbackApplied) return
-                    ;(img as any)._fallbackApplied = true
-                    img.src = FALLBACK_IMG
-                  }}
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                {p.tag && (
-                  <span className="absolute left-3 top-3 badge bg-blue-50 text-blue-700 ring-1 ring-blue-200">
-                    {p.tag}
-                  </span>
-                )}
-                <motion.div initial={{ opacity: 0, y: 10 }} whileHover={{ opacity: 1, y: 0 }} className="absolute bottom-3 left-3 right-3">
-                  <div className="flex items-center justify-between text-white">
-                    <span className="text-sm">Add to cart</span>
-                    <ArrowRight className="h-4 w-4" />
+        {/* Creative visual separator */}
+        <WavySeparator />
+
+        {/* Products block with subtle “shelf” */}
+        <div className="relative">
+          <div className="absolute inset-x-6 -top-3 h-6 rounded-full bg-gradient-to-r from-blue-200/40 via-cyan-200/40 to-blue-200/40 blur-md" />
+          <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 p-4 sm:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">New & trending</h3>
+              <span className="text-xs text-gray-500">Hand-picked concepts</span>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {products.map((p) => (
+                <motion.a
+                  key={p.id}
+                  href={`/products/${p.id}`}
+                  whileHover={{ y: -6 }}
+                  className="group product-hover transition"
+                >
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-3xl">
+                    <img
+                      src={p.img}
+                      alt={p.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={(e) => {
+                        const img = e.currentTarget as HTMLImageElement
+                        if ((img as any)._fallbackApplied) return
+                        ;(img as any)._fallbackApplied = true
+                        img.src = FALLBACK_IMG
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                    {p.tag && (
+                      <span className="absolute left-3 top-3 badge bg-blue-50 text-blue-700 ring-1 ring-blue-200">
+                        {p.tag}
+                      </span>
+                    )}
+                    <motion.div initial={{ opacity: 0, y: 10 }} whileHover={{ opacity: 1, y: 0 }} className="absolute bottom-3 left-3 right-3">
+                      <div className="flex items-center justify-between text-white">
+                        <span className="text-sm">Add to cart</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </motion.div>
                   </div>
-                </motion.div>
-              </div>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold tracking-tight">{p.name}</h3>
-                  <span className="text-blue-700 font-semibold">{eur(p.price)}</span>
-                </div>
-                <p className="mt-1 text-xs text-gray-500">Affordable tracked shipping</p>
-              </div>
-            </motion.a>
-          ))}
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold tracking-tight">{p.name}</h3>
+                      <span className="text-blue-700 font-semibold">{eur(p.price)}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">Affordable tracked shipping</p>
+                  </div>
+                </motion.a>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
