@@ -37,33 +37,26 @@ type ProductUI = {
   description?: string | null;
   basePrice: number; // cents
   images: string[];
-  // (Adult/Kids handled by product name; these are kept for backward compatibility but ignored)
-  sizes?: SizeUI[];
-  kidsSizes?: SizeUI[];
-  kidsPriceDelta?: number;
   optionGroups: OptionGroupUI[];
 };
 
 type SelectedState = Record<string, string | string[] | null>;
-
-type Props = {
-  product: ProductUI;
-};
+type Props = { product: ProductUI };
 
 /* ====================== Helpers ====================== */
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
 
-function isAdultProduct(name: string) {
-  return /adult/i.test(name);
-}
-function isKidProduct(name: string) {
-  return /kid/i.test(name);
-}
+const isAdultProduct = (name: string) => /adult/i.test(name);
+const isKidProduct = (name: string) => /kid/i.test(name);
 
-function classNames(...c: (string | false | null | undefined)[]) {
-  return c.filter(Boolean).join(" ");
-}
+const classNames = (...c: (string | false | null | undefined)[]) =>
+  c.filter(Boolean).join(" ");
+
+/** Free rules */
+const isFreeCustomizationValue = (groupKey: string, value: string) =>
+  groupKey === "customization" && /name-number|badge/i.test(value);
+const isBadgesGroup = (groupKey: string) => groupKey === "badges";
 
 /* ====================== Component ====================== */
 export default function ProductConfigurator({ product }: Props) {
@@ -78,26 +71,22 @@ export default function ProductConfigurator({ product }: Props) {
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
 
   /* ---------- Size logic from product name ---------- */
-  const adult = isAdultProduct(product.name);
   const kid = isKidProduct(product.name);
-
-  const computedSizes = useMemo<SizeUI[]>(() => {
-    const base = kid ? KID_SIZES : ADULT_SIZES;
-    return base.map((s) => ({ id: s, size: s, stock: 999 }));
-  }, [kid]);
-
+  const computedSizes = useMemo<SizeUI[]>(
+    () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999 })),
+    [kid]
+  );
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-
   const pickSize = (size: string) => {
     setSelectedSize(size);
     setSelected((s) => ({ ...s, size }));
   };
 
-  /* ---------- Groups (NO shorts/socks anymore) ---------- */
+  /* ---------- Groups (NO shorts/socks) ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
   const otherGroups = product.optionGroups.filter(
-    (g) => !["size", "customization", "shorts", "socks", "badges"].includes(g.key)
+    (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
   );
 
   const customization = selected["customization"] ?? "";
@@ -108,7 +97,6 @@ export default function ProductConfigurator({ product }: Props) {
   const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
 
-  // supports multiple selections in an ADDON group
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
@@ -126,40 +114,46 @@ export default function ProductConfigurator({ product }: Props) {
     });
   }
 
-  /* ---------- Price logic (no kids delta, no shorts/socks) ---------- */
+  /* ---------- Price logic (personalization & badges are FREE) ---------- */
   const { unitJerseyPrice, finalPrice } = useMemo(() => {
     let jersey = product.basePrice;
 
+    // RADIO groups
     for (const g of product.optionGroups) {
       if (g.type !== "RADIO") continue;
       const chosen = selected[g.key];
       if (!chosen || typeof chosen !== "string") continue;
+
+      // Free if it is a customization with name-number or badge
       const v = g.values.find((x) => x.value === chosen);
-      if (v) jersey += v.priceDelta;
+      if (!v) continue;
+      const delta = isFreeCustomizationValue(g.key, v.value) ? 0 : v.priceDelta;
+      jersey += delta;
     }
 
+    // ADDON groups
     let addons = 0;
     for (const g of product.optionGroups) {
       if (g.type !== "ADDON") continue;
-      // Ignore shorts/socks explicitly if they still arrive from old data
-      if (g.key === "shorts" || g.key === "socks") continue;
+
+      // Badges are FREE
+      const freeBadges = isBadgesGroup(g.key);
 
       const chosen = selected[g.key];
+      const addDelta = (val: string) => {
+        const v = g.values.find((x) => x.value === val);
+        if (!v) return;
+        addons += freeBadges ? 0 : v.priceDelta;
+      };
+
       if (Array.isArray(chosen)) {
-        for (const val of chosen) {
-          const v = g.values.find((x) => x.value === val);
-          if (v) addons += v.priceDelta;
-        }
+        for (const val of chosen) addDelta(val);
       } else if (typeof chosen === "string" && chosen) {
-        const v = g.values.find((x) => x.value === chosen);
-        if (v) addons += v.priceDelta;
+        addDelta(chosen);
       }
     }
 
-    return {
-      unitJerseyPrice: jersey,
-      finalPrice: (jersey + addons) * qty,
-    };
+    return { unitJerseyPrice: jersey, finalPrice: (jersey + addons) * qty };
   }, [product.basePrice, product.optionGroups, selected, qty]);
 
   /* ---------- Inputs sanitize ---------- */
@@ -180,7 +174,6 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
-    // Convert arrays to comma-separated strings for the action
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
       Object.entries(selected).map(([k, v]) => [
         k,
@@ -286,23 +279,16 @@ export default function ProductConfigurator({ product }: Props) {
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
+            freeRule={(g, v) => isFreeCustomizationValue(g.key, v.value)}
           />
         )}
 
-        {/* Competition Badges (ADDON) — only if a customization option with "badge" is chosen */}
-        {showBadgePicker && badgesGroup && (
-          <GroupBlock
-            group={badgesGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-          />
-        )}
-
-        {/* Personalization */}
+        {/* ✅ Personalization FIRST when "Name & Number + Competition Badge" is chosen */}
         {showNameNumber && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
-            <div className="text-sm text-gray-700">Personalization</div>
+            <div className="text-sm text-gray-700">
+              Personalization <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">FREE</span>
+            </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <label className="block">
                 <span className="text-xs text-gray-600">Name (uppercase)</span>
@@ -332,7 +318,18 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* Other add-ons (shorts/socks removed by request) */}
+        {/* Then show Competition Badges (FREE) */}
+        {showBadgePicker && badgesGroup && (
+          <GroupBlock
+            group={badgesGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+            forceFree // all badges free
+          />
+        )}
+
+        {/* Other add-ons (if any) */}
         {otherGroups.map((g) => (
           <GroupBlock
             key={g.id}
@@ -389,16 +386,19 @@ function GroupBlock({
   selected,
   onPickRadio,
   onToggleAddon,
+  forceFree,
+  freeRule,
 }: {
   group: OptionGroupUI;
   selected: SelectedState;
   onPickRadio: (key: string, value: string) => void;
   onToggleAddon: (key: string, value: string, checked: boolean) => void;
+  /** if true, every value in this group is free (used for badges) */
+  forceFree?: boolean;
+  /** optional rule to mark specific values free (used for customization radio) */
+  freeRule?: (group: OptionGroupUI, value: OptionValueUI) => boolean;
 }) {
-  if (group.type === "SIZE") {
-    // (Not used in this setup; size comes from name)
-    return null;
-  }
+  if (group.type === "SIZE") return null;
 
   if (group.type === "RADIO") {
     return (
@@ -409,6 +409,7 @@ function GroupBlock({
         <div className="grid gap-2">
           {group.values.map((v) => {
             const active = selected[group.key] === v.value;
+            const isFree = forceFree || (freeRule ? freeRule(group, v) : false);
             return (
               <label
                 key={v.id}
@@ -426,9 +427,13 @@ function GroupBlock({
                   />
                   <span>{v.label}</span>
                 </div>
-                {v.priceDelta !== 0 && (
+                {isFree ? (
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                    FREE
+                  </span>
+                ) : v.priceDelta !== 0 ? (
                   <span className="text-sm text-gray-600">+ {money(v.priceDelta)}</span>
-                )}
+                ) : null}
               </label>
             );
           })}
@@ -450,6 +455,7 @@ function GroupBlock({
       <div className="grid gap-2">
         {group.values.map((v) => {
           const active = isActive(v.value);
+          const isFree = forceFree || (freeRule ? freeRule(group, v) : false);
           return (
             <label
               key={v.id}
@@ -466,9 +472,13 @@ function GroupBlock({
                 />
                 <span>{v.label}</span>
               </div>
-              {v.priceDelta !== 0 && (
+              {isFree ? (
+                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                  FREE
+                </span>
+              ) : v.priceDelta !== 0 ? (
                 <span className="text-sm text-gray-600">+ {money(v.priceDelta)}</span>
-              )}
+              ) : null}
             </label>
           );
         })}
