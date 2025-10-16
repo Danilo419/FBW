@@ -8,8 +8,28 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Prisma, CartItem } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+// ---- Helper types (garantem que 'items' existe) ----
+type CartWithItems = Prisma.CartGetPayload<{
+  include: {
+    items: {
+      include: {
+        product: {
+          select: {
+            id: true;
+            name: true;
+            team: true;
+            images: true;
+            slug: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
 // Server Action to remove an item (id is a string)
 export async function removeItem(formData: FormData) {
@@ -56,7 +76,7 @@ export default async function CartPage() {
   const userId = (session?.user as any)?.id ?? null;
 
   // Find cart by userId (if logged in) OR by sessionId (anonymous)
-  const cart = await prisma.cart.findFirst({
+  const cart = (await prisma.cart.findFirst({
     where: {
       OR: [
         userId ? { userId } : undefined,
@@ -79,7 +99,7 @@ export default async function CartPage() {
         orderBy: { createdAt: "asc" },
       },
     },
-  });
+  })) as CartWithItems | null;
 
   if (!cart || cart.items.length === 0) {
     return (
@@ -100,24 +120,37 @@ export default async function CartPage() {
     );
   }
 
-  // Ensure totals even if older rows don't have totalPrice filled
-  const items = cart.items.map((it) => ({
-    ...it,
-    total: (it as any).totalPrice ?? it.qty * it.unitPrice,
-  }));
-  const grandTotal = items.reduce((acc, it) => acc + it.total, 0);
+  // Construímos itens para mostrar: preço SEM personalização (usa sempre unitPrice)
+  const displayItems = cart.items.map((it) => {
+    // 'unitPrice' vem do cartItem (preço base gravado no "add to cart")
+    const displayUnit: number = (it as CartItem).unitPrice ?? 0;
+    const displayTotal: number = displayUnit * it.qty;
+
+    const opts =
+      (it as any).optionsJson && typeof (it as any).optionsJson === "object"
+        ? (it as any).optionsJson
+        : null;
+
+    return {
+      ...it,
+      displayUnit,
+      displayTotal,
+      opts,
+    };
+  });
+
+  const grandTotal: number = displayItems.reduce(
+    (acc: number, it) => acc + it.displayTotal,
+    0
+  );
 
   return (
     <div className="container-fw py-12">
       <h1 className="text-3xl font-extrabold mb-8">Your Cart</h1>
 
       <div className="grid gap-5">
-        {items.map((it) => {
+        {displayItems.map((it) => {
           const cover = it.product.images?.[0] ?? "/placeholder.png";
-          const opts =
-            (it as any).optionsJson && typeof (it as any).optionsJson === "object"
-              ? (it as any).optionsJson
-              : null;
 
           return (
             <div
@@ -146,35 +179,30 @@ export default async function CartPage() {
                           {it.product.team}
                         </div>
                       )}
+                      {it.opts ? (
+                        <div className="mt-1 text-xs text-gray-500">
+                          {Object.entries(it.opts as Record<string, any>)
+                            .map(([k, v]) => `${k}: ${String(v)}`)
+                            .join(" · ")}
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="text-right">
                       <div className="text-sm text-gray-500">
-                        Unit: {formatMoney(it.unitPrice)}
+                        Unit: {formatMoney(it.displayUnit)}
                       </div>
                       <div className="text-base font-semibold">
-                        {formatMoney(it.total)}
+                        {formatMoney(it.displayTotal)}
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-2 text-sm text-gray-600">
                     Qty: <span className="font-medium">{it.qty}</span>
-                    {opts ? (
-                      <>
-                        {" "}
-                        ·{" "}
-                        <span className="truncate inline-block align-bottom max-w-[60ch]">
-                          {Object.entries(opts as Record<string, any>)
-                            .map(([k, v]) => `${k}: ${String(v)}`)
-                            .join(" · ")}
-                        </span>
-                      </>
-                    ) : null}
                   </div>
 
                   <div className="mt-3 flex items-center justify-end">
-                    {/* Remove button (Server Action) */}
                     <form action={removeItem}>
                       <input type="hidden" name="itemId" value={String(it.id)} />
                       <button
@@ -193,7 +221,6 @@ export default async function CartPage() {
         })}
       </div>
 
-      {/* Footer: total + Go to checkout */}
       <div className="mt-8 flex items-center justify-end gap-4">
         <div className="rounded-2xl border bg-white px-5 py-3 text-lg font-bold">
           Total:&nbsp;{formatMoney(grandTotal)}
