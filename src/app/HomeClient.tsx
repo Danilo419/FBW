@@ -627,7 +627,7 @@ const highlightSpaces: HighlightSpace[] = [
 
 function ImageSpaces() {
   return (
-    <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {highlightSpaces.map((s) => (
         <motion.a
           key={s.key}
@@ -668,70 +668,6 @@ function ImageSpaces() {
           </div>
         </motion.a>
       ))}
-    </div>
-  )
-}
-
-/* ======================================================================================
-   4.1) CREATIVE SEPARATOR between spaces and products
-        — Wavy gradient ribbon with parallax dots
-====================================================================================== */
-
-function WavySeparator() {
-  return (
-    <div className="relative -mx-4 sm:mx-0 mb-10">
-      {/* Ribbon background */}
-      <div className="absolute inset-0 blur-xl opacity-40 bg-gradient-to-r from-blue-200 via-cyan-200 to-blue-300 rounded-3xl" />
-      <div className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-gradient-to-r from-white to-white/70">
-        {/* Wave SVG */}
-        <svg viewBox="0 0 1440 180" className="w-full h-24 sm:h-28 md:h-32">
-          <defs>
-            <linearGradient id="g1" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0%" stopColor="#3b82f6" />
-              <stop offset="50%" stopColor="#22d3ee" />
-              <stop offset="100%" stopColor="#3b82f6" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M0,120 C180,60 360,60 540,120 C720,180 900,180 1080,120 C1260,60 1440,60 1440,60 L1440,180 L0,180 Z"
-            fill="url(#g1)"
-            opacity="0.15"
-          />
-          <path
-            d="M0,100 C180,40 360,40 540,100 C720,160 900,160 1080,100 C1260,40 1440,40 1440,40"
-            stroke="url(#g1)"
-            strokeWidth="3"
-            fill="none"
-            opacity="0.45"
-          />
-        </svg>
-
-        {/* Floating dots with subtle motion */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(8)].map((_, i) => (
-            <motion.span
-              key={i}
-              className="absolute h-2 w-2 rounded-full bg-blue-400/50"
-              initial={{ x: Math.random() * 100 + '%', y: 60 + Math.random() * 20 + '%' }}
-              animate={{ y: [ '60%', '58%', '60%' ] }}
-              transition={{ duration: 2.2 + Math.random(), repeat: Infinity, repeatType: 'mirror' }}
-              style={{ left: `${10 + i * 12}%` }}
-            />
-          ))}
-        </div>
-
-        {/* Labels */}
-        <div className="flex items-center justify-between px-4 pb-4 -mt-2">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-200">
-              Shop by theme
-            </span>
-            <span className="text-gray-400 text-xs">—</span>
-            <span className="text-xs text-gray-500">Scroll for products</span>
-          </div>
-          <div className="text-xs text-gray-500 hidden sm:block">Curated picks below</div>
-        </div>
-      </div>
     </div>
   )
 }
@@ -832,12 +768,11 @@ export default function Home() {
         {/* Spaces: Adult / Kids / Retro / Concept Kits */}
         <ImageSpaces />
 
-        {/* Creative visual separator */}
-        <WavySeparator />
+        {/* Keep a clean gap between "Highlights" and "New & trending" */}
+        <div className="h-2 sm:h-3" />
 
-        {/* Products block with subtle “shelf” */}
+        {/* Products block */}
         <div className="relative">
-          <div className="absolute inset-x-6 -top-3 h-6 rounded-full bg-gradient-to-r from-blue-200/40 via-cyan-200/40 to-blue-200/40 blur-md" />
           <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">New & trending</h3>
