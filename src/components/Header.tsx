@@ -138,12 +138,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           {/* Search (desktop) — now right aligned and prettier */}
           <SearchBar className="hidden lg:block" />
 
-          {/* Cart */}
+          {/* Cart (desktop) — âncora para a animação fly-to-cart */}
           <Link
             href="/cart"
             aria-label="Open cart"
             className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
             title="Cart"
+            data-cart-anchor="true"
           >
             <ShoppingCart className="h-5 w-5" />
             {cartCount > 0 && (
@@ -260,12 +261,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <Search className="h-5 w-5" />
           </button>
 
-          {/* Cart (mobile) */}
+          {/* Cart (mobile) — âncora para a animação fly-to-cart */}
           <Link
             href="/cart"
             aria-label="Open cart"
             className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
             title="Cart"
+            data-cart-anchor="true"
           >
             <ShoppingCart className="h-5 w-5" />
             {cartCount > 0 && (

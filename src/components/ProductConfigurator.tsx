@@ -2,9 +2,10 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
+import { AnimatePresence, motion } from "framer-motion";
 
 /* ====================== UI Types ====================== */
 type OptionValueUI = {
@@ -47,7 +48,6 @@ type Props = { product: ProductUI };
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
 
-const isAdultProduct = (name: string) => /adult/i.test(name);
 const isKidProduct = (name: string) => /kid/i.test(name);
 
 const classNames = (...c: (string | false | null | undefined)[]) =>
@@ -67,8 +67,15 @@ export default function ProductConfigurator({ product }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
 
+  // Estados de feedback
+  const [justAdded, setJustAdded] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
+
+  // Referência à imagem principal para origem do fly-to-cart
+  const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
   /* ---------- Size logic from product name ---------- */
   const kid = isKidProduct(product.name);
@@ -124,7 +131,6 @@ export default function ProductConfigurator({ product }: Props) {
       const chosen = selected[g.key];
       if (!chosen || typeof chosen !== "string") continue;
 
-      // Free if it is a customization with name-number or badge
       const v = g.values.find((x) => x.value === chosen);
       if (!v) continue;
       const delta = isFreeCustomizationValue(g.key, v.value) ? 0 : v.priceDelta;
@@ -163,6 +169,96 @@ export default function ProductConfigurator({ product }: Props) {
   );
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
+  /* ---------- Fly-to-cart helpers ---------- */
+  function getCartTargetRect(): DOMRect | null {
+    if (typeof document === "undefined") return null;
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]'))
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        const visible = r.width > 0 && r.height > 0;
+        const style = window.getComputedStyle(el);
+        return visible && style.visibility !== "hidden" && style.opacity !== "0";
+      });
+
+    if (anchors.length === 0) return null;
+
+    // Se houver mais que uma (desktop + mobile), escolhe a mais próxima da imagem
+    const imgRect = imgWrapRef.current?.getBoundingClientRect();
+    if (!imgRect) return anchors[0].getBoundingClientRect();
+
+    const imgCx = imgRect.left + imgRect.width / 2;
+    const imgCy = imgRect.top + imgRect.height / 2;
+
+    let best = anchors[0];
+    let bestDist = Infinity;
+    for (const el of anchors) {
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const d = Math.hypot(cx - imgCx, cy - imgCy);
+      if (d < bestDist) {
+        bestDist = d;
+        best = el;
+      }
+    }
+    return best.getBoundingClientRect();
+  }
+
+  function pulseCart() {
+    const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
+    if (!el) return;
+    el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
+    setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
+  }
+
+  function flyToCart() {
+    if (typeof document === "undefined") return;
+    const start = imgWrapRef.current?.getBoundingClientRect();
+    const end = getCartTargetRect();
+    if (!start || !end) return;
+
+    const ghost = document.createElement("img");
+    ghost.src = activeSrc;
+    ghost.alt = "flying image";
+    Object.assign(ghost.style, {
+      position: "fixed",
+      left: `${start.left}px`,
+      top: `${start.top}px`,
+      width: `${start.width}px`,
+      height: `${start.height}px`,
+      objectFit: "contain",
+      borderRadius: "12px",
+      zIndex: "9999",
+      pointerEvents: "none",
+      transition:
+        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
+      opacity: "0.9",
+      transform: "translate3d(0,0,0) scale(1)",
+    } as CSSStyleDeclaration);
+    document.body.appendChild(ghost);
+
+    const startCx = start.left + start.width / 2;
+    const startCy = start.top + start.height / 2;
+    const endCx = end.left + end.width / 2;
+    const endCy = end.top + end.height / 2;
+    const dx = endCx - startCx;
+    const dy = endCy - startCy;
+
+    // Força reflow
+    void ghost.offsetHeight;
+
+    // Aplica deslocação e leve redução
+    ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(0.25)`;
+    ghost.style.opacity = "0.1";
+
+    const cleanup = () => {
+      ghost.removeEventListener("transitionend", cleanup);
+      ghost.remove();
+      pulseCart();
+    };
+    ghost.addEventListener("transitionend", cleanup);
+  }
+
   /* ---------- Add to cart ---------- */
   const addToCart = () => {
     if (!selectedSize) {
@@ -188,15 +284,31 @@ export default function ProductConfigurator({ product }: Props) {
         options: optionsForCart,
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
+
+      // Feedback visual
+      setJustAdded(true);
+      setShowToast(true);
+      flyToCart();
+
+      window.setTimeout(() => setShowToast(false), 2000);
+      window.setTimeout(() => setJustAdded(false), 900);
     });
   };
 
   /* ---------- UI ---------- */
   return (
-    <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
+    <div className="relative flex flex-col gap-10 lg:flex-row lg:items-start">
+      {/* ARIA live (acessibilidade) */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {showToast ? "Produto adicionado ao carrinho." : ""}
+      </div>
+
       {/* Gallery */}
       <div className="rounded-2xl border bg-white p-4 w-full lg:w-[560px] flex-none lg:self-start">
-        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white">
+        <div
+          ref={imgWrapRef}
+          className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
+        >
           <Image
             src={activeSrc}
             alt={product.name}
@@ -287,7 +399,8 @@ export default function ProductConfigurator({ product }: Props) {
         {showNameNumber && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">
-              Personalization <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">FREE</span>
+              Personalization{" "}
+              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">FREE</span>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <label className="block">
@@ -368,14 +481,62 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         </div>
 
-        <button
+        {/* Botão Add to cart com animação */}
+        <motion.button
           onClick={addToCart}
-          className="btn-primary w-full sm:w-auto disabled:opacity-60"
+          className={classNames(
+            "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2",
+            justAdded && "bg-green-600 hover:bg-green-600"
+          )}
           disabled={pending || !selectedSize || qty < 1}
+          animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
+          transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
         >
-          {pending ? "Adding…" : "Add to cart"}
-        </button>
+          {justAdded ? (
+            <>
+              <CheckIcon />
+              Added!
+            </>
+          ) : pending ? (
+            "Adding…"
+          ) : (
+            "Add to cart"
+          )}
+        </motion.button>
       </div>
+
+      {/* Toast “Produto adicionado ao carrinho” */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            key="cart-toast"
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="fixed bottom-4 right-4 z-50"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="rounded-xl border bg-white/95 backdrop-blur px-4 py-3 shadow-xl flex items-center gap-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
+                <CheckIcon className="h-4 w-4 text-green-700" />
+              </div>
+              <div className="text-sm">
+                <div className="font-semibold">Produto adicionado ao carrinho</div>
+                <div className="text-gray-600">Pode continuar a comprar ou ir ao checkout.</div>
+              </div>
+              <button
+                className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                onClick={() => setShowToast(false)}
+                aria-label="Fechar notificação"
+              >
+                Fechar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -484,5 +645,26 @@ function GroupBlock({
         })}
       </div>
     </div>
+  );
+}
+
+/* ====================== Icons ====================== */
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      className={classNames("h-5 w-5", props.className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 7L9 18l-5-5"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
