@@ -12,7 +12,7 @@ type OptionValueUI = {
   id: string;
   value: string;
   label: string;
-  priceDelta: number; // cents
+  priceDelta: number; // cents (ignored now)
 };
 
 type OptionGroupUI = {
@@ -53,9 +53,6 @@ const isKidProduct = (name: string) => /kid/i.test(name);
 const classNames = (...c: (string | false | null | undefined)[]) =>
   c.filter(Boolean).join(" ");
 
-/** Free rules */
-const isFreeCustomizationValue = (groupKey: string, value: string) =>
-  groupKey === "customization" && /name-number|badge/i.test(value);
 const isBadgesGroup = (groupKey: string) => groupKey === "badges";
 
 /* ====================== Component ====================== */
@@ -67,14 +64,12 @@ export default function ProductConfigurator({ product }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
 
-  // Feedback states
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
 
-  // Reference to the main image (used as the origin for the fly-to-cart animation)
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
   /* ---------- Size logic derived from product name ---------- */
@@ -89,7 +84,7 @@ export default function ProductConfigurator({ product }: Props) {
     setSelected((s) => ({ ...s, size }));
   };
 
-  /* ---------- Groups (NO shorts/socks) ---------- */
+  /* ---------- Groups (hide shorts/socks entirely) ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
   const otherGroups = product.optionGroups.filter(
@@ -97,9 +92,10 @@ export default function ProductConfigurator({ product }: Props) {
   );
 
   const customization = selected["customization"] ?? "";
-  const showNameNumber = typeof customization === "string" && customization.includes("name-number");
+  const showNameNumber =
+    typeof customization === "string" && customization.toLowerCase().includes("name-number");
   const showBadgePicker =
-    typeof customization === "string" && customization.includes("badge") && !!badgesGroup;
+    typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
 
   const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -121,46 +117,9 @@ export default function ProductConfigurator({ product }: Props) {
     });
   }
 
-  /* ---------- Price logic (personalization & badges are FREE) ---------- */
-  const { unitJerseyPrice, finalPrice } = useMemo(() => {
-    let jersey = product.basePrice;
-
-    // RADIO groups
-    for (const g of product.optionGroups) {
-      if (g.type !== "RADIO") continue;
-      const chosen = selected[g.key];
-      if (!chosen || typeof chosen !== "string") continue;
-
-      const v = g.values.find((x) => x.value === chosen);
-      if (!v) continue;
-      const delta = isFreeCustomizationValue(g.key, v.value) ? 0 : v.priceDelta;
-      jersey += delta;
-    }
-
-    // ADDON groups
-    let addons = 0;
-    for (const g of product.optionGroups) {
-      if (g.type !== "ADDON") continue;
-
-      // Badges are FREE
-      const freeBadges = isBadgesGroup(g.key);
-
-      const chosen = selected[g.key];
-      const addDelta = (val: string) => {
-        const v = g.values.find((x) => x.value === val);
-        if (!v) return;
-        addons += freeBadges ? 0 : v.priceDelta;
-      };
-
-      if (Array.isArray(chosen)) {
-        for (const val of chosen) addDelta(val);
-      } else if (typeof chosen === "string" && chosen) {
-        addDelta(chosen);
-      }
-    }
-
-    return { unitJerseyPrice: jersey, finalPrice: (jersey + addons) * qty };
-  }, [product.basePrice, product.optionGroups, selected, qty]);
+  /* ---------- Price logic: ALWAYS base price (no deltas) ---------- */
+  const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
+  const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Input sanitization ---------- */
   const safeName = useMemo(
@@ -182,7 +141,6 @@ export default function ProductConfigurator({ product }: Props) {
 
     if (anchors.length === 0) return null;
 
-    // If there are multiple (desktop + mobile), choose the one closest to the product image
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
     if (!imgRect) return anchors[0].getBoundingClientRect();
 
@@ -244,10 +202,8 @@ export default function ProductConfigurator({ product }: Props) {
     const dx = endCx - startCx;
     const dy = endCy - startCy;
 
-    // Force reflow
     void ghost.offsetHeight;
 
-    // Apply translation and a slight scale down
     ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(0.25)`;
     ghost.style.opacity = "0.1";
 
@@ -285,7 +241,6 @@ export default function ProductConfigurator({ product }: Props) {
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
-      // Visual feedback
       setJustAdded(true);
       setShowToast(true);
       flyToCart();
@@ -298,7 +253,6 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- UI ---------- */
   return (
     <div className="relative flex flex-col gap-10 lg:flex-row lg:items-start">
-      {/* ARIA live (accessibility) */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {showToast ? "Item added to cart." : ""}
       </div>
@@ -348,7 +302,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </header>
 
-        {/* Size (derived from product name) */}
+        {/* Size */}
         <div className="rounded-2xl border p-4 bg-white/70">
           <div className="mb-2 text-sm text-gray-700">
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
@@ -384,23 +338,25 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Customization (radio) */}
+        {/* Customization (FREE) */}
         {customizationGroup && (
           <GroupBlock
             group={customizationGroup}
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
-            freeRule={(g, v) => isFreeCustomizationValue(g.key, v.value)}
+            forceFree // all customization options are free now
           />
         )}
 
-        {/* ✅ Personalization FIRST when "Name & Number + Competition Badge" is chosen */}
+        {/* Personalization inputs (FREE) */}
         {showNameNumber && (
           <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">
               Personalization{" "}
-              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">FREE</span>
+              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                FREE
+              </span>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <label className="block">
@@ -431,18 +387,18 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* Then show Competition Badges (FREE) */}
+        {/* Badges (FREE) */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
-            forceFree // all badges free
+            forceFree
           />
         )}
 
-        {/* Other add-ons (if any) */}
+        {/* Other groups (no prices shown; also FREE if you want—change forceFree to true) */}
         {otherGroups.map((g) => (
           <GroupBlock
             key={g.id}
@@ -450,6 +406,7 @@ export default function ProductConfigurator({ product }: Props) {
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
+            // leave as default (no price text either way)
           />
         ))}
 
@@ -466,7 +423,7 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
             <span className="min-w-[2ch] text-center">{qty}</span>
             <button
-              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
               onClick={() => setQty((q) => q + 1)}
               aria-label="Increase quantity"
               disabled={pending}
@@ -481,7 +438,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         </div>
 
-        {/* Add to cart button with animation */}
+        {/* Add to cart */}
         <motion.button
           onClick={addToCart}
           className={classNames(
@@ -505,7 +462,7 @@ export default function ProductConfigurator({ product }: Props) {
         </motion.button>
       </div>
 
-      {/* Toast: “Item added to cart” */}
+      {/* Toast */}
       <AnimatePresence>
         {showToast && (
           <motion.div
@@ -548,16 +505,13 @@ function GroupBlock({
   onPickRadio,
   onToggleAddon,
   forceFree,
-  freeRule,
 }: {
   group: OptionGroupUI;
   selected: SelectedState;
   onPickRadio: (key: string, value: string) => void;
   onToggleAddon: (key: string, value: string, checked: boolean) => void;
-  /** if true, every value in this group is free (used for badges) */
+  /** if true, every value in this group is free (used for customization/badges) */
   forceFree?: boolean;
-  /** optional rule to mark specific values free (used for customization radio) */
-  freeRule?: (group: OptionGroupUI, value: OptionValueUI) => boolean;
 }) {
   if (group.type === "SIZE") return null;
 
@@ -570,7 +524,6 @@ function GroupBlock({
         <div className="grid gap-2">
           {group.values.map((v) => {
             const active = selected[group.key] === v.value;
-            const isFree = forceFree || (freeRule ? freeRule(group, v) : false);
             return (
               <label
                 key={v.id}
@@ -588,12 +541,10 @@ function GroupBlock({
                   />
                   <span>{v.label}</span>
                 </div>
-                {isFree ? (
+                {forceFree ? (
                   <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
                     FREE
                   </span>
-                ) : v.priceDelta !== 0 ? (
-                  <span className="text-sm text-gray-600">+ {money(v.priceDelta)}</span>
                 ) : null}
               </label>
             );
@@ -616,7 +567,6 @@ function GroupBlock({
       <div className="grid gap-2">
         {group.values.map((v) => {
           const active = isActive(v.value);
-          const isFree = forceFree || (freeRule ? freeRule(group, v) : false);
           return (
             <label
               key={v.id}
@@ -633,12 +583,10 @@ function GroupBlock({
                 />
                 <span>{v.label}</span>
               </div>
-              {isFree ? (
+              {forceFree ? (
                 <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
                   FREE
                 </span>
-              ) : v.priceDelta !== 0 ? (
-                <span className="text-sm text-gray-600">+ {money(v.priceDelta)}</span>
               ) : null}
             </label>
           );
