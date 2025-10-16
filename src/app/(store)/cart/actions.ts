@@ -1,12 +1,9 @@
 // src/app/(store)/cart/actions.ts
 'use server';
 
-export const runtime = 'nodejs';
-
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import crypto from 'node:crypto';
 
 const AddToCartSchema = z.object({
   productId: z.string().min(1),
@@ -26,21 +23,26 @@ type AddToCartInput = z.infer<typeof AddToCartSchema>;
 
 async function getOrCreateCart() {
   const jar = await cookies();
-  let sid = jar.get('sid')?.value ?? null;
 
-  // (Se tiveres auth, carrega aqui o userId)
+  // lê o sid atual (pode não existir)
+  const existingSid = jar.get('sid')?.value ?? null;
+
+  // (Se tiveres auth, carrega aqui o userId — deixo null)
   const userId: string | null = null;
 
-  // 1) tenta carrinho existente (usa findFirst; não assume UNIQUE)
-  if (sid) {
-    const found = await prisma.cart.findFirst({ where: { sessionId: sid } });
+  // 1) tenta carrinho existente (não assume UNIQUE)
+  if (existingSid) {
+    const found = await prisma.cart.findFirst({ where: { sessionId: existingSid } });
     if (found) return found;
   }
 
   // 2) cria novo carrinho + cookie
-  sid = crypto.randomUUID();
+  // Garante string SEMPRE (nunca null)
+  const newSid: string =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 dias
-  jar.set('sid', sid, {
+  jar.set('sid', newSid, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
@@ -48,10 +50,7 @@ async function getOrCreateCart() {
   });
 
   return prisma.cart.create({
-    data: {
-      sessionId: sid,
-      userId: userId ?? null,
-    },
+    data: { sessionId: newSid, userId: userId ?? null },
   });
 }
 
@@ -102,7 +101,7 @@ export async function addToCartAction(raw: AddToCartInput) {
       where: { id: existing.id },
       data: {
         qty: newQty,
-        unitPrice,                         // fica sempre o base
+        unitPrice,                         // sempre base
         totalPrice: unitPrice * newQty,    // base * qty
         optionsJson: optionsJson as any,
         personalization: personalization as any,
