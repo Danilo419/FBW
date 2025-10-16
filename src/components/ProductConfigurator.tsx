@@ -67,17 +67,17 @@ export default function ProductConfigurator({ product }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
 
-  // Estados de feedback
+  // Feedback states
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
 
-  // Referência à imagem principal para origem do fly-to-cart
+  // Reference to the main image (used as the origin for the fly-to-cart animation)
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Size logic from product name ---------- */
+  /* ---------- Size logic derived from product name ---------- */
   const kid = isKidProduct(product.name);
   const computedSizes = useMemo<SizeUI[]>(
     () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999 })),
@@ -162,7 +162,7 @@ export default function ProductConfigurator({ product }: Props) {
     return { unitJerseyPrice: jersey, finalPrice: (jersey + addons) * qty };
   }, [product.basePrice, product.optionGroups, selected, qty]);
 
-  /* ---------- Inputs sanitize ---------- */
+  /* ---------- Input sanitization ---------- */
   const safeName = useMemo(
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
     [custName]
@@ -182,7 +182,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     if (anchors.length === 0) return null;
 
-    // Se houver mais que uma (desktop + mobile), escolhe a mais próxima da imagem
+    // If there are multiple (desktop + mobile), choose the one closest to the product image
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
     if (!imgRect) return anchors[0].getBoundingClientRect();
 
@@ -244,10 +244,10 @@ export default function ProductConfigurator({ product }: Props) {
     const dx = endCx - startCx;
     const dy = endCy - startCy;
 
-    // Força reflow
+    // Force reflow
     void ghost.offsetHeight;
 
-    // Aplica deslocação e leve redução
+    // Apply translation and a slight scale down
     ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(0.25)`;
     ghost.style.opacity = "0.1";
 
@@ -285,7 +285,7 @@ export default function ProductConfigurator({ product }: Props) {
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
-      // Feedback visual
+      // Visual feedback
       setJustAdded(true);
       setShowToast(true);
       flyToCart();
@@ -298,9 +298,9 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- UI ---------- */
   return (
     <div className="relative flex flex-col gap-10 lg:flex-row lg:items-start">
-      {/* ARIA live (acessibilidade) */}
+      {/* ARIA live (accessibility) */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {showToast ? "Produto adicionado ao carrinho." : ""}
+        {showToast ? "Item added to cart." : ""}
       </div>
 
       {/* Gallery */}
@@ -379,7 +379,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {kid && (
             <p className="mt-2 text-xs text-gray-500">
-              Ages shown are approximate. If in between, we recommend sizing up.
+              Ages are approximate. If in between, we recommend sizing up.
             </p>
           )}
         </div>
@@ -481,7 +481,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         </div>
 
-        {/* Botão Add to cart com animação */}
+        {/* Add to cart button with animation */}
         <motion.button
           onClick={addToCart}
           className={classNames(
@@ -505,7 +505,7 @@ export default function ProductConfigurator({ product }: Props) {
         </motion.button>
       </div>
 
-      {/* Toast “Produto adicionado ao carrinho” */}
+      {/* Toast: “Item added to cart” */}
       <AnimatePresence>
         {showToast && (
           <motion.div
@@ -523,15 +523,15 @@ export default function ProductConfigurator({ product }: Props) {
                 <CheckIcon className="h-4 w-4 text-green-700" />
               </div>
               <div className="text-sm">
-                <div className="font-semibold">Produto adicionado ao carrinho</div>
-                <div className="text-gray-600">Pode continuar a comprar ou ir ao checkout.</div>
+                <div className="font-semibold">Item added to cart</div>
+                <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
               </div>
               <button
                 className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
                 onClick={() => setShowToast(false)}
-                aria-label="Fechar notificação"
+                aria-label="Close notification"
               >
-                Fechar
+                Close
               </button>
             </div>
           </motion.div>
