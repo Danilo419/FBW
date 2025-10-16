@@ -8,12 +8,25 @@ import { prisma } from "@/lib/prisma";
 import {
   ArrowLeft,
   BadgeCheck,
-  Printer,
   User2,
   MapPin,
   Package,
   AlertTriangle,
 } from "lucide-react";
+
+/* ========================= Client-only bits ========================= */
+// pequeno botão client-side para imprimir sem tocar em `window` no server
+function PrintButton() {
+  "use client";
+  return (
+    <button
+      onClick={() => window.print()}
+      className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+    >
+      Print
+    </button>
+  );
+}
 
 /* ========================= Helpers ========================= */
 
@@ -118,6 +131,16 @@ function ensureArray<T>(v: any): T[] {
   return Array.isArray(v) ? v : [];
 }
 
+function fallbackId(idx: number, it: any) {
+  const base =
+    it?.id ??
+    it?.orderId ??
+    it?.productId ??
+    it?.name ??
+    "item";
+  return `${String(base)}-${idx}`;
+}
+
 /* ========================= Data ========================= */
 
 async function fetchOrder(id: string) {
@@ -127,9 +150,7 @@ async function fetchOrder(id: string) {
       include: {
         user: { select: { name: true, email: true } },
         items: {
-          // ⚠️ OrderItem no teu schema não tem createdAt
-          // para evitar erros em pedidos antigos, não ordenar por um campo inexistente
-          orderBy: { id: "asc" },
+          orderBy: { id: "asc" }, // não usar campos que possam não existir em registos antigos
           include: {
             product: { select: { id: true, slug: true, images: true, name: true } },
           },
@@ -152,7 +173,7 @@ async function fetchOrder(id: string) {
 
     const itemsRaw = ensureArray<any>(order.items);
 
-    const items = itemsRaw.map((it) => {
+    const items = itemsRaw.map((it, i) => {
       const snap = safeParseJSON(it?.snapshotJson);
       const optionsObj =
         safeParseJSON(snap?.optionsJson) ||
@@ -160,7 +181,7 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.selected) ||
         {};
 
-      // Personalization
+      // Personalization (tolerante)
       const personalization =
         snap?.personalization && typeof snap.personalization === "object"
           ? {
@@ -175,14 +196,14 @@ async function fetchOrder(id: string) {
             }
           : null;
 
-      // Size (vários formatos legacy)
+      // Size (vários formatos)
       const size =
         optionsObj.size ??
         snap?.size ??
         pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
         null;
 
-      // Badges podem vir como array/string/objeto
+      // Badges: array/string/obj
       let badges: string | null = null;
       const rawBadges = optionsObj.badges ?? snap?.badges ?? null;
       if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
@@ -192,26 +213,26 @@ async function fetchOrder(id: string) {
 
       // Imagem
       const productImages = ensureArray<string>(it?.product?.images);
-      const image =
-        it?.image ??
-        productImages[0] ??
-        "/placeholder.png";
+      const image = it?.image ?? productImages[0] ?? "/placeholder.png";
 
       const unitPriceCents = Number(it?.unitPrice ?? 0);
-      const totalPriceCents = Number(it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1));
+      const totalPriceCents = Number(
+        it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
+      );
 
-      // “Opções bonitas” para a UI
+      // Opções "bonitas" para UI
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
         if (v == null || v === "") continue;
         if (Array.isArray(v)) options[k] = v.join(", ");
-        else if (typeof v === "object") options[k] = Object.values(v as any).join(", ");
+        else if (typeof v === "object")
+          options[k] = Object.values(v as any).join(", ");
         else options[k] = String(v);
       }
       if (badges) options.badges = badges;
 
       return {
-        id: String(it?.id ?? crypto.randomUUID()),
+        id: fallbackId(i, it),
         name: String(it?.name ?? it?.product?.name ?? "Product"),
         slug: it?.product?.slug ?? null,
         image,
@@ -246,6 +267,7 @@ async function fetchOrder(id: string) {
       error: null,
     };
   } catch (e: any) {
+    // nunca lançar — devolvemos erro para renderizar “amarelo” em vez de 500
     return { order: null, error: String(e?.message || e) };
   }
 }
@@ -283,14 +305,7 @@ export default async function AdminOrderViewPage({
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
           </Link>
-          <button
-            onClick={() => typeof window !== "undefined" && window.print()}
-            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Printer className="h-4 w-4" /> Print
-            </span>
-          </button>
+          <PrintButton />
         </div>
       </div>
 
@@ -309,9 +324,7 @@ export default async function AdminOrderViewPage({
       )}
 
       {!order ? (
-        <div className="rounded-2xl border bg-white p-6">
-          Order not found.
-        </div>
+        <div className="rounded-2xl border bg-white p-6">Order not found.</div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-5">
           {/* LEFT */}
@@ -452,19 +465,6 @@ function AddressBlock(props: {
       {props.email && <div className="text-xs text-gray-500">{props.email}</div>}
       {props.phone && <div className="text-xs text-gray-500">{props.phone}</div>}
       <pre className="mt-2 whitespace-pre-wrap text-sm">{lines || "—"}</pre>
-
-      <div className="mt-2">
-        <button
-          className="rounded-lg border px-2 py-1 text-xs hover:bg-gray-50"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(lines);
-            } catch {}
-          }}
-        >
-          Copy address
-        </button>
-      </div>
     </div>
   );
 }
