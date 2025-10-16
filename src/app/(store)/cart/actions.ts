@@ -23,13 +23,13 @@ const AddToCartSchema = z.object({
 type AddToCartInput = z.infer<typeof AddToCartSchema>;
 
 async function getOrCreateCart() {
-  const jar = await cookies(); // na tua versão é Promise
+  const jar = await cookies();
   let sid = jar.get('sid')?.value ?? null;
 
-  // Se tiveres auth, podes carregar userId aqui (ex.: via getServerSession)
+  // (se tiveres auth, podes carregar userId aqui)
   const userId: string | null = null;
 
-  // 1) tenta por sessionId existente
+  // 1) tenta carrinho existente por sessionId
   if (sid) {
     const found = await prisma.cart.findUnique({ where: { sessionId: sid } });
     if (found) return found;
@@ -46,32 +46,26 @@ async function getOrCreateCart() {
   });
 
   return prisma.cart.create({
-    data: {
-      sessionId: sid,
-      userId: userId ?? null,
-    },
+    data: { sessionId: sid, userId: userId ?? null },
   });
 }
 
-/** Calcula o preço final de 1 unidade com base nas opções escolhidas */
-async function computeUnitPrice(
-  productId: string,
-  options: Record<string, string | null>
-): Promise<number> {
+/** 🔒 PREÇO BASE APENAS: ignora quaisquer deltas/opções */
+async function getBaseUnitPrice(productId: string): Promise<number> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    include: { options: { include: { values: true } } },
+    select: { basePrice: true },
   });
   if (!product) throw new Error('Product not found');
+  return product.basePrice;
+}
 
-  let price = product.basePrice;
-  for (const group of product.options) {
-    const chosen = options[group.key];
-    if (!chosen) continue;
-    const val = group.values.find((v) => v.value === chosen);
-    if (val) price += val.priceDelta;
-  }
-  return price;
+/** Normaliza opções (apenas informativas) para JSON determinístico */
+function normalizeOptions(obj?: Record<string, string | null>) {
+  if (!obj) return {};
+  const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '');
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  return Object.fromEntries(entries);
 }
 
 export async function addToCartAction(raw: AddToCartInput) {
@@ -79,35 +73,62 @@ export async function addToCartAction(raw: AddToCartInput) {
 
   const cart = await getOrCreateCart();
 
-  const unitPrice = await computeUnitPrice(input.productId, input.options);
+  // ⛔️ Sem custos de personalização/opções:
+  const unitPrice = await getBaseUnitPrice(input.productId);
   const totalPrice = unitPrice * input.qty;
 
-  const item = await prisma.cartItem.create({
-    data: {
+  const optionsJson = normalizeOptions(input.options ?? undefined);
+  const personalization = input.personalization ?? null;
+
+  // (Opcional) juntar linhas iguais: mesmo produto + mesmas opções/personalização
+  const existing = await prisma.cartItem.findFirst({
+    where: {
       cartId: cart.id,
       productId: input.productId,
-      qty: input.qty,
-      unitPrice,                     // Int obrigatório no schema
-      totalPrice,                    // Int obrigatório no schema
-      optionsJson: (input.options ?? {}) as any, // Json? no schema
-      personalization: (input.personalization ?? null) as any,
+      optionsJson: optionsJson as any,
+      personalization: personalization as any,
     },
-    include: { product: true },
+    select: { id: true, qty: true },
   });
+
+  if (existing) {
+    const newQty = Math.min(99, existing.qty + input.qty);
+    await prisma.cartItem.update({
+      where: { id: existing.id },
+      data: {
+        qty: newQty,
+        unitPrice,                  // mantém sempre o base
+        totalPrice: unitPrice * newQty,
+        optionsJson: optionsJson as any,
+        personalization: personalization as any,
+      },
+    });
+  } else {
+    await prisma.cartItem.create({
+      data: {
+        cartId: cart.id,
+        productId: input.productId,
+        qty: input.qty,
+        unitPrice,                  // ✅ preço base
+        totalPrice,                 // ✅ base * qty
+        optionsJson: optionsJson as any,      // só informativo
+        personalization: personalization as any, // só informativo
+      },
+    });
+  }
 
   const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
 
   return {
     ok: true as const,
     cartId: cart.id,
-    itemId: item.id,
     count,
-    totalPrice,
+    totalPrice, // total da última operação (não do carrinho inteiro)
   };
 }
 
 export async function getCartSummary() {
-  const jar = await cookies(); // na tua versão é Promise
+  const jar = await cookies();
   const sid = jar.get('sid')?.value ?? null;
   if (!sid) return { count: 0, total: 0 };
 
