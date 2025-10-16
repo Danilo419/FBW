@@ -9,19 +9,15 @@ import { prisma } from "@/lib/prisma";
 import {
   ArrowLeft,
   BadgeCheck,
-  CreditCard,
-  MapPin,
-  Package,
   Printer,
   User2,
+  MapPin,
+  Package,
 } from "lucide-react";
 
-/* =========================================================
-   Helpers
-========================================================= */
+/* ========================= Helpers ========================= */
 
 type Currency = "EUR" | "USD" | "GBP" | "BRL" | "AUD" | "CAD" | "JPY";
-
 const toCurrency = (s?: string | null): Currency =>
   (String(s || "EUR").toUpperCase() as Currency);
 
@@ -50,7 +46,6 @@ function pickStr(o: any, keys: string[]): string | null {
   return null;
 }
 
-/** Shipping snapshot (prefer canonical columns, fallback to shippingJson) */
 function extractShipping(order: any) {
   const canonical = {
     fullName: order.shippingFullName ?? order?.user?.name ?? null,
@@ -103,9 +98,7 @@ function extractShipping(order: any) {
   };
 }
 
-/* =========================================================
-   Data
-========================================================= */
+/* ========================= Data ========================= */
 
 async function fetchOrder(id: string) {
   const order = (await prisma.order.findUnique({
@@ -113,10 +106,11 @@ async function fetchOrder(id: string) {
     include: {
       user: { select: { name: true, email: true } },
       items: {
+        // ⚠️ OrderItem não tem createdAt no teu schema — usar id/omitir
+        orderBy: { id: "asc" },
         include: {
           product: { select: { id: true, slug: true, images: true } },
         },
-        orderBy: { createdAt: "asc" },
       },
     },
   } as any)) as any;
@@ -125,7 +119,6 @@ async function fetchOrder(id: string) {
 
   const currency = toCurrency(order.currency);
 
-  // Prefer canonical cents; total can exist in float or cents as legacy
   const subtotalCents = Number(order.subtotal ?? 0);
   const shippingCents = Number(order.shipping ?? 0);
   const taxCents = Number(order.tax ?? 0);
@@ -136,75 +129,72 @@ async function fetchOrder(id: string) {
       ? Math.round(order.total * 100)
       : subtotalCents + shippingCents + taxCents;
 
-  const items = (order.items as any[]).map((it) => {
-    // Snapshot (what the customer selected at checkout)
-    const snap = safeParseJSON(it.snapshotJson);
-    // Our cart uses optionsJson/personalization inside the snapshot too
-    const options =
-      safeParseJSON(snap?.optionsJson) ||
-      safeParseJSON(snap?.options) ||
-      safeParseJSON(snap?.selected) ||
-      {};
-    const personalization =
-      snap?.personalization && typeof snap.personalization === "object"
-        ? snap.personalization
-        : null;
+  const items = Array.isArray(order.items)
+    ? order.items.map((it: any) => {
+        const snap = safeParseJSON(it.snapshotJson);
+        const options =
+          safeParseJSON(snap?.optionsJson) ||
+          safeParseJSON(snap?.options) ||
+          safeParseJSON(snap?.selected) ||
+          {};
+        const personalization =
+            snap?.personalization && typeof snap.personalization === "object"
+              ? snap.personalization
+              : null;
 
-    const imageFromProduct =
-      it.image ??
-      (Array.isArray(it.product?.images) && it.product.images[0]) ??
-      "/placeholder.png";
+        const imageFromProduct =
+          it.image ??
+          (Array.isArray(it.product?.images) && it.product.images[0]) ??
+          "/placeholder.png";
 
-    const size =
-      options.size ??
-      snap?.size ??
-      pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
-      null;
+        const size =
+          options.size ??
+          snap?.size ??
+          pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
+          null;
 
-    // badges could be single string "ucl" or array ["ucl","la-liga"]; render as csv
-    let badges: string | null = null;
-    const rawBadges = options.badges ?? snap?.badges ?? null;
-    if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
-    else if (rawBadges) badges = String(rawBadges);
+        let badges: string | null = null;
+        const rawBadges = options.badges ?? snap?.badges ?? null;
+        if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
+        else if (rawBadges) badges = String(rawBadges);
 
-    const customization =
-      options.customization ??
-      snap?.customization ??
-      null; // e.g. "name-number+badge"
+        const customization =
+          options.customization ?? snap?.customization ?? null;
 
-    return {
-      id: it.id as string,
-      name: it.name as string,
-      slug: it.product?.slug ?? null,
-      image: imageFromProduct,
-      qty: Number(it.qty ?? 1),
-      unitPriceCents: Number(it.unitPrice ?? 0),
-      totalPriceCents: Number(it.totalPrice ?? 0),
-      size,
-      options: {
-        ...(options || {}),
-        ...(badges ? { badges } : {}),
-        ...(customization ? { customization } : {}),
-      } as Record<string, string>,
-      personalization:
-        personalization && (personalization.name || personalization.number)
-          ? {
-              name:
-                personalization.name != null
-                  ? String(personalization.name)
-                  : null,
-              number:
-                personalization.number != null
-                  ? String(personalization.number)
-                  : null,
-            }
-          : null,
-    };
-  });
+        return {
+          id: String(it.id),
+          name: String(it.name ?? it.product?.name ?? "Product"),
+          slug: it.product?.slug ?? null,
+          image: imageFromProduct,
+          qty: Number(it.qty ?? 1),
+          unitPriceCents: Number(it.unitPrice ?? 0),
+          totalPriceCents: Number(it.totalPrice ?? 0),
+          size,
+          options: {
+            ...(options || {}),
+            ...(badges ? { badges } : {}),
+            ...(customization ? { customization } : {}),
+          } as Record<string, string>,
+          personalization:
+            personalization && (personalization.name || personalization.number)
+              ? {
+                  name:
+                    personalization.name != null
+                      ? String(personalization.name)
+                      : null,
+                  number:
+                    personalization.number != null
+                      ? String(personalization.number)
+                      : null,
+                }
+              : null,
+        };
+      })
+    : [];
 
   return {
-    id: order.id as string,
-    status: order.status as string,
+    id: String(order.id),
+    status: String(order.status ?? "pending"),
     createdAt: order.createdAt as Date,
     currency,
     subtotalCents,
@@ -222,9 +212,7 @@ async function fetchOrder(id: string) {
   };
 }
 
-/* =========================================================
-   Page
-========================================================= */
+/* ========================= Page ========================= */
 
 export default async function AdminOrderViewPage({
   params,
@@ -236,7 +224,6 @@ export default async function AdminOrderViewPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold">
@@ -376,9 +363,7 @@ export default async function AdminOrderViewPage({
   );
 }
 
-/* =========================================================
-   UI Bits
-========================================================= */
+/* ========================= UI Bits ========================= */
 
 function AddressBlock(props: {
   fullName?: string | null;
@@ -478,7 +463,6 @@ function ItemRow({
           </div>
         </div>
 
-        {/* Options & personalization */}
         <div className="mt-2 space-y-1 text-xs text-gray-700">
           {prettyOptions &&
             prettyOptions.map(([k, v]) => (
