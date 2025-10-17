@@ -24,37 +24,26 @@ type AddToCartInput = z.infer<typeof AddToCartSchema>;
 async function getOrCreateCart() {
   const jar = await cookies();
 
-  // lê o sid atual (pode não existir)
   const existingSid = jar.get('sid')?.value ?? null;
+  const userId: string | null = null; // se tiveres auth, mete aqui
 
-  // (Se tiveres auth, carrega aqui o userId — deixo null)
-  const userId: string | null = null;
-
-  // 1) tenta carrinho existente (não assume UNIQUE)
   if (existingSid) {
     const found = await prisma.cart.findFirst({ where: { sessionId: existingSid } });
     if (found) return found;
   }
 
-  // 2) cria novo carrinho + cookie
-  // Garante string SEMPRE (nunca null)
   const newSid: string =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 dias
-  jar.set('sid', newSid, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    expires,
-  });
+  jar.set('sid', newSid, { httpOnly: true, sameSite: 'lax', path: '/', expires });
 
   return prisma.cart.create({
     data: { sessionId: newSid, userId: userId ?? null },
   });
 }
 
-/** 🔒 PREÇO BASE APENAS: ignora quaisquer deltas/opções */
+/** PREÇO BASE APENAS */
 async function getBaseUnitPrice(productId: string): Promise<number> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -64,7 +53,6 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
   return product.basePrice;
 }
 
-/** Normaliza opções (só informativas) para JSON determinístico */
 function normalizeOptions(obj?: Record<string, string | null>) {
   if (!obj) return {};
   const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '');
@@ -72,63 +60,74 @@ function normalizeOptions(obj?: Record<string, string | null>) {
   return Object.fromEntries(entries);
 }
 
+function sameJson(a: unknown, b: unknown) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export async function addToCartAction(raw: AddToCartInput) {
-  const input = AddToCartSchema.parse(raw);
+  try {
+    const input = AddToCartSchema.parse(raw);
 
-  const cart = await getOrCreateCart();
+    const cart = await getOrCreateCart();
 
-  // ✅ sem custos de personalização/opções
-  const unitPrice = await getBaseUnitPrice(input.productId);
-  const totalPrice = unitPrice * input.qty;
+    const unitPrice = await getBaseUnitPrice(input.productId);
+    const optionsJson = normalizeOptions(input.options ?? undefined);
+    const personalization = input.personalization ?? null;
 
-  const optionsJson = normalizeOptions(input.options ?? undefined);
-  const personalization = input.personalization ?? null;
-
-  // Junta linhas iguais (mesmo produto + mesmas opções/personalização)
-  const existing = await prisma.cartItem.findFirst({
-    where: {
-      cartId: cart.id,
-      productId: input.productId,
-      optionsJson: optionsJson as any,
-      personalization: personalization as any,
-    },
-    select: { id: true, qty: true },
-  });
-
-  if (existing) {
-    const newQty = Math.min(99, existing.qty + input.qty);
-    await prisma.cartItem.update({
-      where: { id: existing.id },
-      data: {
-        qty: newQty,
-        unitPrice,                         // sempre base
-        totalPrice: unitPrice * newQty,    // base * qty
-        optionsJson: optionsJson as any,
-        personalization: personalization as any,
-      },
-    });
-  } else {
-    await prisma.cartItem.create({
-      data: {
+    // ⚠️ NÃO comparar JSON no `where`.
+    // Buscar todas as linhas do mesmo produto e comparar em JS.
+    const siblings = await prisma.cartItem.findMany({
+      where: {
         cartId: cart.id,
         productId: input.productId,
-        qty: input.qty,
-        unitPrice,                         // ✅ base
-        totalPrice,                        // ✅ base * qty
-        optionsJson: optionsJson as any,   // informativo
-        personalization: personalization as any, // informativo
       },
+      select: {
+        id: true,
+        qty: true,
+        optionsJson: true,          // ajusta o nome se no teu schema for diferente
+        personalization: true,      // idem: se for personalizationJson, troca aqui e no create/update
+      },
+      orderBy: { createdAt: 'asc' },
     });
+
+    const existing = siblings.find(
+      (it) =>
+        sameJson(it.optionsJson ?? {}, optionsJson) &&
+        sameJson(it.personalization ?? null, personalization)
+    );
+
+    if (existing) {
+      const newQty = Math.min(99, existing.qty + input.qty);
+      await prisma.cartItem.update({
+        where: { id: existing.id },
+        data: {
+          qty: newQty,
+          unitPrice,                      // sempre base
+          totalPrice: unitPrice * newQty,
+          optionsJson: optionsJson as any,
+          personalization: personalization as any,
+        },
+      });
+    } else {
+      await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId: input.productId,
+          qty: input.qty,
+          unitPrice,                      // ✅ base
+          totalPrice: unitPrice * input.qty,
+          optionsJson: optionsJson as any,         // apenas informativo
+          personalization: personalization as any, // apenas informativo
+        },
+      });
+    }
+
+    const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
+    return { ok: true as const, cartId: cart.id, count, totalPrice: unitPrice * input.qty };
+  } catch (err) {
+    console.error('[addToCartAction] failed:', err);
+    return { ok: false as const, error: 'ADD_TO_CART_FAILED' };
   }
-
-  const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
-
-  return {
-    ok: true as const,
-    cartId: cart.id,
-    count,
-    totalPrice, // total desta operação
-  };
 }
 
 export async function getCartSummary() {
