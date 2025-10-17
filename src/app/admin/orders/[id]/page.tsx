@@ -273,14 +273,13 @@ export default async function AdminOrderViewPage({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
-            href="/admin" // ✅ agora aponta para o dashboard do admin
+            href="/admin"
             className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
           >
             <span className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
           </Link>
-          {/* ✅ Botão de imprimir sem texto visível (ícone apenas) */}
           <PrintButton className="rounded-xl border px-3 py-2 hover:bg-gray-50 inline-flex items-center">
             <Printer className="h-4 w-4" />
             <span className="sr-only">Print</span>
@@ -457,10 +456,8 @@ function CustomerBlock({
   );
 }
 
+// ⬇️ Shipping address SEM Name/Email/Phone
 function AddressBlock(props: {
-  fullName?: string | null;
-  email?: string | null;
-  phone?: string | null;
   address1?: string | null;
   address2?: string | null;
   city?: string | null;
@@ -472,9 +469,6 @@ function AddressBlock(props: {
 
   return (
     <div className="space-y-1">
-      <LabeledRow label="Name" value={props.fullName ?? "—"} />
-      <LabeledRow label="Email" value={props.email ?? "—"} />
-      <LabeledRow label="Phone" value={props.phone ?? "—"} />
       <LabeledRow label="Address" value={props.address1 ?? "—"} />
       {props.address2 ? <LabeledRow label="Address 2" value={props.address2} /> : null}
       <LabeledRow label="City / Region" value={cityRegion || "—"} />
