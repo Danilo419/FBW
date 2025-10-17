@@ -13,7 +13,7 @@ import {
   Package,
   AlertTriangle,
 } from "lucide-react";
-import { PrintButton } from "@/components/admin/PrintButton"; // ✅ client component externo
+import { PrintButton } from "@/components/admin/PrintButton";
 
 /* ========================= Helpers ========================= */
 
@@ -157,6 +157,8 @@ async function fetchOrder(id: string) {
 
     const items = itemsRaw.map((it, i) => {
       const snap = safeParseJSON(it?.snapshotJson);
+
+      // tentar opções/personalização/badges em múltiplos formatos
       const optionsObj =
         safeParseJSON(snap?.optionsJson) ||
         safeParseJSON(snap?.options) ||
@@ -183,8 +185,10 @@ async function fetchOrder(id: string) {
         pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
         null;
 
+      // badges pode vir como array, obj ou string
       let badges: string | null = null;
-      const rawBadges = optionsObj.badges ?? snap?.badges ?? null;
+      const rawBadges =
+        optionsObj.badges ?? snap?.badges ?? optionsObj["competition_badge"] ?? null;
       if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
       else if (rawBadges && typeof rawBadges === "object") {
         badges = Object.values(rawBadges).join(", ");
@@ -198,6 +202,7 @@ async function fetchOrder(id: string) {
         it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
       );
 
+      // Opções simpáticas
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
         if (v == null || v === "") continue;
@@ -260,8 +265,8 @@ export default async function AdminOrderViewPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-extrabold">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-extrabold truncate">
             {order ? `Order #${order.id.slice(0, 7)}` : "Order"}
           </h1>
           <p className="text-sm text-gray-500">
@@ -272,7 +277,7 @@ export default async function AdminOrderViewPage({
             Status: <span className="font-medium">{order?.status ?? "—"}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/admin/(panel)"
             className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -281,7 +286,6 @@ export default async function AdminOrderViewPage({
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
           </Link>
-          {/* ✅ Client component: não passamos handlers aqui */}
           <PrintButton />
         </div>
       </div>
@@ -319,22 +323,22 @@ export default async function AdminOrderViewPage({
                 )}
               </div>
               {order.stripePaymentIntentId && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 break-all">
                   Stripe PI: {order.stripePaymentIntentId}
                 </div>
               )}
               {order.stripeSessionId && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 break-all">
                   Stripe Session: {order.stripeSessionId}
                 </div>
               )}
               {order.paypalOrderId && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 break-all">
                   PayPal Order: {order.paypalOrderId}
                 </div>
               )}
               {order.paypalCaptureId && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 break-all">
                   PayPal Capture: {order.paypalCaptureId}
                 </div>
               )}
@@ -347,11 +351,13 @@ export default async function AdminOrderViewPage({
               <div className="text-sm">
                 {order.shipping.fullName ?? order.user?.name ?? "—"}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 break-all">
                 {order.shipping.email ?? order.user?.email ?? "—"}
               </div>
               {order.shipping.phone && (
-                <div className="text-xs text-gray-500">{order.shipping.phone}</div>
+                <div className="text-xs text-gray-500 break-all">
+                  {order.shipping.phone}
+                </div>
               )}
             </section>
 
@@ -399,7 +405,7 @@ export default async function AdminOrderViewPage({
               {order.items.length === 0 ? (
                 <div className="text-sm text-gray-500">No items.</div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {order.items.map((it) => (
                     <ItemRow key={it.id} currency={order.currency} item={it} />
                   ))}
@@ -439,8 +445,8 @@ function AddressBlock(props: {
   return (
     <div className="text-sm">
       {props.fullName && <div>{props.fullName}</div>}
-      {props.email && <div className="text-xs text-gray-500">{props.email}</div>}
-      {props.phone && <div className="text-xs text-gray-500">{props.phone}</div>}
+      {props.email && <div className="text-xs text-gray-500 break-all">{props.email}</div>}
+      {props.phone && <div className="text-xs text-gray-500 break-all">{props.phone}</div>}
       <pre className="mt-2 whitespace-pre-wrap text-sm">{lines || "—"}</pre>
     </div>
   );
@@ -475,24 +481,24 @@ function ItemRow({
     !!item.personalization?.name || !!item.personalization?.number;
 
   return (
-    <div className="grid grid-cols-[84px,1fr] gap-3">
-      <div className="aspect-square overflow-hidden rounded-lg bg-gray-50">
+    <div className="grid grid-cols-[96px,1fr] gap-3 rounded-xl border p-3">
+      <div className="h-24 w-24 overflow-hidden rounded-lg bg-gray-50 border">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={item.image || "/placeholder.png"}
           alt={item.name}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
         />
       </div>
-      <div>
+      <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="font-medium">{item.name}</div>
+          <div className="min-w-0">
+            <div className="font-medium leading-tight truncate">{item.name}</div>
             <div className="text-xs text-gray-500">
               Size: {item.size || "—"} • Qty: {item.qty}
             </div>
           </div>
-          <div className="text-right text-sm">
+          <div className="text-right text-sm shrink-0">
             <div>{money(item.unitPriceCents, currency)}</div>
             <div className="font-semibold">
               {money(item.totalPriceCents, currency)}
@@ -503,7 +509,7 @@ function ItemRow({
         <div className="mt-2 space-y-1 text-xs text-gray-700">
           {prettyOptions &&
             prettyOptions.map(([k, v]) => (
-              <div key={k}>
+              <div key={k} className="break-words">
                 <span className="text-gray-500 capitalize">
                   {k.replace(/_/g, " ")}:
                 </span>{" "}
@@ -517,7 +523,7 @@ function ItemRow({
             ))}
 
           {hasPersonalization && (
-            <div>
+            <div className="break-words">
               <span className="text-gray-500">Personalization:</span>{" "}
               {[
                 item.personalization?.name
