@@ -12,8 +12,9 @@ import {
   MapPin,
   Package,
   AlertTriangle,
+  Printer,
 } from "lucide-react";
-import { PrintButton } from "@/components/admin/PrintButton";
+import { PrintButton } from "@/components/admin/PrintButton"; // client component
 
 /* ========================= Helpers ========================= */
 
@@ -158,7 +159,6 @@ async function fetchOrder(id: string) {
     const items = itemsRaw.map((it, i) => {
       const snap = safeParseJSON(it?.snapshotJson);
 
-      // tentar opções/personalização/badges em múltiplos formatos
       const optionsObj =
         safeParseJSON(snap?.optionsJson) ||
         safeParseJSON(snap?.options) ||
@@ -180,15 +180,17 @@ async function fetchOrder(id: string) {
           : null;
 
       const size =
-        optionsObj.size ??
+        (optionsObj as any).size ??
         snap?.size ??
         pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
         null;
 
-      // badges pode vir como array, obj ou string
       let badges: string | null = null;
       const rawBadges =
-        optionsObj.badges ?? snap?.badges ?? optionsObj["competition_badge"] ?? null;
+        (optionsObj as any).badges ??
+        snap?.badges ??
+        (optionsObj as any)["competition_badge"] ??
+        null;
       if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
       else if (rawBadges && typeof rawBadges === "object") {
         badges = Object.values(rawBadges).join(", ");
@@ -202,7 +204,6 @@ async function fetchOrder(id: string) {
         it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
       );
 
-      // Opções simpáticas
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
         if (v == null || v === "") continue;
@@ -269,26 +270,31 @@ export default async function AdminOrderViewPage({
           <h1 className="text-xl md:text-2xl font-extrabold truncate">
             {order ? `Order #${order.id.slice(0, 7)}` : "Order"}
           </h1>
-          <p className="text-sm text-gray-500">
-            {order?.createdAt
-              ? `Created ${new Date(order.createdAt).toLocaleString("en-GB")}`
-              : "Created —"}
-            {" • "}
-            Status: <span className="font-medium">{order?.status ?? "—"}</span>
-          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
-            href="/admin/(panel)"
+            href="/admin" // ✅ agora aponta para o dashboard do admin
             className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
           >
             <span className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
           </Link>
-          <PrintButton />
+          {/* ✅ Botão de imprimir sem texto visível (ícone apenas) */}
+          <PrintButton className="rounded-xl border px-3 py-2 hover:bg-gray-50 inline-flex items-center">
+            <Printer className="h-4 w-4" />
+            <span className="sr-only">Print</span>
+          </PrintButton>
         </div>
       </div>
+
+      <p className="text-sm text-gray-500">
+        {order?.createdAt
+          ? `Created ${new Date(order.createdAt).toLocaleString("en-GB")}`
+          : "Created —"}
+        {" • "}
+        Status: <span className="font-medium">{order?.status ?? "—"}</span>
+      </p>
 
       {error && (
         <div className="rounded-2xl border bg-amber-50 p-4 text-amber-900">
@@ -348,17 +354,11 @@ export default async function AdminOrderViewPage({
               <div className="mb-2 flex items-center gap-2 font-semibold">
                 <User2 className="h-4 w-4" /> Customer
               </div>
-              <div className="text-sm">
-                {order.shipping.fullName ?? order.user?.name ?? "—"}
-              </div>
-              <div className="text-xs text-gray-500 break-all">
-                {order.shipping.email ?? order.user?.email ?? "—"}
-              </div>
-              {order.shipping.phone && (
-                <div className="text-xs text-gray-500 break-all">
-                  {order.shipping.phone}
-                </div>
-              )}
+              <CustomerBlock
+                name={order.shipping.fullName ?? order.user?.name ?? null}
+                email={order.shipping.email ?? order.user?.email ?? null}
+                phone={order.shipping.phone ?? null}
+              />
             </section>
 
             <section className="rounded-2xl border bg-white p-4">
@@ -421,6 +421,42 @@ export default async function AdminOrderViewPage({
 
 /* ========================= UI Bits ========================= */
 
+function LabeledRow({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  if (!value) return null;
+  return (
+    <div className="flex items-baseline gap-2 text-sm">
+      <span className="w-28 shrink-0 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+        {label}
+      </span>
+      <span className="break-all">{value}</span>
+    </div>
+  );
+}
+
+function CustomerBlock({
+  name,
+  email,
+  phone,
+}: {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}) {
+  return (
+    <div className="space-y-1">
+      <LabeledRow label="Name" value={name ?? "—"} />
+      <LabeledRow label="Email" value={email ?? "—"} />
+      <LabeledRow label="Phone" value={phone ?? "—"} />
+    </div>
+  );
+}
+
 function AddressBlock(props: {
   fullName?: string | null;
   email?: string | null;
@@ -432,22 +468,18 @@ function AddressBlock(props: {
   postalCode?: string | null;
   country?: string | null;
 }) {
-  const lines = [
-    props.address1,
-    props.address2,
-    [props.city, props.region].filter(Boolean).join(", "),
-    props.postalCode,
-    props.country,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const cityRegion = [props.city, props.region].filter(Boolean).join(", ");
 
   return (
-    <div className="text-sm">
-      {props.fullName && <div>{props.fullName}</div>}
-      {props.email && <div className="text-xs text-gray-500 break-all">{props.email}</div>}
-      {props.phone && <div className="text-xs text-gray-500 break-all">{props.phone}</div>}
-      <pre className="mt-2 whitespace-pre-wrap text-sm">{lines || "—"}</pre>
+    <div className="space-y-1">
+      <LabeledRow label="Name" value={props.fullName ?? "—"} />
+      <LabeledRow label="Email" value={props.email ?? "—"} />
+      <LabeledRow label="Phone" value={props.phone ?? "—"} />
+      <LabeledRow label="Address" value={props.address1 ?? "—"} />
+      {props.address2 ? <LabeledRow label="Address 2" value={props.address2} /> : null}
+      <LabeledRow label="City / Region" value={cityRegion || "—"} />
+      <LabeledRow label="Postal Code" value={props.postalCode ?? "—"} />
+      <LabeledRow label="Country" value={props.country ?? "—"} />
     </div>
   );
 }
