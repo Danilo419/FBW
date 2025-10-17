@@ -13,20 +13,7 @@ import {
   Package,
   AlertTriangle,
 } from "lucide-react";
-
-/* ========================= Client-only bits ========================= */
-// pequeno botão client-side para imprimir sem tocar em `window` no server
-function PrintButton() {
-  "use client";
-  return (
-    <button
-      onClick={() => window.print()}
-      className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-    >
-      Print
-    </button>
-  );
-}
+import { PrintButton } from "@/components/admin/PrintButton"; // ✅ client component externo
 
 /* ========================= Helpers ========================= */
 
@@ -132,12 +119,7 @@ function ensureArray<T>(v: any): T[] {
 }
 
 function fallbackId(idx: number, it: any) {
-  const base =
-    it?.id ??
-    it?.orderId ??
-    it?.productId ??
-    it?.name ??
-    "item";
+  const base = it?.id ?? it?.orderId ?? it?.productId ?? it?.name ?? "item";
   return `${String(base)}-${idx}`;
 }
 
@@ -150,7 +132,7 @@ async function fetchOrder(id: string) {
       include: {
         user: { select: { name: true, email: true } },
         items: {
-          orderBy: { id: "asc" }, // não usar campos que possam não existir em registos antigos
+          orderBy: { id: "asc" },
           include: {
             product: { select: { id: true, slug: true, images: true, name: true } },
           },
@@ -181,7 +163,6 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.selected) ||
         {};
 
-      // Personalization (tolerante)
       const personalization =
         snap?.personalization && typeof snap.personalization === "object"
           ? {
@@ -196,14 +177,12 @@ async function fetchOrder(id: string) {
             }
           : null;
 
-      // Size (vários formatos)
       const size =
         optionsObj.size ??
         snap?.size ??
         pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
         null;
 
-      // Badges: array/string/obj
       let badges: string | null = null;
       const rawBadges = optionsObj.badges ?? snap?.badges ?? null;
       if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
@@ -211,7 +190,6 @@ async function fetchOrder(id: string) {
         badges = Object.values(rawBadges).join(", ");
       } else if (rawBadges) badges = String(rawBadges);
 
-      // Imagem
       const productImages = ensureArray<string>(it?.product?.images);
       const image = it?.image ?? productImages[0] ?? "/placeholder.png";
 
@@ -220,7 +198,6 @@ async function fetchOrder(id: string) {
         it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
       );
 
-      // Opções "bonitas" para UI
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
         if (v == null || v === "") continue;
@@ -267,7 +244,6 @@ async function fetchOrder(id: string) {
       error: null,
     };
   } catch (e: any) {
-    // nunca lançar — devolvemos erro para renderizar “amarelo” em vez de 500
     return { order: null, error: String(e?.message || e) };
   }
 }
@@ -305,6 +281,7 @@ export default async function AdminOrderViewPage({
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
           </Link>
+          {/* ✅ Client component: não passamos handlers aqui */}
           <PrintButton />
         </div>
       </div>
