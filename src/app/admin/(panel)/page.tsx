@@ -11,25 +11,7 @@ import {
 } from "@/lib/kpis";
 import { formatMoney, moneyFromOrder } from "@/lib/money";
 import { Eye } from "lucide-react";
-import { revalidatePath } from "next/cache";
-
-/* ---------- SERVER ACTION: mark order as resolved ---------- */
-export async function markOrderResolved(orderId: string) {
-  "use server";
-  try {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: "RESOLVED" },
-    });
-  } catch (e) {
-    // Se o status for enum diferente, não quebra a página
-    console.error("markOrderResolved:", e);
-  } finally {
-    revalidatePath("/admin");
-    revalidatePath("/admin/orders");
-    revalidatePath(`/admin/orders/${orderId}`);
-  }
-}
+import ResolveCheckbox from "@/components/admin/ResolveCheckbox";
 
 /* ---------- helpers ---------- */
 // Use a locale that uses dot as thousands separator (pt-BR).
@@ -103,6 +85,7 @@ async function getTrafficStats() {
 
     return { uniqToday, uniq7d, uniqNow, viewsToday };
   } catch {
+    // If the Visit table doesn't exist yet, return zeros so the dashboard doesn't crash
     return { uniqToday: 0, uniq7d: 0, uniqNow: 0, viewsToday: 0 };
   }
 }
@@ -123,8 +106,10 @@ async function getRecentOrders(limit = 10) {
         total: true,
         totalCents: true,
         items: { select: { totalPrice: true } }, // used by moneyFromOrder
+        // canonical shipping identity (minimal needed for name/email)
         shippingFullName: true,
         shippingEmail: true,
+        // fallback
         shippingJson: true,
         user: { select: { name: true, email: true } },
       } as any,
@@ -148,6 +133,7 @@ function safeParseJSON(input: any): Record<string, any> {
   if (typeof input === "object") return input as Record<string, any>;
   return {};
 }
+
 function getDeep(obj: any, paths: string[][]): string | undefined {
   for (const p of paths) {
     let cur: any = obj;
@@ -165,13 +151,17 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
   }
   return undefined;
 }
+
 function fromOrder(o: any) {
+  // Prefer canonical columns when present
   if (o.shippingFullName || o.shippingEmail) {
     return {
       fullName: o.shippingFullName ?? o?.user?.name ?? null,
       email: o.shippingEmail ?? o?.user?.email ?? null,
     };
   }
+
+  // Fallback to JSON
   const j = safeParseJSON(o?.shippingJson);
   const candidates = (keys: string[]) =>
     [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
@@ -220,6 +210,7 @@ export default async function AdminDashboardPage() {
           <h3 className="font-semibold mb-1">Visitors</h3>
           <div className="text-3xl font-extrabold">{fmtInt(traffic.uniqToday)}</div>
           <p className="text-xs text-gray-500 mt-1">Uniques today</p>
+
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-slate-50 border p-3">
               <div className="text-xs text-gray-500">Last 7 days</div>
@@ -230,6 +221,7 @@ export default async function AdminDashboardPage() {
               <div className="text-xl font-bold">{fmtInt(traffic.uniqNow)}</div>
             </div>
           </div>
+
           <p className="text-xs text-gray-400 mt-3">Pageviews today: {fmtInt(traffic.viewsToday)}</p>
         </div>
       </section>
@@ -294,7 +286,6 @@ export default async function AdminDashboardPage() {
   );
 }
 
-/* ---------- client bits ---------- */
 function KpiCard(props: { title: string; value: string | number; subtitle?: string }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow border">
@@ -304,84 +295,3 @@ function KpiCard(props: { title: string; value: string | number; subtitle?: stri
     </div>
   );
 }
-
-/* A caixinha com confetes */
-function ResolveCheckbox(props: { orderId: string; initialResolved: boolean }) {
-  "use client";
-  const { orderId, initialResolved } = props;
-  const [checked, setChecked] = React.useState(initialResolved);
-  const [firing, setFiring] = React.useState(false);
-  const [pending, startTransition] = React.useTransition();
-
-  const onToggle = () => {
-    if (checked) return; // já resolvido
-    setChecked(true);
-    setFiring(true);
-    startTransition(async () => {
-      await markOrderResolved(orderId);
-    });
-    setTimeout(() => setFiring(false), 1200);
-  };
-
-  return (
-    <>
-      <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-0"
-          checked={checked}
-          onChange={onToggle}
-          disabled={checked || pending}
-        />
-        <span className="text-xs">{checked ? "Resolved" : "Mark resolved"}</span>
-      </label>
-
-      {firing && <ConfettiBurst />}
-    </>
-  );
-}
-
-function ConfettiBurst() {
-  "use client";
-  const pieces = Array.from({ length: 28 });
-  return (
-    <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center">
-      <div className="relative">
-        {pieces.map((_, i) => (
-          <span key={i} className="confetti-piece" style={{ ["--i" as any]: i } as React.CSSProperties} />
-        ))}
-      </div>
-      <style jsx>{`
-        .confetti-piece {
-          position: absolute;
-          width: 8px;
-          height: 12px;
-          top: 0;
-          left: 0;
-          border-radius: 1px;
-          background: hsl(calc(var(--i) * 13), 90%, 55%);
-          transform: translate(-50%, -50%) rotate(45deg);
-          animation: confetti-burst 900ms ease-out forwards;
-          opacity: 0.95;
-        }
-        @keyframes confetti-burst {
-          0% {
-            transform: translate(0, 0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(
-                calc((var(--i) - 14) * 16px),
-                calc(-120px - (var(--i) % 5) * 20px)
-              )
-              rotate(720deg);
-            opacity: 0;
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-/* Import React para os client components acima */
-import * as React from "react";
