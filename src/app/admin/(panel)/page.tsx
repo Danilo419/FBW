@@ -262,7 +262,11 @@ export default async function AdminDashboardPage() {
                     <td className="py-2 pr-3">{o?.status ?? "—"}</td>
                     <td className="py-2 pr-3">{money.label}</td>
                     <td className="py-2 pr-3">
-                      <ResolveCheckbox orderId={o.id} initialResolved={isResolved} />
+                      <ResolveCheckbox
+                        orderId={o.id}
+                        initialResolved={isResolved}
+                        initialStatus={o?.status || "PENDING"}  // permite desmarcar e restaurar
+                      />
                     </td>
                     <td className="py-2 pr-3 text-right">
                       <a
