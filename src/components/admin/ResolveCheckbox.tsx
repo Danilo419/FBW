@@ -57,7 +57,17 @@ function fireConfettiAtTarget(inputEl: HTMLInputElement) {
   confettiBurst({ x, y });
 }
 
-function confettiBurst({ x, y, count = 140, duration = 1000 }: { x: number; y: number; count?: number; duration?: number }) {
+function confettiBurst({
+  x,
+  y,
+  count = 140,
+  duration = 1000,
+}: {
+  x: number;
+  y: number;
+  count?: number;
+  duration?: number;
+}) {
   const canvas = document.createElement("canvas");
   canvas.style.position = "fixed";
   canvas.style.left = "0";
@@ -82,8 +92,8 @@ function confettiBurst({ x, y, count = 140, duration = 1000 }: { x: number; y: n
 
     particles.forEach((pt) => {
       // física simples
-      pt.vy += 0.25;          // gravidade
-      pt.vx += 0.02 * Math.sin(pt.seed + t * 0.01); // drift
+      pt.vy += 0.25; // gravidade
+      pt.vx += 0.02 * Math.sin(pt.seed + t * 0.01); // drift lateral
       pt.x += pt.vx;
       pt.y += pt.vy;
       pt.r += pt.spin;
@@ -109,18 +119,29 @@ function confettiBurst({ x, y, count = 140, duration = 1000 }: { x: number; y: n
 
 function makeParticles(n: number, x: number, y: number, W: number, H: number) {
   const out: Array<{
-    x: number; y: number; vx: number; vy: number; r: number; spin: number;
-    w: number; h: number; color: string; seed: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    r: number;
+    spin: number;
+    w: number;
+    h: number;
+    color: string;
+    seed: number;
   }> = [];
+
   for (let i = 0; i < n; i++) {
-    const angle = (Math.random() * Math.PI) - Math.PI / 2; // para cima
+    // ângulo no semicírculo superior [-π, 0] → confetis para ambos os lados
+    const angle = -Math.PI + Math.random() * Math.PI; // [-π, 0]
     const speed = 4 + Math.random() * 6;
     const hue = Math.floor(Math.random() * 360);
+
     out.push({
       x,
       y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 2,
+      vx: Math.cos(angle) * speed, // pode ir para a esquerda (<0) ou direita (>0)
+      vy: Math.sin(angle) * speed - 2, // impulso inicial para cima
       r: Math.random() * Math.PI,
       spin: (Math.random() - 0.5) * 0.3,
       w: 6 + Math.random() * 6,
