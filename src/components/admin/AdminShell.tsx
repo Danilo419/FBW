@@ -1,4 +1,3 @@
-// src/app/admin/(panel)/AdminShell.tsx  (ou o nome do ficheiro que mostraste)
 "use client";
 
 import Link from "next/link";
@@ -18,7 +17,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
-  // Load saved width
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -29,7 +27,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     } catch {}
   }, []);
 
-  // Persist when width changes (if not collapsed)
   useEffect(() => {
     if (!collapsed) {
       try {
@@ -38,7 +35,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     }
   }, [width, collapsed]);
 
-  // Drag handlers
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     isDraggingRef.current = true;
     startXRef.current = e.clientX;
@@ -92,10 +88,10 @@ function Sidebar({
 }) {
   const pathname = usePathname();
 
-  const nav = [
+  const items = [
     { href: "/admin", label: "Dashboard", short: "Dash" },
     { href: "/admin/orders", label: "Orders", short: "Ord." },
-    { href: "/admin/products", label: "Products", short: "Prod." }, // ✅ enabled
+    { href: "/admin/products", label: "Products", short: "Prod." }, // ✅ ENABLED
     { href: "/admin/analytics", label: "Analytics", short: "An." },
   ];
 
@@ -104,12 +100,10 @@ function Sidebar({
 
   return (
     <aside className="relative bg-white border-r p-3 md:p-4">
-      {/* Sidebar header */}
       <div className="mb-4 flex items-center justify-between">
         <Link href="/" className="block text-lg md:text-xl font-extrabold truncate">
           {collapsed ? "FW" : <>FootBallWorld<span className="text-gray-400"> • Admin</span></>}
         </Link>
-
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -120,25 +114,23 @@ function Sidebar({
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="space-y-1">
-        {nav.map((item) => (
+        {items.map((it) => (
           <Link
-            key={item.href}
+            key={it.href}
+            href={it.href}
+            title={it.label}
+            aria-current={isActive(it.href) ? "page" : undefined}
             className={[
               "block rounded-lg px-3 py-2 truncate transition",
-              isActive(item.href) ? "bg-gray-100 font-semibold" : "hover:bg-gray-100",
+              isActive(it.href) ? "bg-gray-100 font-semibold" : "hover:bg-gray-100",
             ].join(" ")}
-            href={item.href}
-            title={item.label}
-            aria-current={isActive(item.href) ? "page" : undefined}
           >
-            {collapsed ? item.short : item.label}
+            {collapsed ? it.short : it.label}
           </Link>
         ))}
       </nav>
 
-      {/* Logout */}
       <form action="/admin/logout" method="POST" className="mt-4">
         <button
           type="submit"
@@ -149,13 +141,10 @@ function Sidebar({
         </button>
       </form>
 
-      {/* Resize handle */}
       <div
         onMouseDown={onMouseDown}
         className="absolute top-0 right-[-3px] h-full w-1.5 cursor-col-resize select-none"
-        style={{
-          background: "linear-gradient(to right, transparent 0, rgba(0,0,0,0.08) 50%, transparent 100%)",
-        }}
+        style={{ background: "linear-gradient(to right, transparent 0, rgba(0,0,0,0.08) 50%, transparent 100%)" }}
         title="Drag to resize"
       />
     </aside>
