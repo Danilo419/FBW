@@ -89,7 +89,7 @@ async function getTrafficStats() {
   }
 }
 
-/* ---------- orders ---------- */
+/* ---------- orders (reduced select) ---------- */
 async function getRecentOrders(limit = 10) {
   try {
     const orders = await prisma.order.findMany({
@@ -98,24 +98,16 @@ async function getRecentOrders(limit = 10) {
       select: {
         id: true,
         status: true,
-        createdAt: true,
         currency: true,
         subtotal: true,
         shipping: true,
         tax: true,
         total: true,
         totalCents: true,
-        items: { select: { totalPrice: true } }, // <- needed to compute robust totals
-        // canonical columns (when present)
+        items: { select: { totalPrice: true } }, // used by moneyFromOrder
+        // canonical shipping identity (minimal needed for name/email)
         shippingFullName: true,
         shippingEmail: true,
-        shippingPhone: true,
-        shippingAddress1: true,
-        shippingAddress2: true,
-        shippingCity: true,
-        shippingRegion: true,
-        shippingPostalCode: true,
-        shippingCountry: true,
         // fallback
         shippingJson: true,
         user: { select: { name: true, email: true } },
@@ -159,68 +151,19 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
   return undefined;
 }
 
-// last resort: extract from loose non-JSON text like `"postal_code":"XXXX"`
-function extractPostalFromLooseText(raw?: any): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  const re =
-    /"(?:postal[_\s-]?code|postcode|post_code|zip(?:code)?|zip_code|zipcode|codigo(?:_)?postal|cep)"\s*:\s*"([^"]+)"/i;
-  const m = raw.match(re);
-  return m?.[1];
-}
-
 function fromOrder(o: any) {
-  // 1) use canonical columns when available
-  if (
-    o.shippingFullName ||
-    o.shippingEmail ||
-    o.shippingPhone ||
-    o.shippingAddress1 ||
-    o.shippingCity ||
-    o.shippingPostalCode ||
-    o.shippingCountry
-  ) {
+  // Prefer canonical columns when present
+  if (o.shippingFullName || o.shippingEmail) {
     return {
       fullName: o.shippingFullName ?? o?.user?.name ?? null,
       email: o.shippingEmail ?? o?.user?.email ?? null,
-      phone: o.shippingPhone ?? null,
-      address1: o.shippingAddress1 ?? null,
-      address2: o.shippingAddress2 ?? null,
-      city: o.shippingCity ?? null,
-      region: o.shippingRegion ?? null,
-      postalCode: o.shippingPostalCode ?? null,
-      country: o.shippingCountry ?? null,
     };
   }
 
-  // 2) fallback: JSON (when valid) or loose text
+  // Fallback to JSON
   const j = safeParseJSON(o?.shippingJson);
-  const raw = typeof o?.shippingJson === "string" ? o.shippingJson : undefined;
-
   const candidates = (keys: string[]) =>
-    [
-      keys, // flat
-      ["shipping", ...keys],
-      ["address", ...keys],
-      ["delivery", ...keys],
-    ] as string[][];
-
-  const postalFromJson =
-    getDeep(j, candidates(["postalCode"])) ??
-    getDeep(j, candidates(["postal_code"])) ??
-    getDeep(j, candidates(["post_code"])) ??
-    getDeep(j, candidates(["postcode"])) ??
-    getDeep(j, candidates(["postCode"])) ??
-    getDeep(j, candidates(["zip"])) ??
-    getDeep(j, candidates(["zipCode"])) ??
-    getDeep(j, candidates(["zip_code"])) ??
-    getDeep(j, candidates(["zipcode"])) ??
-    getDeep(j, candidates(["codigoPostal"])) ??
-    getDeep(j, candidates(["codigo_postal"])) ??
-    getDeep(j, candidates(["cep"])) ??
-    getDeep(j, candidates(["pincode"])) ??
-    getDeep(j, candidates(["eircode"])) ??
-    undefined;
-
+    [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
   return {
     fullName:
       getDeep(j, candidates(["fullName"])) ??
@@ -228,48 +171,7 @@ function fromOrder(o: any) {
       getDeep(j, candidates(["recipient"])) ??
       o?.user?.name ??
       null,
-
     email: getDeep(j, candidates(["email"])) ?? o?.user?.email ?? null,
-
-    phone:
-      getDeep(j, candidates(["phone"])) ??
-      getDeep(j, candidates(["telephone"])) ??
-      null,
-
-    address1:
-      getDeep(j, candidates(["address1"])) ??
-      getDeep(j, candidates(["addressLine1"])) ??
-      getDeep(j, candidates(["line1"])) ??
-      getDeep(j, candidates(["street"])) ??
-      null,
-
-    address2:
-      getDeep(j, candidates(["address2"])) ??
-      getDeep(j, candidates(["addressLine2"])) ??
-      getDeep(j, candidates(["line2"])) ??
-      getDeep(j, candidates(["street2"])) ??
-      null,
-
-    city:
-      getDeep(j, candidates(["city"])) ??
-      getDeep(j, candidates(["locality"])) ??
-      getDeep(j, candidates(["town"])) ??
-      null,
-
-    region:
-      getDeep(j, candidates(["region"])) ??
-      getDeep(j, candidates(["state"])) ??
-      getDeep(j, candidates(["province"])) ??
-      null,
-
-    // ✅ postalCode with fallback to loose text
-    postalCode: postalFromJson ?? extractPostalFromLooseText(raw) ?? null,
-
-    country:
-      getDeep(j, candidates(["country"])) ??
-      getDeep(j, candidates(["countryCode"])) ??
-      getDeep(j, candidates(["shippingCountry"])) ??
-      null,
   };
 }
 
@@ -332,23 +234,15 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">Full name</th>
                 <th className="py-2 pr-3">Email</th>
-                <th className="py-2 pr-3">Phone</th>
-                <th className="py-2 pr-3">Address 1</th>
-                <th className="py-2 pr-3">Address 2</th>
-                <th className="py-2 pr-3">City</th>
-                <th className="py-2 pr-3">Region/State</th>
-                <th className="py-2 pr-3">Postal code</th>
-                <th className="py-2 pr-3">Country</th>
                 <th className="py-2 pr-3">Status</th>
                 <th className="py-2 pr-3">Total</th>
-                <th className="py-2 pr-3">Created</th>
                 <th className="py-2 pr-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {orders.length === 0 && (
                 <tr>
-                  <td className="py-3 text-gray-500" colSpan={14}>
+                  <td className="py-3 text-gray-500" colSpan={6}>
                     No data to display.
                   </td>
                 </tr>
@@ -361,18 +255,8 @@ export default async function AdminDashboardPage() {
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{o.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.phone ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.address1 ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.address2 ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.city ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.region ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.postalCode ?? "—"}</td>
-                    <td className="py-2 pr-3">{ship.country ?? "—"}</td>
                     <td className="py-2 pr-3">{o?.status ?? "—"}</td>
                     <td className="py-2 pr-3">{money.label}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      {o?.createdAt ? new Date(o.createdAt).toLocaleString("en-GB") : "—"}
-                    </td>
                     <td className="py-2 pr-3 text-right">
                       <a
                         href={`/admin/orders/${o.id}`}
