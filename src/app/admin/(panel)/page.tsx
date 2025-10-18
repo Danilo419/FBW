@@ -14,7 +14,6 @@ import { Eye } from "lucide-react";
 import ResolveCheckbox from "@/components/admin/ResolveCheckbox";
 
 /* ---------- helpers ---------- */
-// Use a locale that uses dot as thousands separator (pt-BR).
 function fmtInt(n: number) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(n);
 }
@@ -85,7 +84,6 @@ async function getTrafficStats() {
 
     return { uniqToday, uniq7d, uniqNow, viewsToday };
   } catch {
-    // If the Visit table doesn't exist yet, return zeros so the dashboard doesn't crash
     return { uniqToday: 0, uniq7d: 0, uniqNow: 0, viewsToday: 0 };
   }
 }
@@ -99,28 +97,29 @@ async function getRecentOrders(limit = 10) {
       select: {
         id: true,
         status: true,
+        paymentStatus: true as any, // se existir no schema
+        paid: true as any, // se existir
+        paidAt: true as any, // se existir
         currency: true,
         subtotal: true,
         shipping: true,
         tax: true,
         total: true,
         totalCents: true,
-        items: { select: { totalPrice: true } }, // used by moneyFromOrder
-        // canonical shipping identity (minimal needed for name/email)
+        items: { select: { totalPrice: true } },
         shippingFullName: true,
         shippingEmail: true,
-        // fallback
         shippingJson: true,
         user: { select: { name: true, email: true } },
       } as any,
-    } as any);
+    });
     return orders as any[];
   } catch {
     return [];
   }
 }
 
-/* ---------- robust utils to extract shipping ---------- */
+/* ---------- utils para shipping ---------- */
 function safeParseJSON(input: any): Record<string, any> {
   if (!input) return {};
   if (typeof input === "string") {
@@ -153,15 +152,12 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
 }
 
 function fromOrder(o: any) {
-  // Prefer canonical columns when present
   if (o.shippingFullName || o.shippingEmail) {
     return {
       fullName: o.shippingFullName ?? o?.user?.name ?? null,
       email: o.shippingEmail ?? o?.user?.email ?? null,
     };
   }
-
-  // Fallback to JSON
   const j = safeParseJSON(o?.shippingJson);
   const candidates = (keys: string[]) =>
     [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
@@ -174,6 +170,20 @@ function fromOrder(o: any) {
       null,
     email: getDeep(j, candidates(["email"])) ?? o?.user?.email ?? null,
   };
+}
+
+/* ---------- payment state heuristic ---------- */
+type PaymentState = "pending" | "paid" | "unknown";
+function getPaymentState(o: any): PaymentState {
+  const raw = String(o?.paymentStatus ?? "").toUpperCase();
+  const PAID = new Set(["PAID", "SUCCEEDED", "COMPLETED"]);
+  const PENDING = new Set(["PENDING", "UNPAID", "WAITING", "PROCESSING"]);
+
+  if (o?.paid === true) return "paid";
+  if (o?.paidAt) return "paid";
+  if (PAID.has(raw)) return "paid";
+  if (PENDING.has(raw)) return "pending";
+  return "unknown";
 }
 
 /* ---------- page ---------- */
@@ -210,7 +220,6 @@ export default async function AdminDashboardPage() {
           <h3 className="font-semibold mb-1">Visitors</h3>
           <div className="text-3xl font-extrabold">{fmtInt(traffic.uniqToday)}</div>
           <p className="text-xs text-gray-500 mt-1">Uniques today</p>
-
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-slate-50 border p-3">
               <div className="text-xs text-gray-500">Last 7 days</div>
@@ -221,7 +230,6 @@ export default async function AdminDashboardPage() {
               <div className="text-xl font-bold">{fmtInt(traffic.uniqNow)}</div>
             </div>
           </div>
-
           <p className="text-xs text-gray-400 mt-3">Pageviews today: {fmtInt(traffic.viewsToday)}</p>
         </div>
       </section>
@@ -253,9 +261,19 @@ export default async function AdminDashboardPage() {
                 const ship = fromOrder(o);
                 const money = moneyFromOrder(o, (o?.currency || "EUR").toString());
                 const isResolved = (o?.status || "").toUpperCase() === "RESOLVED";
+                const payState = getPaymentState(o);
+
+                const rowBg =
+                  payState === "pending"
+                    ? "bg-red-50"
+                    : payState === "paid" && !isResolved
+                    ? "bg-yellow-50"
+                    : payState === "paid" && isResolved
+                    ? "bg-green-50"
+                    : "";
 
                 return (
-                  <tr key={o.id} className="border-b last:border-0 align-top">
+                  <tr key={o.id} className={`border-b last:border-0 align-top ${rowBg}`}>
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{o.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
@@ -265,7 +283,7 @@ export default async function AdminDashboardPage() {
                       <ResolveCheckbox
                         orderId={o.id}
                         initialResolved={isResolved}
-                        initialStatus={o?.status || "PENDING"}  // permite desmarcar e restaurar
+                        initialStatus={o?.status || "PENDING"}
                       />
                     </td>
                     <td className="py-2 pr-3 text-right">
@@ -285,11 +303,25 @@ export default async function AdminDashboardPage() {
             </tbody>
           </table>
         </div>
+
+        {/* legenda */}
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded bg-red-50 border" /> Payment pending
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded bg-yellow-50 border" /> Paid (not resolved)
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded bg-green-50 border" /> Paid + resolved
+          </span>
+        </div>
       </section>
     </div>
   );
 }
 
+/* ---------- KPI Card ---------- */
 function KpiCard(props: { title: string; value: string | number; subtitle?: string }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow border">
