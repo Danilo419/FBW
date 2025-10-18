@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
@@ -27,7 +27,7 @@ type OptionGroupUI = {
 type SizeUI = {
   id: string;
   size: string; // e.g., "S", "M", "L", "10-11"
-  stock: number;
+  stock: number; // <= 0 => unavailable
 };
 
 type ProductUI = {
@@ -39,6 +39,8 @@ type ProductUI = {
   basePrice: number; // cents
   images: string[];
   optionGroups: OptionGroupUI[];
+  /** Optional: real sizes from DB (SizeStock). If not provided, we infer (all available). */
+  sizes?: SizeUI[];
 };
 
 type SelectedState = Record<string, string | string[] | null>;
@@ -72,17 +74,40 @@ export default function ProductConfigurator({ product }: Props) {
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Size logic derived from product name ---------- */
+  /* ---------- Sizes: prefer DB sizes; fallback to inferred list ---------- */
   const kid = isKidProduct(product.name);
-  const computedSizes = useMemo<SizeUI[]>(
+
+  const inferred: SizeUI[] = useMemo(
     () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999 })),
     [kid]
   );
+
+  const sizes: SizeUI[] = useMemo(
+    () =>
+      (product.sizes && product.sizes.length > 0
+        ? product.sizes
+        : inferred
+      ).map((s) => ({ ...s, size: String(s.size).toUpperCase() })),
+    [product.sizes, inferred]
+  );
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const pickSize = (size: string) => {
+    const found = sizes.find((s) => s.size === size);
+    if (!found || (found.stock ?? 0) <= 0) return; // don't allow selecting unavailable
     setSelectedSize(size);
     setSelected((s) => ({ ...s, size }));
   };
+
+  // If the currently selected size becomes unavailable (after a toggle), unselect it.
+  useEffect(() => {
+    if (!selectedSize) return;
+    const found = sizes.find((s) => s.size === selectedSize);
+    if (!found || (found.stock ?? 0) <= 0) {
+      setSelectedSize(null);
+      setSelected((s) => ({ ...s, size: null }));
+    }
+  }, [sizes, selectedSize]);
 
   /* ---------- Groups (hide shorts/socks entirely) ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
@@ -221,6 +246,11 @@ export default function ProductConfigurator({ product }: Props) {
       alert("Please choose a size first.");
       return;
     }
+    const sel = sizes.find((s) => s.size === selectedSize);
+    if (!sel || (sel.stock ?? 0) <= 0) {
+      alert("This size is unavailable.");
+      return;
+    }
     if (qty < 1) {
       alert("Quantity must be at least 1.");
       return;
@@ -308,18 +338,26 @@ export default function ProductConfigurator({ product }: Props) {
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
-          {computedSizes.length > 0 ? (
+          {sizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {computedSizes.map((s) => {
-                const isActive = selectedSize === s.size;
+              {sizes.map((s) => {
+                const unavailable = (s.stock ?? 0) <= 0;
+                const isActive = !unavailable && selectedSize === s.size;
                 return (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => pickSize(s.size)}
-                    className={`rounded-xl px-3 py-2 border text-sm transition ${
-                      isActive ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
-                    }`}
+                    disabled={unavailable}
+                    aria-disabled={unavailable}
+                    title={unavailable ? "Unavailable" : `Select size ${s.size}`}
+                    className={classNames(
+                      "rounded-xl px-3 py-2 border text-sm transition",
+                      unavailable
+                        ? "opacity-50 line-through cursor-not-allowed"
+                        : "hover:bg-gray-50",
+                      isActive && "bg-blue-600 text-white border-blue-600"
+                    )}
                     aria-pressed={isActive}
                   >
                     {s.size}
@@ -398,7 +436,7 @@ export default function ProductConfigurator({ product }: Props) {
           />
         )}
 
-        {/* Other groups (no prices shown; also FREE if you want—change forceFree to true) */}
+        {/* Other groups */}
         {otherGroups.map((g) => (
           <GroupBlock
             key={g.id}
@@ -406,7 +444,6 @@ export default function ProductConfigurator({ product }: Props) {
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
-            // leave as default (no price text either way)
           />
         ))}
 
@@ -423,7 +460,7 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
             <span className="min-w-[2ch] text-center">{qty}</span>
             <button
-              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
               onClick={() => setQty((q) => q + 1)}
               aria-label="Increase quantity"
               disabled={pending}
