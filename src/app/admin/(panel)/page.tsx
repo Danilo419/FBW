@@ -88,38 +88,38 @@ async function getTrafficStats() {
   }
 }
 
-/* ---------- orders (reduced select) ---------- */
+/* ---------- orders ---------- */
 async function getRecentOrders(limit = 10) {
   try {
     const orders = await prisma.order.findMany({
       take: limit,
-      orderBy: { createdAt: "desc" } as any,
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         status: true,
-        paymentStatus: true as any, // se existir no schema
-        paid: true as any, // se existir
-        paidAt: true as any, // se existir
+        paymentStatus: true,
+        paidAt: true,
         currency: true,
         subtotal: true,
         shipping: true,
         tax: true,
         total: true,
         totalCents: true,
-        items: { select: { totalPrice: true } },
         shippingFullName: true,
         shippingEmail: true,
         shippingJson: true,
         user: { select: { name: true, email: true } },
-      } as any,
+        items: { select: { totalPrice: true } },
+      },
     });
-    return orders as any[];
-  } catch {
+    return orders;
+  } catch (err) {
+    console.error("Error fetching orders:", err);
     return [];
   }
 }
 
-/* ---------- utils para shipping ---------- */
+/* ---------- utils: shipping ---------- */
 function safeParseJSON(input: any): Record<string, any> {
   if (!input) return {};
   if (typeof input === "string") {
@@ -129,23 +129,23 @@ function safeParseJSON(input: any): Record<string, any> {
       return {};
     }
   }
-  if (typeof input === "object") return input as Record<string, any>;
+  if (typeof input === "object") return input;
   return {};
 }
 
 function getDeep(obj: any, paths: string[][]): string | undefined {
-  for (const p of paths) {
+  for (const path of paths) {
     let cur: any = obj;
-    for (const k of p) {
-      if (cur && typeof cur === "object" && k in cur) cur = cur[k];
+    for (const key of path) {
+      if (cur && typeof cur === "object" && key in cur) cur = cur[key];
       else {
         cur = undefined;
         break;
       }
     }
     if (cur != null) {
-      const s = String(cur).trim();
-      if (s !== "") return s;
+      const val = String(cur).trim();
+      if (val !== "") return val;
     }
   }
   return undefined;
@@ -158,9 +158,14 @@ function fromOrder(o: any) {
       email: o.shippingEmail ?? o?.user?.email ?? null,
     };
   }
+
   const j = safeParseJSON(o?.shippingJson);
-  const candidates = (keys: string[]) =>
-    [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
+  const candidates = (keys: string[]) => [
+    keys,
+    ["shipping", ...keys],
+    ["address", ...keys],
+    ["delivery", ...keys],
+  ];
   return {
     fullName:
       getDeep(j, candidates(["fullName"])) ??
@@ -172,14 +177,13 @@ function fromOrder(o: any) {
   };
 }
 
-/* ---------- payment state heuristic ---------- */
+/* ---------- determine payment state ---------- */
 type PaymentState = "pending" | "paid" | "unknown";
 function getPaymentState(o: any): PaymentState {
   const raw = String(o?.paymentStatus ?? "").toUpperCase();
-  const PAID = new Set(["PAID", "SUCCEEDED", "COMPLETED"]);
+  const PAID = new Set(["PAID", "SUCCEEDED", "COMPLETED", "CAPTURED", "SETTLED"]);
   const PENDING = new Set(["PENDING", "UNPAID", "WAITING", "PROCESSING"]);
 
-  if (o?.paid === true) return "paid";
   if (o?.paidAt) return "paid";
   if (PAID.has(raw)) return "paid";
   if (PENDING.has(raw)) return "pending";
@@ -188,8 +192,11 @@ function getPaymentState(o: any): PaymentState {
 
 /* ---------- page ---------- */
 export default async function AdminDashboardPage() {
-  const [{ usersCount, avgRating, shippedOrders, countriesServed, revenueCents }, traffic, orders] =
-    await Promise.all([getStats(), getTrafficStats(), getRecentOrders(12)]);
+  const [
+    { usersCount, avgRating, shippedOrders, countriesServed, revenueCents },
+    traffic,
+    orders,
+  ] = await Promise.all([getStats(), getTrafficStats(), getRecentOrders(12)]);
 
   return (
     <div className="space-y-8">
@@ -206,7 +213,11 @@ export default async function AdminDashboardPage() {
           subtitle="Global average"
         />
         <KpiCard title="Orders shipped" value={fmtInt(shippedOrders)} subtitle="Total shipped" />
-        <KpiCard title="Countries served" value={fmtInt(countriesServed)} subtitle="Distinct countries" />
+        <KpiCard
+          title="Countries served"
+          value={fmtInt(countriesServed)}
+          subtitle="Distinct countries"
+        />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
@@ -220,6 +231,7 @@ export default async function AdminDashboardPage() {
           <h3 className="font-semibold mb-1">Visitors</h3>
           <div className="text-3xl font-extrabold">{fmtInt(traffic.uniqToday)}</div>
           <p className="text-xs text-gray-500 mt-1">Uniques today</p>
+
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-slate-50 border p-3">
               <div className="text-xs text-gray-500">Last 7 days</div>
@@ -230,7 +242,10 @@ export default async function AdminDashboardPage() {
               <div className="text-xl font-bold">{fmtInt(traffic.uniqNow)}</div>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-3">Pageviews today: {fmtInt(traffic.viewsToday)}</p>
+
+          <p className="text-xs text-gray-400 mt-3">
+            Pageviews today: {fmtInt(traffic.viewsToday)}
+          </p>
         </div>
       </section>
 
@@ -259,7 +274,7 @@ export default async function AdminDashboardPage() {
               )}
               {orders.map((o) => {
                 const ship = fromOrder(o);
-                const money = moneyFromOrder(o, (o?.currency || "EUR").toString());
+                const money = moneyFromOrder(o, o?.currency || "EUR");
                 const isResolved = (o?.status || "").toUpperCase() === "RESOLVED";
                 const payState = getPaymentState(o);
 
@@ -277,21 +292,19 @@ export default async function AdminDashboardPage() {
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{o.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
-                    <td className="py-2 pr-3">{o?.status ?? "—"}</td>
+                    <td className="py-2 pr-3 capitalize">{o?.status ?? "—"}</td>
                     <td className="py-2 pr-3">{money.label}</td>
                     <td className="py-2 pr-3">
                       <ResolveCheckbox
                         orderId={o.id}
                         initialResolved={isResolved}
-                        initialStatus={o?.status || "PENDING"}
+                        initialStatus={o?.status || "pending"}
                       />
                     </td>
                     <td className="py-2 pr-3 text-right">
                       <a
                         href={`/admin/orders/${o.id}`}
                         className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
-                        aria-label={`View order ${o.id}`}
-                        title="View details"
                       >
                         <Eye className="h-4 w-4" />
                         View
@@ -304,7 +317,6 @@ export default async function AdminDashboardPage() {
           </table>
         </div>
 
-        {/* legenda */}
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
           <span className="inline-flex items-center gap-2">
             <span className="inline-block h-3 w-3 rounded bg-red-50 border" /> Payment pending
@@ -327,7 +339,9 @@ function KpiCard(props: { title: string; value: string | number; subtitle?: stri
     <div className="rounded-2xl bg-white p-5 shadow border">
       <div className="text-sm text-gray-500">{props.title}</div>
       <div className="text-3xl font-extrabold mt-1">{props.value}</div>
-      {props.subtitle && <div className="text-xs text-gray-400 mt-1">{props.subtitle}</div>}
+      {props.subtitle && (
+        <div className="text-xs text-gray-400 mt-1">{props.subtitle}</div>
+      )}
     </div>
   );
 }
