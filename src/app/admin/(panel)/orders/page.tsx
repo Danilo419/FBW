@@ -7,14 +7,55 @@ import { Eye } from "lucide-react";
 function fmtMoney(amount: number, currency = "EUR") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
 }
+
+/** Heurística robusta para normalizar total (euros vs. cêntimos) */
 function normalizeTotal(o: any): number {
-  if (typeof o.total === "number") return o.total;
-  if (typeof o.totalCents === "number") return o.totalCents / 100;
-  const s = Number(o.subtotal ?? 0);
-  const sh = Number(o.shipping ?? 0);
-  const t = Number(o.tax ?? 0);
-  const sum = s + sh + t;
-  return sum < 10000 ? sum / 100 : sum;
+  // 1) Se existir totalCents, é a fonte da verdade
+  if (typeof o.totalCents === "number" && !Number.isNaN(o.totalCents)) {
+    return o.totalCents / 100;
+  }
+
+  // 2) Se existir total, tentar perceber a escala
+  if (typeof o.total === "number" && !Number.isNaN(o.total)) {
+    const t = o.total;
+
+    // Se for um número grande (>= 1000), quase de certeza está em cêntimos
+    if (t >= 1000) return t / 100;
+
+    // Se não há subtotal/shipping/tax, e total é inteiro múltiplo de 100 (100, 200, 590, 900),
+    // é altamente provável que esteja em cêntimos.
+    const hasParts = typeof o.subtotal === "number" || typeof o.shipping === "number" || typeof o.tax === "number";
+    if (!hasParts && Number.isInteger(t) && t % 100 === 0) {
+      return t / 100;
+    }
+
+    // Se existem partes, verificar se parecem estar em cêntimos (maioria ≥ 1000 ou múltiplos de 100).
+    const parts = [o.subtotal, o.shipping, o.tax].filter((x) => typeof x === "number") as number[];
+    const looksLikeCents =
+      parts.length > 0 &&
+      parts.filter((p) => (p >= 1000) || (Number.isInteger(p) && p % 100 === 0)).length >= Math.ceil(parts.length / 2);
+
+    if (looksLikeCents) return t / 100;
+
+    // Caso mais comum: já está em euros
+    return t;
+  }
+
+  // 3) Calcular a partir de subtotal + shipping + tax (cada um pode estar em euros ou cêntimos)
+  const parts = [Number(o.subtotal ?? 0), Number(o.shipping ?? 0), Number(o.tax ?? 0)];
+  const normalized = parts
+    .map((p) => {
+      if (Number.isNaN(p)) return 0;
+      // Se muito grande, tratar como cêntimos
+      if (p >= 1000) return p / 100;
+      // Se inteiro e múltiplo de 100 (ex.: 590) é provável que sejam cêntimos
+      if (Number.isInteger(p) && p % 100 === 0 && p !== 0) return p / 100;
+      // Caso normal: euros
+      return p;
+    })
+    .reduce((a, b) => a + b, 0);
+
+  return normalized;
 }
 
 /* ---------- shipping utils (minimal for name/email) ---------- */
@@ -48,14 +89,12 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
   return undefined;
 }
 function fromOrder(order: any) {
-  // Preferir colunas canónicas
   if (order.shippingFullName || order.shippingEmail) {
     return {
       fullName: order.shippingFullName ?? order?.user?.name ?? null,
       email: order.shippingEmail ?? order?.user?.email ?? null,
     };
   }
-  // Fallback: JSON
   const j = safeParseJSON(order?.shippingJson);
   const candidates = (keys: string[]) =>
     [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
