@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { Eye } from "lucide-react";
+import ResolveCheckbox from "@/components/admin/ResolveCheckbox";
 
 /* ---------- helpers ---------- */
 function fmtMoney(amount: number, currency = "EUR") {
@@ -19,25 +20,26 @@ function normalizeTotal(o: any): number {
   if (typeof o.total === "number" && !Number.isNaN(o.total)) {
     const t = o.total;
 
-    // Se for um número grande (>= 1000), quase de certeza está em cêntimos
     if (t >= 1000) return t / 100;
 
-    // Se não há subtotal/shipping/tax, e total é inteiro múltiplo de 100 (100, 200, 590, 900),
-    // é altamente provável que esteja em cêntimos.
-    const hasParts = typeof o.subtotal === "number" || typeof o.shipping === "number" || typeof o.tax === "number";
+    const hasParts =
+      typeof o.subtotal === "number" ||
+      typeof o.shipping === "number" ||
+      typeof o.tax === "number";
     if (!hasParts && Number.isInteger(t) && t % 100 === 0) {
       return t / 100;
     }
 
-    // Se existem partes, verificar se parecem estar em cêntimos (maioria ≥ 1000 ou múltiplos de 100).
-    const parts = [o.subtotal, o.shipping, o.tax].filter((x) => typeof x === "number") as number[];
+    const parts = [o.subtotal, o.shipping, o.tax].filter(
+      (x) => typeof x === "number"
+    ) as number[];
     const looksLikeCents =
       parts.length > 0 &&
-      parts.filter((p) => (p >= 1000) || (Number.isInteger(p) && p % 100 === 0)).length >= Math.ceil(parts.length / 2);
+      parts.filter((p) => p >= 1000 || (Number.isInteger(p) && p % 100 === 0)).length >=
+        Math.ceil(parts.length / 2);
 
     if (looksLikeCents) return t / 100;
 
-    // Caso mais comum: já está em euros
     return t;
   }
 
@@ -46,11 +48,8 @@ function normalizeTotal(o: any): number {
   const normalized = parts
     .map((p) => {
       if (Number.isNaN(p)) return 0;
-      // Se muito grande, tratar como cêntimos
       if (p >= 1000) return p / 100;
-      // Se inteiro e múltiplo de 100 (ex.: 590) é provável que sejam cêntimos
       if (Number.isInteger(p) && p % 100 === 0 && p !== 0) return p / 100;
-      // Caso normal: euros
       return p;
     })
     .reduce((a, b) => a + b, 0);
@@ -109,16 +108,33 @@ function fromOrder(order: any) {
   };
 }
 
-/* ---------- select reduzido ---------- */
+/* ---------- payment state heuristic ---------- */
+type PaymentState = "pending" | "paid" | "unknown";
+function getPaymentState(o: any): PaymentState {
+  const raw = String(o?.paymentStatus ?? "").toUpperCase();
+  const PAID = new Set(["PAID", "SUCCEEDED", "COMPLETED", "CAPTURED", "SETTLED"]);
+  const PENDING = new Set(["PENDING", "UNPAID", "WAITING", "PROCESSING"]);
+
+  if (o?.paidAt) return "paid";
+  if (PAID.has(raw)) return "paid";
+  if (PENDING.has(raw)) return "pending";
+  return "unknown";
+}
+
+/* ---------- select ---------- */
 const orderSelect = {
   id: true,
   status: true,
+  paymentStatus: true,
+  paidAt: true,
+
   currency: true,
   subtotal: true,
   shipping: true,
   tax: true,
   total: true,
   totalCents: true,
+
   shippingFullName: true,
   shippingEmail: true,
   shippingJson: true,
@@ -152,13 +168,14 @@ export default async function OrdersPage() {
                 <th className="py-2 pr-3">Email</th>
                 <th className="py-2 pr-3">Status</th>
                 <th className="py-2 pr-3">Total</th>
+                <th className="py-2 pr-3">Resolve</th>
                 <th className="py-2 pr-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {orders.length === 0 && (
                 <tr>
-                  <td className="py-3 text-gray-500" colSpan={6}>
+                  <td className="py-3 text-gray-500" colSpan={7}>
                     No data to display.
                   </td>
                 </tr>
@@ -167,14 +184,32 @@ export default async function OrdersPage() {
                 const ship = fromOrder(ord);
                 const total = normalizeTotal(ord);
                 const currency = (ord?.currency || "EUR").toString().toUpperCase();
+                const isResolved = (ord?.status || "").toUpperCase() === "RESOLVED";
+                const payState = getPaymentState(ord);
+
+                const rowBg =
+                  payState === "pending"
+                    ? "bg-red-50"
+                    : payState === "paid" && !isResolved
+                    ? "bg-yellow-50"
+                    : payState === "paid" && isResolved
+                    ? "bg-green-50"
+                    : "";
 
                 return (
-                  <tr key={ord.id} className="border-b last:border-0 align-top">
+                  <tr key={ord.id} className={`border-b last:border-0 align-top ${rowBg}`}>
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{ord.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
-                    <td className="py-2 pr-3">{ord.status ?? "—"}</td>
+                    <td className="py-2 pr-3 capitalize">{ord.status ?? "—"}</td>
                     <td className="py-2 pr-3">{fmtMoney(total, currency)}</td>
+                    <td className="py-2 pr-3">
+                      <ResolveCheckbox
+                        orderId={ord.id}
+                        initialResolved={isResolved}
+                        initialStatus={ord?.status || "pending"}
+                      />
+                    </td>
                     <td className="py-2 pr-3 text-right">
                       <a
                         href={`/admin/orders/${ord.id}`}

@@ -231,7 +231,6 @@ export default async function AdminDashboardPage() {
           <h3 className="font-semibold mb-1">Visitors</h3>
           <div className="text-3xl font-extrabold">{fmtInt(traffic.uniqToday)}</div>
           <p className="text-xs text-gray-500 mt-1">Uniques today</p>
-
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-slate-50 border p-3">
               <div className="text-xs text-gray-500">Last 7 days</div>
@@ -242,7 +241,6 @@ export default async function AdminDashboardPage() {
               <div className="text-xl font-bold">{fmtInt(traffic.uniqNow)}</div>
             </div>
           </div>
-
           <p className="text-xs text-gray-400 mt-3">
             Pageviews today: {fmtInt(traffic.viewsToday)}
           </p>
@@ -316,18 +314,7 @@ export default async function AdminDashboardPage() {
             </tbody>
           </table>
         </div>
-
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded bg-red-50 border" /> Payment pending
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded bg-yellow-50 border" /> Paid (not resolved)
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded bg-green-50 border" /> Paid + resolved
-          </span>
-        </div>
+        {/* legenda removida */}
       </section>
     </div>
   );
