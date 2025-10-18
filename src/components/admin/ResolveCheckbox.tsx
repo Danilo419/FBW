@@ -1,36 +1,42 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { toggleResolved } from "@/app/admin/(panel)/actions";
 
 type Props = {
   orderId: string;
   initialResolved: boolean;
-  initialStatus: string; // status original para restaurar quando desmarcar
+  initialStatus: string; // status atual quando a página carregou
 };
 
 export default function ResolveCheckbox({ orderId, initialResolved, initialStatus }: Props) {
+  const router = useRouter();
   const [checked, setChecked] = React.useState(initialResolved);
   const [isPending, startTransition] = React.useTransition();
-  const originalStatusRef = React.useRef(initialStatus || "PENDING");
+
+  // Quando o status inicial já é RESOLVED, usar PENDING como fallback;
+  // caso contrário, usar o próprio initialStatus.
+  const fallbackStatus = React.useMemo(() => {
+    const s = (initialStatus || "").toUpperCase();
+    return s === "RESOLVED" ? "PENDING" : (initialStatus || "PENDING");
+  }, [initialStatus]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = e.target.checked;
     setChecked(next);
 
-    // dispara confetti apenas quando MARCA como resolvido
+    // confetti apenas ao marcar
     if (next) fireConfettiAtTarget(e.currentTarget);
 
     startTransition(async () => {
       if (next) {
         await toggleResolved({ orderId, makeResolved: true });
       } else {
-        await toggleResolved({
-          orderId,
-          makeResolved: false,
-          fallbackStatus: originalStatusRef.current || "PENDING",
-        });
+        await toggleResolved({ orderId, makeResolved: false, fallbackStatus });
       }
+      // força revalidate no cliente para refletir o novo status na tabela
+      router.refresh();
     });
   };
 
@@ -132,7 +138,7 @@ function makeParticles(n: number, x: number, y: number, W: number, H: number) {
   }> = [];
 
   for (let i = 0; i < n; i++) {
-    // ângulo no semicírculo superior [-π, 0] → confetis para ambos os lados
+    // Semicírculo superior [-π, 0] → esquerda e direita
     const angle = -Math.PI + Math.random() * Math.PI; // [-π, 0]
     const speed = 4 + Math.random() * 6;
     const hue = Math.floor(Math.random() * 360);
@@ -140,8 +146,8 @@ function makeParticles(n: number, x: number, y: number, W: number, H: number) {
     out.push({
       x,
       y,
-      vx: Math.cos(angle) * speed, // pode ir para a esquerda (<0) ou direita (>0)
-      vy: Math.sin(angle) * speed - 2, // impulso inicial para cima
+      vx: Math.cos(angle) * speed,           // esquerda (<0) / direita (>0)
+      vy: Math.sin(angle) * speed - 2,       // impulso para cima
       r: Math.random() * Math.PI,
       spin: (Math.random() - 0.5) * 0.3,
       w: 6 + Math.random() * 6,
