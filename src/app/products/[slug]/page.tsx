@@ -28,7 +28,7 @@ type OptionGroupUI = {
 type SizeUI = {
   id: string;
   size: string;
-  stock: number;
+  stock: number; // 👈 o Configurator ainda usa "stock"
 };
 
 type ProductUI = {
@@ -39,11 +39,8 @@ type ProductUI = {
   description?: string | null;
   basePrice: number; // cents
   images: string[];
-  // Adult sizes (kept for backwards compatibility with the UI)
-  sizes: SizeUI[];
-  // Kids sizes (enable Adult/Kids toggle when present)
-  kidsSizes?: SizeUI[];
-  // Optional delta for kids price (in cents). If omitted, same as basePrice.
+  sizes: SizeUI[];        // Adult
+  kidsSizes?: SizeUI[];   // Kids (opcional)
   kidsPriceDelta?: number;
   optionGroups: OptionGroupUI[];
 };
@@ -79,28 +76,30 @@ function mapValuesByGroup(values: {
   return by;
 }
 
-function toUISizes(rows: { id: string | number; size: string; stock: number }[]): SizeUI[] {
-  return rows.map((s) => ({ id: String(s.id), size: s.size, stock: s.stock ?? 0 }));
+/** Converte linhas do Prisma (available:boolean) para UI (stock:number) */
+function toUISizes(rows: { id: string | number; size: string; available: boolean }[]): SizeUI[] {
+  return rows.map((s) => ({
+    id: String(s.id),
+    size: s.size,
+    stock: s.available ? 1 : 0, // 👈 compatibilidade com UI antiga
+  }));
 }
 
-// Sorting helpers (robust to different naming like 2XL vs XXL)
+// Ordenação
 const ADULT_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "4XL"];
-const KIDS_ORDER = ["4Y", "6Y", "8Y", "10Y", "12Y", "14Y"];
+const KIDS_ORDER = ["2-3Y", "3-4Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"];
 
 function indexInOrder(value: string, order: string[]) {
   const i = order.indexOf(value.toUpperCase());
   return i === -1 ? Number.POSITIVE_INFINITY : i;
 }
-
 function sortByOrder<T extends { size: string }>(list: T[], order: string[]): T[] {
   return [...list].sort(
     (a, b) => indexInOrder(a.size.toUpperCase(), order) - indexInOrder(b.size.toUpperCase(), order)
   );
 }
 
-/** Add disabled adult sizes up to 3XL only if you already have at least one adult size.
- *  (Prevents showing a full ghost adult grid when a product is kids-only.)
- */
+/** Se já existir pelo menos um tamanho adulto, mostra “fantasmas” até 3XL (stock=0). */
 function ensureUpTo3XLIfNeeded(adult: SizeUI[]): SizeUI[] {
   if (!adult.length) return adult;
   const by = new Map(adult.map((s) => [s.size.toUpperCase(), s]));
@@ -118,23 +117,15 @@ function ensureUpTo3XLIfNeeded(adult: SizeUI[]): SizeUI[] {
   return merged;
 }
 
-/** Kids detector: supports "6Y", "8 yrs", "10 years", "12 anos", "14 años", "Junior", "Kids", etc. */
+/** Kids detector: 6Y, 10-11Y, Junior, Kids, etc. */
 function isKidsLabel(s: string) {
   const t = s.trim().toUpperCase();
-
-  // 6Y, 8Y, 10Y, 12Y, 14Y, 16Y
-  if (/^\d+\s*Y$/.test(t)) return true;
-
-  // 6YR, 8YRS, 10 YEAR(S), 12YEAR(S)
+  if (/^\d+\s*Y$/.test(t)) return true;             // 6Y
+  if (/^\d+\s*-\s*\d+\s*Y$/.test(t)) return true;   // 10-11Y
   if (/^\d+\s*(YR|YRS|YEAR|YEARS)$/.test(t)) return true;
-
-  // PT/ES: 6 ANOS, 8 AÑOS
   if (/^\d+\s*(ANOS|AÑOS)$/.test(t)) return true;
-
-  // Prefix/suffix labels
   if (/^(KID|KIDS|CHILD|JUNIOR|JR)\b/.test(t)) return true;
   if (/\b(JR|JUNIOR|KID|KIDS)$/.test(t)) return true;
-
   return false;
 }
 
@@ -192,7 +183,6 @@ function buildUIProduct(args: {
 
   if (kidsSizes.length) {
     ui.kidsSizes = kidsSizes;
-    // If you later store a kids base price, compute a delta and set ui.kidsPriceDelta.
   }
 
   return ui;
@@ -200,7 +190,6 @@ function buildUIProduct(args: {
 
 /* ---------- Static params (guarded on Vercel) ---------- */
 export async function generateStaticParams() {
-  // On Vercel builds, do not pre-generate anything to avoid DB access
   if (process.env.VERCEL) return [];
   try {
     const rows = await prisma.product.findMany({ select: { slug: true }, take: 500 });
@@ -234,7 +223,8 @@ export default async function ProductPage({ params }: PageProps) {
     prisma.sizeStock.findMany({
       where: { productId: core.id },
       orderBy: { id: "asc" },
-      select: { id: true, size: true, stock: true }, // schema-agnostic
+      // 👇 buscar `available` no schema novo
+      select: { id: true, size: true, available: true },
     }),
     prisma.optionGroup.findMany({
       where: { productId: core.id },
@@ -248,6 +238,7 @@ export default async function ProductPage({ params }: PageProps) {
     }),
   ]);
 
+  // Converter para a forma esperada pelo ProductConfigurator (stock:number)
   const sizesAll = toUISizes(sizesDb);
   const { adult, kids } = splitAdultKids(sizesAll);
   const valuesByGroup = mapValuesByGroup(valuesDb as any);
@@ -270,9 +261,7 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <div className="container-fw py-10 grid gap-10">
-      {/* Product configurator / details (Adult & Kids in the same page) */}
       <ProductConfigurator product={uiProduct} />
-      {/* Reviews (rating 0–5 + comment) */}
       <ProductReviews productId={uiProduct.id} />
     </div>
   );
