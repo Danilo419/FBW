@@ -76,7 +76,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   );
 }
 
-/* ---------------- Sidebar ---------------- */
+/* ----------------- Sidebar ----------------- */
 function Sidebar({
   collapsed,
   toggleCollapsed,
