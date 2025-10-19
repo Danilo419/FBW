@@ -14,7 +14,7 @@ function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
-// ordem de exibição sugerida (adulto primeiro). Qualquer size não listado cai para o fim.
+// ordem sugerida (adulto primeiro; depois kids)
 const SIZE_ORDER = [
   "XS",
   "S",
@@ -24,22 +24,14 @@ const SIZE_ORDER = [
   "2XL",
   "3XL",
   "4XL",
-  "5XL",
-  "6XL",
-  "XXS",
-  "XXL", // aliases comuns
-  // kids
-  "4Y",
-  "5Y",
-  "6Y",
-  "7Y",
-  "8Y",
-  "9Y",
-  "10Y",
-  "11Y",
-  "12Y",
-  "13Y",
-  "14Y",
+  // kids (idades)
+  "2-3Y",
+  "3-4Y",
+  "4-5Y",
+  "6-7Y",
+  "8-9Y",
+  "10-11Y",
+  "12-13Y",
 ];
 
 function normalizeSize(s: string) {
@@ -65,7 +57,7 @@ export default async function ProductEditPage({
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
-      sizes: true, // vamos ordenar/filtrar no código
+      sizes: true, // tem { id, productId, size, available }
       options: {
         where: { type: "SIZE" as OptionType },
         include: { values: { select: { value: true, label: true } } },
@@ -195,13 +187,13 @@ export default async function ProductEditPage({
 
         {viewSizes.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No sizes to show. Add size options to this product or create stock
+            No sizes to show. Add size options to this product or create size
             entries only for the sizes you sell.
           </p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {viewSizes.map((s) => {
-              const unavailable = (s.stock ?? 0) <= 0;
+              const unavailable = !s.available; // ✅ booleano
               return (
                 <div
                   key={s.id}
@@ -227,9 +219,8 @@ export default async function ProductEditPage({
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Toggling <strong>Unavailable</strong> sets <code>stock = 0</code>.
-          Toggling back to <strong>Available</strong> restores stock to a small
-          default (configurable).
+          Toggling <strong>Unavailable</strong> simply turns the size off (no
+          quantity tracking).
         </p>
       </section>
     </div>

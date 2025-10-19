@@ -105,14 +105,15 @@ model Product {
 }
 
 model SizeStock {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   productId String
   size      String
-  stock     Int
+  available Boolean @default(true) // ✅ sem número de stock; apenas disponibilidade on/off
 
   product Product @relation(fields: [productId], references: [id])
 
   @@index([productId])
+  @@unique([productId, size])
 }
 
 model OptionGroup {
