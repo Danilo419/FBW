@@ -1,12 +1,16 @@
+// src/app/admin/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 
 function fmtMoneyFromCents(cents: number, currency = "EUR") {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(cents / 100);
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(
+    cents / 100
+  );
 }
 
 export default async function ProductsPage() {
@@ -18,6 +22,7 @@ export default async function ProductsPage() {
       team: true,
       season: true,
       basePrice: true,
+      images: true, // String[] of URLs (first = main)
       sizes: { select: { id: true, size: true, stock: true } },
       createdAt: true,
     },
@@ -35,6 +40,7 @@ export default async function ProductsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
+                <th className="py-2 pr-3">Image</th>
                 <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">Name</th>
                 <th className="py-2 pr-3">Team</th>
@@ -47,20 +53,43 @@ export default async function ProductsPage() {
             <tbody>
               {products.length === 0 && (
                 <tr>
-                  <td className="py-3 text-gray-500" colSpan={7}>
+                  <td className="py-3 text-gray-500" colSpan={8}>
                     No products yet.
                   </td>
                 </tr>
               )}
               {products.map((p) => {
                 const available = p.sizes.filter((s) => (s.stock ?? 0) > 0).length;
+                const mainImageUrl = p.images?.[0] ?? "";
+
                 return (
                   <tr key={p.id} className="border-b last:border-0 align-top">
+                    <td className="py-2 pr-3">
+                      <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50">
+                        {mainImageUrl ? (
+                          <Image
+                            src={mainImageUrl}
+                            alt={p.name}
+                            width={56}
+                            height={56}
+                            className="h-14 w-14 object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center text-[10px] text-gray-400">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{p.id}</td>
                     <td className="py-2 pr-3">{p.name}</td>
                     <td className="py-2 pr-3">{p.team}</td>
                     <td className="py-2 pr-3">{p.season ?? "—"}</td>
-                    <td className="py-2 pr-3">{fmtMoneyFromCents(p.basePrice, "EUR")}</td>
+                    <td className="py-2 pr-3">
+                      {fmtMoneyFromCents(p.basePrice, "EUR")}
+                    </td>
                     <td className="py-2 pr-3">
                       {p.sizes.length} sizes
                       {p.sizes.length > 0 && (
