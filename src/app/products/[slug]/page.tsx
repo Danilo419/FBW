@@ -85,27 +85,40 @@ function toUISizes(rows: { id: string | number; size: string; available: boolean
   }));
 }
 
-// Ordenação
-const ADULT_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "4XL"];
-const KIDS_ORDER = ["2-3Y", "3-4Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"];
+/* ==================== ADULT SIZES: S → 4XL ==================== */
+/** Ordem e conjunto permitido (apenas estes serão mostrados no UI) */
+const ADULT_ALLOWED_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
+type AllowedAdult = (typeof ADULT_ALLOWED_ORDER)[number];
 
-function indexInOrder(value: string, order: string[]) {
+function normalizeAdultSizeLabel(raw: string): string {
+  const t = raw.trim().toUpperCase().replace(/\s+/g, "");
+  if (t === "XXL") return "2XL";
+  if (t === "XXXL") return "3XL";
+  if (t === "XXXXL") return "4XL";
+  return t;
+}
+
+function isAllowedAdultSize(label: string): label is AllowedAdult {
+  return ADULT_ALLOWED_ORDER.includes(label as AllowedAdult);
+}
+
+/* 🔧 estas funções agora aceitam arrays readonly */
+function indexInOrder(value: string, order: readonly string[]) {
   const i = order.indexOf(value.toUpperCase());
   return i === -1 ? Number.POSITIVE_INFINITY : i;
 }
-function sortByOrder<T extends { size: string }>(list: T[], order: string[]): T[] {
+function sortByOrder<T extends { size: string }>(list: T[], order: readonly string[]): T[] {
   return [...list].sort(
     (a, b) => indexInOrder(a.size.toUpperCase(), order) - indexInOrder(b.size.toUpperCase(), order)
   );
 }
 
-/** Se já existir pelo menos um tamanho adulto, mostra “fantasmas” até 3XL (stock=0). */
-function ensureUpTo3XLIfNeeded(adult: SizeUI[]): SizeUI[] {
+/** Se já existir pelo menos um tamanho adulto, garante todos S→4XL (fantasmas com stock=0 se faltar) */
+function ensureUpTo4XLIfNeeded(adult: SizeUI[]): SizeUI[] {
   if (!adult.length) return adult;
   const by = new Map(adult.map((s) => [s.size.toUpperCase(), s]));
-  const wanted = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
   const merged: SizeUI[] = [];
-  for (const key of wanted) {
+  for (const key of ADULT_ALLOWED_ORDER) {
     merged.push(
       by.get(key) ?? {
         id: `ghost-${key}`,
@@ -117,7 +130,9 @@ function ensureUpTo3XLIfNeeded(adult: SizeUI[]): SizeUI[] {
   return merged;
 }
 
-/** Kids detector: 6Y, 10-11Y, Junior, Kids, etc. */
+/* ==================== KIDS ==================== */
+const KIDS_ORDER = ["2-3Y", "3-4Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"] as const;
+
 function isKidsLabel(s: string) {
   const t = s.trim().toUpperCase();
   if (/^\d+\s*Y$/.test(t)) return true;             // 6Y
@@ -129,12 +144,29 @@ function isKidsLabel(s: string) {
   return false;
 }
 
-/** Split DB sizes into Adult vs Kids. */
+/** Split DB sizes into Adult vs Kids, aplicando o filtro S→4XL nos adultos */
 function splitAdultKids(all: SizeUI[]): { adult: SizeUI[]; kids: SizeUI[] } {
-  const adult = all.filter((s) => !isKidsLabel(s.size));
+  const rawAdult = all.filter((s) => !isKidsLabel(s.size));
   const kids = all.filter((s) => isKidsLabel(s.size));
+
+  const adultNormalized = rawAdult
+    .map((s) => ({ ...s, size: normalizeAdultSizeLabel(s.size) }))
+    .filter((s) => isAllowedAdultSize(s.size));
+
+  const dedupMap = new Map<string, SizeUI>();
+  for (const s of adultNormalized) {
+    const key = s.size.toUpperCase();
+    const existing = dedupMap.get(key);
+    if (!existing) dedupMap.set(key, s);
+    else if (existing.stock <= 0 && s.stock > 0) dedupMap.set(key, s);
+  }
+
+  const adultFiltered = Array.from(dedupMap.values());
+  const adultSorted = sortByOrder(adultFiltered, ADULT_ALLOWED_ORDER);
+  const adultCompleted = ensureUpTo4XLIfNeeded(adultSorted);
+
   return {
-    adult: sortByOrder(ensureUpTo3XLIfNeeded(adult), ADULT_ORDER),
+    adult: adultCompleted,
     kids: sortByOrder(kids, KIDS_ORDER),
   };
 }
@@ -181,10 +213,7 @@ function buildUIProduct(args: {
     optionGroups,
   };
 
-  if (kidsSizes.length) {
-    ui.kidsSizes = kidsSizes;
-  }
-
+  if (kidsSizes.length) ui.kidsSizes = kidsSizes;
   return ui;
 }
 
@@ -223,7 +252,6 @@ export default async function ProductPage({ params }: PageProps) {
     prisma.sizeStock.findMany({
       where: { productId: core.id },
       orderBy: { id: "asc" },
-      // 👇 buscar `available` no schema novo
       select: { id: true, size: true, available: true },
     }),
     prisma.optionGroup.findMany({
@@ -238,7 +266,6 @@ export default async function ProductPage({ params }: PageProps) {
     }),
   ]);
 
-  // Converter para a forma esperada pelo ProductConfigurator (stock:number)
   const sizesAll = toUISizes(sizesDb);
   const { adult, kids } = splitAdultKids(sizesAll);
   const valuesByGroup = mapValuesByGroup(valuesDb as any);
