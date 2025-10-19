@@ -1,4 +1,4 @@
-// src/app/admin/products/page.tsx
+// src/app/admin/(panel)/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -23,7 +23,8 @@ export default async function ProductsPage() {
       season: true,
       basePrice: true,
       images: true, // String[] of URLs (first = main)
-      sizes: { select: { id: true, size: true, stock: true } },
+      // ✅ schema novo: SizeStock tem { id, size, available }
+      sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
     },
   });
@@ -59,8 +60,8 @@ export default async function ProductsPage() {
                 </tr>
               )}
               {products.map((p) => {
-                const available = p.sizes.filter((s) => (s.stock ?? 0) > 0).length;
                 const mainImageUrl = p.images?.[0] ?? "";
+                const availableCount = p.sizes.filter((s) => s.available).length;
 
                 return (
                   <tr key={p.id} className="border-b last:border-0 align-top">
@@ -87,13 +88,11 @@ export default async function ProductsPage() {
                     <td className="py-2 pr-3">{p.name}</td>
                     <td className="py-2 pr-3">{p.team}</td>
                     <td className="py-2 pr-3">{p.season ?? "—"}</td>
-                    <td className="py-2 pr-3">
-                      {fmtMoneyFromCents(p.basePrice, "EUR")}
-                    </td>
+                    <td className="py-2 pr-3">{fmtMoneyFromCents(p.basePrice, "EUR")}</td>
                     <td className="py-2 pr-3">
                       {p.sizes.length} sizes
                       {p.sizes.length > 0 && (
-                        <span className="text-gray-400"> ({available} available)</span>
+                        <span className="text-gray-400"> ({availableCount} available)</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-right">
