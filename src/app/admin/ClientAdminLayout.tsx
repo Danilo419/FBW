@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Sidebar with:
@@ -135,8 +136,8 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
               <nav className="space-y-1">
                 <NavItem href="/admin" label="Dashboard" />
                 <NavItem href="/admin/orders" label="Orders" />
+                <NavItem href="/admin/products" label="Products" /> {/* ✅ enabled */}
                 <NavItem href="/admin/analytics" label="Analytics" />
-                {/* <NavItem href="/admin/products" label="Products" /> */}
               </nav>
 
               <div className="flex-1" />
@@ -176,17 +177,22 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
   );
 }
 
-/* ---------- Nav item ---------- */
+/* ---------- Nav item (with active state) ---------- */
 function NavItem({ href, label }: { href: string; label: string }) {
+  const pathname = usePathname();
+  const active = pathname === href || (href !== "/admin" && pathname?.startsWith(href));
+
   return (
     <Link
       href={href}
-      className="relative block rounded-lg px-3 py-2 hover:bg-gray-100"
+      className={[
+        "relative block rounded-lg px-3 py-2 transition truncate",
+        active ? "bg-gray-100 font-semibold" : "hover:bg-gray-100",
+      ].join(" ")}
       title={label}
+      aria-current={active ? "page" : undefined}
     >
-      <span className="transition-[opacity,transform] duration-200 opacity-100 translate-x-0">
-        {label}
-      </span>
+      {label}
     </Link>
   );
 }
