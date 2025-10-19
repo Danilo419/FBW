@@ -8,9 +8,53 @@ import { notFound } from "next/navigation";
 import { updateProduct } from "@/app/admin/(panel)/products/actions";
 import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilityToggle";
 import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
+import type { OptionType } from "@prisma/client";
 
 function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
+}
+
+// ordem de exibição sugerida (adulto primeiro). Qualquer size não listado cai para o fim.
+const SIZE_ORDER = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "2XL",
+  "3XL",
+  "4XL",
+  "5XL",
+  "6XL",
+  "XXS",
+  "XXL", // aliases comuns
+  // kids
+  "4Y",
+  "5Y",
+  "6Y",
+  "7Y",
+  "8Y",
+  "9Y",
+  "10Y",
+  "11Y",
+  "12Y",
+  "13Y",
+  "14Y",
+];
+
+function normalizeSize(s: string) {
+  return s.trim().toUpperCase();
+}
+
+function sizeComparator(a: string, b: string) {
+  const A = normalizeSize(a);
+  const B = normalizeSize(b);
+  const ia = SIZE_ORDER.indexOf(A);
+  const ib = SIZE_ORDER.indexOf(B);
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  return A.localeCompare(B);
 }
 
 export default async function ProductEditPage({
@@ -20,9 +64,33 @@ export default async function ProductEditPage({
 }) {
   const product = await prisma.product.findUnique({
     where: { id: params.id },
-    include: { sizes: { orderBy: { size: "asc" } } },
+    include: {
+      sizes: true, // vamos ordenar/filtrar no código
+      options: {
+        where: { type: "SIZE" as OptionType },
+        include: { values: { select: { value: true, label: true } } },
+      },
+    },
   });
   if (!product) return notFound();
+
+  // --- Determinar quais tamanhos são válidos para ESTE produto ---
+  const sizeGroup = product.options[0]; // se houver múltiplos grupos SIZE, usa o primeiro
+  const allowedSizesSet =
+    sizeGroup && sizeGroup.values.length > 0
+      ? new Set(
+          sizeGroup.values
+            .map((v) => normalizeSize(v.label || v.value))
+            .filter(Boolean)
+        )
+      : null;
+
+  // Filtra e ordena os SizeStock exibidos
+  const viewSizes = product.sizes
+    .filter((s) =>
+      allowedSizesSet ? allowedSizesSet.has(normalizeSize(s.size)) : true
+    )
+    .sort((a, b) => sizeComparator(a.size, b.size));
 
   return (
     <div className="space-y-6">
@@ -96,7 +164,7 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* Images editor (drag, add, remove, reorder). Submits `imagesText` */}
+          {/* Editor de Imagens (drag, add, remove, reorder). Submete `imagesText` */}
           <ImagesEditor
             name="imagesText"
             initialImages={product.images ?? []}
@@ -115,32 +183,49 @@ export default async function ProductEditPage({
       </section>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
-        <h3 className="font-semibold mb-3">Sizes & Availability</h3>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {product.sizes.map((s) => {
-            const unavailable = (s.stock ?? 0) <= 0;
-            return (
-              <div
-                key={s.id}
-                className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
-                  unavailable ? "bg-red-50" : "bg-green-50"
-                }`}
-              >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Sizes & Availability</h3>
+          {allowedSizesSet && (
+            <span className="text-xs text-gray-500">
+              Showing {viewSizes.length} of {product.sizes.length} sizes (based on
+              product size options)
+            </span>
+          )}
+        </div>
+
+        {viewSizes.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No sizes to show. Add size options to this product or create stock
+            entries only for the sizes you sell.
+          </p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {viewSizes.map((s) => {
+              const unavailable = (s.stock ?? 0) <= 0;
+              return (
                 <div
-                  className={`font-semibold ${
-                    unavailable ? "line-through opacity-50" : ""
+                  key={s.id}
+                  className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
+                    unavailable ? "bg-red-50" : "bg-green-50"
                   }`}
                 >
-                  {s.size}
+                  <div
+                    className={`font-semibold ${
+                      unavailable ? "line-through opacity-50" : ""
+                    }`}
+                  >
+                    {s.size}
+                  </div>
+                  <SizeAvailabilityToggle
+                    sizeId={s.id}
+                    initialUnavailable={unavailable}
+                  />
                 </div>
-                <SizeAvailabilityToggle
-                  sizeId={s.id}
-                  initialUnavailable={unavailable}
-                />
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+
         <p className="text-xs text-gray-500 mt-3">
           Toggling <strong>Unavailable</strong> sets <code>stock = 0</code>.
           Toggling back to <strong>Available</strong> restores stock to a small
