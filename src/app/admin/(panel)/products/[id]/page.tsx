@@ -14,7 +14,7 @@ function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
-/* ==================== Regras de tamanhos (Adult S→4XL) ==================== */
+/* ==================== Regras S→4XL (com “fantasmas”) ==================== */
 const ADULT_ALLOWED_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 type AllowedAdult = (typeof ADULT_ALLOWED_ORDER)[number];
 
@@ -48,6 +48,20 @@ function sortByOrder<T extends { size: string }>(list: T[], order: readonly stri
   );
 }
 
+/** Completa S→4XL com “fantasmas” (sem id real, sem toggle) */
+function completeAdultsWithGhosts<
+  T extends { id?: string; size: string; available?: boolean }
+>(rows: T[]) {
+  const by = new Map(rows.map((r) => [r.size.toUpperCase(), r]));
+  return ADULT_ALLOWED_ORDER.map((sz) => {
+    const hit = by.get(sz);
+    if (hit) return { ...hit, __ghost: false as const };
+    return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & {
+      __ghost: true;
+    };
+  });
+}
+
 export default async function ProductEditPage({
   params,
 }: {
@@ -65,7 +79,7 @@ export default async function ProductEditPage({
   });
   if (!product) return notFound();
 
-  // 1) Conjunto permitido derivado do grupo SIZE (se existir) + normalização + filtro S→4XL
+  // (Opcional) ainda respeitamos o grupo SIZE, mas a seguir vamos completar com fantasmas
   const sizeGroup = product.options[0] ?? null;
   const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
@@ -76,18 +90,14 @@ export default async function ProductEditPage({
         )
       : null;
 
-  // 2) Filtra entradas do DB: ignora kids, normaliza rótulos, mantém apenas S→4XL,
-  //    e aplica o allowedFromGroup se existir
+  // 1) Normaliza tamanhos adultos existentes (ignora kids) e filtra S→4XL
   const normalizedAdults = product.sizes
     .filter((s) => !isKidsLabel(s.size))
-    .map((s) => ({
-      ...s,
-      size: normalizeAdultSizeLabel(s.size),
-    }))
+    .map((s) => ({ ...s, size: normalizeAdultSizeLabel(s.size) }))
     .filter((s) => isAllowedAdultSize(s.size))
     .filter((s) => (allowedFromGroup ? allowedFromGroup.has(s.size) : true));
 
-  // 3) Dedup (se houver duplicados do mesmo size no DB, mantém o com available=true)
+  // 2) Dedup (mantém o com available=true se houver duplicados)
   const dedupMap = new Map<string, (typeof normalizedAdults)[number]>();
   for (const s of normalizedAdults) {
     const key = s.size.toUpperCase();
@@ -95,11 +105,14 @@ export default async function ProductEditPage({
     if (!prev) dedupMap.set(key, s);
     else if (prev.available === false && s.available === true) dedupMap.set(key, s);
   }
-  const viewSizes = sortByOrder(Array.from(dedupMap.values()), ADULT_ALLOWED_ORDER);
+  const dedupList = Array.from(dedupMap.values());
 
-  // 4) Texto auxiliar
-  const originCount =
-    allowedFromGroup ? allowedFromGroup.size : ADULT_ALLOWED_ORDER.length;
+  // 3) Completa com “fantasmas” para S, M, L, XL, 2XL, 3XL, 4XL
+  const completed = completeAdultsWithGhosts(dedupList);
+
+  // 4) Ordena e usa contagem fixa (7)
+  const viewSizes = sortByOrder(completed, ADULT_ALLOWED_ORDER);
+  const originCount = ADULT_ALLOWED_ORDER.length;
 
   return (
     <div className="space-y-6">
@@ -146,9 +159,7 @@ export default async function ProductEditPage({
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-600">
-                Base price (EUR)
-              </label>
+              <label className="text-xs font-medium text-gray-600">Base price (EUR)</label>
               <input
                 name="price"
                 type="number"
@@ -161,9 +172,7 @@ export default async function ProductEditPage({
             </div>
 
             <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-600">
-                Description
-              </label>
+              <label className="text-xs font-medium text-gray-600">Description</label>
               <textarea
                 name="description"
                 defaultValue={product.description ?? ""}
@@ -200,32 +209,49 @@ export default async function ProductEditPage({
         </div>
 
         {viewSizes.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No adult sizes to show (S–4XL). Add size options to this product or
-            create size entries only for the sizes you sell.
-          </p>
+          <p className="text-sm text-gray-500">No adult sizes to show (S–4XL).</p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {viewSizes.map((s) => {
+            {viewSizes.map((s: any) => {
+              const isGhost = s.__ghost === true;
               const unavailable = !s.available;
+
               return (
                 <div
                   key={s.id}
                   className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
-                    unavailable ? "bg-red-50" : "bg-green-50"
+                    isGhost ? "bg-gray-50" : unavailable ? "bg-red-50" : "bg-green-50"
                   }`}
+                  title={isGhost ? "This size does not exist in the database yet" : undefined}
                 >
                   <div
-                    className={`font-semibold ${
-                      unavailable ? "line-through opacity-50" : ""
+                    className={`font-semibold flex items-center gap-2 ${
+                      isGhost ? "opacity-70" : unavailable ? "line-through opacity-50" : ""
                     }`}
                   >
-                    {s.size}
+                    <span>{s.size}</span>
+                    {isGhost && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                        ghost
+                      </span>
+                    )}
                   </div>
-                  <SizeAvailabilityToggle
-                    sizeId={s.id}
-                    initialUnavailable={unavailable}
-                  />
+
+                  {isGhost ? (
+                    <button
+                      type="button"
+                      className="cursor-not-allowed text-xs rounded-lg border px-2 py-1 text-gray-400"
+                      title="Create this size in DB to enable"
+                      disabled
+                    >
+                      Unavailable
+                    </button>
+                  ) : (
+                    <SizeAvailabilityToggle
+                      sizeId={s.id}
+                      initialUnavailable={unavailable}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -233,8 +259,8 @@ export default async function ProductEditPage({
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Toggling <strong>Unavailable</strong> simply turns the size off (no
-          quantity tracking).
+          Sizes shown are fixed to S–4XL. Entries marked as <strong>ghost</strong> don’t exist in
+          the database yet; create them (via seed/Studio) to enable the toggle.
         </p>
       </section>
     </div>
