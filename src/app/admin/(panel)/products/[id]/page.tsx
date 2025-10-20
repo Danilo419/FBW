@@ -14,39 +14,38 @@ function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
-// ordem sugerida (adulto primeiro; depois kids)
-const SIZE_ORDER = [
-  "XS",
-  "S",
-  "M",
-  "L",
-  "XL",
-  "2XL",
-  "3XL",
-  "4XL",
-  // kids (idades)
-  "2-3Y",
-  "3-4Y",
-  "4-5Y",
-  "6-7Y",
-  "8-9Y",
-  "10-11Y",
-  "12-13Y",
-];
+/* ==================== Regras de tamanhos (Adult S→4XL) ==================== */
+const ADULT_ALLOWED_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
+type AllowedAdult = (typeof ADULT_ALLOWED_ORDER)[number];
 
-function normalizeSize(s: string) {
-  return s.trim().toUpperCase();
+function normalizeAdultSizeLabel(raw: string): string {
+  const t = raw.trim().toUpperCase().replace(/\s+/g, "");
+  if (t === "XXL") return "2XL";
+  if (t === "XXXL") return "3XL";
+  if (t === "XXXXL") return "4XL";
+  return t;
 }
-
-function sizeComparator(a: string, b: string) {
-  const A = normalizeSize(a);
-  const B = normalizeSize(b);
-  const ia = SIZE_ORDER.indexOf(A);
-  const ib = SIZE_ORDER.indexOf(B);
-  if (ia !== -1 && ib !== -1) return ia - ib;
-  if (ia !== -1) return -1;
-  if (ib !== -1) return 1;
-  return A.localeCompare(B);
+function isAllowedAdultSize(label: string): label is AllowedAdult {
+  return ADULT_ALLOWED_ORDER.includes(label as AllowedAdult);
+}
+function isKidsLabel(s: string) {
+  const t = s.trim().toUpperCase();
+  if (/^\d+\s*Y$/.test(t)) return true;             // 6Y
+  if (/^\d+\s*-\s*\d+\s*Y$/.test(t)) return true;   // 10-11Y
+  if (/^\d+\s*(YR|YRS|YEAR|YEARS)$/.test(t)) return true;
+  if (/^\d+\s*(ANOS|AÑOS)$/.test(t)) return true;
+  if (/^(KID|KIDS|CHILD|JUNIOR|JR)\b/.test(t)) return true;
+  if (/\b(JR|JUNIOR|KID|KIDS)$/.test(t)) return true;
+  return false;
+}
+function indexInOrder(value: string, order: readonly string[]) {
+  const i = order.indexOf(value.toUpperCase());
+  return i === -1 ? Number.POSITIVE_INFINITY : i;
+}
+function sortByOrder<T extends { size: string }>(list: T[], order: readonly string[]): T[] {
+  return [...list].sort(
+    (a, b) => indexInOrder(a.size.toUpperCase(), order) - indexInOrder(b.size.toUpperCase(), order)
+  );
 }
 
 export default async function ProductEditPage({
@@ -57,7 +56,7 @@ export default async function ProductEditPage({
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
-      sizes: true, // tem { id, productId, size, available }
+      sizes: true, // { id, productId, size, available }
       options: {
         where: { type: "SIZE" as OptionType },
         include: { values: { select: { value: true, label: true } } },
@@ -66,23 +65,41 @@ export default async function ProductEditPage({
   });
   if (!product) return notFound();
 
-  // --- Determinar quais tamanhos são válidos para ESTE produto ---
-  const sizeGroup = product.options[0]; // se houver múltiplos grupos SIZE, usa o primeiro
-  const allowedSizesSet =
+  // 1) Conjunto permitido derivado do grupo SIZE (se existir) + normalização + filtro S→4XL
+  const sizeGroup = product.options[0] ?? null;
+  const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
       ? new Set(
           sizeGroup.values
-            .map((v) => normalizeSize(v.label || v.value))
-            .filter(Boolean)
+            .map((v) => normalizeAdultSizeLabel(v.label || v.value || ""))
+            .filter((x) => x && isAllowedAdultSize(x))
         )
       : null;
 
-  // Filtra e ordena os SizeStock exibidos
-  const viewSizes = product.sizes
-    .filter((s) =>
-      allowedSizesSet ? allowedSizesSet.has(normalizeSize(s.size)) : true
-    )
-    .sort((a, b) => sizeComparator(a.size, b.size));
+  // 2) Filtra entradas do DB: ignora kids, normaliza rótulos, mantém apenas S→4XL,
+  //    e aplica o allowedFromGroup se existir
+  const normalizedAdults = product.sizes
+    .filter((s) => !isKidsLabel(s.size))
+    .map((s) => ({
+      ...s,
+      size: normalizeAdultSizeLabel(s.size),
+    }))
+    .filter((s) => isAllowedAdultSize(s.size))
+    .filter((s) => (allowedFromGroup ? allowedFromGroup.has(s.size) : true));
+
+  // 3) Dedup (se houver duplicados do mesmo size no DB, mantém o com available=true)
+  const dedupMap = new Map<string, (typeof normalizedAdults)[number]>();
+  for (const s of normalizedAdults) {
+    const key = s.size.toUpperCase();
+    const prev = dedupMap.get(key);
+    if (!prev) dedupMap.set(key, s);
+    else if (prev.available === false && s.available === true) dedupMap.set(key, s);
+  }
+  const viewSizes = sortByOrder(Array.from(dedupMap.values()), ADULT_ALLOWED_ORDER);
+
+  // 4) Texto auxiliar
+  const originCount =
+    allowedFromGroup ? allowedFromGroup.size : ADULT_ALLOWED_ORDER.length;
 
   return (
     <div className="space-y-6">
@@ -112,7 +129,7 @@ export default async function ProductEditPage({
               <label className="text-xs font-medium text-gray-600">Team</label>
               <input
                 name="team"
-                defaultValue={product.team}
+                defaultValue={product.team ?? ""}
                 className="mt-1 w-full rounded-xl border px-3 py-2"
                 required
               />
@@ -177,23 +194,20 @@ export default async function ProductEditPage({
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>
-          {allowedSizesSet && (
-            <span className="text-xs text-gray-500">
-              Showing {viewSizes.length} of {product.sizes.length} sizes (based on
-              product size options)
-            </span>
-          )}
+          <span className="text-xs text-gray-500">
+            Showing {viewSizes.length} of {originCount} adult sizes (S–4XL)
+          </span>
         </div>
 
         {viewSizes.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No sizes to show. Add size options to this product or create size
-            entries only for the sizes you sell.
+            No adult sizes to show (S–4XL). Add size options to this product or
+            create size entries only for the sizes you sell.
           </p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {viewSizes.map((s) => {
-              const unavailable = !s.available; // ✅ booleano
+              const unavailable = !s.available;
               return (
                 <div
                   key={s.id}
