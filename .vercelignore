@@ -1,0 +1,16 @@
+# artefactos e pastas que não precisam de ir para a Vercel
+.next
+out
+dist
+coverage
+node_modules
+*.log
+.DS_Store
+
+# assets brutos/pesados que NÃO devem ir para produção
+public/**/*.psd
+public/**/*.ai
+public/**/*.zip
+public/raw/**
+assets-raw/**
+**/*.tmp
