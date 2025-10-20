@@ -163,28 +163,68 @@ async function createProduct(
 async function main() {
   // ------------------------------- LA LIGA -------------------------------
   await createProduct(
-    "jersey-real-madrid-25-26",
-    "Real Madrid Jersey 25/26",
+    "home-jersey-real-madrid-25-26",
+    "Real Madrid Home Jersey 25/26",
     "Real Madrid",
     "25/26",
-    ["/img/rm-front-25-26.png", "/img/rm-back-25-26.png"],
-    10000,
+    ["/img/RealMadrid/25-26/home/rm-1-25-26-home.png", "/img/RealMadrid/25-26/home/rm-2-25-26-home.png", "/img/RealMadrid/25-26/home/rm-3-25-26-home.png", "/img/RealMadrid/25-26/home/rm-4-25-26-home.png", "/img/RealMadrid/25-26/home/rm-5-25-26-home.png", "/img/RealMadrid/25-26/home/rm-6-25-26-home.png", "/img/RealMadrid/25-26/home/rm-7-25-26-home.png", "/img/RealMadrid/25-26/home/rm-8-25-26-home.png"],
+    3499,
     [
       { value: "laliga",      label: "La Liga Patch",               priceDelta: 500 },
       { value: "ucl",         label: "UEFA Champions League Patch", priceDelta: 700 },
-      { value: "ucl-winners", label: "UCL Winners Patch",           priceDelta: 900 },
     ]
   );
 
   await createProduct(
-    "jersey-barcelona-25-26",
-    "FC Barcelona Jersey 25/26",
+    "away-jersey-real-madrid-25-26",
+    "Real Madrid Away Jersey 25/26",
+    "Real Madrid",
+    "25/26",
+    ["/img/RealMadrid/25-26/away/rm-1-25-26-away.png", "/img/RealMadrid/25-26/away/rm-2-25-26-away.png", "/img/RealMadrid/25-26/away/rm-3-25-26-away.png", "/img/RealMadrid/25-26/away/rm-4-25-26-away.png", "/img/RealMadrid/25-26/away/rm-5-25-26-away.png", "/img/RealMadrid/25-26/away/rm-6-25-26-away.png"],
+    3499,
+    [
+      { value: "laliga",      label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",         label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
+  );
+
+  await createProduct(
+    "third-jersey-real-madrid-25-26",
+    "Real Madrid Third Jersey 25/26",
+    "Real Madrid",
+    "25/26",
+    ["/img/RealMadrid/25-26/third/rm-1-25-26-third.png", "/img/RealMadrid/25-26/third/rm-2-25-26-third.png", "/img/RealMadrid/25-26/third/rm-3-25-26-third.png", "/img/RealMadrid/25-26/third/rm-4-25-26-third.png", "/img/RealMadrid/25-26/third/rm-5-25-26-third.png", "/img/RealMadrid/25-26/third/rm-6-25-26-third.png", "/img/RealMadrid/25-26/third/rm-7-25-26-third.png"],
+    3499,
+    [
+      { value: "laliga",      label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",         label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
+  );
+
+  await createProduct(
+    "home-jersey-barcelona-25-26",
+    "FC Barcelona Home Jersey 25/26",
     "FC Barcelona",
     "25/26",
-    ["/img/fcb-front-25-26.png", "/img/fcb-back-25-26.png"],
-    8999,
+    ["/img/Barcelona/25-26/home/fcb-1-25-26-home.png", "/img/Barcelona/25-26/home/fcb-2-25-26-home.png", "/img/Barcelona/25-26/home/fcb-3-25-26-home.png", "/img/Barcelona/25-26/home/fcb-4-25-26-home.png", "/img/Barcelona/25-26/home/fcb-5-25-26-home.png", "/img/Barcelona/25-26/home/fcb-6-25-26-home.png", "/img/Barcelona/25-26/home/fcb-7-25-26-home.png"],
+    3499,
     [
       { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "laligawinner", label: "La Liga Winner Patch",  priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
+  );
+
+  await createProduct(
+    "away-jersey-barcelona-25-26",
+    "FC Barcelona Away Jersey 25/26",
+    "FC Barcelona",
+    "25/26",
+    ["/img/Barcelona/25-26/away/fcb-1-25-26-away.png", "/img/Barcelona/25-26/away/fcb-2-25-26-away.png", "/img/Barcelona/25-26/away/fcb-3-25-26-away.png", "/img/Barcelona/25-26/away/fcb-4-25-26-away.png", "/img/Barcelona/25-26/away/fcb-5-25-26-away.png", "/img/Barcelona/25-26/away/fcb-6-25-26-away.png", "/img/Barcelona/25-26/away/fcb-7-25-26-away.png"],
+    3499,
+    [
+      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "laligawinner", label: "La Liga Winner Patch",  priceDelta: 500 },
       { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
@@ -195,7 +235,7 @@ async function main() {
     "Atlético de Madrid",
     "25/26",
     ["/img/atm-front-25-26.png", "/img/atm-back-25-26.png"],
-    8999,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -205,7 +245,7 @@ async function main() {
     "Real Betis",
     "25/26",
     ["/img/betis-front-25-26.png", "/img/betis-back-25-26.png"],
-    8499,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -215,7 +255,7 @@ async function main() {
     "Sevilla FC",
     "25/26",
     ["/img/sevilla-front-25-26.png", "/img/sevilla-back-25-26.png"],
-    8499,
+    3499,
     [
       { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
       { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
@@ -228,7 +268,7 @@ async function main() {
     "Real Sociedad",
     "25/26",
     ["/img/realsociedad-front-25-26.png", "/img/realsociedad-back-25-26.png"],
-    8499,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -238,7 +278,7 @@ async function main() {
     "Villarreal",
     "25/26",
     ["/img/villarreal-front-25-26.png", "/img/villarreal-back-25-26.png"],
-    8499,
+    3499,
     [
       { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
       { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
@@ -251,7 +291,7 @@ async function main() {
     "Athletic Club",
     "25/26",
     ["/img/athletic-front-25-26.png", "/img/athletic-back-25-26.png"],
-    8299,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -261,7 +301,7 @@ async function main() {
     "Getafe CF",
     "25/26",
     ["/img/getafe-front-25-26.png", "/img/getafe-back-25-26.png"],
-    8999,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -271,7 +311,7 @@ async function main() {
     "Elche CF",
     "25/26",
     ["/img/elche-front-25-26.png", "/img/elche-back-25-26.png"],
-    8999,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -281,7 +321,7 @@ async function main() {
     "Valencia CF",
     "25/26",
     ["/img/valencia-front-25-26.png", "/img/valencia-back-25-26.png"],
-    8999,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -291,7 +331,7 @@ async function main() {
     "RCD Espanyol",
     "25/26",
     ["/img/espanyol-front-25-26.png", "/img/espanyol-back-25-26.png"],
-    8999,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -301,7 +341,7 @@ async function main() {
     "Alavés",
     "25/26",
     ["/img/alaves-front-25-26.png", "/img/alaves-back-25-26.png"],
-    8999,
+    3499,
     [{ value: "laliga", label: "La Liga Patch", priceDelta: 500 }]
   );
 
@@ -311,21 +351,8 @@ async function main() {
     "SL Benfica Jersey 25/26",
     "SL Benfica",
     "25/26",
-    ["/img/slb-front-25-26.png", "/img/slb-back-25-26.png"],
-    8499,
-    [
-      { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
-      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
-    ]
-  );
-
-  await createProduct(
-    "jersey-sporting-25-26",
-    "Sporting CP Jersey 25/26",
-    "Sporting CP",
-    "25/26",
-    ["/img/scp-front-25-26.png", "/img/scp-back-25-26.png"],
-    8499,
+    ["/img/Benfica/25-26/slb-front-25-26.png", "/img/Benfica/25-26/slb-back-25-26.png"],
+    3499,
     [
       { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
       { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
@@ -337,8 +364,21 @@ async function main() {
     "FC Porto Jersey 25/26",
     "FC Porto",
     "25/26",
-    ["/img/fcp-front-25-26.png", "/img/fcp-back-25-26.png"],
-    8499,
+    ["/img/Porto/25-26/fcp-front-25-26.png", "/img/Porto/25-26/fcp-back-25-26.png"],
+    3499,
+    [
+      { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
+    ]
+  );
+
+  await createProduct(
+    "jersey-sporting-25-26",
+    "Sporting CP Jersey 25/26",
+    "Sporting CP",
+    "25/26",
+    ["/img/Sporting/25-26/scp-front-25-26.png", "/img/Sporting/25-26/scp-back-25-26.png"],
+    3499,
     [
       { value: "ligaportugal", label: "Liga Portugal Patch",         priceDelta: 500 },
       { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
@@ -351,7 +391,7 @@ async function main() {
     "SC Braga",
     "25/26",
     ["/img/braga-front-25-26.png", "/img/braga-back-25-26.png"],
-    7999,
+    3499,
     [{ value: "ligaportugal", label: "Liga Portugal Patch", priceDelta: 500 }]
   );
 
@@ -361,7 +401,7 @@ async function main() {
     "Vitória SC",
     "25/26",
     ["/img/vsc-front-25-26.png", "/img/vsc-back-25-26.png"],
-    7999,
+    3499,
     [{ value: "ligaportugal", label: "Liga Portugal Patch", priceDelta: 500 }]
   );
 }
