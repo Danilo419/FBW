@@ -97,7 +97,7 @@ export default function ProductConfigurator({ product }: { product: ProductClien
       return;
     }
 
-    // Integra aqui com a tua store/API de carrinho
+    // Integra aqui com a tua store/API do carrinho
     console.log("ADD TO CART", {
       productId: product.id,
       slug: product.slug,
