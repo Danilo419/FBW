@@ -6,9 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { Prisma, CartItem } from "@prisma/client";
+import { removeItem } from "./actions"; // importa a server action
 
 export const dynamic = "force-dynamic";
 
@@ -31,45 +30,8 @@ type CartWithItems = Prisma.CartGetPayload<{
   };
 }>;
 
-// Server Action to remove an item (id is a string)
-export async function removeItem(formData: FormData) {
-  "use server";
-
-  const jar = await cookies();
-  const sid = jar.get("sid")?.value ?? null;
-
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id ?? null;
-
-  const itemId = formData.get("itemId");
-  if (!itemId || typeof itemId !== "string") {
-    redirect("/cart");
-  }
-
-  try {
-    const currentCart = await prisma.cart.findFirst({
-      where: {
-        OR: [
-          userId ? { userId } : undefined,
-          sid ? { sessionId: sid } : undefined,
-        ].filter(Boolean) as any,
-      },
-      select: { id: true },
-    });
-
-    if (currentCart) {
-      await prisma.cartItem.deleteMany({
-        where: { id: itemId, cartId: currentCart.id },
-      });
-    }
-  } finally {
-    revalidatePath("/cart");
-    redirect("/cart");
-  }
-}
-
 export default async function CartPage() {
-  const cookieStore = await cookies();
+  const cookieStore = await cookies(); // ✅ no teu TS, cookies() é Promise
   const sid = cookieStore.get("sid")?.value ?? null;
 
   const session = await getServerSession(authOptions);

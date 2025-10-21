@@ -3,11 +3,13 @@
 
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
+/* ========= validação ========= */
 const AddToCartSchema = z.object({
   productId: z.string().min(1),
-  qty: z.number().int().min(1).max(99),
+  qty: z.coerce.number().int().min(1).max(99),
   options: z.record(z.string(), z.string().nullable()).default({}),
   personalization: z
     .object({
@@ -18,11 +20,21 @@ const AddToCartSchema = z.object({
     .optional()
     .nullable(),
 });
-
 type AddToCartInput = z.infer<typeof AddToCartSchema>;
 
+/* ========= helpers ========= */
+function normalizeOptions(obj?: Record<string, string | null>) {
+  if (!obj) return {};
+  const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '');
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  return Object.fromEntries(entries);
+}
+function sameJson(a: unknown, b: unknown) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 async function getOrCreateCart() {
-  const jar = await cookies();
+  const jar = await cookies(); // ✅ no teu setup é Promise<ReadonlyRequestCookies>
 
   const existingSid = jar.get('sid')?.value ?? null;
   const userId: string | null = null; // se tiveres auth, mete aqui
@@ -36,14 +48,19 @@ async function getOrCreateCart() {
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 dias
-  jar.set('sid', newSid, { httpOnly: true, sameSite: 'lax', path: '/', expires });
+  jar.set('sid', newSid, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    expires,
+    secure: true, // ✅ em prod
+  });
 
   return prisma.cart.create({
     data: { sessionId: newSid, userId: userId ?? null },
   });
 }
 
-/** PREÇO BASE APENAS */
 async function getBaseUnitPrice(productId: string): Promise<number> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -53,17 +70,7 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
   return product.basePrice;
 }
 
-function normalizeOptions(obj?: Record<string, string | null>) {
-  if (!obj) return {};
-  const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '');
-  entries.sort(([a], [b]) => a.localeCompare(b));
-  return Object.fromEntries(entries);
-}
-
-function sameJson(a: unknown, b: unknown) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
+/* ========= actions ========= */
 export async function addToCartAction(raw: AddToCartInput) {
   try {
     const input = AddToCartSchema.parse(raw);
@@ -74,20 +81,16 @@ export async function addToCartAction(raw: AddToCartInput) {
     const optionsJson = normalizeOptions(input.options ?? undefined);
     const personalization = input.personalization ?? null;
 
-    // ⚠️ NÃO comparar JSON no `where`.
-    // Buscar todas as linhas do mesmo produto e comparar em JS.
+    // procurar linhas iguais (mesmo produto + mesmas opções/personalização)
     const siblings = await prisma.cartItem.findMany({
-      where: {
-        cartId: cart.id,
-        productId: input.productId,
-      },
+      where: { cartId: cart.id, productId: input.productId },
       select: {
         id: true,
         qty: true,
-        optionsJson: true,          // ajusta o nome se no teu schema for diferente
-        personalization: true,      // idem: se for personalizationJson, troca aqui e no create/update
+        optionsJson: true,     // ajusta se no schema o nome for diferente
+        personalization: true, // idem
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'asc' }, // garante ordem determinística
     });
 
     const existing = siblings.find(
@@ -102,7 +105,7 @@ export async function addToCartAction(raw: AddToCartInput) {
         where: { id: existing.id },
         data: {
           qty: newQty,
-          unitPrice,                      // sempre base
+          unitPrice, // base
           totalPrice: unitPrice * newQty,
           optionsJson: optionsJson as any,
           personalization: personalization as any,
@@ -114,16 +117,21 @@ export async function addToCartAction(raw: AddToCartInput) {
           cartId: cart.id,
           productId: input.productId,
           qty: input.qty,
-          unitPrice,                      // ✅ base
+          unitPrice, // base
           totalPrice: unitPrice * input.qty,
-          optionsJson: optionsJson as any,         // apenas informativo
-          personalization: personalization as any, // apenas informativo
+          optionsJson: optionsJson as any,
+          personalization: personalization as any,
         },
       });
     }
 
     const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
-    return { ok: true as const, cartId: cart.id, count, totalPrice: unitPrice * input.qty };
+    return {
+      ok: true as const,
+      cartId: cart.id,
+      count, // nº de linhas
+      lineTotal: unitPrice * input.qty, // total da operação atual
+    };
   } catch (err) {
     console.error('[addToCartAction] failed:', err);
     return { ok: false as const, error: 'ADD_TO_CART_FAILED' };
@@ -131,7 +139,7 @@ export async function addToCartAction(raw: AddToCartInput) {
 }
 
 export async function getCartSummary() {
-  const jar = await cookies();
+  const jar = await cookies(); // ✅ usar await
   const sid = jar.get('sid')?.value ?? null;
   if (!sid) return { count: 0, total: 0 };
 
@@ -142,4 +150,33 @@ export async function getCartSummary() {
 
   const total = items.reduce((acc, it) => acc + it.totalPrice, 0);
   return { count: items.length, total };
+}
+
+/* ====== EXTRA: mover estas actions para fora do page.tsx ====== */
+
+export async function removeItem(formData: FormData) {
+  const id = formData.get('itemId');
+  if (!id || typeof id !== 'string') return;
+  try {
+    await prisma.cartItem.delete({ where: { id } });
+  } catch {}
+  revalidatePath('/cart');
+}
+
+export async function updateQty(formData: FormData) {
+  const id = formData.get('itemId');
+  const qty = Number(formData.get('qty'));
+  if (!id || typeof id !== 'string' || !Number.isFinite(qty) || qty < 1) return;
+  try {
+    const item = await prisma.cartItem.update({
+      where: { id },
+      data: { qty, totalPrice: { set: undefined } }, // opcional: se calculas noutro lado
+    });
+    // se quiseres recalcular aqui:
+    await prisma.cartItem.update({
+      where: { id },
+      data: { totalPrice: item.unitPrice * qty },
+    });
+  } catch {}
+  revalidatePath('/cart');
 }
