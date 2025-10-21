@@ -34,6 +34,46 @@ import {
 
 const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
 
+/** <SafeImg> — tenta .png se falhar e depois usa fallback */
+function SafeImg(
+  props: React.ImgHTMLAttributes<HTMLImageElement> & { forcePngFirst?: boolean }
+) {
+  const { src = '', alt = '', className, forcePngFirst, ...rest } = props
+  const [currentSrc, setCurrentSrc] = useState(() => {
+    if (forcePngFirst) {
+      return String(src).replace(/\.(jpe?g|webp)$/i, '.png')
+    }
+    return String(src)
+  })
+
+  const triedPngRef = useRef(forcePngFirst ?? false)
+  const fallbackRef = useRef(false)
+
+  return (
+    <img
+      {...rest}
+      src={currentSrc}
+      alt={alt}
+      className={className}
+      onError={(e) => {
+        const el = e.currentTarget as HTMLImageElement
+        if (!triedPngRef.current) {
+          triedPngRef.current = true
+          const png = currentSrc.replace(/\.(jpe?g|webp)$/i, '.png')
+          if (png !== currentSrc) {
+            setCurrentSrc(png)
+            return
+          }
+        }
+        if (!fallbackRef.current) {
+          fallbackRef.current = true
+          el.src = FALLBACK_IMG
+        }
+      }}
+    />
+  )
+}
+
 /** Spotlight that follows the cursor */
 function Spotlight({
   className = '',
@@ -566,15 +606,16 @@ type Product = {
   img: string
   tag?: string
 }
+
 const products: Product[] = [
-  { id: 'kit-aurora',  name: 'Aurora Kit (concept)',  price: 59.9, img: '/images/products/aurora.jpg',  tag: 'New' },
-  { id: 'street-pro',  name: 'Street Pro (concept)',  price: 54.9, img: '/images/products/street-pro.jpg', tag: 'Best-seller' },
-  { id: 'cosmos',      name: 'Cosmos (concept)',      price: 64.9, img: '/images/products/cosmos.jpg' },
-  { id: 'voltage',     name: 'Voltage (concept)',     price: 49.9, img: '/images/products/voltage.jpg' },
-  { id: 'cobalt',      name: 'Cobalt (concept)',      price: 52.9, img: '/images/products/cobalt.jpg' },
-  { id: 'nebula',      name: 'Nebula (limited)',      price: 67.9, img: '/images/products/nebula.jpg', tag: 'Limited' },
-  { id: 'wave',        name: 'Wave (concept)',        price: 57.5, img: '/images/products/wave.jpg' },
-  { id: 'onyx',        name: 'Onyx (concept)',        price: 62.0, img: '/images/products/onyx.jpg' },
+  { id: 'kit-aurora',  name: 'Aurora Kit (concept)',  price: 59.9, img: '/images/products/aurora.png',  tag: 'New' },
+  { id: 'street-pro',  name: 'Street Pro (concept)',  price: 54.9, img: '/images/products/street-pro.png', tag: 'Best-seller' },
+  { id: 'cosmos',      name: 'Cosmos (concept)',      price: 64.9, img: '/images/products/cosmos.png' },
+  { id: 'voltage',     name: 'Voltage (concept)',     price: 49.9, img: '/images/products/voltage.png' },
+  { id: 'cobalt',      name: 'Cobalt (concept)',      price: 52.9, img: '/images/products/cobalt.png' },
+  { id: 'nebula',      name: 'Nebula (limited)',      price: 67.9, img: '/images/products/nebula.png', tag: 'Limited' },
+  { id: 'wave',        name: 'Wave (concept)',        price: 57.5, img: '/images/products/wave.png' },
+  { id: 'onyx',        name: 'Onyx (concept)',        price: 62.0, img: '/images/products/onyx.png' },
 ]
 const eur = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })
 
@@ -636,18 +677,12 @@ function ImageSpaces() {
           className="group relative overflow-hidden rounded-3xl ring-1 ring-black/5"
         >
           <div className="relative aspect-[16/10] sm:aspect-[5/6]">
-            <img
+            <SafeImg
               src={s.img}
               alt={s.alt || s.label}
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement
-                if ((img as any)._fallbackApplied) return
-                ;(img as any)._fallbackApplied = true
-                img.src = FALLBACK_IMG
-                img.style.objectPosition = 'center'
-              }}
+              forcePngFirst
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
             <div className="absolute inset-x-0 bottom-0 p-4">
@@ -788,17 +823,12 @@ export default function Home() {
                   className="group product-hover transition"
                 >
                   <div className="relative aspect-[4/5] overflow-hidden rounded-3xl">
-                    <img
+                    <SafeImg
                       src={p.img}
                       alt={p.name}
                       loading="lazy"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      onError={(e) => {
-                        const img = e.currentTarget as HTMLImageElement
-                        if ((img as any)._fallbackApplied) return
-                        ;(img as any)._fallbackApplied = true
-                        img.src = FALLBACK_IMG
-                      }}
+                      forcePngFirst
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
                     {p.tag && (
