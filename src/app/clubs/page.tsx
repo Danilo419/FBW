@@ -1,41 +1,46 @@
 // src/app/clubs/page.tsx
-import { Suspense } from "react";
-import { prisma } from "@/lib/prisma";
-import ClubsClient from "./ClubsClient";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type ClubCard = { name: string; image?: string | null };
+import { prisma } from "@/lib/prisma";
+import ClubsClient from "./ClubsClient";
+import { slugifyClub } from "../../lib/clubs";
 
-export default async function ClubsPage() {
-  const rows = await prisma.product.findMany({
-    select: { team: true, images: true },
+type ClubRow = { team: string | null };
+
+async function getDistinctClubs(): Promise<{ name: string; slug: string }[]> {
+  const rows: ClubRow[] = await prisma.product.findMany({
+    // sem "where" – evita o erro de tipos
+    distinct: ["team"],
+    select: { team: true },
     orderBy: { team: "asc" },
   });
 
-  const map = new Map<string, string | null>();
-  for (const r of rows) {
-    const team = (r.team || "").trim();
-    if (!team) continue; // evita vazios
-    if (!map.has(team)) {
-      const imgArr = Array.isArray(r.images) ? r.images : [];
-      const firstImg =
-        imgArr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
-      map.set(team, firstImg);
+  const clubs = rows
+    .filter((r) => typeof r.team === "string" && r.team.trim().length > 0)
+    .map((r) => {
+      const name = (r.team as string).trim();
+      return { name, slug: slugifyClub(name) };
+    });
+
+  const seen = new Set<string>();
+  const unique: { name: string; slug: string }[] = [];
+  for (const c of clubs) {
+    if (!seen.has(c.slug)) {
+      seen.add(c.slug);
+      unique.push(c);
     }
   }
+  return unique;
+}
 
-  const clubs: ClubCard[] = Array.from(map.entries())
-    .map(([name, image]) => ({ name, image }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+export default async function ClubsPage() {
+  const clubs = await getDistinctClubs();
 
   return (
-    <main className="container-fw py-10 space-y-6">
-      <h1 className="text-3xl font-extrabold tracking-tight">Clubs</h1>
-      <Suspense fallback={<div className="rounded-2xl border bg-white p-5 text-center">Loading clubs…</div>}>
-        <ClubsClient initialClubs={clubs} />
-      </Suspense>
-    </main>
+    <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-10">
+      <h1 className="text-3xl font-bold mb-8">Clubs</h1>
+      <ClubsClient clubs={clubs} />
+    </div>
   );
 }

@@ -1,57 +1,67 @@
 // src/app/clubs/ClubsClient.tsx
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { clubImagePath } from "../../lib/clubs"; // <-- import relativo
 
-type ClubCard = { name: string; image?: string | null };
+type Club = { name: string; slug: string };
 
-function slugify(s: string) {
-  return s
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+export default function ClubsClient({ clubs }: { clubs: Club[] }) {
+  const [q, setQ] = useState("");
 
-export default function ClubsClient({ initialClubs = [] as ClubCard[] }) {
-  const clubs = Array.from(
-    new Map(initialClubs.map((c) => [c.name, c])) // dedup
-  ).map(([, v]) => v);
-
-  if (!clubs.length) {
-    return <div className="p-10 text-center text-xl">No clubs found.</div>;
-  }
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return clubs;
+    return clubs.filter((c) => c.name.toLowerCase().includes(term));
+  }, [q, clubs]);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-      {clubs.map(({ name, image }) => {
-        const slug = slugify(name);
-        const display = name.replace(/-/g, " ");
-        const img = image || "/placeholder.png";
-        return (
-          <motion.div key={name} whileHover={{ y: -6 }} className="group product-hover">
-            <Link href={`/clubs/${slug}`} aria-label={`Open ${display}`}>
-              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border bg-white">
+    <>
+      <div className="mb-6">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search clubs…"
+          className="w-full md:w-96 rounded-xl border px-4 py-2 outline-none focus:ring-2 focus:ring-black/10"
+          aria-label="Search clubs"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filtered.map((club) => {
+          const img = clubImagePath(club.slug);
+          const href = `/products?team=${encodeURIComponent(club.name)}`;
+
+          return (
+            <Link
+              key={club.slug}
+              href={href}
+              className="group rounded-2xl border bg-white hover:shadow-md transition overflow-hidden"
+            >
+              <div className="aspect-[4/3] w-full relative bg-neutral-50">
                 <Image
                   src={img}
-                  alt={display}
+                  alt={club.name}
                   fill
-                  className="object-contain p-6 transition-transform duration-300 group-hover:scale-105"
-                  sizes="(min-width:1024px) 220px, 45vw"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-contain p-6 transition group-hover:scale-[1.02]"
                 />
-                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-white/90 to-transparent">
-                  <span className="block text-center text-sm font-semibold capitalize line-clamp-1">
-                    {display}
-                  </span>
-                </div>
+              </div>
+              <div className="px-4 py-3 border-t">
+                <div className="font-medium">{club.name}</div>
               </div>
             </Link>
-          </motion.div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="text-sm text-neutral-500 mt-6">
+          No clubs found for “{q}”.
+        </p>
+      )}
+    </>
   );
 }
