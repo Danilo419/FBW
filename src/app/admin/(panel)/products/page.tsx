@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import FWImage from "@/components/FWImage";
+import Image from "next/image";
 
 function fmtMoneyFromCents(cents: number, currency = "EUR") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(
@@ -23,6 +23,7 @@ export default async function ProductsPage() {
       season: true,
       basePrice: true,
       images: true, // String[] of URLs (first = main)
+      // ✅ schema novo: SizeStock tem { id, size, available }
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
     },
@@ -59,7 +60,7 @@ export default async function ProductsPage() {
                 </tr>
               )}
               {products.map((p) => {
-                const mainImageUrl = p.images?.[0] ?? "/placeholder.png";
+                const mainImageUrl = p.images?.[0] ?? "";
                 const availableCount = p.sizes.filter((s) => s.available).length;
 
                 return (
@@ -67,7 +68,7 @@ export default async function ProductsPage() {
                     <td className="py-2 pr-3">
                       <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50">
                         {mainImageUrl ? (
-                          <FWImage
+                          <Image
                             src={mainImageUrl}
                             alt={p.name}
                             width={56}

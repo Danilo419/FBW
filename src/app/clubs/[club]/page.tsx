@@ -1,8 +1,8 @@
 // src/app/clubs/[club]/page.tsx
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import FWImage from "@/components/FWImage";
 
 /** Render sempre em runtime (sem SSG/ISR) */
 export const revalidate = 0;
@@ -89,7 +89,7 @@ export default async function ClubProductsPage({ params }: PageProps) {
               className="group rounded-2xl border bg-white overflow-hidden"
             >
               <div className="relative aspect-[4/5]">
-                <FWImage
+                <Image
                   src={img}
                   alt={p.name}
                   fill
