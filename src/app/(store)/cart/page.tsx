@@ -1,5 +1,4 @@
 // src/app/(store)/cart/page.tsx
-import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
@@ -9,6 +8,7 @@ import { formatMoney } from "@/lib/money";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma, CartItem } from "@prisma/client";
+import FWImage from "@/components/FWImage";
 
 export const dynamic = "force-dynamic";
 
@@ -159,7 +159,7 @@ export default async function CartPage() {
             >
               <div className="flex gap-4 sm:gap-5">
                 <div className="relative h-28 w-24 sm:h-32 sm:w-28 overflow-hidden rounded-xl border">
-                  <Image
+                  <FWImage
                     src={cover}
                     alt={it.product.name}
                     fill
