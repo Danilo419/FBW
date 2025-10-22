@@ -71,7 +71,8 @@ export default function ProductConfigurator({ product }: Props) {
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
-  const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
+  const STRIP_MAX_W =
+    MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -129,7 +130,8 @@ export default function ProductConfigurator({ product }: Props) {
   const showBadgePicker =
     typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
 
-  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) =>
+    setSelected((s) => ({ ...s, [key]: value || null }));
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
@@ -151,7 +153,7 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize inputs ---------- */
+  /* ---------- Sanitize ---------- */
   const safeName = useMemo(
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
     [custName]
@@ -161,13 +163,14 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]'))
-      .filter((el) => {
-        const r = el.getBoundingClientRect();
-        const visible = r.width > 0 && r.height > 0;
-        const style = window.getComputedStyle(el);
-        return visible && style.visibility !== "hidden" && style.opacity !== "0";
-      });
+    const anchors = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
+    ).filter((el) => {
+      const r = el.getBoundingClientRect();
+      const visible = r.width > 0 && r.height > 0;
+      const style = window.getComputedStyle(el);
+      return visible && style.visibility !== "hidden" && style.opacity !== "0";
+    });
     if (anchors.length === 0) return null;
 
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
@@ -253,7 +256,7 @@ export default function ProductConfigurator({ product }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  /* ---------- Add to cart (como declaração de função, hoisted) ---------- */
+  /* ---------- Add to cart ---------- */
   function addToCart() {
     if (!selectedSize) {
       alert("Please choose a size first.");
@@ -301,21 +304,23 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      <div className="rounded-2xl border bg-white p-0 w-full lg:w-[480px] flex-none lg:self-start">
-        <div ref={imgWrapRef} className="relative aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-white">
-          <div className="absolute inset-0 p-6 md:p-8 lg:p-10">
-            <div className="relative h-full w-full">
-              <Image
-                src={activeSrc}
-                alt={product.name}
-                fill
-                className="object-contain"
-                sizes="(min-width: 1024px) 460px, 100vw"
-                priority
-              />
-            </div>
-          </div>
+      {/* p-6 para igualar o respiro do cartão da direita (setas azuis) */}
+      <div className="rounded-2xl border bg-white p-6 w-full lg:w-[480px] flex-none lg:self-start">
+        {/* Área 3:4 SEM padding interno excessivo (elimina diferenças de topo/fundo) */}
+        <div
+          ref={imgWrapRef}
+          className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
+        >
+          <Image
+            src={activeSrc}
+            alt={product.name}
+            fill
+            className="object-contain"
+            sizes="(min-width: 1024px) 460px, 100vw"
+            priority
+          />
 
+          {/* Setas */}
           {images.length > 1 && (
             <>
               <button
@@ -338,9 +343,9 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs */}
+        {/* Thumbs — espaçamento controlado para não “estufar” o fundo */}
         {images.length > 1 && (
-          <div className="border-t rounded-b-2xl p-2">
+          <div className="mt-4">
             <div
               ref={thumbsRef}
               className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none]"
@@ -418,7 +423,11 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="text-sm text-gray-500">No sizes available.</div>
           )}
 
-          {kid && <p className="mt-2 text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>}
+          {kid && (
+            <p className="mt-2 text-xs text-gray-500">
+              Ages are approximate. If in between, we recommend sizing up.
+            </p>
+          )}
         </div>
 
         {/* Customization (FREE) */}
@@ -464,7 +473,9 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
             </div>
-            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+            <p className="text-xs text-gray-500">
+              Personalization will be printed in the club’s official style.
+            </p>
           </div>
         )}
 
