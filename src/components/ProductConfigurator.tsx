@@ -12,12 +12,12 @@ type OptionValueUI = {
   id: string;
   value: string;
   label: string;
-  priceDelta: number; // cents (ignored now)
+  priceDelta: number;
 };
 
 type OptionGroupUI = {
   id: string;
-  key: string; // e.g., "customization", "badges"
+  key: string;
   label: string;
   type: "SIZE" | "RADIO" | "ADDON";
   required: boolean;
@@ -26,8 +26,8 @@ type OptionGroupUI = {
 
 type SizeUI = {
   id: string;
-  size: string; // e.g., "S", "M", "L", "10-11"
-  stock: number; // <= 0 => unavailable
+  size: string;
+  stock: number;
 };
 
 type ProductUI = {
@@ -36,7 +36,7 @@ type ProductUI = {
   name: string;
   team?: string | null;
   description?: string | null;
-  basePrice: number; // cents
+  basePrice: number;
   images: string[];
   optionGroups: OptionGroupUI[];
   sizes?: SizeUI[];
@@ -48,9 +48,8 @@ type Props = { product: ProductUI };
 /* ====================== Helpers ====================== */
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
-
 const isKidProduct = (name: string) => /kid/i.test(name);
-const classNames = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
+const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<SelectedState>({});
@@ -68,25 +67,20 @@ export default function ProductConfigurator({ product }: Props) {
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbnail strip settings (max 6 visíveis) ---------- */
+  /* ---------- Thumbs (máx 6 visíveis) ---------- */
   const MAX_VISIBLE_THUMBS = 6;
-  const THUMB_W = 68; // px (reduzido de 80)
-  const GAP = 8; // px
+  const THUMB_W = 68;
+  const GAP = 8;
   const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
-
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
-  // Mantém a ativa visível com 2 anteriores quando possível
   useEffect(() => {
     const cont = thumbsRef.current;
     if (!cont) return;
-
     const itemWidth = THUMB_W + GAP;
     const maxScroll = cont.scrollWidth - cont.clientWidth;
-
     let desired = Math.max(0, (activeIndex - 2) * itemWidth);
     desired = Math.min(desired, Math.max(0, maxScroll));
-
     cont.scrollTo({ left: desired, behavior: "smooth" });
   }, [activeIndex]);
 
@@ -130,7 +124,6 @@ export default function ProductConfigurator({ product }: Props) {
   );
 
   const customization = selected["customization"] ?? "";
-  theBadgePicker: 0;
   const showNameNumber =
     typeof customization === "string" && customization.toLowerCase().includes("name-number");
   const showBadgePicker =
@@ -158,21 +151,23 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Input sanitization ---------- */
-  const safeName = useMemo(() => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14), [custName]);
+  /* ---------- Sanitize inputs ---------- */
+  const safeName = useMemo(
+    () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
+    [custName]
+  );
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter(
-      (el) => {
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]'))
+      .filter((el) => {
         const r = el.getBoundingClientRect();
         const visible = r.width > 0 && r.height > 0;
         const style = window.getComputedStyle(el);
         return visible && style.visibility !== "hidden" && style.opacity !== "0";
-      }
-    );
+      });
     if (anchors.length === 0) return null;
 
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
@@ -195,14 +190,12 @@ export default function ProductConfigurator({ product }: Props) {
     }
     return best.getBoundingClientRect();
   }
-
   function pulseCart() {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
     setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
-
   function flyToCart() {
     if (typeof document === "undefined") return;
     const start = imgWrapRef.current?.getBoundingClientRect();
@@ -218,7 +211,7 @@ export default function ProductConfigurator({ product }: Props) {
       top: `${start.top}px`,
       width: `${start.width}px`,
       height: `${start.height}px`,
-      objectFit: "cover",
+      objectFit: "contain",
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
@@ -247,11 +240,10 @@ export default function ProductConfigurator({ product }: Props) {
     ghost.addEventListener("transitionend", cleanup);
   }
 
-  /* ---------- Image navigation ---------- */
+  /* ---------- Navegação ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
 
-  // Keyboard arrows
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") goPrev();
@@ -261,8 +253,8 @@ export default function ProductConfigurator({ product }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  /* ---------- Add to cart ---------- */
-  const addToCart = () => {
+  /* ---------- Add to cart (como declaração de função, hoisted) ---------- */
+  function addToCart() {
     if (!selectedSize) {
       alert("Please choose a size first.");
       return;
@@ -299,7 +291,7 @@ export default function ProductConfigurator({ product }: Props) {
       window.setTimeout(() => setShowToast(false), 2000);
       window.setTimeout(() => setJustAdded(false), 900);
     });
-  };
+  }
 
   /* ---------- UI ---------- */
   return (
@@ -308,23 +300,22 @@ export default function ProductConfigurator({ product }: Props) {
         {showToast ? "Item added to cart." : ""}
       </div>
 
-      {/* Gallery (p-0 remove espaços brancos) */}
+      {/* ===== GALLERY ===== */}
       <div className="rounded-2xl border bg-white p-0 w-full lg:w-[480px] flex-none lg:self-start">
-        {/* Main image — object-cover para eliminar barras em cima/baixo */}
-        <div
-          ref={imgWrapRef}
-          className="relative aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-white"
-        >
-          <Image
-            src={activeSrc}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(min-width: 1024px) 480px, 100vw"
-            priority
-          />
+        <div ref={imgWrapRef} className="relative aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-white">
+          <div className="absolute inset-0 p-6 md:p-8 lg:p-10">
+            <div className="relative h-full w-full">
+              <Image
+                src={activeSrc}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(min-width: 1024px) 460px, 100vw"
+                priority
+              />
+            </div>
+          </div>
 
-          {/* Prev/Next buttons */}
           {images.length > 1 && (
             <>
               <button
@@ -347,7 +338,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbnails (máx. 6 visíveis; mantém 2 anteriores quando possível) */}
+        {/* Thumbs */}
         {images.length > 1 && (
           <div className="border-t rounded-b-2xl p-2">
             <div
@@ -365,9 +356,9 @@ export default function ProductConfigurator({ product }: Props) {
                       data-thumb={i}
                       type="button"
                       onClick={() => setActiveIndex(i)}
-                      className={classNames(
+                      className={cx(
                         "relative overflow-hidden rounded-xl border transition flex-none",
-                        "h-[82px] w-[68px]", // reduzido
+                        "h-[82px] w-[68px]",
                         isActive ? "ring-2 ring-blue-600" : "hover:opacity-90"
                       )}
                       aria-label={`Image ${i + 1}`}
@@ -382,7 +373,7 @@ export default function ProductConfigurator({ product }: Props) {
         )}
       </div>
 
-      {/* Configurator */}
+      {/* ===== CONFIGURATOR ===== */}
       <div className="card p-6 space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
@@ -398,7 +389,7 @@ export default function ProductConfigurator({ product }: Props) {
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
-        {sizes.length > 0 ? (
+          {sizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {sizes.map((s) => {
                 const unavailable = (s.stock ?? 0) <= 0;
@@ -411,7 +402,7 @@ export default function ProductConfigurator({ product }: Props) {
                     disabled={unavailable}
                     aria-disabled={unavailable}
                     title={unavailable ? "Unavailable" : `Select size ${s.size}`}
-                    className={classNames(
+                    className={cx(
                       "rounded-xl px-3 py-2 border text-sm transition",
                       unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
                       isActive && "bg-blue-600 text-white border-blue-600"
@@ -427,11 +418,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="text-sm text-gray-500">No sizes available.</div>
           )}
 
-          {kid && (
-            <p className="mt-2 text-xs text-gray-500">
-              Ages are approximate. If in between, we recommend sizing up.
-            </p>
-          )}
+          {kid && <p className="mt-2 text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>}
         </div>
 
         {/* Customization (FREE) */}
@@ -477,32 +464,18 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
             </div>
-            <p className="text-xs text-gray-500">
-              Personalization will be printed in the club’s official style.
-            </p>
+            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
           </div>
         )}
 
         {/* Badges (FREE) */}
         {showBadgePicker && badgesGroup && (
-          <GroupBlock
-            group={badgesGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-            forceFree
-          />
+          <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
         )}
 
         {/* Other groups */}
         {otherGroups.map((g) => (
-          <GroupBlock
-            key={g.id}
-            group={g}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-          />
+          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
         ))}
 
         {/* Qty + Total */}
@@ -536,7 +509,7 @@ export default function ProductConfigurator({ product }: Props) {
         {/* Add to cart */}
         <motion.button
           onClick={addToCart}
-          className={classNames(
+          className={cx(
             "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2",
             justAdded && "bg-green-600 hover:bg-green-600"
           )}
@@ -693,41 +666,21 @@ function GroupBlock({
 /* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      className={classNames("h-5 w-5", props.className)}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
-
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} viewBox="0 0 24 24" className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform" fill="none" aria-hidden="true">
       <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
-
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} viewBox="0 0 24 24" className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform" fill="none" aria-hidden="true">
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
