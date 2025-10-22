@@ -68,31 +68,27 @@ export default function ProductConfigurator({ product }: Props) {
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbnail strip settings ---------- */
+  /* ---------- Thumbnail strip settings (max 6 visíveis) ---------- */
   const MAX_VISIBLE_THUMBS = 6;
-  const THUMB_W = 80; // px
-  const GAP = 8; // px
+  const THUMB_W = 80; // px => w-[80px]
+  const GAP = 8; // px => gap-2
   const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
 
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
-  // Keep active thumbnail visible in the strip (smooth scroll)
+  // MANTER A ATIVA VISÍVEL com 2 anteriores à esquerda (quando possível)
   useEffect(() => {
     const cont = thumbsRef.current;
     if (!cont) return;
-    const el = cont.querySelector<HTMLElement>(`[data-thumb="${activeIndex}"]`);
-    if (!el) return;
 
-    const cLeft = cont.scrollLeft;
-    const cRight = cLeft + cont.clientWidth;
-    const eLeft = el.offsetLeft;
-    const eRight = eLeft + el.clientWidth;
+    const itemWidth = THUMB_W + GAP;
+    const maxScroll = cont.scrollWidth - cont.clientWidth;
 
-    if (eLeft < cLeft || eRight > cRight) {
-      const target =
-        eLeft - (cont.clientWidth / 2 - el.clientWidth / 2); // center the active thumb
-      cont.scrollTo({ left: target, behavior: "smooth" });
-    }
+    // alvo: deixar 2 anteriores visíveis (se existirem)
+    let desired = Math.max(0, (activeIndex - 2) * itemWidth);
+    desired = Math.min(desired, Math.max(0, maxScroll));
+
+    cont.scrollTo({ left: desired, behavior: "smooth" });
   }, [activeIndex]);
 
   /* ---------- Sizes ---------- */
@@ -312,7 +308,7 @@ export default function ProductConfigurator({ product }: Props) {
         {showToast ? "Item added to cart." : ""}
       </div>
 
-      {/* Gallery — padding 0 para remover espaços brancos */}
+      {/* Gallery (p-0 remove espaços brancos) */}
       <div className="rounded-2xl border bg-white p-0 w-full lg:w-[560px] flex-none lg:self-start">
         {/* Main image */}
         <div
@@ -328,7 +324,7 @@ export default function ProductConfigurator({ product }: Props) {
             priority
           />
 
-          {/* Attractive Prev/Next buttons */}
+          {/* Prev/Next buttons (atrativos) */}
           {images.length > 1 && (
             <>
               <button
@@ -351,27 +347,16 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbnails (máx. 6 visíveis; animação para manter a ativa visível) */}
+        {/* Thumbnails (máx. 6 visíveis; mantém 2 anteriores quando possível) */}
         {images.length > 1 && (
           <div className="border-t rounded-b-2xl p-2">
             <div
               ref={thumbsRef}
               className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none]"
-              style={{
-                maxWidth: STRIP_MAX_W,
-              }}
+              style={{ maxWidth: STRIP_MAX_W }}
             >
-              {/* hide webkit scrollbar */}
-              <style>
-                {`
-                  .no-scrollbar::-webkit-scrollbar{display:none;}
-                `}
-              </style>
-
-              <div
-                className="inline-flex gap-2 no-scrollbar"
-                style={{ scrollBehavior: "smooth" }}
-              >
+              <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+              <div className="inline-flex gap-2 no-scrollbar" style={{ scrollBehavior: "smooth" }}>
                 {images.map((src, i) => {
                   const isActive = i === activeIndex;
                   return (
@@ -382,18 +367,12 @@ export default function ProductConfigurator({ product }: Props) {
                       onClick={() => setActiveIndex(i)}
                       className={classNames(
                         "relative overflow-hidden rounded-xl border transition flex-none",
-                        "h-[96px] w-[80px]", // keeps ratio visible and fixed width for strip math
+                        "h-[96px] w-[80px]",
                         isActive ? "ring-2 ring-blue-600" : "hover:opacity-90"
                       )}
                       aria-label={`Image ${i + 1}`}
                     >
-                      <Image
-                        src={src}
-                        alt={`thumb ${i + 1}`}
-                        fill
-                        className="object-contain"
-                        sizes="80px"
-                      />
+                      <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="80px" />
                     </button>
                   );
                 })}
@@ -434,9 +413,7 @@ export default function ProductConfigurator({ product }: Props) {
                     title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                     className={classNames(
                       "rounded-xl px-3 py-2 border text-sm transition",
-                      unavailable
-                        ? "opacity-50 line-through cursor-not-allowed"
-                        : "hover:bg-gray-50",
+                      unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
                       isActive && "bg-blue-600 text-white border-blue-600"
                     )}
                     aria-pressed={isActive}
@@ -451,9 +428,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
           {kid && (
-            <p className="mt-2 text-xs text-gray-500">
-              Ages are approximate. If in between, we recommend sizing up.
-            </p>
+            <p className="mt-2 text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
           )}
         </div>
 
@@ -500,32 +475,18 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
             </div>
-            <p className="text-xs text-gray-500">
-              Personalization will be printed in the club’s official style.
-            </p>
+            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
           </div>
         )}
 
         {/* Badges (FREE) */}
         {showBadgePicker && badgesGroup && (
-          <GroupBlock
-            group={badgesGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-            forceFree
-          />
+          <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
         )}
 
         {/* Other groups */}
         {otherGroups.map((g) => (
-          <GroupBlock
-            key={g.id}
-            group={g}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-          />
+          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
         ))}
 
         {/* Qty + Total */}
@@ -723,13 +684,7 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
       fill="none"
       aria-hidden="true"
     >
-      <path
-        d="M20 7L9 18l-5-5"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
