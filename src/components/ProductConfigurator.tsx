@@ -76,7 +76,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
-  // MANTER A ATIVA VISÍVEL com 2 anteriores à esquerda (quando possível)
+  // Mantém a ativa visível com 2 anteriores quando possível
   useEffect(() => {
     const cont = thumbsRef.current;
     if (!cont) return;
@@ -84,7 +84,6 @@ export default function ProductConfigurator({ product }: Props) {
     const itemWidth = THUMB_W + GAP;
     const maxScroll = cont.scrollWidth - cont.clientWidth;
 
-    // alvo: deixar 2 anteriores visíveis (se existirem)
     let desired = Math.max(0, (activeIndex - 2) * itemWidth);
     desired = Math.min(desired, Math.max(0, maxScroll));
 
@@ -218,7 +217,7 @@ export default function ProductConfigurator({ product }: Props) {
       top: `${start.top}px`,
       width: `${start.width}px`,
       height: `${start.height}px`,
-      objectFit: "contain",
+      objectFit: "cover",
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
@@ -310,7 +309,7 @@ export default function ProductConfigurator({ product }: Props) {
 
       {/* Gallery (p-0 remove espaços brancos) */}
       <div className="rounded-2xl border bg-white p-0 w-full lg:w-[560px] flex-none lg:self-start">
-        {/* Main image */}
+        {/* Main image — object-cover para eliminar barras em cima/baixo */}
         <div
           ref={imgWrapRef}
           className="relative aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-white"
@@ -319,12 +318,12 @@ export default function ProductConfigurator({ product }: Props) {
             src={activeSrc}
             alt={product.name}
             fill
-            className="object-contain"
+            className="object-cover"
             sizes="(min-width: 1024px) 560px, 100vw"
             priority
           />
 
-          {/* Prev/Next buttons (atrativos) */}
+          {/* Prev/Next buttons */}
           {images.length > 1 && (
             <>
               <button
@@ -475,13 +474,21 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
             </div>
-            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+            <p className="text-xs text-gray-500">
+              Personalization will be printed in the club’s official style.
+            </p>
           </div>
         )}
 
         {/* Badges (FREE) */}
         {showBadgePicker && badgesGroup && (
-          <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
+          <GroupBlock
+            group={badgesGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+            forceFree
+          />
         )}
 
         {/* Other groups */}
