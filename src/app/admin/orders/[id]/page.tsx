@@ -259,9 +259,11 @@ async function fetchOrder(id: string) {
 export default async function AdminOrderViewPage({
   params,
 }: {
-  params: { id: string };
+  // ✅ Next 15: params é Promise
+  params: Promise<{ id: string }>;
 }) {
-  const { order, error } = await fetchOrder(params.id);
+  const { id } = await params;
+  const { order, error } = await fetchOrder(id);
 
   return (
     <div className="space-y-6">
