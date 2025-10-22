@@ -283,7 +283,6 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      {/* lg:w-[560px] — imagem maior; setas fora do quadro */}
       <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-6">
         <div className="flex items-center gap-4">
           {images.length > 1 ? (
@@ -324,12 +323,12 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs — CORRIGIDO: sem overflow-y-hidden e com py-1 para não cortar o ring */}
+        {/* Thumbs — wrapper com sombra azul quando ativo (nada cortado) */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
               ref={thumbsRef}
-              className="mx-auto overflow-x-auto whitespace-nowrap py-1 [scrollbar-width:none] [-ms-overflow-style:none]"
+              className="mx-auto overflow-x-auto whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none]"
               style={{ maxWidth: STRIP_MAX_W }}
             >
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -337,19 +336,26 @@ export default function ProductConfigurator({ product }: Props) {
                 {images.map((src, i) => {
                   const isActive = i === activeIndex;
                   return (
-                    <button
+                    <div
                       key={src + i}
-                      type="button"
-                      onClick={() => setActiveIndex(i)}
                       className={cx(
-                        "relative overflow-hidden rounded-xl border transition flex-none",
-                        "h-[82px] w-[68px]",
-                        isActive ? "ring-2 ring-blue-600" : "hover:opacity-90"
+                        "rounded-2xl p-[2px] transition-shadow",
+                        isActive && "shadow-[0_0_0_2px_rgba(37,99,235,1)]"
                       )}
-                      aria-label={`Image ${i + 1}`}
                     >
-                      <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveIndex(i)}
+                        className={cx(
+                          "relative overflow-hidden rounded-xl border transition flex-none",
+                          "h-[82px] w-[68px]",
+                          !isActive && "hover:opacity-90"
+                        )}
+                        aria-label={`Image ${i + 1}`}
+                      >
+                        <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -378,7 +384,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="flex flex-wrap gap-2">
               {sizes.map((s) => {
                 const unavailable = (s.stock ?? 0) <= 0;
-                const isActive = (selected.size as string) === s.size && !unavailable;
+                const isActive = !unavailable && selectedSize === s.size;
                 return (
                   <button
                     key={s.id}
@@ -491,7 +497,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           <div className="text-right">
             <div className="text-sm text-gray-600">Total</div>
-            <div className="text-lg font-semibold">{money(finalPrice)}</div>
+            <div className="text-lg font-semibold">{money(unitJerseyPrice * qty)}</div>
           </div>
         </div>
 
