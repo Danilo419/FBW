@@ -1,14 +1,9 @@
+// src/components/ProductOptions.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 import { formatMoney } from "@/lib/money";
-import type {
-  OptionGroup,
-  OptionType,
-  OptionValue,
-  Product,
-  SizeStock,
-} from "@prisma/client";
+import type { OptionGroup, OptionValue, Product, SizeStock } from "@prisma/client";
 
 type ProductWithOptions = Product & {
   sizes: SizeStock[];
@@ -53,11 +48,12 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
   }
 
   function addToCart() {
+    // Basic required-option validation
     for (const g of product.options) {
       if (!g.required) continue;
       const v = selected[g.key];
       if (!v) {
-        alert(`Selecione: ${g.label}`);
+        alert(`Please select: ${g.label}`);
         return;
       }
     }
@@ -73,20 +69,20 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
     };
 
     console.log("ADD_TO_CART", lineItem);
-    // TODO: enviar para o carrinho (zustand/contexto) ou POST /api/cart
+    // TODO: send to cart (zustand/context) or POST /api/cart
   }
 
   return (
     <div className="space-y-6">
-      {/* Tamanho */}
+      {/* Size */}
       {sizeGroup && (
         <div>
           <div className="mb-1 font-medium">{sizeGroup.label}</div>
           <div className="grid grid-cols-4 gap-2">
             {sizeGroup.values.map((v) => {
-              const stock =
-                product.sizes.find((s) => s.size === v.value)?.stock ?? 0;
-              const disabled = stock <= 0;
+              const available =
+                product.sizes.find((s) => s.size === v.value)?.available ?? false;
+              const disabled = !available;
               const active = selected[sizeGroup.key] === v.value;
 
               return (
@@ -97,7 +93,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
                   className={`rounded-xl border px-3 py-2 text-sm ${
                     active ? "bg-blue-600 text-white" : "hover:bg-gray-50"
                   } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title={disabled ? "Sem stock" : `${stock} em stock`}
+                  title={disabled ? "Out of stock" : "Available"}
                 >
                   {v.label}
                 </button>
@@ -107,7 +103,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
         </div>
       )}
 
-      {/* Personalização */}
+      {/* Customization */}
       {custGroup && (
         <div>
           <div className="mb-1 font-medium">{custGroup.label}</div>
@@ -136,19 +132,19 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
             })}
           </div>
 
-          {/* Condicional: Nome/Número */}
+          {/* Conditional: Name/Number */}
           {shouldAskNameNumber() && (
             <div className="mt-3 grid sm:grid-cols-2 gap-3">
               <input
                 className="rounded-xl border px-3 py-2"
-                placeholder="Nome (camisola)"
+                placeholder="Name (jersey)"
                 maxLength={12}
                 value={nameText}
                 onChange={(e) => setNameText(e.target.value)}
               />
               <input
                 className="rounded-xl border px-3 py-2"
-                placeholder="Número"
+                placeholder="Number"
                 inputMode="numeric"
                 maxLength={2}
                 value={numberText}
@@ -161,7 +157,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
         </div>
       )}
 
-      {/* Add-ons: calções/meias */}
+      {/* Add-ons: shorts/socks */}
       {product.options
         .filter((o) => o.type === "ADDON")
         .map((g) => {
@@ -194,7 +190,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
       <div className="flex items-center justify-between pt-1">
         <div className="text-xl font-bold">{formatMoney(finalPrice)}</div>
         <button onClick={addToCart} className="btn-primary">
-          Adicionar ao carrinho
+          Add to cart
         </button>
       </div>
     </div>
