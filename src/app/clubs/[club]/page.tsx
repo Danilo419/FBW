@@ -38,10 +38,12 @@ export async function generateStaticParams() {
   return rows.map((r) => ({ club: slugify(r.team) }));
 }
 
-type PageProps = { params: { club: string } };
-
-export default async function ClubProductsPage({ params }: PageProps) {
-  const { club } = params;
+export default async function ClubProductsPage({
+  params,
+}: {
+  params: Promise<{ club: string }>;
+}) {
+  const { club } = await params;
 
   // Lista de equipas distintas para mapear slug -> nome real
   const teams = await prisma.product.findMany({
@@ -68,7 +70,7 @@ export default async function ClubProductsPage({ params }: PageProps) {
   if (!products.length) notFound();
 
   const money = (cents: number) =>
-    (cents / 100).toLocaleString(undefined, { style: "currency", currency: "EUR" });
+    (cents / 100).toLocaleString("en-GB", { style: "currency", currency: "EUR" });
 
   return (
     <div className="container-fw py-10 space-y-8">
