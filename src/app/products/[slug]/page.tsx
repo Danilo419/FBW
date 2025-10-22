@@ -28,7 +28,7 @@ type OptionGroupUI = {
 type SizeUI = {
   id: string;
   size: string;
-  stock: number; // 👈 o Configurator ainda usa "stock"
+  stock: number;
 };
 
 type ProductUI = {
@@ -49,11 +49,9 @@ type ProductUI = {
 function toUIGroupType(t: string): "SIZE" | "RADIO" | "ADDON" {
   return t === "SIZE" || t === "RADIO" || t === "ADDON" ? t : "RADIO";
 }
-
 function ensureArray<T>(arr: T[] | null | undefined): T[] {
   return Array.isArray(arr) ? arr : [];
 }
-
 function mapValuesByGroup(values: {
   id: string | number;
   groupId: string | number;
@@ -75,21 +73,18 @@ function mapValuesByGroup(values: {
   }
   return by;
 }
-
 /** Converte linhas do Prisma (available:boolean) para UI (stock:number) */
 function toUISizes(rows: { id: string | number; size: string; available: boolean }[]): SizeUI[] {
   return rows.map((s) => ({
     id: String(s.id),
     size: s.size,
-    stock: s.available ? 1 : 0, // 👈 compatibilidade com UI antiga
+    stock: s.available ? 1 : 0,
   }));
 }
 
 /* ==================== ADULT SIZES: S → 4XL ==================== */
-/** Ordem e conjunto permitido (apenas estes serão mostrados no UI) */
 const ADULT_ALLOWED_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 type AllowedAdult = (typeof ADULT_ALLOWED_ORDER)[number];
-
 function normalizeAdultSizeLabel(raw: string): string {
   const t = raw.trim().toUpperCase().replace(/\s+/g, "");
   if (t === "XXL") return "2XL";
@@ -97,12 +92,9 @@ function normalizeAdultSizeLabel(raw: string): string {
   if (t === "XXXXL") return "4XL";
   return t;
 }
-
 function isAllowedAdultSize(label: string): label is AllowedAdult {
   return ADULT_ALLOWED_ORDER.includes(label as AllowedAdult);
 }
-
-/* 🔧 estas funções agora aceitam arrays readonly */
 function indexInOrder(value: string, order: readonly string[]) {
   const i = order.indexOf(value.toUpperCase());
   return i === -1 ? Number.POSITIVE_INFINITY : i;
@@ -112,7 +104,6 @@ function sortByOrder<T extends { size: string }>(list: T[], order: readonly stri
     (a, b) => indexInOrder(a.size.toUpperCase(), order) - indexInOrder(b.size.toUpperCase(), order)
   );
 }
-
 /** Se já existir pelo menos um tamanho adulto, garante todos S→4XL (fantasmas com stock=0 se faltar) */
 function ensureUpTo4XLIfNeeded(adult: SizeUI[]): SizeUI[] {
   if (!adult.length) return adult;
@@ -132,18 +123,16 @@ function ensureUpTo4XLIfNeeded(adult: SizeUI[]): SizeUI[] {
 
 /* ==================== KIDS ==================== */
 const KIDS_ORDER = ["2-3Y", "3-4Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"] as const;
-
 function isKidsLabel(s: string) {
   const t = s.trim().toUpperCase();
-  if (/^\d+\s*Y$/.test(t)) return true;             // 6Y
-  if (/^\d+\s*-\s*\d+\s*Y$/.test(t)) return true;   // 10-11Y
+  if (/^\d+\s*Y$/.test(t)) return true;
+  if (/^\d+\s*-\s*\d+\s*Y$/.test(t)) return true;
   if (/^\d+\s*(YR|YRS|YEAR|YEARS)$/.test(t)) return true;
   if (/^\d+\s*(ANOS|AÑOS)$/.test(t)) return true;
   if (/^(KID|KIDS|CHILD|JUNIOR|JR)\b/.test(t)) return true;
   if (/\b(JR|JUNIOR|KID|KIDS)$/.test(t)) return true;
   return false;
 }
-
 /** Split DB sizes into Adult vs Kids, aplicando o filtro S→4XL nos adultos */
 function splitAdultKids(all: SizeUI[]): { adult: SizeUI[]; kids: SizeUI[] } {
   const rawAdult = all.filter((s) => !isKidsLabel(s.size));
@@ -160,7 +149,6 @@ function splitAdultKids(all: SizeUI[]): { adult: SizeUI[]; kids: SizeUI[] } {
     if (!existing) dedupMap.set(key, s);
     else if (existing.stock <= 0 && s.stock > 0) dedupMap.set(key, s);
   }
-
   const adultFiltered = Array.from(dedupMap.values());
   const adultSorted = sortByOrder(adultFiltered, ADULT_ALLOWED_ORDER);
   const adultCompleted = ensureUpTo4XLIfNeeded(adultSorted);
@@ -200,7 +188,6 @@ function buildUIProduct(args: {
   optionGroups: OptionGroupUI[];
 }): ProductUI {
   const { core, adultSizes, kidsSizes, optionGroups } = args;
-
   const ui: ProductUI = {
     id: core.id,
     slug: core.slug,
@@ -212,7 +199,6 @@ function buildUIProduct(args: {
     sizes: adultSizes,
     optionGroups,
   };
-
   if (kidsSizes.length) ui.kidsSizes = kidsSizes;
   return ui;
 }
@@ -229,10 +215,12 @@ export async function generateStaticParams() {
 }
 
 /* ---------- Page ---------- */
-type PageProps = { params: { slug: string } };
-
-export default async function ProductPage({ params }: PageProps) {
-  const { slug } = params;
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
 
   const core = await prisma.product.findUnique({
     where: { slug },
@@ -289,6 +277,7 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <div className="container-fw py-10 grid gap-10">
       <ProductConfigurator product={uiProduct} />
+      {/* ⬇️ Apenas productId, sem prop "product" */}
       <ProductReviews productId={uiProduct.id} />
     </div>
   );
