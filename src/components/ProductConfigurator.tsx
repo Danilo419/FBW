@@ -283,9 +283,8 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      {/* Aumentado para lg:w-[560px] (imagem maior). Setas continuam FORA do quadro. */}
+      {/* lg:w-[560px] — imagem maior; setas fora do quadro */}
       <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-6">
-        {/* Linha: seta esquerda | imagem | seta direita */}
         <div className="flex items-center gap-4">
           {images.length > 1 ? (
             <button
@@ -325,12 +324,12 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs */}
+        {/* Thumbs — CORRIGIDO: sem overflow-y-hidden e com py-1 para não cortar o ring */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
               ref={thumbsRef}
-              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none]"
+              className="mx-auto overflow-x-auto whitespace-nowrap py-1 [scrollbar-width:none] [-ms-overflow-style:none]"
               style={{ maxWidth: STRIP_MAX_W }}
             >
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -363,7 +362,7 @@ export default function ProductConfigurator({ product }: Props) {
       <div className="card p-6 space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
-          <div className="text-xl font-semibold">{money(unitJerseyPrice)}</div>
+          <div className="text-xl font-semibold">{money(product.basePrice)}</div>
           {product.description && (
             <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
           )}
@@ -379,7 +378,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="flex flex-wrap gap-2">
               {sizes.map((s) => {
                 const unavailable = (s.stock ?? 0) <= 0;
-                const isActive = !unavailable && selectedSize === s.size;
+                const isActive = (selected.size as string) === s.size && !unavailable;
                 return (
                   <button
                     key={s.id}
@@ -541,10 +540,7 @@ export default function ProductConfigurator({ product }: Props) {
                 <div className="font-semibold">Item added to cart</div>
                 <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
               </div>
-              <button
-                className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                onClick={() => setShowToast(false)}
-              >
+              <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
                 Close
               </button>
             </div>
