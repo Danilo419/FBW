@@ -43,6 +43,7 @@ export default function ProductConfigurator({ product }: Props) {
   const [custName, setCustName] = useState("");
   const [custNumber, setCustNumber] = useState("");
   const [qty, setQty] = useState(1);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
   const [justAdded, setJustAdded] = useState(false);
@@ -249,9 +250,14 @@ export default function ProductConfigurator({ product }: Props) {
       alert("Quantity must be at least 1.");
       return;
     }
+
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : (v ?? null)])
+      Object.entries(selected).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? (v.length ? v.join(",") : null) : (v ?? null),
+      ])
     );
+
     startTransition(async () => {
       await addToCartAction({
         productId: product.id,
@@ -259,9 +265,11 @@ export default function ProductConfigurator({ product }: Props) {
         options: optionsForCart,
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
+
       setJustAdded(true);
       setShowToast(true);
       flyToCart();
+
       window.setTimeout(() => setShowToast(false), 2000);
       window.setTimeout(() => setJustAdded(false), 900);
     });
@@ -275,14 +283,23 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      {/* Card sem paddings “internos” no quadro; setas ficam fora da imagem (no padding lateral) */}
-      <div className="rounded-2xl border bg-white w-full lg:w-[480px] flex-none lg:self-start">
-        {/* Wrapper só do quadro da imagem — controla paddings e posiciona as setas por fora */}
-        <div className="relative px-6 pt-6">
-          <div
-            ref={imgWrapRef}
-            className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
-          >
+      <div className="rounded-2xl border bg-white w-full lg:w-[480px] flex-none lg:self-start p-6">
+        {/* Linha: seta esquerda | imagem | seta direita (FORA da imagem) */}
+        <div className="flex items-center gap-4">
+          {images.length > 1 ? (
+            <button
+              type="button"
+              onClick={goPrev}
+              aria-label="Previous image"
+              className="group h-10 w-10 shrink-0 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <ChevronLeft />
+            </button>
+          ) : (
+            <div className="h-10 w-10 shrink-0" />
+          )}
+
+          <div ref={imgWrapRef} className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white">
             <Image
               src={activeSrc}
               alt={product.name}
@@ -293,32 +310,23 @@ export default function ProductConfigurator({ product }: Props) {
             />
           </div>
 
-          {/* SETAS FORA DA IMAGEM (ficam no padding lateral do card) */}
-          {images.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={goPrev}
-                aria-label="Previous image"
-                className="group absolute left-6 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <ChevronLeft />
-              </button>
-              <button
-                type="button"
-                onClick={goNext}
-                aria-label="Next image"
-                className="group absolute right-6 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <ChevronRight />
-              </button>
-            </>
+          {images.length > 1 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              aria-label="Next image"
+              className="group h-10 w-10 shrink-0 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <ChevronRight />
+            </button>
+          ) : (
+            <div className="h-10 w-10 shrink-0" />
           )}
         </div>
 
-        {/* Thumbs (com o mesmo padding inferior) */}
+        {/* Thumbs */}
         {images.length > 1 && (
-          <div className="px-6 pb-6 mt-4">
+          <div className="mt-4">
             <div
               ref={thumbsRef}
               className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none]"
@@ -354,7 +362,7 @@ export default function ProductConfigurator({ product }: Props) {
       <div className="card p-6 space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
-          <div className="text-xl font-semibold">{money(product.basePrice)}</div>
+          <div className="text-xl font-semibold">{money(unitJerseyPrice)}</div>
           {product.description && (
             <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
           )}
@@ -363,43 +371,43 @@ export default function ProductConfigurator({ product }: Props) {
         {/* Size */}
         <div className="rounded-2xl border p-4 bg-white/70">
           <div className="mb-2 text-sm text-gray-700">
-            Size ({isKidProduct(product.name) ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
+            Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {useMemo(
-              () =>
-                (product.sizes && product.sizes.length > 0
-                  ? product.sizes
-                  : (isKidProduct(product.name) ? KID_SIZES : ADULT_SIZES).map((s) => ({
-                      id: s,
-                      size: s,
-                      stock: 999,
-                    }))
-                ).map((s) => ({ ...s, size: String(s.size).toUpperCase() })),
-              [product.sizes, product.name]
-            ).map((s) => {
-              const unavailable = (s.stock ?? 0) <= 0;
-              const isActive = !unavailable && s.size === (selected.size as string);
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => pickSize(s.size)}
-                  disabled={unavailable}
-                  aria-disabled={unavailable}
-                  title={unavailable ? "Unavailable" : `Select size ${s.size}`}
-                  className={cx(
-                    "rounded-xl px-3 py-2 border text-sm transition",
-                    unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
-                    isActive && "bg-blue-600 text-white border-blue-600"
-                  )}
-                  aria-pressed={isActive}
-                >
-                  {s.size}
-                </button>
-              );
-            })}
-          </div>
+
+          {sizes.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {sizes.map((s) => {
+                const unavailable = (s.stock ?? 0) <= 0;
+                const isActive = !unavailable && selectedSize === s.size;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => pickSize(s.size)}
+                    disabled={unavailable}
+                    aria-disabled={unavailable}
+                    title={unavailable ? "Unavailable" : `Select size ${s.size}`}
+                    className={cx(
+                      "rounded-xl px-3 py-2 border text-sm transition",
+                      unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
+                      isActive && "bg-blue-600 text-white border-blue-600"
+                    )}
+                    aria-pressed={isActive}
+                  >
+                    {s.size}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No sizes available.</div>
+          )}
+
+          {kid && (
+            <p className="mt-2 text-xs text-gray-500">
+              Ages are approximate. If in between, we recommend sizing up.
+            </p>
+          )}
         </div>
 
         {/* Customization (FREE) */}
@@ -462,13 +470,28 @@ export default function ProductConfigurator({ product }: Props) {
         {/* Qty + Total */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button className="rounded-xl border px-3 py-2 hover:bg-gray-50" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={pending}>−</button>
+            <button
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              aria-label="Decrease quantity"
+              disabled={pending}
+            >
+              −
+            </button>
             <span className="min-w-[2ch] text-center">{qty}</span>
-            <button className="rounded-xl border px-3 py-2 hover:bg-gray-50" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={pending}>+</button>
+            <button
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              onClick={() => setQty((q) => q + 1)}
+              aria-label="Increase quantity"
+              disabled={pending}
+            >
+              +
+            </button>
           </div>
+
           <div className="text-right">
             <div className="text-sm text-gray-600">Total</div>
-            <div className="text-lg font-semibold">{money(product.basePrice * qty)}</div>
+            <div className="text-lg font-semibold">{money(finalPrice)}</div>
           </div>
         </div>
 
@@ -479,11 +502,20 @@ export default function ProductConfigurator({ product }: Props) {
             "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2",
             justAdded && "bg-green-600 hover:bg-green-600"
           )}
-          disabled={pending || !selected.size || qty < 1}
+          disabled={pending || !selectedSize || qty < 1}
           animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
           transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
         >
-          {justAdded ? <> <CheckIcon /> Added! </> : pending ? "Adding…" : "Add to cart"}
+          {justAdded ? (
+            <>
+              <CheckIcon />
+              Added!
+            </>
+          ) : pending ? (
+            "Adding…"
+          ) : (
+            "Add to cart"
+          )}
         </motion.button>
       </div>
 
@@ -508,7 +540,12 @@ export default function ProductConfigurator({ product }: Props) {
                 <div className="font-semibold">Item added to cart</div>
                 <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
               </div>
-              <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>Close</button>
+              <button
+                className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                onClick={() => setShowToast(false)}
+              >
+                Close
+              </button>
             </div>
           </motion.div>
         )}
@@ -550,11 +587,19 @@ function GroupBlock({
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <input type="radio" name={group.key} className="accent-blue-600" checked={!!active} onChange={() => onPickRadio(group.key, v.value)} />
+                  <input
+                    type="radio"
+                    name={group.key}
+                    className="accent-blue-600"
+                    checked={!!active}
+                    onChange={() => onPickRadio(group.key, v.value)}
+                  />
                   <span>{v.label}</span>
                 </div>
                 {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                    FREE
+                  </span>
                 ) : null}
               </label>
             );
@@ -583,11 +628,18 @@ function GroupBlock({
               }`}
             >
               <div className="flex items-center gap-2">
-                <input type="checkbox" className="accent-blue-600" checked={!!active} onChange={(e) => onToggleAddon(group.key, v.value, e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="accent-blue-600"
+                  checked={!!active}
+                  onChange={(e) => onToggleAddon(group.key, v.value, e.target.checked)}
+                />
                 <span>{v.label}</span>
               </div>
               {forceFree ? (
-                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                  FREE
+                </span>
               ) : null}
             </label>
           );
