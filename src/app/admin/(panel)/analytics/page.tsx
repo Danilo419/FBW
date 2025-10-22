@@ -2,13 +2,34 @@
 import MetricChart from "@/components/analytics/MetricChart";
 import LiveVisitorsBadge from "@/components/analytics/LiveVisitorsBadge";
 
-export default function AnalyticsPage({
+// Tipos iguais aos usados dentro do MetricChart (não exportados de lá)
+type Metric = "visitors" | "sales" | "orders" | "conversion";
+type Period = "today" | "7d" | "30d" | "90d" | "custom";
+
+type SP = Record<string, string | string[]>;
+
+const METRICS = ["visitors", "sales", "orders", "conversion"] as const;
+const PERIODS = ["today", "7d", "30d", "90d", "custom"] as const;
+
+function toMetric(value: unknown, fallback: Metric): Metric {
+  const v = Array.isArray(value) ? value[0] : value;
+  return METRICS.includes(v as any) ? (v as Metric) : fallback;
+}
+
+function toPeriod(value: unknown, fallback: Period): Period {
+  const v = Array.isArray(value) ? value[0] : value;
+  return PERIODS.includes(v as any) ? (v as Period) : fallback;
+}
+
+export default async function AnalyticsPage({
   searchParams,
 }: {
-  searchParams?: { metric?: string; period?: string };
+  searchParams?: Promise<SP>;
 }) {
-  const metric = (searchParams?.metric as any) || "visitors";
-  const period = (searchParams?.period as any) || "30d";
+  const sp = (await searchParams) ?? {};
+
+  const metric: Metric = toMetric(sp.metric, "visitors");
+  const period: Period = toPeriod(sp.period, "30d");
 
   return (
     <div className="space-y-6">
