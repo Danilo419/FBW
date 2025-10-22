@@ -6,9 +6,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(
+  _req: NextRequest,
+  ctx: { params: Promise<{ id: string }> }
+) {
   try {
-    const id = ctx.params?.id;
+    const { id } = await ctx.params;
     if (!id) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
@@ -32,7 +35,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // shape minimal que a SuccessClient espera
+    // shape mínimo que a SuccessClient espera
     const shaped = {
       id: order.id,
       status: order.status,
@@ -40,7 +43,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       shipping: order.shipping,
       tax: order.tax,
       total: order.total ?? null,
-      totalCents: order.totalCents ?? null,
+      totalCents: (order as any).totalCents ?? null, // caso uses cents numérico
       items: order.items.map((it) => ({
         id: it.id,
         name: it.name,
