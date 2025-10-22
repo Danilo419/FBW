@@ -39,7 +39,6 @@ type ProductUI = {
   basePrice: number; // cents
   images: string[];
   optionGroups: OptionGroupUI[];
-  /** Optional: real sizes from DB (SizeStock). If not provided, we infer (all available). */
   sizes?: SizeUI[];
 };
 
@@ -51,21 +50,16 @@ const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
 
 const isKidProduct = (name: string) => /kid/i.test(name);
+const classNames = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-const classNames = (...c: (string | false | null | undefined)[]) =>
-  c.filter(Boolean).join(" ");
-
-const isBadgesGroup = (groupKey: string) => groupKey === "badges";
-
-/* ====================== Component ====================== */
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
   const [custNumber, setCustNumber] = useState("");
   const [qty, setQty] = useState(1);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
-
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -74,32 +68,56 @@ export default function ProductConfigurator({ product }: Props) {
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Sizes: prefer DB sizes; fallback to inferred list ---------- */
-  const kid = isKidProduct(product.name);
+  /* ---------- Thumbnail strip settings ---------- */
+  const MAX_VISIBLE_THUMBS = 6;
+  const THUMB_W = 80; // px
+  const GAP = 8; // px
+  const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
 
+  const thumbsRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep active thumbnail visible in the strip (smooth scroll)
+  useEffect(() => {
+    const cont = thumbsRef.current;
+    if (!cont) return;
+    const el = cont.querySelector<HTMLElement>(`[data-thumb="${activeIndex}"]`);
+    if (!el) return;
+
+    const cLeft = cont.scrollLeft;
+    const cRight = cLeft + cont.clientWidth;
+    const eLeft = el.offsetLeft;
+    const eRight = eLeft + el.clientWidth;
+
+    if (eLeft < cLeft || eRight > cRight) {
+      const target =
+        eLeft - (cont.clientWidth / 2 - el.clientWidth / 2); // center the active thumb
+      cont.scrollTo({ left: target, behavior: "smooth" });
+    }
+  }, [activeIndex]);
+
+  /* ---------- Sizes ---------- */
+  const kid = isKidProduct(product.name);
   const inferred: SizeUI[] = useMemo(
     () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999 })),
     [kid]
   );
-
   const sizes: SizeUI[] = useMemo(
     () =>
-      (product.sizes && product.sizes.length > 0
-        ? product.sizes
-        : inferred
-      ).map((s) => ({ ...s, size: String(s.size).toUpperCase() })),
+      (product.sizes && product.sizes.length > 0 ? product.sizes : inferred).map((s) => ({
+        ...s,
+        size: String(s.size).toUpperCase(),
+      })),
     [product.sizes, inferred]
   );
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const pickSize = (size: string) => {
     const found = sizes.find((s) => s.size === size);
-    if (!found || (found.stock ?? 0) <= 0) return; // don't allow selecting unavailable
+    if (!found || (found.stock ?? 0) <= 0) return;
     setSelectedSize(size);
     setSelected((s) => ({ ...s, size }));
   };
 
-  // If the currently selected size becomes unavailable (after a toggle), unselect it.
   useEffect(() => {
     if (!selectedSize) return;
     const found = sizes.find((s) => s.size === selectedSize);
@@ -109,7 +127,7 @@ export default function ProductConfigurator({ product }: Props) {
     }
   }, [sizes, selectedSize]);
 
-  /* ---------- Groups (hide shorts/socks entirely) ---------- */
+  /* ---------- Groups ---------- */
   const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
   const otherGroups = product.optionGroups.filter(
@@ -122,9 +140,7 @@ export default function ProductConfigurator({ product }: Props) {
   const showBadgePicker =
     typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
 
-  const setRadio = (key: string, value: string) =>
-    setSelected((s) => ({ ...s, [key]: value || null }));
-
+  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
@@ -142,28 +158,25 @@ export default function ProductConfigurator({ product }: Props) {
     });
   }
 
-  /* ---------- Price logic: ALWAYS base price (no deltas) ---------- */
+  /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Input sanitization ---------- */
-  const safeName = useMemo(
-    () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
-    [custName]
-  );
+  const safeName = useMemo(() => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14), [custName]);
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]'))
-      .filter((el) => {
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter(
+      (el) => {
         const r = el.getBoundingClientRect();
         const visible = r.width > 0 && r.height > 0;
         const style = window.getComputedStyle(el);
         return visible && style.visibility !== "hidden" && style.opacity !== "0";
-      });
-
+      }
+    );
     if (anchors.length === 0) return null;
 
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
@@ -213,8 +226,7 @@ export default function ProductConfigurator({ product }: Props) {
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
-      transition:
-        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
+      transition: "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
       opacity: "0.9",
       transform: "translate3d(0,0,0) scale(1)",
     } as CSSStyleDeclaration);
@@ -228,7 +240,6 @@ export default function ProductConfigurator({ product }: Props) {
     const dy = endCy - startCy;
 
     void ghost.offsetHeight;
-
     ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(0.25)`;
     ghost.style.opacity = "0.1";
 
@@ -241,10 +252,18 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   /* ---------- Image navigation ---------- */
-  const goPrev = () =>
-    setActiveIndex((i) => (i - 1 + images.length) % images.length);
-  const goNext = () =>
-    setActiveIndex((i) => (i + 1) % images.length);
+  const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
+  const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
+
+  // Keyboard arrows
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   /* ---------- Add to cart ---------- */
   const addToCart = () => {
@@ -293,11 +312,12 @@ export default function ProductConfigurator({ product }: Props) {
         {showToast ? "Item added to cart." : ""}
       </div>
 
-      {/* Gallery (reduced padding to remove extra white space) */}
-      <div className="rounded-2xl border bg-white p-2 w-full lg:w-[560px] flex-none lg:self-start">
+      {/* Gallery — padding 0 para remover espaços brancos */}
+      <div className="rounded-2xl border bg-white p-0 w-full lg:w-[560px] flex-none lg:self-start">
+        {/* Main image */}
         <div
           ref={imgWrapRef}
-          className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
+          className="relative aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-white"
         >
           <Image
             src={activeSrc}
@@ -308,45 +328,77 @@ export default function ProductConfigurator({ product }: Props) {
             priority
           />
 
-          {/* Prev / Next buttons over the main image */}
+          {/* Attractive Prev/Next buttons */}
           {images.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={goPrev}
                 aria-label="Previous image"
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 backdrop-blur border shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group absolute left-3 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                ‹
+                <ChevronLeft />
               </button>
               <button
                 type="button"
                 onClick={goNext}
                 aria-label="Next image"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 backdrop-blur border shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group absolute right-3 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                ›
+                <ChevronRight />
               </button>
             </>
           )}
         </div>
 
-        {/* Thumbs: show up to 6 at once */}
+        {/* Thumbnails (máx. 6 visíveis; animação para manter a ativa visível) */}
         {images.length > 1 && (
-          <div className="mt-3 grid grid-cols-6 gap-2">
-            {images.slice(0, 6).map((src, i) => (
-              <button
-                key={src + i}
-                type="button"
-                onClick={() => setActiveIndex(i)}
-                className={`relative aspect-[3/4] overflow-hidden rounded-xl border transition ${
-                  i === activeIndex ? "ring-2 ring-blue-600" : "hover:opacity-90"
-                }`}
-                aria-label={`Image ${i + 1}`}
+          <div className="border-t rounded-b-2xl p-2">
+            <div
+              ref={thumbsRef}
+              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none]"
+              style={{
+                maxWidth: STRIP_MAX_W,
+              }}
+            >
+              {/* hide webkit scrollbar */}
+              <style>
+                {`
+                  .no-scrollbar::-webkit-scrollbar{display:none;}
+                `}
+              </style>
+
+              <div
+                className="inline-flex gap-2 no-scrollbar"
+                style={{ scrollBehavior: "smooth" }}
               >
-                <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" />
-              </button>
-            ))}
+                {images.map((src, i) => {
+                  const isActive = i === activeIndex;
+                  return (
+                    <button
+                      key={src + i}
+                      data-thumb={i}
+                      type="button"
+                      onClick={() => setActiveIndex(i)}
+                      className={classNames(
+                        "relative overflow-hidden rounded-xl border transition flex-none",
+                        "h-[96px] w-[80px]", // keeps ratio visible and fixed width for strip math
+                        isActive ? "ring-2 ring-blue-600" : "hover:opacity-90"
+                      )}
+                      aria-label={`Image ${i + 1}`}
+                    >
+                      <Image
+                        src={src}
+                        alt={`thumb ${i + 1}`}
+                        fill
+                        className="object-contain"
+                        sizes="80px"
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -412,7 +464,7 @@ export default function ProductConfigurator({ product }: Props) {
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
-            forceFree // all customization options are free now
+            forceFree
           />
         )}
 
@@ -576,7 +628,6 @@ function GroupBlock({
   selected: SelectedState;
   onPickRadio: (key: string, value: string) => void;
   onToggleAddon: (key: string, value: string, checked: boolean) => void;
-  /** if true, every value in this group is free (used for customization/badges) */
   forceFree?: boolean;
 }) {
   if (group.type === "SIZE") return null;
@@ -679,6 +730,34 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
