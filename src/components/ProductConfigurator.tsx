@@ -240,6 +240,12 @@ export default function ProductConfigurator({ product }: Props) {
     ghost.addEventListener("transitionend", cleanup);
   }
 
+  /* ---------- Image navigation ---------- */
+  const goPrev = () =>
+    setActiveIndex((i) => (i - 1 + images.length) % images.length);
+  const goNext = () =>
+    setActiveIndex((i) => (i + 1) % images.length);
+
   /* ---------- Add to cart ---------- */
   const addToCart = () => {
     if (!selectedSize) {
@@ -282,13 +288,13 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    <div className="relative flex flex-col gap-10 lg:flex-row lg:items-start">
+    <div className="relative flex flex-col gap-8 lg:flex-row lg:items-start">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {showToast ? "Item added to cart." : ""}
       </div>
 
-      {/* Gallery */}
-      <div className="rounded-2xl border bg-white p-4 w-full lg:w-[560px] flex-none lg:self-start">
+      {/* Gallery (reduced padding to remove extra white space) */}
+      <div className="rounded-2xl border bg-white p-2 w-full lg:w-[560px] flex-none lg:self-start">
         <div
           ref={imgWrapRef}
           className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
@@ -301,11 +307,34 @@ export default function ProductConfigurator({ product }: Props) {
             sizes="(min-width: 1024px) 560px, 100vw"
             priority
           />
+
+          {/* Prev / Next buttons over the main image */}
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={goPrev}
+                aria-label="Previous image"
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 backdrop-blur border shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                aria-label="Next image"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 backdrop-blur border shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                ›
+              </button>
+            </>
+          )}
         </div>
 
+        {/* Thumbs: show up to 6 at once */}
         {images.length > 1 && (
-          <div className="mt-4 grid grid-cols-5 gap-3 sm:grid-cols-6">
-            {images.map((src, i) => (
+          <div className="mt-3 grid grid-cols-6 gap-2">
+            {images.slice(0, 6).map((src, i) => (
               <button
                 key={src + i}
                 type="button"
