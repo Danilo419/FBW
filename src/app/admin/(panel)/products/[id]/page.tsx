@@ -65,10 +65,13 @@ function completeAdultsWithGhosts<
 export default async function ProductEditPage({
   params,
 }: {
-  params: { id: string };
+  // ✅ Next 15: params é Promise
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
   const product = await prisma.product.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       sizes: true, // { id, productId, size, available }
       options: {
@@ -247,10 +250,7 @@ export default async function ProductEditPage({
                       Unavailable
                     </button>
                   ) : (
-                    <SizeAvailabilityToggle
-                      sizeId={s.id}
-                      initialUnavailable={unavailable}
-                    />
+                    <SizeAvailabilityToggle sizeId={s.id} initialUnavailable={unavailable} />
                   )}
                 </div>
               );
