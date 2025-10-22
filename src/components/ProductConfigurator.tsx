@@ -8,13 +8,7 @@ import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 
 /* ====================== UI Types ====================== */
-type OptionValueUI = {
-  id: string;
-  value: string;
-  label: string;
-  priceDelta: number;
-};
-
+type OptionValueUI = { id: string; value: string; label: string; priceDelta: number };
 type OptionGroupUI = {
   id: string;
   key: string;
@@ -23,13 +17,7 @@ type OptionGroupUI = {
   required: boolean;
   values: OptionValueUI[];
 };
-
-type SizeUI = {
-  id: string;
-  size: string;
-  stock: number;
-};
-
+type SizeUI = { id: string; size: string; stock: number };
 type ProductUI = {
   id: string;
   slug: string;
@@ -45,7 +33,6 @@ type ProductUI = {
 type SelectedState = Record<string, string | string[] | null>;
 type Props = { product: ProductUI };
 
-/* ====================== Helpers ====================== */
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
 const isKidProduct = (name: string) => /kid/i.test(name);
@@ -56,7 +43,6 @@ export default function ProductConfigurator({ product }: Props) {
   const [custName, setCustName] = useState("");
   const [custNumber, setCustNumber] = useState("");
   const [qty, setQty] = useState(1);
-
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
   const [justAdded, setJustAdded] = useState(false);
@@ -71,8 +57,7 @@ export default function ProductConfigurator({ product }: Props) {
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
-  const STRIP_MAX_W =
-    MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
+  const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -107,7 +92,6 @@ export default function ProductConfigurator({ product }: Props) {
     setSelectedSize(size);
     setSelected((s) => ({ ...s, size }));
   };
-
   useEffect(() => {
     if (!selectedSize) return;
     const found = sizes.find((s) => s.size === selectedSize);
@@ -130,8 +114,7 @@ export default function ProductConfigurator({ product }: Props) {
   const showBadgePicker =
     typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
 
-  const setRadio = (key: string, value: string) =>
-    setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
@@ -154,18 +137,13 @@ export default function ProductConfigurator({ product }: Props) {
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Sanitize ---------- */
-  const safeName = useMemo(
-    () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
-    [custName]
-  );
+  const safeName = useMemo(() => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14), [custName]);
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
-    ).filter((el) => {
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
@@ -304,9 +282,8 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      {/* p-6 para igualar o respiro do cartão da direita (setas azuis) */}
+      {/* p-6 para o mesmo respiro do cartão da direita; sem padding extra dentro da área 3:4 */}
       <div className="rounded-2xl border bg-white p-6 w-full lg:w-[480px] flex-none lg:self-start">
-        {/* Área 3:4 SEM padding interno excessivo (elimina diferenças de topo/fundo) */}
         <div
           ref={imgWrapRef}
           className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
@@ -320,7 +297,6 @@ export default function ProductConfigurator({ product }: Props) {
             priority
           />
 
-          {/* Setas */}
           {images.length > 1 && (
             <>
               <button
@@ -343,7 +319,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs — espaçamento controlado para não “estufar” o fundo */}
+        {/* Thumbs */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
@@ -358,7 +334,6 @@ export default function ProductConfigurator({ product }: Props) {
                   return (
                     <button
                       key={src + i}
-                      data-thumb={i}
                       type="button"
                       onClick={() => setActiveIndex(i)}
                       className={cx(
@@ -562,11 +537,7 @@ export default function ProductConfigurator({ product }: Props) {
                 <div className="font-semibold">Item added to cart</div>
                 <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
               </div>
-              <button
-                className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                onClick={() => setShowToast(false)}
-                aria-label="Close notification"
-              >
+              <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
                 Close
               </button>
             </div>
@@ -634,8 +605,7 @@ function GroupBlock({
 
   // ADDON
   const chosen = selected[group.key];
-  const isActive = (value: string) =>
-    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
+  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
     <div className="rounded-2xl border p-4 bg-white/70">
