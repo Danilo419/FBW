@@ -1,10 +1,18 @@
+// src/app/admin/login/page.tsx
 import { redirect } from "next/navigation";
 
-export default function AdminLoginRedirect({
+export default async function AdminLoginRedirect({
   searchParams,
 }: {
-  searchParams?: { next?: string };
+  // Next 15: searchParams é Promise
+  searchParams?: Promise<Record<string, string | string[]>>;
 }) {
-  const next = searchParams?.next || "/admin";
+  const sp = (await searchParams) ?? {};
+  const raw = sp.next;
+  const next =
+    (Array.isArray(raw) ? raw[0] : raw) && typeof (Array.isArray(raw) ? raw[0] : raw) === "string"
+      ? (Array.isArray(raw) ? raw[0] : raw)
+      : "/admin";
+
   redirect(`/login?next=${encodeURIComponent(next)}`);
 }
