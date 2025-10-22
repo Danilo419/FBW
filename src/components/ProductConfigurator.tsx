@@ -70,8 +70,8 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Thumbnail strip settings (max 6 visíveis) ---------- */
   const MAX_VISIBLE_THUMBS = 6;
-  const THUMB_W = 80; // px => w-[80px]
-  const GAP = 8; // px => gap-2
+  const THUMB_W = 68; // px (reduzido de 80)
+  const GAP = 8; // px
   const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
 
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -130,6 +130,7 @@ export default function ProductConfigurator({ product }: Props) {
   );
 
   const customization = selected["customization"] ?? "";
+  theBadgePicker: 0;
   const showNameNumber =
     typeof customization === "string" && customization.toLowerCase().includes("name-number");
   const showBadgePicker =
@@ -308,7 +309,7 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* Gallery (p-0 remove espaços brancos) */}
-      <div className="rounded-2xl border bg-white p-0 w-full lg:w-[560px] flex-none lg:self-start">
+      <div className="rounded-2xl border bg-white p-0 w-full lg:w-[480px] flex-none lg:self-start">
         {/* Main image — object-cover para eliminar barras em cima/baixo */}
         <div
           ref={imgWrapRef}
@@ -319,7 +320,7 @@ export default function ProductConfigurator({ product }: Props) {
             alt={product.name}
             fill
             className="object-cover"
-            sizes="(min-width: 1024px) 560px, 100vw"
+            sizes="(min-width: 1024px) 480px, 100vw"
             priority
           />
 
@@ -330,7 +331,7 @@ export default function ProductConfigurator({ product }: Props) {
                 type="button"
                 onClick={goPrev}
                 aria-label="Previous image"
-                className="group absolute left-3 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <ChevronLeft />
               </button>
@@ -338,7 +339,7 @@ export default function ProductConfigurator({ product }: Props) {
                 type="button"
                 onClick={goNext}
                 aria-label="Next image"
-                className="group absolute right-3 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <ChevronRight />
               </button>
@@ -366,12 +367,12 @@ export default function ProductConfigurator({ product }: Props) {
                       onClick={() => setActiveIndex(i)}
                       className={classNames(
                         "relative overflow-hidden rounded-xl border transition flex-none",
-                        "h-[96px] w-[80px]",
+                        "h-[82px] w-[68px]", // reduzido
                         isActive ? "ring-2 ring-blue-600" : "hover:opacity-90"
                       )}
                       aria-label={`Image ${i + 1}`}
                     >
-                      <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="80px" />
+                      <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
                     </button>
                   );
                 })}
@@ -397,7 +398,7 @@ export default function ProductConfigurator({ product }: Props) {
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
-          {sizes.length > 0 ? (
+        {sizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {sizes.map((s) => {
                 const unavailable = (s.stock ?? 0) <= 0;
@@ -427,7 +428,9 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
           {kid && (
-            <p className="mt-2 text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Ages are approximate. If in between, we recommend sizing up.
+            </p>
           )}
         </div>
 
@@ -493,7 +496,13 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Other groups */}
         {otherGroups.map((g) => (
-          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
+          <GroupBlock
+            key={g.id}
+            group={g}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
         ))}
 
         {/* Qty + Total */}
