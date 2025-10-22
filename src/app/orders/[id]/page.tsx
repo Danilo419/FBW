@@ -1,6 +1,7 @@
 // src/app/orders/[id]/page.tsx
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -98,8 +99,12 @@ async function loadOrder(id: string) {
 
 /* -------------------------------- page ------------------------------ */
 
-export default async function OrderPage({ params }: { params: { id: string } }) {
-  const id = params.id;
+export default async function OrderPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const order = await loadOrder(id);
 
   if (!order) {
@@ -129,7 +134,9 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
       <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-2xl font-bold">Order details</h1>
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}
+          >
             {order.status}
           </span>
         </div>
@@ -142,15 +149,16 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
               <ul className="divide-y">
                 {order.items.map((it: any) => (
                   <li key={it.id} className="flex items-center gap-4 p-4">
-                    {it.image ? (
-                      <img
-                        src={it.image}
+                    <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden">
+                      <Image
+                        src={it.image || "/placeholder.png"}
                         alt={it.name}
-                        className="h-14 w-14 rounded-md object-cover border"
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                        priority={false}
                       />
-                    ) : (
-                      <div className="h-14 w-14 rounded-md border bg-gray-50" />
-                    )}
+                    </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{it.name}</div>
@@ -248,10 +256,16 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
             <div className="rounded-xl border p-4">
               <h2 className="font-semibold">Actions</h2>
               <div className="mt-2 flex flex-col gap-2">
-                <Link href="/" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
+                <Link
+                  href="/"
+                  className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50"
+                >
                   Continue shopping
                 </Link>
-                <Link href="/account" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
+                <Link
+                  href="/account"
+                  className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50"
+                >
                   Go to my account
                 </Link>
               </div>
@@ -265,9 +279,14 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
 
 /* ----------------------------- metadata ---------------------------- */
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true, status: true },
   });
   const title = order ? `Order ${order.id} — ${order.status}` : "Order";
