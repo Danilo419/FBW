@@ -283,8 +283,9 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      <div className="rounded-2xl border bg-white w-full lg:w-[480px] flex-none lg:self-start p-6">
-        {/* Linha: seta esquerda | imagem | seta direita (FORA da imagem) */}
+      {/* Aumentado para lg:w-[560px] (imagem maior). Setas continuam FORA do quadro. */}
+      <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-6">
+        {/* Linha: seta esquerda | imagem | seta direita */}
         <div className="flex items-center gap-4">
           {images.length > 1 ? (
             <button
@@ -305,7 +306,7 @@ export default function ProductConfigurator({ product }: Props) {
               alt={product.name}
               fill
               className="object-contain"
-              sizes="(min-width: 1024px) 460px, 100vw"
+              sizes="(min-width: 1024px) 540px, 100vw"
               priority
             />
           </div>
