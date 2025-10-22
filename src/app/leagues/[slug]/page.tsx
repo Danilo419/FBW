@@ -1,6 +1,9 @@
 // src/app/leagues/[slug]/page.tsx
 import Link from "next/link";
 
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
+
 /** -------------------- helpers -------------------- */
 const TITLES: Record<string, string> = {
   "premier-league": "Premier League",
@@ -109,12 +112,15 @@ function getClubsForLeague(leagueSlug: string): ClubCard[] {
 }
 
 /** -------------------- page -------------------- */
-type Props = { params: { slug: string } };
-
-export default async function LeaguePage({ params }: Props) {
-  const slug = params.slug.toLowerCase();
-  const title = titleFromSlug(slug);
-  const clubs = getClubsForLeague(slug);
+export default async function LeaguePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const leagueSlug = slug.toLowerCase();
+  const title = titleFromSlug(leagueSlug);
+  const clubs = getClubsForLeague(leagueSlug);
 
   return (
     <div className="container-fw py-10">
@@ -159,7 +165,7 @@ export default async function LeaguePage({ params }: Props) {
             You can still browse via the clubs page filtered by this league.
           </p>
           <Link
-            href={`/clubs?league=${encodeURIComponent(slug)}`}
+            href={`/clubs?league=${encodeURIComponent(leagueSlug)}`}
             className="inline-flex mt-4 rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
             Open clubs for {title}
