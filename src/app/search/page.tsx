@@ -6,11 +6,12 @@ import { Search } from "lucide-react";
 import ResultsClient from "./ResultsClient";
 
 type PageProps = {
-  searchParams?: { q?: string };
+  searchParams?: Promise<{ q?: string }>;
 };
 
-export default function SearchPage({ searchParams }: PageProps) {
-  const query = (searchParams?.q ?? "").toString().trim();
+export default async function SearchPage({ searchParams }: PageProps) {
+  const { q } = (await searchParams) ?? {};
+  const query = (q ?? "").toString().trim();
 
   return (
     <div className="container-fw py-6 md:py-10">
