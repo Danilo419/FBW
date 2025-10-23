@@ -9,7 +9,9 @@ import path from "path";
 import { promises as fs } from "fs";
 import crypto from "crypto";
 
-const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+// ===== Size presets =====
+const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"]; // XS removido
+const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
 
 function toCents(input: string) {
   const normalized = input.replace(",", ".").trim();
@@ -36,7 +38,7 @@ async function uniqueSlugFromName(name: string) {
     const exists = await prisma.product.findUnique({ where: { slug: candidate } });
     if (!exists) return candidate;
     i += 1;
-    const suffix = "-" + (i < 3 ? crypto.randomUUID().slice(0, 4) : crypto.randomUUID().slice(0, 6));
+    const suffix = "-" + crypto.randomUUID().slice(0, 4);
     candidate = (base + suffix).slice(0, 70);
   }
 }
@@ -139,17 +141,47 @@ export default function NewProductPage() {
             <p className="text-xs text-gray-500">You can select multiple images. The first will be the main image.</p>
           </div>
 
+          {/* === Size group selection === */}
           <div className="space-y-3">
-            <div className="text-sm font-medium">Sizes</div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {DEFAULT_SIZES.map((s) => (
-                <label key={s} className="inline-flex items-center gap-2 rounded-xl border px-3 py-2">
-                  <input type="checkbox" name="sizes" value={s} defaultChecked />
-                  <span className="text-sm">{s}</span>
-                </label>
-              ))}
+            <label htmlFor="sizeGroup" className="text-sm font-medium">Sizes</label>
+            <select
+              id="sizeGroup"
+              name="sizeGroup"
+              defaultValue="adult"
+              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+            >
+              <option value="adult">Adult sizes</option>
+              <option value="kid">Kid sizes</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Only the sizes from the selected group will be saved.
+            </p>
+
+            {/* Adult list */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase text-gray-500">Adult</div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {ADULT_SIZES.map((s) => (
+                  <label key={s} className="inline-flex items-center gap-2 rounded-xl border px-3 py-2">
+                    <input type="checkbox" name="sizesAdult" value={s} defaultChecked />
+                    <span className="text-sm">{s}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-gray-500">Checked sizes will be created as available stock.</p>
+
+            {/* Kid list */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase text-gray-500">Kid</div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {KID_SIZES.map((s) => (
+                  <label key={s} className="inline-flex items-center gap-2 rounded-xl border px-3 py-2">
+                    <input type="checkbox" name="sizesKid" value={s} />
+                    <span className="text-sm">{s}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3">
@@ -177,7 +209,7 @@ async function createProductAction(formData: FormData) {
 
   const name = String(formData.get("name") || "").trim();
   const teamInput = String(formData.get("team") || "").trim();
-  const team: string = teamInput || ""; // schema requires string
+  const team: string = teamInput || ""; // schema exige string
   const seasonInput = String(formData.get("season") || "").trim();
   const season: string | undefined = seasonInput || undefined;
   const descriptionInput = String(formData.get("description") || "").trim();
@@ -191,13 +223,21 @@ async function createProductAction(formData: FormData) {
 
   const slug = await uniqueSlugFromName(name);
 
+  // Images
   const imagesFiles = formData.getAll("images").filter(Boolean) as File[];
   const imageUrls = await saveFilesToUploads(imagesFiles);
 
-  const sizes = (formData.getAll("sizes") as string[])
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const uniqueSizes = Array.from(new Set(sizes));
+  // Size group + sizes
+  const sizeGroup = String(formData.get("sizeGroup") || "adult");
+  const sizesAdult = (formData.getAll("sizesAdult") as string[]).map((s) => s.trim());
+  const sizesKid = (formData.getAll("sizesKid") as string[]).map((s) => s.trim());
+
+  const picked = (sizeGroup === "kid" ? sizesKid : sizesAdult).filter(Boolean);
+  const uniqueSizes = Array.from(new Set(picked));
+
+  if (uniqueSizes.length === 0) {
+    throw new Error("Please select at least one size.");
+  }
 
   const product = await prisma.product.create({
     data: {
