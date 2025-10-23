@@ -3,9 +3,9 @@
 
 import { useState } from "react";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const runtime = "nodejs";
+// ⚠️ Importante: não exportar `runtime`, `dynamic` ou `revalidate` aqui.
+// Este ficheiro é um Client Component e essas flags são para Server Components/rotas,
+// podendo causar 500 na Vercel quando usadas aqui.
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"]; // XS removido
 const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
@@ -13,7 +13,7 @@ const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
-  // por defeito: todos os ADULT selecionados
+  // Por defeito: todos os ADULT selecionados
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
@@ -21,11 +21,11 @@ export default function NewProductPage() {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
     if (group === "adult") {
-      // seleciona TODOS os adult, limpa kid
+      // Seleciona TODOS os adult e desmarca os kid
       setSelectedAdult([...ADULT_SIZES]);
       setSelectedKid([]);
     } else {
-      // seleciona TODOS os kid, limpa adult
+      // Seleciona TODOS os kid e desmarca os adult
       setSelectedKid([...KID_SIZES]);
       setSelectedAdult([]);
     }
@@ -48,7 +48,7 @@ export default function NewProductPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // incluir grupo e tamanhos selecionados
+    // Incluir grupo e tamanhos selecionados
     formData.append("sizeGroup", sizeGroup);
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
@@ -66,7 +66,8 @@ export default function NewProductPage() {
 
     alert("Product created successfully!");
     form.reset();
-    // voltar ao estado inicial: adulto com todos marcados
+
+    // Voltar ao estado inicial
     setSelectedAdult([...ADULT_SIZES]);
     setSelectedKid([]);
     setSizeGroup("adult");
