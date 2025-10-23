@@ -54,7 +54,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbs (máx 6 visíveis) ---------- */
+  /* ---------- Thumbs (max 6 visible) ---------- */
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
@@ -222,7 +222,7 @@ export default function ProductConfigurator({ product }: Props) {
     ghost.addEventListener("transitionend", cleanup);
   }
 
-  /* ---------- Navegação ---------- */
+  /* ---------- Navigation ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
 
@@ -283,6 +283,7 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
+      {/* lg:w-[560px] — bigger image; arrows outside the frame */}
       <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-6">
         <div className="flex items-center gap-4">
           {images.length > 1 ? (
@@ -323,7 +324,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs — wrapper com sombra azul quando ativo (nada cortado) */}
+        {/* Thumbs — FIX: removed overflow-hidden from button; ring never clipped */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
@@ -336,26 +337,23 @@ export default function ProductConfigurator({ product }: Props) {
                 {images.map((src, i) => {
                   const isActive = i === activeIndex;
                   return (
-                    <div
+                    <button
                       key={src + i}
+                      type="button"
+                      onClick={() => setActiveIndex(i)}
+                      aria-label={`Image ${i + 1}`}
                       className={cx(
-                        "rounded-2xl p-[2px] transition-shadow",
-                        isActive && "shadow-[0_0_0_2px_rgba(37,99,235,1)]"
+                        "relative rounded-xl border transition flex-none h-[82px] w-[68px] focus:outline-none",
+                        isActive
+                          ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
+                          : "hover:opacity-90"
                       )}
                     >
-                      <button
-                        type="button"
-                        onClick={() => setActiveIndex(i)}
-                        className={cx(
-                          "relative overflow-hidden rounded-xl border transition flex-none",
-                          "h-[82px] w-[68px]",
-                          !isActive && "hover:opacity-90"
-                        )}
-                        aria-label={`Image ${i + 1}`}
-                      >
+                      {/* inner wrapper keeps the image clipped, but NOT the ring */}
+                      <span className="absolute inset-0 overflow-hidden rounded-[10px]">
                         <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
-                      </button>
-                    </div>
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -384,7 +382,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="flex flex-wrap gap-2">
               {sizes.map((s) => {
                 const unavailable = (s.stock ?? 0) <= 0;
-                const isActive = !unavailable && selectedSize === s.size;
+                const isActive = (selected.size as string) === s.size && !unavailable;
                 return (
                   <button
                     key={s.id}
@@ -497,7 +495,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           <div className="text-right">
             <div className="text-sm text-gray-600">Total</div>
-            <div className="text-lg font-semibold">{money(unitJerseyPrice * qty)}</div>
+            <div className="text-lg font-semibold">{money(finalPrice)}</div>
           </div>
         </div>
 
