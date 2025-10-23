@@ -23,7 +23,6 @@ export default async function ProductsPage() {
       season: true,
       basePrice: true,
       images: true, // String[] of URLs (first = main)
-      // ✅ schema novo: SizeStock tem { id, size, available }
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
     },
@@ -31,9 +30,20 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold">Products</h1>
-        <p className="text-sm text-gray-500">List of all store products.</p>
+      <header className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold">Products</h1>
+            <p className="text-sm text-gray-500">List of all store products.</p>
+          </div>
+
+          <Link
+            href="/admin/products/new"
+            className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900 transition"
+          >
+            Create New Product
+          </Link>
+        </div>
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
