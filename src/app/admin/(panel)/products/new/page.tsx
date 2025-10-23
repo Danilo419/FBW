@@ -3,14 +3,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type SizesPickerProps = {
+// *** Não exportes este tipo (para não confundir o Next no page.tsx) ***
+interface SizesPickerProps {
   adultSizes: string[];
   kidSizes: string[];
-};
+}
 
 /**
  * Regras:
- * - Trocar o grupo (adult/kid) seleciona TODOS desse grupo e desmarca o outro (que fica desativado).
+ * - Mudar o grupo (adult/kid) seleciona TODOS desse grupo e desmarca o outro (que fica desativado).
  * - Envia inputs hidden "sizes" com os tamanhos finais para o server action.
  */
 export default function SizesPicker({ adultSizes, kidSizes }: SizesPickerProps) {
