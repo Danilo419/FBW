@@ -3,23 +3,22 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type Props = {
+type SizesPickerProps = {
   adultSizes: string[];
   kidSizes: string[];
 };
 
 /**
  * Regras:
- * - trocar o grupo (adult/kid) seleciona TODOS desse grupo
- *   e desmarca o outro, que fica desativado.
- * - envia inputs hidden "sizes" com os tamanhos finais, lidos pelo server action.
+ * - Trocar o grupo (adult/kid) seleciona TODOS desse grupo e desmarca o outro (que fica desativado).
+ * - Envia inputs hidden "sizes" com os tamanhos finais para o server action.
  */
-export default function SizesPicker({ adultSizes, kidSizes }: Props) {
+export default function SizesPicker({ adultSizes, kidSizes }: SizesPickerProps) {
   const [group, setGroup] = useState<"adult" | "kid">("adult");
   const [selectedAdult, setSelectedAdult] = useState<string[]>(adultSizes);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
-  // Sempre que muda o grupo → selecionar todos do grupo e limpar o outro
+  // Quando muda o grupo → marcar todos do grupo e limpar o outro
   useEffect(() => {
     if (group === "adult") {
       setSelectedAdult(adultSizes);
@@ -35,7 +34,7 @@ export default function SizesPicker({ adultSizes, kidSizes }: Props) {
     const list = group === "adult" ? selectedAdult : selectedKid;
     return (
       <>
-        {/* o server action lê todos os "sizes" */}
+        <input type="hidden" name="sizeGroup" value={group} />
         {list.map((s) => (
           <input key={s} type="hidden" name="sizes" value={s} />
         ))}
@@ -46,9 +45,6 @@ export default function SizesPicker({ adultSizes, kidSizes }: Props) {
   return (
     <div className="space-y-3">
       <label htmlFor="sizeGroup" className="text-sm font-medium">Sizes</label>
-
-      {/* hidden para o grupo (se precisares no futuro) */}
-      <input type="hidden" name="sizeGroup" value={group} />
 
       <select
         id="sizeGroup"
