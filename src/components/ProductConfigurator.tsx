@@ -283,7 +283,6 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== GALLERY ===== */}
-      {/* lg:w-[560px] — bigger image; arrows outside the frame */}
       <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-6">
         <div className="flex items-center gap-4">
           {images.length > 1 ? (
@@ -324,12 +323,12 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs — FIX: removed overflow-hidden from button; ring never clipped */}
+        {/* Thumbs — ring nunca é cortado */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
               ref={thumbsRef}
-              className="mx-auto overflow-x-auto whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none]"
+              className="mx-auto overflow-x-auto overflow-y-visible whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none]"
               style={{ maxWidth: STRIP_MAX_W }}
             >
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -349,7 +348,7 @@ export default function ProductConfigurator({ product }: Props) {
                           : "hover:opacity-90"
                       )}
                     >
-                      {/* inner wrapper keeps the image clipped, but NOT the ring */}
+                      {/* só a imagem é recortada */}
                       <span className="absolute inset-0 overflow-hidden rounded-[10px]">
                         <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
                       </span>
