@@ -54,7 +54,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbs (max 6 visible) ---------- */
+  /* ---------- Thumbs (max 6 visíveis) ---------- */
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
@@ -222,7 +222,7 @@ export default function ProductConfigurator({ product }: Props) {
     ghost.addEventListener("transitionend", cleanup);
   }
 
-  /* ---------- Navigation ---------- */
+  /* ---------- Navegação ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
 
@@ -323,12 +323,12 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs — ring nunca é cortado */}
+        {/* Thumbs — destaque interno (NÃO usa ring) */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
               ref={thumbsRef}
-              className="mx-auto overflow-x-auto overflow-y-visible whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none]"
+              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none]"
               style={{ maxWidth: STRIP_MAX_W }}
             >
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -342,14 +342,20 @@ export default function ProductConfigurator({ product }: Props) {
                       onClick={() => setActiveIndex(i)}
                       aria-label={`Image ${i + 1}`}
                       className={cx(
-                        "relative rounded-xl border transition flex-none h-[82px] w-[68px] focus:outline-none",
-                        isActive
-                          ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
-                          : "hover:opacity-90"
+                        "relative flex-none h-[82px] w-[68px] rounded-xl border transition focus:outline-none",
+                        isActive ? "border-transparent" : "hover:opacity-90"
                       )}
                     >
-                      {/* só a imagem é recortada */}
-                      <span className="absolute inset-0 overflow-hidden rounded-[10px]">
+                      {/* Moldura azul 100% interna ao botão */}
+                      {isActive && (
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
+                        />
+                      )}
+
+                      {/* Imagem recortada dentro, com pequeno afastamento das bordas */}
+                      <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
                         <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
                       </span>
                     </button>
