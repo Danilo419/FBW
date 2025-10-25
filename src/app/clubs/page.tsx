@@ -10,7 +10,7 @@ type ClubCard = { name: string; image?: string | null };
 
 export default async function ClubsPage() {
   const rows = await prisma.product.findMany({
-    select: { team: true, images: true },
+    select: { team: true, imageUrls: true }, // ✅ substitui "images"
     orderBy: { team: "asc" },
   });
 
@@ -18,10 +18,11 @@ export default async function ClubsPage() {
   for (const r of rows) {
     const team = (r.team || "").trim();
     if (!team) continue; // evita vazios
+
     if (!map.has(team)) {
-      const imgArr = Array.isArray(r.images) ? r.images : [];
+      const arr = Array.isArray(r.imageUrls) ? r.imageUrls : [];
       const firstImg =
-        imgArr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
+        arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
       map.set(team, firstImg);
     }
   }
@@ -33,7 +34,13 @@ export default async function ClubsPage() {
   return (
     <main className="container-fw py-10 space-y-6">
       <h1 className="text-3xl font-extrabold tracking-tight">Clubs</h1>
-      <Suspense fallback={<div className="rounded-2xl border bg-white p-5 text-center">Loading clubs…</div>}>
+      <Suspense
+        fallback={
+          <div className="rounded-2xl border bg-white p-5 text-center">
+            Loading clubs…
+          </div>
+        }
+      >
         <ClubsClient initialClubs={clubs} />
       </Suspense>
     </main>
