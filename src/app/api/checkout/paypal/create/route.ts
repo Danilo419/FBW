@@ -53,14 +53,19 @@ export async function POST(req: NextRequest) {
     const APP = getBaseUrl(req);
 
     // Identificar carrinho pela cookie de sessão
-    const jar = await cookies(); // ok no Next 15
+    const jar = await cookies(); // Next 15: cookies() é async
     const sid = jar.get("sid")?.value ?? null;
 
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid ?? undefined },
       include: {
         items: {
-          include: { product: { select: { name: true, images: true } } },
+          include: {
+            product: {
+              // 👇 usar imageUrls no select
+              select: { name: true, imageUrls: true, slug: true },
+            },
+          },
         },
       },
     });
@@ -90,7 +95,7 @@ export async function POST(req: NextRequest) {
         total: subtotalCents, // retrocompat
         shippingJson: (shippingFromCookie as any) ?? null,
 
-        // Preencher campos canónicos (opcional, mas útil)
+        // Preencher campos canónicos (opcional)
         shippingFullName: shippingFromCookie?.name ?? null,
         shippingEmail: shippingFromCookie?.email ?? null,
         shippingPhone: shippingFromCookie?.phone ?? null,
@@ -105,7 +110,9 @@ export async function POST(req: NextRequest) {
           create: cart.items.map((it: typeof cart.items[number]) => ({
             productId: it.productId,
             name: it.product.name,
-            image: it.product.images?.[0] ?? null,
+            // 👇 primeira imagem do array
+            image:
+              (it.product as { imageUrls?: string[] })?.imageUrls?.[0] ?? null,
             qty: it.qty,
             unitPrice: it.unitPrice,
             totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
@@ -142,6 +149,7 @@ export async function POST(req: NextRequest) {
               value: (it.unitPrice / 100).toFixed(2),
             },
             category: "PHYSICAL_GOODS",
+            // PayPal não exige imagem aqui; se precisares, podes guardar noutra estrutura
           })),
           // (opcional) enviar shipping já aqui se quiseres forçar:
           shipping: shippingFromCookie?.address?.line1
@@ -196,7 +204,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ url: approveUrl, orderId: order.id, paypalOrderId: ppOrderId });
+    return NextResponse.json({
+      url: approveUrl,
+      orderId: order.id,
+      paypalOrderId: ppOrderId,
+    });
   } catch (err: any) {
     console.error("PayPal create error:", err);
     return NextResponse.json(
