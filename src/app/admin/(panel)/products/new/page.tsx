@@ -10,22 +10,92 @@ import { useState } from "react";
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"]; // XS removido
 const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
 
+/** ---- Badge catalog (values/labels in EN) ---- */
+type BadgeOption = { value: string; label: string };
+
+const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
+  {
+    title: "Domestic Leagues – Europe (Top 8)",
+    items: [
+      { value: "premier-league-regular", label: "Premier League – League Badge" },
+      { value: "premier-league-champions", label: "Premier League – Champions (Gold)" },
+
+      { value: "la-liga-regular", label: "La Liga – League Badge" },
+      { value: "la-liga-champions", label: "La Liga – Champion" },
+
+      { value: "serie-a-regular", label: "Serie A – League Badge" },
+      { value: "serie-a-scudetto", label: "Italy – Scudetto (Serie A Champion)" },
+
+      { value: "bundesliga-regular", label: "Bundesliga – League Badge" },
+      { value: "bundesliga-champions", label: "Bundesliga – Champion (Meister Badge)" },
+
+      { value: "ligue1-regular", label: "Ligue 1 – League Badge" },
+      { value: "ligue1-champions", label: "Ligue 1 – Champion" },
+
+      { value: "primeira-liga-regular", label: "Primeira Liga (Portugal) – League Badge" },
+      { value: "primeira-liga-champions", label: "Primeira Liga – Champion" },
+
+      { value: "eredivisie-regular", label: "Eredivisie – League Badge" },
+      { value: "eredivisie-champions", label: "Eredivisie – Champion" },
+
+      { value: "scottish-premiership-regular", label: "Scottish Premiership – League Badge" },
+      { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
+    ],
+  },
+  {
+    title: "Domestic Leagues – Others mentioned",
+    items: [
+      { value: "mls-regular", label: "MLS – League Badge" },
+      { value: "mls-champions", label: "MLS – Champions (MLS Cup Holders)" },
+
+      { value: "brasileirao-regular", label: "Brazil – Brasileirão – League Badge" },
+      { value: "brasileirao-champions", label: "Brazil – Brasileirão – Champion" },
+
+      { value: "super-lig-regular", label: "Turkey – Süper Lig – League Badge" },
+      { value: "super-lig-champions", label: "Turkey – Süper Lig – Champion (if applicable)" },
+
+      { value: "spl-saudi-regular", label: "Saudi Pro League – League Badge" },
+      { value: "spl-saudi-champions", label: "Saudi Pro League – Champion (if applicable)" },
+    ],
+  },
+  {
+    title: "UEFA Competitions",
+    items: [
+      { value: "ucl-regular", label: "UEFA Champions League – Starball Badge" },
+      { value: "ucl-winners", label: "UEFA Champions League – Winners Badge" },
+
+      { value: "uel-regular", label: "UEFA Europa League – Badge" },
+      { value: "uel-winners", label: "UEFA Europa League – Winners Badge" },
+
+      { value: "uecl-regular", label: "UEFA Europa Conference League – Badge" },
+      { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
+    ],
+  },
+  {
+    title: "International Club",
+    items: [
+      { value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" },
+    ],
+  },
+];
+
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
-  // Por defeito: todos os ADULT selecionados
+  // Sizes default
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
+
+  // Badges (multi-select)
+  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
 
   function handleSizeGroupChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
     if (group === "adult") {
-      // Seleciona TODOS os adult e desmarca os kid
       setSelectedAdult([...ADULT_SIZES]);
       setSelectedKid([]);
     } else {
-      // Seleciona TODOS os kid e desmarca os adult
       setSelectedKid([...KID_SIZES]);
       setSelectedAdult([]);
     }
@@ -43,15 +113,24 @@ export default function NewProductPage() {
     );
   }
 
+  function toggleBadge(value: string) {
+    setSelectedBadges((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // Incluir grupo e tamanhos selecionados
+    // Sizes
     formData.append("sizeGroup", sizeGroup);
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
+
+    // Badges
+    selectedBadges.forEach((b) => formData.append("badges", b));
 
     const res = await fetch("/api/admin/create-product", {
       method: "POST",
@@ -67,10 +146,11 @@ export default function NewProductPage() {
     alert("Product created successfully!");
     form.reset();
 
-    // Voltar ao estado inicial
+    // Reset state
     setSelectedAdult([...ADULT_SIZES]);
     setSelectedKid([]);
     setSizeGroup("adult");
+    setSelectedBadges([]);
   }
 
   return (
@@ -141,6 +221,7 @@ export default function NewProductPage() {
             />
           </div>
 
+          {/* Images */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Images</label>
             <input
@@ -153,6 +234,40 @@ export default function NewProductPage() {
             <p className="text-xs text-gray-500">
               You can select multiple images. The first will be the main image.
             </p>
+          </div>
+
+          {/* NEW: Badges */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Badges (optional)</label>
+            <p className="text-xs text-gray-500">
+              Select one or more patches to show on the product page (league, champion, UEFA, etc.).
+            </p>
+
+            <div className="space-y-5">
+              {BADGE_GROUPS.map((group) => (
+                <fieldset key={group.title} className="space-y-2">
+                  <legend className="text-xs font-semibold uppercase text-gray-500">
+                    {group.title}
+                  </legend>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {group.items.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
+                      >
+                        <input
+                          type="checkbox"
+                          value={opt.value}
+                          checked={selectedBadges.includes(opt.value)}
+                          onChange={() => toggleBadge(opt.value)}
+                        />
+                        <span className="text-sm">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
           </div>
 
           {/* Size group selection */}
