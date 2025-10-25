@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
         name: true,
         slug: true,
         basePrice: true, // cêntimos
-        images: true,    // string[]
+        imageUrls: true, // ✅ string[]
       },
       take: limit,
       orderBy: { name: "asc" }, // ordem base; depois reordenamos por relevância
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
       name: p.name,
       slug: p.slug,
       price: Math.max(0, (p.basePrice ?? 0) / 100), // EUR
-      imageUrl: Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null,
+      imageUrl: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : null,
       clubName: null,
     }));
 
