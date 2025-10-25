@@ -31,7 +31,7 @@ type Row = {
   name: string;
   team: string;
   basePrice: number; // cents
-  images: string[];
+  imageUrls: string[]; // ✅ substitui "images"
   description: string | null;
   updatedAt: Date;
 };
@@ -62,7 +62,9 @@ export async function GET(req: Request) {
   const qRaw = (url.searchParams.get("q") || "").trim();
   const debug = url.searchParams.get("debug") === "1";
   if (!qRaw) {
-    return NextResponse.json(debug ? { products: [], info: { reason: "empty query" } } : { products: [] });
+    return NextResponse.json(
+      debug ? { products: [], info: { reason: "empty query" } } : { products: [] }
+    );
   }
 
   const qFull = normalize(qRaw).toLowerCase();
@@ -106,7 +108,7 @@ export async function GET(req: Request) {
         name: true,
         team: true,
         basePrice: true,
-        images: true,
+        imageUrls: true, // ✅ campo correto
         description: true,
         updatedAt: true,
       },
@@ -126,7 +128,7 @@ export async function GET(req: Request) {
           name: true,
           team: true,
           basePrice: true,
-          images: true,
+          imageUrls: true, // ✅ campo correto
           description: true,
           updatedAt: true,
         },
@@ -141,7 +143,7 @@ export async function GET(req: Request) {
       id: p.id,
       name: p.name,
       slug: p.slug,
-      img: Array.isArray(p.images) ? p.images[0] : undefined,
+      img: Array.isArray(p.imageUrls) ? p.imageUrls[0] : undefined,
       price: centsToEur(p.basePrice),
     }));
 
