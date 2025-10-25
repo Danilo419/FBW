@@ -47,9 +47,10 @@ export async function generateStaticParams() {
 export default async function ClubProductsPage({
   params,
 }: {
-  params: { club: string };
+  params: Promise<{ club: string }>;
 }) {
-  const club = params.club;
+  // ✅ o teu router fornece params como Promise
+  const { club } = await params;
 
   // Lista de equipas distintas para mapear slug -> nome real
   const teams = await prisma.product.findMany({
