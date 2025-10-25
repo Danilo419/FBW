@@ -38,7 +38,7 @@ type ProductUI = {
   team?: string | null;
   description?: string | null;
   basePrice: number; // cents
-  images: string[];
+  images: string[];  // ← UI continua a usar "images"
   sizes: SizeUI[];        // Adult
   kidsSizes?: SizeUI[];   // Kids (opcional)
   kidsPriceDelta?: number;
@@ -181,7 +181,7 @@ function buildUIProduct(args: {
     team: string | null;
     description: string | null;
     basePrice: number; // cents
-    images: string[] | null;
+    imageUrls: string[] | null; // ← agora vem como imageUrls
   };
   adultSizes: SizeUI[];
   kidsSizes: SizeUI[];
@@ -195,7 +195,7 @@ function buildUIProduct(args: {
     team: core.team ?? null,
     description: core.description ?? null,
     basePrice: core.basePrice,
-    images: ensureArray(core.images),
+    images: ensureArray(core.imageUrls), // ← UI continua a expor "images"
     sizes: adultSizes,
     optionGroups,
   };
@@ -230,8 +230,8 @@ export default async function ProductPage({
       name: true,
       team: true,
       description: true,
-      basePrice: true, // cents
-      images: true, // string[]
+      basePrice: true,   // cents
+      imageUrls: true,   // ✅ substitui "images"
     },
   });
   if (!core) notFound();
@@ -267,7 +267,7 @@ export default async function ProductPage({
       team: core.team,
       description: core.description,
       basePrice: Number(core.basePrice ?? 0),
-      images: core.images,
+      imageUrls: core.imageUrls, // ← vem do Prisma
     },
     adultSizes: adult,
     kidsSizes: kids,
