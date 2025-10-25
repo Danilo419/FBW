@@ -22,7 +22,7 @@ export default async function ProductsPage() {
       team: true,
       season: true,
       basePrice: true,
-      images: true, // String[] of URLs (first = main)
+      imageUrls: true, // 👈 mudou de images -> imageUrls
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
     },
@@ -70,7 +70,7 @@ export default async function ProductsPage() {
                 </tr>
               )}
               {products.map((p) => {
-                const mainImageUrl = p.images?.[0] ?? "";
+                const mainImageUrl = p.imageUrls?.[0] ?? ""; // 👈 usa imageUrls[0]
                 const availableCount = p.sizes.filter((s) => s.available).length;
 
                 return (
