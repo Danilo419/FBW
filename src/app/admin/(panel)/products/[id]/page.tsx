@@ -65,7 +65,7 @@ function completeAdultsWithGhosts<
 export default async function ProductEditPage({
   params,
 }: {
-  // ✅ Next 15: params é Promise
+  // Next 15: params pode ser Promise
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -79,6 +79,7 @@ export default async function ProductEditPage({
         include: { values: { select: { value: true, label: true } } },
       },
     },
+    // Usando apenas include: Prisma devolve todos os campos escalares (inclui imageUrls)
   });
   if (!product) return notFound();
 
@@ -188,7 +189,7 @@ export default async function ProductEditPage({
           {/* Editor de Imagens (drag, add, remove, reorder). Submete `imagesText` */}
           <ImagesEditor
             name="imagesText"
-            initialImages={product.images ?? []}
+            initialImages={product.imageUrls ?? []} // 👈 atualizado para imageUrls
             alt={product.name}
           />
 
