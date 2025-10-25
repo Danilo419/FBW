@@ -7,17 +7,17 @@ type PageProps = { params: Promise<{ team: string }> };
 // mapeia slugs -> nomes exatamente como estão na BD (seed)
 const TEAM_MAP: Record<string, string> = {
   "real-madrid": "Real Madrid",
-  "barcelona": "FC Barcelona",
+  barcelona: "FC Barcelona",
   "atletico-madrid": "Atlético de Madrid",
   "real-betis": "Real Betis",
-  "sevilla": "Sevilla FC",
+  sevilla: "Sevilla FC",
   "real-sociedad": "Real Sociedad",
-  "villarreal": "Villarreal",
+  villarreal: "Villarreal",
 
-  "benfica": "SL Benfica",
-  "porto": "FC Porto",
-  "sporting": "Sporting CP",
-  "braga": "SC Braga",
+  benfica: "SL Benfica",
+  porto: "FC Porto",
+  sporting: "Sporting CP",
+  braga: "SC Braga",
   "vitoria-sc": "Vitória SC",
 };
 
@@ -32,7 +32,7 @@ function fallbackTitle(slug: string) {
 export const revalidate = 60;
 
 export default async function TeamProductsPage({ params }: PageProps) {
-  const { team } = await params; // 👈 agora é awaited
+  const { team } = await params; // 👈 params é Promise
   const slug = team.toLowerCase();
   const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
 
@@ -43,7 +43,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
       id: true,
       slug: true,
       name: true,
-      images: true,
+      imageUrls: true, // ✅ substitui "images"
       basePrice: true,
       team: true,
     },
@@ -58,7 +58,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
           id: true,
           slug: true,
           name: true,
-          images: true,
+          imageUrls: true, // ✅
           basePrice: true,
           team: true,
         },
@@ -83,7 +83,7 @@ function List({
   items,
 }: {
   team: string;
-  items: { slug: string; name: string; images: string[]; basePrice: number }[];
+  items: { slug: string; name: string; imageUrls: string[]; basePrice: number }[];
 }) {
   return (
     <div className="container-fw py-10 space-y-8">
@@ -99,7 +99,7 @@ function List({
             <div className="aspect-[3/4] w-full bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={p.images?.[0] ?? "/placeholder.png"}
+                src={p.imageUrls?.[0] ?? "/placeholder.png"}
                 alt={p.name}
                 className="h-full w-full object-contain"
               />
