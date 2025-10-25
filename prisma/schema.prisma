@@ -82,19 +82,19 @@ model VerificationToken {
  * =========================================================
  */
 model Product {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String  @id @default(cuid())
+  slug        String  @unique
   name        String
   team        String
-  season      String?          // e.g. "25/26"
-  basePrice   Int              // cents
-  description String?          // texto livre por produto
+  season      String? // e.g. "25/26"
+  basePrice   Int // cents
+  description String? // texto livre por produto
 
   // Imagens hospedadas (ex.: Vercel Blob)
   imageUrls String[] @default([])
 
   // Badges selecionados (ex.: "ucl-winners", "premier-league-champions", etc.)
-  badges    String[] @default([])
+  badges String[] @default([])
 
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
@@ -117,8 +117,8 @@ model SizeStock {
 
   product Product @relation(fields: [productId], references: [id])
 
-  @@index([productId])
   @@unique([productId, size])
+  @@index([productId])
 }
 
 model OptionGroup {

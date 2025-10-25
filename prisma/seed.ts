@@ -36,7 +36,6 @@ async function removeProductBySlug(slug: string) {
 
 type BadgeSeed = { value: string; label: string; priceDelta: number };
 
-// Adulto S–4XL, Criança com “Y”
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KIDS_SIZES  = ["2-3Y", "3-4Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"] as const;
 
@@ -46,7 +45,7 @@ async function createProduct(
   name: string,
   team: string,
   season: string,      // e.g., "25/26"
-  images: string[],    // 👈 nome do campo no schema atual
+  imageUrls: string[], // 👈 agora bate com o schema
   priceCents: number,
   badges: BadgeSeed[] = []
 ) {
@@ -59,12 +58,11 @@ async function createProduct(
       team,
       season,
       basePrice: priceCents,
-      images, // 👈 corresponde ao schema atual
+      imageUrls, // 👈 campo correto
       description: `Official ${team} jersey ${season}. Breathable and comfortable fabric for fans and athletes.`,
     },
   });
 
-  // SizeStock apenas com disponibilidade (boolean)
   await prisma.sizeStock.createMany({
     data: [
       ...ADULT_SIZES.map((sz) => ({ productId: product.id, size: sz, available: true })),
@@ -73,7 +71,6 @@ async function createProduct(
     skipDuplicates: true,
   });
 
-  // Grupo SIZE
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -90,7 +87,6 @@ async function createProduct(
     },
   });
 
-  // Customization (RADIO)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -109,7 +105,6 @@ async function createProduct(
     },
   });
 
-  // Shorts (ADDON)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -121,7 +116,6 @@ async function createProduct(
     },
   });
 
-  // Socks (ADDON)
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -133,7 +127,6 @@ async function createProduct(
     },
   });
 
-  // Competition Badges (ADDON, multi-select)
   if (badges.length) {
     await prisma.optionGroup.create({
       data: {
