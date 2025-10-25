@@ -1,52 +1,51 @@
 // scripts/fix-images-to-webp.ts
 import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-
 const prisma = new PrismaClient();
 
-function toWebp(p: string) {
-  return p.replace(/\.(png|jpe?g)$/i, ".webp");
-}
-
-function fileExistsInPublic(p: string) {
-  if (!p?.startsWith("/")) return false;
-  return fs.existsSync(path.join(process.cwd(), "public", p));
+// Converte a extensão para .webp mantendo o path
+function toWebp(url: string) {
+  return url.replace(/\.(png|jpg|jpeg)$/i, ".webp");
 }
 
 async function main() {
   const products = await prisma.product.findMany({
-    select: { id: true, images: true, name: true },
+    select: { id: true, name: true, imageUrls: true },
   });
 
-  let updated = 0, missing = 0;
+  let updated = 0;
+  let missing = 0;
 
   for (const p of products) {
-    const curr = p.images ?? [];
-    const next = curr.map(toWebp);
-
-    // se nada mudou, salta
-    if (JSON.stringify(curr) === JSON.stringify(next)) continue;
-
-    // validação básica: conta quantos webp existem mesmo no disco
-    const nonExisting = next.filter((rel) => !fileExistsInPublic(rel));
-    if (nonExisting.length) {
-      console.warn(`[WARN] ${p.name} tem imagens .webp em falta:`, nonExisting);
-      missing += nonExisting.length;
+    const src = p.imageUrls ?? [];
+    if (!src.length) {
+      missing++;
+      continue;
     }
+
+    const converted = src.map(toWebp);
+
+    // Se nada mudou, segue
+    const isSame =
+      converted.length === src.length &&
+      converted.every((u, i) => u === src[i]);
+
+    if (isSame) continue;
 
     await prisma.product.update({
       where: { id: p.id },
-      data: { images: next },
+      data: { imageUrls: { set: converted } },
     });
+
     updated++;
-    console.log(`OK: ${p.name}`);
+    console.log(`✅ ${p.name}: ${src.length} → ${converted.length} imagens (extensão .webp aplicada)`);
   }
 
-  console.log(`\nProdutos atualizados: ${updated}`);
-  console.log(`.webp em falta (aviso): ${missing}`);
+  console.log(`\nResumo: ${updated} produtos atualizados; ${missing} sem imagens.`);
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1); })
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
   .finally(() => prisma.$disconnect());
