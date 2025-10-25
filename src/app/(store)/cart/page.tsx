@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import type { Prisma, CartItem } from "@prisma/client";
-import { removeItem } from "./actions"; // importa a server action
+import { removeItem } from "./actions"; // server action
 
 export const dynamic = "force-dynamic";
 
@@ -21,17 +21,19 @@ type CartWithItems = Prisma.CartGetPayload<{
             id: true;
             name: true;
             team: true;
-            images: true;
+            imageUrls: true; // ← atualizado
             slug: true;
+            basePrice: true;
           };
         };
       };
+      orderBy: { createdAt: "asc" };
     };
   };
 }>;
 
 export default async function CartPage() {
-  const cookieStore = await cookies(); // ✅ no teu TS, cookies() é Promise
+  const cookieStore = await cookies(); // em algumas versões é Promise
   const sid = cookieStore.get("sid")?.value ?? null;
 
   const session = await getServerSession(authOptions);
@@ -53,8 +55,9 @@ export default async function CartPage() {
               id: true,
               name: true,
               team: true,
-              images: true,
+              imageUrls: true, // ← atualizado
               slug: true,
+              basePrice: true,
             },
           },
         },
@@ -82,9 +85,8 @@ export default async function CartPage() {
     );
   }
 
-  // Construímos itens para mostrar: preço SEM personalização (usa sempre unitPrice)
+  // Construímos itens para mostrar: usa sempre unitPrice gravado no cart
   const displayItems = cart.items.map((it) => {
-    // 'unitPrice' vem do cartItem (preço base gravado no "add to cart")
     const displayUnit: number = (it as CartItem).unitPrice ?? 0;
     const displayTotal: number = displayUnit * it.qty;
 
@@ -112,7 +114,7 @@ export default async function CartPage() {
 
       <div className="grid gap-5">
         {displayItems.map((it) => {
-          const cover = it.product.images?.[0] ?? "/placeholder.png";
+          const cover = it.product.imageUrls?.[0] ?? "/placeholder.png"; // ← atualizado
 
           return (
             <div
@@ -126,7 +128,7 @@ export default async function CartPage() {
                     alt={it.product.name}
                     fill
                     className="object-contain"
-                    sizes="112px"
+                    sizes="(max-width: 640px) 96px, 112px"
                   />
                 </div>
 
