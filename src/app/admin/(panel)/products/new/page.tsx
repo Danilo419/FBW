@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client"; // upload direto do browser
 
 // ⚠️ Importante: não exportar `runtime`, `dynamic` ou `revalidate` aqui.
 // Este ficheiro é um Client Component e essas flags são para Server Components/rotas,
@@ -73,9 +74,7 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   },
   {
     title: "International Club",
-    items: [
-      { value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" },
-    ],
+    items: [{ value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" }],
   },
 ];
 
@@ -88,6 +87,10 @@ export default function NewProductPage() {
 
   // Badges (multi-select)
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
+
+  // Images → upload direto para Blob; guardamos apenas URLs
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   function handleSizeGroupChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const group = e.target.value as "adult" | "kid";
@@ -119,6 +122,30 @@ export default function NewProductPage() {
     );
   }
 
+  // ⬇️ Upload direto (client) com @vercel/blob/client
+  async function handleImagesSelected(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        // O client exige uma rota que devolve um upload URL assinado:
+        // ver: /api/blob/upload (generateUploadURL)
+        const { url } = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/blob/upload",
+        });
+        uploaded.push(url);
+      }
+      setImageUrls((prev) => [...prev, ...uploaded]);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload images. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -131,6 +158,11 @@ export default function NewProductPage() {
 
     // Badges
     selectedBadges.forEach((b) => formData.append("badges", b));
+
+    // Image URLs (apenas URLs; não enviar ficheiros brutos)
+    imageUrls.forEach((u) => formData.append("imageUrls", u));
+    // garantir que nenhum <input name="images"> será enviado
+    formData.delete("images");
 
     const res = await fetch("/api/admin/create-product", {
       method: "POST",
@@ -151,6 +183,7 @@ export default function NewProductPage() {
     setSelectedKid([]);
     setSizeGroup("adult");
     setSelectedBadges([]);
+    setImageUrls([]);
   }
 
   return (
@@ -221,22 +254,33 @@ export default function NewProductPage() {
             />
           </div>
 
-          {/* Images */}
+          {/* Images (upload direto → Blob) */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Images</label>
             <input
               type="file"
-              name="images"
               multiple
               accept="image/*"
+              onChange={(e) => handleImagesSelected(e.target.files)}
               className="block w-full rounded-xl border px-3 py-2 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-900"
             />
             <p className="text-xs text-gray-500">
-              You can select multiple images. The first will be the main image.
+              Files are uploaded directly to storage. The first URL will be the main image.
             </p>
+
+            {imageUrls.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                {imageUrls.map((u, i) => (
+                  <div key={u} className="rounded-xl border p-1 text-xs">
+                    <div className="truncate">{i + 1}. {u.split("/").pop()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {uploading && <p className="text-xs text-blue-600">Uploading images…</p>}
           </div>
 
-          {/* NEW: Badges */}
+          {/* Badges */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
@@ -344,9 +388,10 @@ export default function NewProductPage() {
             </a>
             <button
               type="submit"
+              disabled={uploading}
               className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900"
             >
-              Create Product
+              {uploading ? "Uploading…" : "Create Product"}
             </button>
           </div>
         </form>

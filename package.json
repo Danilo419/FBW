@@ -24,6 +24,7 @@
     "@prisma/client": "^6.16.0",
     "@stripe/react-stripe-js": "^4.0.0",
     "@stripe/stripe-js": "^7.9.0",
+    "@vercel/blob": "^2.0.0",
     "bcryptjs": "^3.0.2",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.540.0",
