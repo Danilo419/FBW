@@ -11,13 +11,16 @@ function toNullableString(v: unknown): string | null {
   return s === "" ? null : s;
 }
 
+/** Converte "39.90" -> 3990; valores inválidos viram 0 */
 function toCents(v: unknown): number {
-  const n = Number(v);
+  if (v == null) return 0;
+  // aceita vírgula ou ponto
+  const n = Number(String(v).replace(",", "."));
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100);
 }
 
-/** Aceita JSON, linhas ou vírgulas */
+/** Aceita JSON, linhas ou vírgulas; devolve array de URLs */
 function parseImagesText(input: unknown): string[] {
   if (input == null) return [];
   const raw = String(input).trim();
@@ -58,7 +61,8 @@ export async function updateProduct(formData: FormData) {
   const description = toNullableString(formData.get("description"));
   const basePrice = toCents(formData.get("price"));
 
-  const images = parseImagesText(formData.get("imagesText"));
+  // 👇 corresponde ao campo do schema: Product.imageUrls String[]
+  const imageUrls = parseImagesText(formData.get("imagesText"));
 
   await prisma.product.update({
     where: { id },
@@ -68,13 +72,14 @@ export async function updateProduct(formData: FormData) {
       season,
       description,
       basePrice,
-      images,
+      imageUrls, // <<<<<<<<<<<<<< usar o nome novo do schema
     },
   });
 
-  // refresca as páginas relevantes no painel
+  // refresca as páginas relevantes no painel e listagens públicas
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
+  revalidatePath("/products");
 }
 
 /**
