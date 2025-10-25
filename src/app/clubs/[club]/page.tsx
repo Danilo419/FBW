@@ -7,9 +7,11 @@ import { notFound } from "next/navigation";
 /** Render sempre em runtime (sem SSG/ISR) */
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-function slugify(s: string) {
-  return s
+function slugify(s?: string | null) {
+  const base = (s ?? "").trim();
+  return base
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -35,15 +37,19 @@ export async function generateStaticParams() {
     select: { team: true },
     distinct: ["team"],
   });
-  return rows.map((r) => ({ club: slugify(r.team) }));
+
+  return rows
+    .map((r) => r.team)
+    .filter((t): t is string => !!t && t.trim().length > 0)
+    .map((team) => ({ club: slugify(team) }));
 }
 
 export default async function ClubProductsPage({
   params,
 }: {
-  params: Promise<{ club: string }>;
+  params: { club: string };
 }) {
-  const { club } = await params;
+  const club = params.club;
 
   // Lista de equipas distintas para mapear slug -> nome real
   const teams = await prisma.product.findMany({
@@ -51,7 +57,7 @@ export default async function ClubProductsPage({
     distinct: ["team"],
   });
 
-  const matchedTeam = teams.find((t) => slugify(t.team) === club)?.team;
+  const matchedTeam = teams.find((t) => slugify(t.team) === club)?.team ?? null;
   const teamName = matchedTeam ?? titleFromSlug(club);
 
   const products = await prisma.product.findMany({
@@ -61,7 +67,7 @@ export default async function ClubProductsPage({
       id: true,
       slug: true,
       name: true,
-      images: true,
+      imageUrls: true, // ✅ substitui "images"
       basePrice: true,
       team: true,
     },
@@ -70,20 +76,32 @@ export default async function ClubProductsPage({
   if (!products.length) notFound();
 
   const money = (cents: number) =>
-    (cents / 100).toLocaleString("en-GB", { style: "currency", currency: "EUR" });
+    (Math.round(cents) / 100).toLocaleString("en-GB", {
+      style: "currency",
+      currency: "EUR",
+    });
 
   return (
     <div className="container-fw py-10 space-y-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight">{teamName} — Products</h1>
-        <Link href="/products" className="rounded-full px-4 py-2 border hover:bg-gray-50 text-sm">
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          {teamName} — Products
+        </h1>
+        <Link
+          href="/products"
+          className="rounded-full px-4 py-2 border hover:bg-gray-50 text-sm"
+        >
           ← Back to all products
         </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((p) => {
-          const img = (Array.isArray(p.images) ? p.images[0] : undefined) ?? "/placeholder.png";
+          const img =
+            (Array.isArray(p.imageUrls) && p.imageUrls.length > 0
+              ? p.imageUrls[0]
+              : undefined) ?? "/placeholder.png";
+
           return (
             <Link
               key={p.id}
@@ -95,13 +113,17 @@ export default async function ClubProductsPage({
                   src={img}
                   alt={p.name}
                   fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
+                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                  priority={false}
                 />
               </div>
               <div className="p-3">
-                <div className="text-xs text-gray-500">{p.team}</div>
+                <div className="text-xs text-gray-500">{p.team ?? teamName}</div>
                 <div className="font-semibold line-clamp-2">{p.name}</div>
-                <div className="mt-1 text-sm text-gray-700">{money(p.basePrice)}</div>
+                <div className="mt-1 text-sm text-gray-700">
+                  {money(p.basePrice)}
+                </div>
               </div>
             </Link>
           );
