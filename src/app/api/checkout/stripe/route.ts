@@ -83,7 +83,14 @@ export async function POST(req: NextRequest) {
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid ?? undefined },
       include: {
-        items: { include: { product: { select: { name: true, images: true } } } },
+        items: {
+          include: {
+            product: {
+              // ✅ usar imageUrls (String[])
+              select: { name: true, imageUrls: true },
+            },
+          },
+        },
       },
     });
     if (!cart || cart.items.length === 0) {
@@ -123,7 +130,8 @@ export async function POST(req: NextRequest) {
             create: cart.items.map((it: (typeof cart.items)[number]) => ({
               productId: it.productId,
               name: it.product.name,
-              image: it.product.images?.[0] ?? null,
+              // ✅ primeira imagem a partir de imageUrls
+              image: (it.product as any).imageUrls?.[0] ?? null,
               qty: it.qty,
               unitPrice: it.unitPrice,
               totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
@@ -153,7 +161,8 @@ export async function POST(req: NextRequest) {
           create: cart.items.map((it: (typeof cart.items)[number]) => ({
             productId: it.productId,
             name: it.product.name,
-            image: it.product.images?.[0] ?? null,
+            // ✅ primeira imagem a partir de imageUrls
+            image: (it.product as any).imageUrls?.[0] ?? null,
             qty: it.qty,
             unitPrice: it.unitPrice,
             totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
