@@ -90,10 +90,10 @@ model Product {
   basePrice   Int              // cents
   description String?          // texto livre por produto
 
-  // Novo: imagens hospedadas (ex.: Vercel Blob)
+  // Imagens hospedadas (ex.: Vercel Blob)
   imageUrls String[] @default([])
 
-  // Novo: badges selecionados (valores string como "ucl-winners", "premier-league-champions", etc.)
+  // Badges selecionados (ex.: "ucl-winners", "premier-league-champions", etc.)
   badges    String[] @default([])
 
   sizes      SizeStock[]
@@ -113,7 +113,7 @@ model SizeStock {
   id        String  @id @default(cuid())
   productId String
   size      String
-  available Boolean @default(true) // ✅ sem número de stock; apenas disponibilidade on/off
+  available Boolean @default(true) // sem número de stock; apenas disponibilidade on/off
 
   product Product @relation(fields: [productId], references: [id])
 
@@ -196,7 +196,6 @@ model Cart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // @@unique([userId]) // opcional
   @@index([userId])
 }
 

@@ -46,7 +46,7 @@ async function createProduct(
   name: string,
   team: string,
   season: string,      // e.g., "25/26"
-  images: string[],
+  images: string[],    // 👈 nome do campo no schema atual
   priceCents: number,
   badges: BadgeSeed[] = []
 ) {
@@ -59,12 +59,12 @@ async function createProduct(
       team,
       season,
       basePrice: priceCents,
-      images,
+      images, // 👈 corresponde ao schema atual
       description: `Official ${team} jersey ${season}. Breathable and comfortable fabric for fans and athletes.`,
     },
   });
 
-  // ✅ SizeStock agora só indica se existe/está disponível (boolean), sem número
+  // SizeStock apenas com disponibilidade (boolean)
   await prisma.sizeStock.createMany({
     data: [
       ...ADULT_SIZES.map((sz) => ({ productId: product.id, size: sz, available: true })),
@@ -73,7 +73,7 @@ async function createProduct(
     skipDuplicates: true,
   });
 
-  // Grupo SIZE com exatamente estes tamanhos (adulto + criança)
+  // Grupo SIZE
   await prisma.optionGroup.create({
     data: {
       productId: product.id,
@@ -167,11 +167,20 @@ async function main() {
     "Real Madrid Home Jersey 25/26",
     "Real Madrid",
     "25/26",
-    ["/img/RealMadrid/25-26/home/rm-1-25-26-home.png", "/img/RealMadrid/25-26/home/rm-2-25-26-home.png", "/img/RealMadrid/25-26/home/rm-3-25-26-home.png", "/img/RealMadrid/25-26/home/rm-4-25-26-home.png", "/img/RealMadrid/25-26/home/rm-5-25-26-home.png", "/img/RealMadrid/25-26/home/rm-6-25-26-home.png", "/img/RealMadrid/25-26/home/rm-7-25-26-home.png", "/img/RealMadrid/25-26/home/rm-8-25-26-home.png"],
+    [
+      "/img/RealMadrid/25-26/home/rm-1-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-2-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-3-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-4-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-5-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-6-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-7-25-26-home.png",
+      "/img/RealMadrid/25-26/home/rm-8-25-26-home.png",
+    ],
     3499,
     [
-      { value: "laliga",      label: "La Liga Patch",               priceDelta: 500 },
-      { value: "ucl",         label: "UEFA Champions League Patch", priceDelta: 700 },
+      { value: "laliga", label: "La Liga Patch", priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
 
@@ -180,11 +189,18 @@ async function main() {
     "Real Madrid Away Jersey 25/26",
     "Real Madrid",
     "25/26",
-    ["/img/RealMadrid/25-26/away/rm-1-25-26-away.png", "/img/RealMadrid/25-26/away/rm-2-25-26-away.png", "/img/RealMadrid/25-26/away/rm-3-25-26-away.png", "/img/RealMadrid/25-26/away/rm-4-25-26-away.png", "/img/RealMadrid/25-26/away/rm-5-25-26-away.png", "/img/RealMadrid/25-26/away/rm-6-25-26-away.png"],
+    [
+      "/img/RealMadrid/25-26/away/rm-1-25-26-away.png",
+      "/img/RealMadrid/25-26/away/rm-2-25-26-away.png",
+      "/img/RealMadrid/25-26/away/rm-3-25-26-away.png",
+      "/img/RealMadrid/25-26/away/rm-4-25-26-away.png",
+      "/img/RealMadrid/25-26/away/rm-5-25-26-away.png",
+      "/img/RealMadrid/25-26/away/rm-6-25-26-away.png",
+    ],
     3499,
     [
-      { value: "laliga",      label: "La Liga Patch",               priceDelta: 500 },
-      { value: "ucl",         label: "UEFA Champions League Patch", priceDelta: 700 },
+      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
 
@@ -193,11 +209,19 @@ async function main() {
     "Real Madrid Third Jersey 25/26",
     "Real Madrid",
     "25/26",
-    ["/img/RealMadrid/25-26/third/rm-1-25-26-third.png", "/img/RealMadrid/25-26/third/rm-2-25-26-third.png", "/img/RealMadrid/25-26/third/rm-3-25-26-third.png", "/img/RealMadrid/25-26/third/rm-4-25-26-third.png", "/img/RealMadrid/25-26/third/rm-5-25-26-third.png", "/img/RealMadrid/25-26/third/rm-6-25-26-third.png", "/img/RealMadrid/25-26/third/rm-7-25-26-third.png"],
+    [
+      "/img/RealMadrid/25-26/third/rm-1-25-26-third.png",
+      "/img/RealMadrid/25-26/third/rm-2-25-26-third.png",
+      "/img/RealMadrid/25-26/third/rm-3-25-26-third.png",
+      "/img/RealMadrid/25-26/third/rm-4-25-26-third.png",
+      "/img/RealMadrid/25-26/third/rm-5-25-26-third.png",
+      "/img/RealMadrid/25-26/third/rm-6-25-26-third.png",
+      "/img/RealMadrid/25-26/third/rm-7-25-26-third.png",
+    ],
     3499,
     [
-      { value: "laliga",      label: "La Liga Patch",               priceDelta: 500 },
-      { value: "ucl",         label: "UEFA Champions League Patch", priceDelta: 700 },
+      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
+      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
 
@@ -206,12 +230,20 @@ async function main() {
     "FC Barcelona Home Jersey 25/26",
     "FC Barcelona",
     "25/26",
-    ["/img/Barcelona/25-26/home/fcb-1-25-26-home.png", "/img/Barcelona/25-26/home/fcb-2-25-26-home.png", "/img/Barcelona/25-26/home/fcb-3-25-26-home.png", "/img/Barcelona/25-26/home/fcb-4-25-26-home.png", "/img/Barcelona/25-26/home/fcb-5-25-26-home.png", "/img/Barcelona/25-26/home/fcb-6-25-26-home.png", "/img/Barcelona/25-26/home/fcb-7-25-26-home.png"],
+    [
+      "/img/Barcelona/25-26/home/fcb-1-25-26-home.png",
+      "/img/Barcelona/25-26/home/fcb-2-25-26-home.png",
+      "/img/Barcelona/25-26/home/fcb-3-25-26-home.png",
+      "/img/Barcelona/25-26/home/fcb-4-25-26-home.png",
+      "/img/Barcelona/25-26/home/fcb-5-25-26-home.png",
+      "/img/Barcelona/25-26/home/fcb-6-25-26-home.png",
+      "/img/Barcelona/25-26/home/fcb-7-25-26-home.png",
+    ],
     3499,
     [
-      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
-      { value: "laligawinner", label: "La Liga Winner Patch",  priceDelta: 500 },
-      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
+      { value: "laliga",       label: "La Liga Patch",              priceDelta: 500 },
+      { value: "laligawinner", label: "La Liga Winner Patch",       priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
 
@@ -220,12 +252,20 @@ async function main() {
     "FC Barcelona Away Jersey 25/26",
     "FC Barcelona",
     "25/26",
-    ["/img/Barcelona/25-26/away/fcb-1-25-26-away.png", "/img/Barcelona/25-26/away/fcb-2-25-26-away.png", "/img/Barcelona/25-26/away/fcb-3-25-26-away.png", "/img/Barcelona/25-26/away/fcb-4-25-26-away.png", "/img/Barcelona/25-26/away/fcb-5-25-26-away.png", "/img/Barcelona/25-26/away/fcb-6-25-26-away.png", "/img/Barcelona/25-26/away/fcb-7-25-26-away.png"],
+    [
+      "/img/Barcelona/25-26/away/fcb-1-25-26-away.png",
+      "/img/Barcelona/25-26/away/fcb-2-25-26-away.png",
+      "/img/Barcelona/25-26/away/fcb-3-25-26-away.png",
+      "/img/Barcelona/25-26/away/fcb-4-25-26-away.png",
+      "/img/Barcelona/25-26/away/fcb-5-25-26-away.png",
+      "/img/Barcelona/25-26/away/fcb-6-25-26-away.png",
+      "/img/Barcelona/25-26/away/fcb-7-25-26-away.png",
+    ],
     3499,
     [
-      { value: "laliga", label: "La Liga Patch",               priceDelta: 500 },
-      { value: "laligawinner", label: "La Liga Winner Patch",  priceDelta: 500 },
-      { value: "ucl",    label: "UEFA Champions League Patch", priceDelta: 700 },
+      { value: "laliga",       label: "La Liga Patch",              priceDelta: 500 },
+      { value: "laligawinner", label: "La Liga Winner Patch",       priceDelta: 500 },
+      { value: "ucl",          label: "UEFA Champions League Patch", priceDelta: 700 },
     ]
   );
 
