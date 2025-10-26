@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Star,
   MessageSquare,
@@ -10,6 +10,7 @@ import {
   MessageCircle,
   X,
   Image as ImageIcon,
+  UploadCloud,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -22,7 +23,7 @@ type Review = {
   comment?: string | null;
   createdAt: string; // ISO
   user?: ReviewUser | null;
-  imageUrls?: string[] | null; // ✅ novo
+  imageUrls?: string[] | null;
 };
 type ReviewsResponse = { reviews: Review[]; average: number; total: number };
 
@@ -54,7 +55,7 @@ function initials(name?: string | null) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Read-only stars (com parcial)                                      */
+/* Read-only stars                                                    */
 /* ------------------------------------------------------------------ */
 function ReadOnlyStars({ value, size = 16 }: { value: number; size?: number }) {
   const v = clamp(value);
@@ -74,7 +75,6 @@ function ReadOnlyStars({ value, size = 16 }: { value: number; size?: number }) {
               height={size}
               fill="currentColor"
               style={{ clipPath: `inset(0 ${100 - filled * 100}% 0 0)` }}
-              aria-hidden
             />
             <Star className="absolute inset-0 text-amber-700/25" width={size} height={size} fill="none" />
           </div>
@@ -130,7 +130,7 @@ function SelectStars({
 }
 
 /* ------------------------------------------------------------------ */
-/* Item de review                                                     */
+/* Review Item                                                        */
 /* ------------------------------------------------------------------ */
 function ReviewItem({ r }: { r: Review }) {
   const name = r.user?.name || "Anonymous";
@@ -139,40 +139,30 @@ function ReviewItem({ r }: { r: Review }) {
   return (
     <li className="py-3">
       <div className="flex items-start gap-3">
-        {/* Avatar */}
         {photo ? (
-          <img
-            src={photo}
-            alt={name}
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-full object-cover ring-1 ring-black/5"
-          />
+          <img src={photo} alt={name} width={40} height={40} className="h-10 w-10 rounded-full object-cover ring-1 ring-black/5" />
         ) : (
           <div className="h-10 w-10 rounded-full grid place-items-center bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 ring-1 ring-black/5">
             <span className="text-xs font-semibold">{initials(name)}</span>
           </div>
         )}
 
-        {/* Conteúdo */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold truncate">{name}</span>
             <ReadOnlyStars value={r.rating} />
             <span className="ml-auto text-xs text-gray-500">{timeAgo(r.createdAt)}</span>
           </div>
-
           {r.comment && <p className="mt-1 text-sm text-gray-700 break-words">{r.comment}</p>}
 
-          {/* ✅ imagens do review */}
           {r.imageUrls && r.imageUrls.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
               {r.imageUrls.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="group">
                   <img
                     src={url}
                     alt={`Review image ${i + 1}`}
-                    className="h-20 w-20 object-cover rounded-lg ring-1 ring-black/10 hover:brightness-110 transition"
+                    className="h-24 w-full object-cover rounded-lg ring-1 ring-black/10 group-hover:brightness-110 transition"
                   />
                 </a>
               ))}
@@ -185,15 +175,14 @@ function ReviewItem({ r }: { r: Review }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Barras de distribuição                                             */
+/* Distribution bars                                                  */
 /* ------------------------------------------------------------------ */
 function Distribution({ reviews }: { reviews: Review[] }) {
   const totals = useMemo(() => {
-    const acc = [0, 0, 0, 0, 0, 0]; // 0..5
+    const acc = [0, 0, 0, 0, 0, 0];
     for (const r of reviews) acc[clamp(Math.round(r.rating))] += 1;
     return acc;
   }, [reviews]);
-
   const total = reviews.length || 1;
 
   return (
@@ -205,10 +194,7 @@ function Distribution({ reviews }: { reviews: Review[] }) {
           <div key={star} className="grid grid-cols-[24px_1fr_auto] items-center gap-3">
             <span className="text-xs text-gray-500">{star}</span>
             <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden ring-1 ring-black/5">
-              <div
-                className="h-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 transition-all duration-700"
-                style={{ width: `${pct}%` }}
-              />
+              <div className="h-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-xs tabular-nums text-gray-500 w-8 text-right">{pct}%</span>
           </div>
@@ -219,7 +205,7 @@ function Distribution({ reviews }: { reviews: Review[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Mini confetti ⭐✨                                                  */
+/* Confetti                                                           */
 /* ------------------------------------------------------------------ */
 function Confetti({ show }: { show: boolean }) {
   if (!show) return null;
@@ -246,17 +232,21 @@ function Confetti({ show }: { show: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* MAIN                                                                */
+/* MAIN                                                               */
 /* ------------------------------------------------------------------ */
 export default function ReviewsPanel({ productId }: { productId: string }) {
   const [data, setData] = useState<ReviewsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState("");
-  const [files, setFiles] = useState<File[]>([]); // ✅ novo
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+
+  // Dropzone UI
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   async function load() {
     setLoading(true);
@@ -270,10 +260,58 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       setLoading(false);
     }
   }
-
   useEffect(() => {
     load();
   }, [productId]);
+
+  /** valida e adiciona imagens ao estado */
+  function addFiles(incoming: File[]) {
+    const MAX = 4;
+    const MAX_MB = 5;
+    const errs: string[] = [];
+
+    // filtrar apenas imagens e até 5MB
+    const cleaned = incoming.filter((f) => {
+      const okType = /^image\//.test(f.type);
+      const okSize = f.size <= MAX_MB * 1024 * 1024;
+      if (!okType) errs.push(`"${f.name}" não é uma imagem.`);
+      if (!okSize) errs.push(`"${f.name}" ultrapassa ${MAX_MB}MB.`);
+      return okType && okSize;
+    });
+
+    // evitar duplicados por name+size
+    const existingKey = new Set(files.map((f) => `${f.name}-${f.size}`));
+    const unique = cleaned.filter((f) => !existingKey.has(`${f.name}-${f.size}`));
+
+    const next = [...files, ...unique].slice(0, MAX);
+    if (files.length + unique.length > MAX) {
+      errs.push(`Máximo de ${MAX} imagens.`);
+    }
+
+    if (errs.length) {
+      setError(errs.join(" "));
+      setTimeout(() => setError(null), 3500);
+    }
+    setFiles(next);
+  }
+
+  function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    addFiles(Array.from(e.target.files || []));
+    // limpar o input para permitir re-selecionar o mesmo ficheiro depois
+    e.currentTarget.value = "";
+  }
+
+  function onDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const fls = Array.from(e.dataTransfer.files || []);
+    addFiles(fls);
+  }
+
+  function openPicker() {
+    inputRef.current?.click();
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -285,23 +323,14 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       formData.append("productId", productId);
       formData.append("rating", String(rating));
       formData.append("comment", comment.trim());
+      files.forEach((f) => formData.append("images", f));
 
-      // ✅ envia as imagens (limite 4)
-      files.slice(0, 4).forEach((f) => formData.append("images", f));
-
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        body: formData, // multipart/form-data
-      });
-
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || "Failed to submit review.");
-      }
+      const res = await fetch("/api/reviews", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Failed to submit review.");
 
       setComment("");
-      setRating(0);
       setFiles([]);
+      setRating(0);
       setOk(true);
       await load();
       setTimeout(() => setOk(false), 800);
@@ -316,17 +345,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
   const average = data?.average ?? 0;
   const total = data?.total ?? 0;
   const reviews = data?.reviews ?? [];
-
-  // dial
   const deg = (clamp(average) / 5) * 360;
-
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const chosen = Array.from(e.target.files || []);
-    // validações simples
-    const onlyImages = chosen.filter((f) => /^image\//.test(f.type));
-    const limited = onlyImages.slice(0, 4);
-    setFiles(limited);
-  }
 
   return (
     <section className="mt-10">
@@ -368,7 +387,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             </div>
           </div>
 
-          {/* Comentário */}
+          {/* Comment */}
           <div className="mt-4 relative">
             <div className="pointer-events-none absolute left-3 top-3 text-gray-400">
               <MessageSquare className="h-4 w-4" />
@@ -384,45 +403,98 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             <div className="mt-1 text-xs text-gray-400 text-right">{comment.length}/1000</div>
           </div>
 
-          {/* ✅ Upload de imagens */}
+          {/* ✅ Upload de imagens — Dropzone estilizado */}
           <div className="mt-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-              <ImageIcon className="h-4 w-4 text-blue-500" />
-              Add images (optional, up to 4)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={onFileChange}
-              className="mt-2 block w-full text-sm text-gray-600"
-            />
-            {files.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {files.map((f, i) => (
-                  <div key={i} className="relative">
-                    <img
-                      src={URL.createObjectURL(f)}
-                      alt="preview"
-                      className="h-20 w-20 object-cover rounded-lg ring-1 ring-black/10"
-                    />
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              className={[
+                "block rounded-2xl border-2 border-dashed px-4 py-5 cursor-pointer transition relative",
+                "bg-gradient-to-r from-slate-50/60 to-cyan-50/40",
+                dragOver ? "border-blue-500 bg-blue-50/60" : "border-gray-200 hover:border-blue-300",
+              ].join(" ")}
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  <UploadCloud className={dragOver ? "h-5 w-5 text-blue-600" : "h-5 w-5 text-gray-500"} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-700">
+                    Add images <span className="font-normal text-gray-500">(optional, up to 4 · max 5 MB each)</span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Drag & drop here or{" "}
                     <button
                       type="button"
-                      onClick={() => setFiles((arr) => arr.filter((_, j) => j !== i))}
-                      className="absolute -top-1 -right-1 bg-white rounded-full p-1 shadow"
-                      aria-label="Remove image"
-                      title="Remove"
+                      onClick={openPicker}
+                      className="underline decoration-dotted font-medium text-blue-600 hover:text-blue-700"
                     >
-                      <X className="h-3 w-3 text-gray-700" />
+                      browse
                     </button>
+                    .
                   </div>
-                ))}
+
+                  {/* Previews */}
+                  {files.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {files.map((f, i) => (
+                        <div key={i} className="relative group">
+                          <img
+                            src={URL.createObjectURL(f)}
+                            alt="preview"
+                            className="h-24 w-full object-cover rounded-xl ring-1 ring-black/10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFiles((arr) => arr.filter((_, j) => j !== i))}
+                            className="absolute -top-2 -right-2 p-1 rounded-full bg-white shadow ring-1 ring-black/10 opacity-90 group-hover:opacity-100"
+                            aria-label="Remove image"
+                            title="Remove"
+                          >
+                            <X className="h-3.5 w-3.5 text-gray-700" />
+                          </button>
+                          <div className="mt-1 truncate text-[11px] text-gray-500">{f.name}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="ml-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={openPicker}
+                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-3 py-2 text-xs font-medium text-white shadow-md hover:brightness-110"
+                  >
+                    <ImageIcon className="h-4 w-4" /> Choose
+                  </button>
+                </div>
               </div>
-            )}
+
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={onFileInput}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+            </label>
+
+            {/* status linha fina */}
+            <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+              <span>{files.length}/4 selected</span>
+              {error && <span className="text-red-600">{error}</span>}
+            </div>
           </div>
 
           {/* Submit */}
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-5 flex items-center gap-3">
             <button
               disabled={submitting || rating <= 0 || rating > 5}
               className="relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-sm font-medium text-white shadow-md transition hover:brightness-110 active:scale-[.98] disabled:opacity-60"
@@ -438,7 +510,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
               )}
             </button>
 
-            {error && <span className="text-sm text-red-600">{error}</span>}
             {ok && <span className="text-sm text-emerald-600">Thanks for your review!</span>}
           </div>
         </form>
