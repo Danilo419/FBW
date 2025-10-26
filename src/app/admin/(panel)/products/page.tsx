@@ -1,4 +1,3 @@
-// src/app/admin/(panel)/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -7,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
-import { Trash2, Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon } from "lucide-react";
+import DeleteButton from "./DeleteButton";
 
 /* ---------- helpers ---------- */
 function fmtMoneyFromCents(cents: number, currency = "EUR") {
@@ -42,7 +42,6 @@ async function deleteProductAction(formData: FormData) {
 export default async function ProductsPage({
   searchParams,
 }: {
-  // Next 15: searchParams é Promise<>
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const sp = await searchParams;
@@ -51,14 +50,13 @@ export default async function ProductsPage({
   const pageParam = Number(sp?.page ?? "1");
   let page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
-  // filtro simples: procura em name, team, season e slug
   const where = q
     ? {
         OR: [
-          { name:   { contains: q, mode: "insensitive" as const } },
-          { team:   { contains: q, mode: "insensitive" as const } },
+          { name: { contains: q, mode: "insensitive" as const } },
+          { team: { contains: q, mode: "insensitive" as const } },
           { season: { contains: q, mode: "insensitive" as const } },
-          { slug:   { contains: q, mode: "insensitive" as const } },
+          { slug: { contains: q, mode: "insensitive" as const } },
         ],
       }
     : {};
@@ -79,7 +77,6 @@ export default async function ProductsPage({
       imageUrls: true,
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
-      slug: true,
     },
     skip: (page - 1) * LIMIT,
     take: LIMIT,
@@ -104,7 +101,6 @@ export default async function ProductsPage({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Search box */}
             <form action="/admin/products" method="get" className="relative">
               <input
                 type="search"
@@ -114,7 +110,6 @@ export default async function ProductsPage({
                 className="w-64 rounded-xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
               <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              {/* ao pesquisar, volta sempre à página 1 */}
               <input type="hidden" name="page" value="1" />
             </form>
 
@@ -134,11 +129,10 @@ export default async function ProductsPage({
             <thead>
               <tr className="text-left text-gray-500 border-b">
                 <th className="py-2 pr-3">Image</th>
-                <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">Name</th>
                 <th className="py-2 pr-3">Team</th>
                 <th className="py-2 pr-3">Season</th>
-                <th className="py-2 pr-3">Base price</th>
+                <th className="py-2 pr-3">Price</th>
                 <th className="py-2 pr-3">Sizes</th>
                 <th className="py-2 pr-3 text-right">Actions</th>
               </tr>
@@ -146,23 +140,23 @@ export default async function ProductsPage({
             <tbody>
               {products.length === 0 && (
                 <tr>
-                  <td className="py-3 text-gray-500" colSpan={8}>
+                  <td colSpan={7} className="py-3 text-gray-500 text-center">
                     No products found.
                   </td>
                 </tr>
               )}
 
               {products.map((p) => {
-                const mainImageUrl = p.imageUrls?.[0] ?? "";
+                const img = p.imageUrls?.[0] ?? "";
                 const availableCount = p.sizes.filter((s) => s.available).length;
 
                 return (
                   <tr key={p.id} className="border-b last:border-0 align-top">
                     <td className="py-2 pr-3">
                       <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50">
-                        {mainImageUrl ? (
+                        {img ? (
                           <Image
-                            src={mainImageUrl}
+                            src={img}
                             alt={p.name}
                             width={56}
                             height={56}
@@ -177,43 +171,23 @@ export default async function ProductsPage({
                       </div>
                     </td>
 
-                    <td className="py-2 pr-3 font-mono whitespace-nowrap">{p.id}</td>
                     <td className="py-2 pr-3">{p.name}</td>
                     <td className="py-2 pr-3">{p.team}</td>
                     <td className="py-2 pr-3">{p.season ?? "—"}</td>
-                    <td className="py-2 pr-3">{fmtMoneyFromCents(p.basePrice, "EUR")}</td>
+                    <td className="py-2 pr-3">{fmtMoneyFromCents(p.basePrice)}</td>
                     <td className="py-2 pr-3">
-                      {p.sizes.length} sizes
-                      {p.sizes.length > 0 && (
-                        <span className="text-gray-400"> ({availableCount} available)</span>
-                      )}
+                      {p.sizes.length} ({availableCount} available)
                     </td>
 
-                    <td className="py-2 pr-0">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-2 pr-3 text-right">
+                      <div className="flex justify-end gap-2">
                         <Link
                           href={`/admin/products/${p.id}`}
                           className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                         >
                           Edit
                         </Link>
-
-                        <form action={deleteProductAction}>
-                          <input type="hidden" name="id" value={p.id} />
-                          <button
-                            type="submit"
-                            title="Delete product"
-                            aria-label={`Delete ${p.name}`}
-                            className="inline-flex items-center justify-center rounded-xl border px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
-                            onClick={(e) => {
-                              if (!confirm(`Delete “${p.name}”? This cannot be undone.`)) {
-                                e.preventDefault();
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </form>
+                        <DeleteButton id={p.id} name={p.name} action={deleteProductAction} />
                       </div>
                     </td>
                   </tr>
@@ -222,28 +196,6 @@ export default async function ProductsPage({
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              const active = p === page;
-              return (
-                <Link
-                  key={p}
-                  href={queryForLink(p)}
-                  className={`min-w-[2rem] text-center rounded-lg border px-2.5 py-1.5 text-sm ${
-                    active ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
-                  }`}
-                  aria-current={active ? "page" : undefined}
-                >
-                  {p}
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </section>
     </div>
   );
