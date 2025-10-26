@@ -26,6 +26,44 @@ function parsePriceToCents(raw: string): number {
   return Math.round(n * 100);
 }
 
+/** Catálogo de labels legíveis para as badges (mesmos "values" usados no admin) */
+const BADGE_LABELS = new Map<string, string>([
+  // Europe (top 8)
+  ["premier-league-regular", "Premier League – League Badge"],
+  ["premier-league-champions", "Premier League – Champions (Gold)"],
+  ["la-liga-regular", "La Liga – League Badge"],
+  ["la-liga-champions", "La Liga – Champion"],
+  ["serie-a-regular", "Serie A – League Badge"],
+  ["serie-a-scudetto", "Italy – Scudetto (Serie A Champion)"],
+  ["bundesliga-regular", "Bundesliga – League Badge"],
+  ["bundesliga-champions", "Bundesliga – Champion (Meister Badge)"],
+  ["ligue1-regular", "Ligue 1 – League Badge"],
+  ["ligue1-champions", "Ligue 1 – Champion"],
+  ["primeira-liga-regular", "Primeira Liga – League Badge"],
+  ["primeira-liga-champions", "Primeira Liga – Champion"],
+  ["eredivisie-regular", "Eredivisie – League Badge"],
+  ["eredivisie-champions", "Eredivisie – Champion"],
+  ["scottish-premiership-regular", "Scottish Premiership – League Badge"],
+  ["scottish-premiership-champions", "Scottish Premiership – Champion"],
+  // Others mentioned
+  ["mls-regular", "MLS – League Badge"],
+  ["mls-champions", "MLS – Champions (MLS Cup Holders)"],
+  ["brasileirao-regular", "Brazil – Brasileirão – League Badge"],
+  ["brasileirao-champions", "Brazil – Brasileirão – Champion"],
+  ["super-lig-regular", "Turkey – Süper Lig – League Badge"],
+  ["super-lig-champions", "Turkey – Süper Lig – Champion"],
+  ["spl-saudi-regular", "Saudi Pro League – League Badge"],
+  ["spl-saudi-champions", "Saudi Pro League – Champion"],
+  // UEFA / FIFA
+  ["ucl-regular", "UEFA Champions League – Starball Badge"],
+  ["ucl-winners", "UEFA Champions League – Winners Badge"],
+  ["uel-regular", "UEFA Europa League – Badge"],
+  ["uel-winners", "UEFA Europa League – Winners Badge"],
+  ["uecl-regular", "UEFA Europa Conference League – Badge"],
+  ["uecl-winners", "UEFA Europa Conference League – Winners Badge"],
+  ["club-world-cup-champions", "Club World Cup – Champions Badge"],
+]);
+
 /* ================== Handler ================== */
 export async function POST(req: Request) {
   try {
@@ -52,12 +90,11 @@ export async function POST(req: Request) {
       | string
       | null;
 
-    const badges = getAllStrings(form.getAll("badges"));
-    const imageUrlsRaw = getAllStrings(form.getAll("imageUrls"));
+    const badges = getAllStrings(form.getAll("badges"));          // ex.: ["ucl-regular", ...]
+    const imageUrlsRaw = getAllStrings(form.getAll("imageUrls")); // URLs (Vercel Blob)
 
-    // Só aceita URLs http(s) — os do Vercel Blob já são https://...public.blob.vercel-storage.com
+    // Só aceita URLs http(s)
     const imageUrls = imageUrlsRaw.filter((u) => /^https?:\/\//i.test(u));
-
     if (imageUrls.length === 0) {
       return NextResponse.json(
         { error: "At least one image url is required." },
@@ -79,7 +116,7 @@ export async function POST(req: Request) {
       slug = `${base}-${suffix++}`;
     }
 
-    // Criação do produto
+    // 1) Criar produto
     const created = await prisma.product.create({
       data: {
         name,
@@ -94,7 +131,7 @@ export async function POST(req: Request) {
       select: { id: true, slug: true },
     });
 
-    // Tenta criar stocks (ignora se não existir a tabela)
+    // 2) Tentar criar stocks simples (ignora se tabela não existir)
     try {
       if (sizes.length > 0) {
         await prisma.sizeStock.createMany({
@@ -108,6 +145,50 @@ export async function POST(req: Request) {
       }
     } catch {
       // Silencioso se SizeStock não existir no schema
+    }
+
+    // 3) Bootstrapping de Option Groups para o configurador
+    // 3.1 Customization (sempre)
+    await prisma.optionGroup.create({
+      data: {
+        productId: created.id,
+        key: "customization",
+        label: "Customization",
+        type: "RADIO",       // OptionType enum
+        required: true,
+        values: {
+          create: [
+            { value: "none", label: "No customization", priceDelta: 0 },
+            { value: "name-number", label: "Name & Number", priceDelta: 0 },
+            { value: "badge", label: "Competition Badge", priceDelta: 0 },
+            {
+              value: "name-number-badge",
+              label: "Name & Number + Competition Badge",
+              priceDelta: 0,
+            },
+          ],
+        },
+      },
+    });
+
+    // 3.2 Badges (só se houver alguma escolhida no admin)
+    if (badges.length > 0) {
+      await prisma.optionGroup.create({
+        data: {
+          productId: created.id,
+          key: "badges",
+          label: "Competition Badge",
+          type: "ADDON",
+          required: false,
+          values: {
+            create: badges.map((v) => ({
+              value: v,
+              label: BADGE_LABELS.get(v) ?? v,
+              priceDelta: 0,
+            })),
+          },
+        },
+      });
     }
 
     return NextResponse.json(
