@@ -49,6 +49,7 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  /* ---------- Images (garantir que mostram sem configurar domains) ---------- */
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
 
@@ -103,8 +104,31 @@ export default function ProductConfigurator({ product }: Props) {
   }, [sizes, selectedSize]);
 
   /* ---------- Groups ---------- */
-  const customizationGroup = product.optionGroups.find((g) => g.key === "customization");
+  const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
+
+  // ✅ Se não houver customization no DB, cria um grupo "sintético" (FREE)
+  const customizationGroup: OptionGroupUI | undefined =
+    customizationGroupFromDb ??
+    ({
+      id: "synthetic-customization",
+      key: "customization",
+      label: "Customization",
+      type: "RADIO",
+      required: true,
+      values: [
+        { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
+        { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
+        { id: "c-badge", value: "badge", label: "Competition Badge", priceDelta: 0 },
+        {
+          id: "c-both",
+          value: "name-number-badge",
+          label: "Name & Number + Competition Badge",
+          priceDelta: 0,
+        },
+      ],
+    } as OptionGroupUI);
+
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
   );
@@ -113,7 +137,9 @@ export default function ProductConfigurator({ product }: Props) {
   const showNameNumber =
     typeof customization === "string" && customization.toLowerCase().includes("name-number");
   const showBadgePicker =
-    typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
+    typeof customization === "string" &&
+    customization.toLowerCase().includes("badge") &&
+    !!badgesGroup;
 
   const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
   function toggleAddon(key: string, value: string, checked: boolean) {
@@ -306,6 +332,7 @@ export default function ProductConfigurator({ product }: Props) {
               className="object-contain"
               sizes="(min-width: 1024px) 540px, 100vw"
               priority
+              unoptimized   // ✅ evita whitelist de domínios no next.config
             />
           </div>
 
@@ -356,7 +383,7 @@ export default function ProductConfigurator({ product }: Props) {
 
                       {/* Imagem recortada dentro, com pequeno afastamento das bordas */}
                       <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                        <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" />
+                        <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" unoptimized />
                       </span>
                     </button>
                   );
@@ -419,7 +446,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Customization (FREE) */}
+        {/* Customization (FREE) — usa o do DB ou o sintético */}
         {customizationGroup && (
           <GroupBlock
             group={customizationGroup}
