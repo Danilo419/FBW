@@ -775,7 +775,7 @@ function Avatar({ src, name, size = 40 }: { src?: string; name?: string; size?: 
     .toUpperCase();
 
   if (src) {
-    // eslint-disable-next-line @next/next/no-img-element.
+    // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
         src={src}
