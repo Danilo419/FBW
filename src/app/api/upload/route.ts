@@ -1,45 +1,48 @@
 // src/app/api/upload/route.ts
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "fs/promises";
-import { randomBytes } from "crypto";
-import path from "path";
+import { put } from "@vercel/blob";
+import { randomUUID } from "crypto";
 
-export const runtime = "nodejs"; // garante FS local
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8MB
+const ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/gif",
+]);
+
+function sanitizeName(name: string) {
+  return name.replace(/[^\w.\-]+/g, "_");
+}
 
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
     const file = form.get("file") as File | null;
+
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
-
-    if (!file.type.startsWith("image/")) {
+    if (!ALLOWED_MIME.has(file.type)) {
       return NextResponse.json({ error: "Only images are allowed" }, { status: 400 });
     }
-
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: "Max file size is 8MB" }, { status: 400 });
     }
 
-    // Lê o conteúdo para buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const baseName = `${randomUUID()}_${sanitizeName(file.name)}`;
+    const key = `products/${baseName}`;
 
-    // Caminho final: /public/uploads/xxxx.ext
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
-
-    const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-    const name = `${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
-    const filePath = path.join(uploadsDir, name);
-
-    await writeFile(filePath, buffer);
-
-    // URL público (servido pelo Next a partir de /public)
-    const url = `/uploads/${name}`;
+    // ⬇️ Envia o próprio File para o Blob (corrige o erro de tipo)
+    const { url } = await put(key, file, {
+      access: "public",
+      contentType: file.type || "application/octet-stream",
+      addRandomSuffix: false,
+    });
 
     return NextResponse.json({ ok: true, url }, { status: 201 });
   } catch (e: any) {

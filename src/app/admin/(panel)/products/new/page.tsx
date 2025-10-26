@@ -1,14 +1,10 @@
 // src/app/admin/(panel)/products/new/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { upload } from "@vercel/blob/client"; // upload direto do browser
 
-// ⚠️ Importante: não exportar `runtime`, `dynamic` ou `revalidate` aqui.
-// Este ficheiro é um Client Component e essas flags são para Server Components/rotas,
-// podendo causar 500 na Vercel quando usadas aqui.
-
-const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"]; // XS removido
+const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
 
 /** ---- Badge catalog (values/labels in EN) ---- */
@@ -92,7 +88,7 @@ export default function NewProductPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  function handleSizeGroupChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  function handleSizeGroupChange(e: ChangeEvent<HTMLSelectElement>) {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
     if (group === "adult") {
@@ -122,15 +118,14 @@ export default function NewProductPage() {
     );
   }
 
-  // ⬇️ Upload direto (client) com @vercel/blob/client
+  // ⬇️ Upload direto com @vercel/blob/client
   async function handleImagesSelected(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        // O client exige uma rota que devolve um upload URL assinado:
-        // ver: /api/blob/upload (generateUploadURL)
+        // Requer rota server que devolve URL assinado: /api/blob/upload
         const { url } = await upload(file.name, file, {
           access: "public",
           handleUploadUrl: "/api/blob/upload",
@@ -146,7 +141,7 @@ export default function NewProductPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -161,8 +156,7 @@ export default function NewProductPage() {
 
     // Image URLs (apenas URLs; não enviar ficheiros brutos)
     imageUrls.forEach((u) => formData.append("imageUrls", u));
-    // garantir que nenhum <input name="images"> será enviado
-    formData.delete("images");
+    formData.delete("images"); // garantir que nenhum input "images" vai no POST
 
     const res = await fetch("/api/admin/create-product", {
       method: "POST",

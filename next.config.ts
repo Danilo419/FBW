@@ -2,20 +2,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ✅ Let builds on Vercel pass even if ESLint/TS complain while you iterate.
-  //    (You can turn these off later to enforce strict checks.)
+  // ✅ Deixa os builds passarem mesmo com avisos de ESLint/TS enquanto iteras.
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
 
-  // If you need to allow remote images later, uncomment and configure:
-  // images: {
-  //   remotePatterns: [
-  //     { protocol: "https", hostname: "**" },
-  //   ],
-  // },
+  // ✅ Permitir imagens remotas do Vercel Blob
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.public.blob.vercel-storage.com",
+      },
+    ],
+  },
 
   webpack: (config) => {
-    return config; // keep default webpack behavior
+    return config; // comportamento padrão do webpack
   },
 };
 
