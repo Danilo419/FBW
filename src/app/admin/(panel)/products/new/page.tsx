@@ -121,14 +121,20 @@ export default function NewProductPage() {
     );
   }
 
-  // ⬇️ Upload direto com @vercel/blob/client (robusto e incremental)
+  // helper p/ nome único
+  const uniqueName = (file: File) => {
+    const safe = file.name.replace(/\s+/g, "_");
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    return `${id}_${safe}`;
+  };
+
+  // ⬇️ Upload direto com @vercel/blob/client (robusto e incremental + nomes únicos)
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
 
     const errors: string[] = [];
     for (const file of Array.from(files)) {
-      // validação igual à da API
       if (!ALLOWED.has(file.type)) {
         errors.push(`${file.name}: unsupported type`);
         continue;
@@ -139,20 +145,18 @@ export default function NewProductPage() {
       }
 
       try {
-        const { url } = await upload(file.name, file, {
+        const name = uniqueName(file); // ← evita “blob already exists”
+        const { url } = await upload(name, file, {
           access: "public",
           handleUploadUrl: "/api/blob/upload",
         });
-        // acrescenta imediatamente ao state (não perde as anteriores)
         setImageUrls((prev) => (prev.includes(url) ? prev : [...prev, url]));
       } catch (e: any) {
         errors.push(`${file.name}: ${e?.message ?? "upload failed"}`);
       }
     }
 
-    // limpa o input para permitir escolher os mesmos ficheiros novamente
-    if (input) input.value = "";
-
+    if (input) input.value = ""; // poder selecionar os mesmos ficheiros de novo
     setUploading(false);
 
     if (errors.length) {
@@ -173,9 +177,9 @@ export default function NewProductPage() {
     // Badges
     selectedBadges.forEach((b) => formData.append("badges", b));
 
-    // Image URLs (apenas URLs; não enviar ficheiros brutos)
+    // Image URLs (apenas URLs)
     imageUrls.forEach((u) => formData.append("imageUrls", u));
-    formData.delete("images"); // garantir que nenhum input "images" vai no POST
+    formData.delete("images");
 
     const res = await fetch("/api/admin/create-product", {
       method: "POST",
@@ -318,7 +322,7 @@ export default function NewProductPage() {
                           checked={selectedBadges.includes(opt.value)}
                           onChange={() => toggleBadge(opt.value)}
                         />
-                        <span className="text-sm">{opt.label}</span>
+                          <span className="text-sm">{opt.label}</span>
                       </label>
                     ))}
                   </div>
