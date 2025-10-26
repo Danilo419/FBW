@@ -6,11 +6,40 @@ export const runtime = "nodejs";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
+import { revalidatePath } from "next/cache";
+import { Trash2 } from "lucide-react";
 
+/* ---------- helpers ---------- */
 function fmtMoneyFromCents(cents: number, currency = "EUR") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(
     cents / 100
   );
+}
+
+/* ---------- server action: delete product ---------- */
+async function deleteProductAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id") || "");
+
+  if (!id) return;
+
+  // Apagar dependências primeiro para evitar FK errors
+  await prisma.$transaction(async (tx) => {
+    await tx.optionValue.deleteMany({ where: { group: { productId: id } } });
+    await tx.optionGroup.deleteMany({ where: { productId: id } });
+    await tx.sizeStock.deleteMany({ where: { productId: id } });
+
+    // Itens de carrinho / encomenda e reviews que referem o produto
+    await tx.cartItem.deleteMany({ where: { productId: id } });
+    await tx.orderItem.deleteMany({ where: { productId: id } });
+    await tx.review.deleteMany({ where: { productId: id } });
+
+    // Por fim, o próprio produto
+    await tx.product.delete({ where: { id } });
+  });
+
+  // Refresca esta página
+  revalidatePath("/admin/products");
 }
 
 export default async function ProductsPage() {
@@ -22,7 +51,7 @@ export default async function ProductsPage() {
       team: true,
       season: true,
       basePrice: true,
-      imageUrls: true, // 👈 mudou de images -> imageUrls
+      imageUrls: true,
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
     },
@@ -69,8 +98,9 @@ export default async function ProductsPage() {
                   </td>
                 </tr>
               )}
+
               {products.map((p) => {
-                const mainImageUrl = p.imageUrls?.[0] ?? ""; // 👈 usa imageUrls[0]
+                const mainImageUrl = p.imageUrls?.[0] ?? "";
                 const availableCount = p.sizes.filter((s) => s.available).length;
 
                 return (
@@ -105,13 +135,29 @@ export default async function ProductsPage() {
                         <span className="text-gray-400"> ({availableCount} available)</span>
                       )}
                     </td>
-                    <td className="py-2 pr-3 text-right">
-                      <Link
-                        href={`/admin/products/${p.id}`}
-                        className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
-                      >
-                        Edit
-                      </Link>
+
+                    <td className="py-2 pr-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/admin/products/${p.id}`}
+                          className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                        >
+                          Edit
+                        </Link>
+
+                        {/* Delete button (red trash) */}
+                        <form action={deleteProductAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <button
+                            type="submit"
+                            title="Delete product"
+                            aria-label={`Delete ${p.name}`}
+                            className="inline-flex items-center justify-center rounded-xl border px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 );
