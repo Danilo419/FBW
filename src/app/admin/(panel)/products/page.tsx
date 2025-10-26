@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
-import { Trash2 } from "lucide-react";
+import { Trash2, Search as SearchIcon } from "lucide-react";
 
 /* ---------- helpers ---------- */
 function fmtMoneyFromCents(cents: number, currency = "EUR") {
@@ -16,35 +16,60 @@ function fmtMoneyFromCents(cents: number, currency = "EUR") {
   );
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
 /* ---------- server action: delete product ---------- */
 async function deleteProductAction(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
-
   if (!id) return;
 
-  // Apagar dependências primeiro para evitar FK errors
   await prisma.$transaction(async (tx) => {
     await tx.optionValue.deleteMany({ where: { group: { productId: id } } });
     await tx.optionGroup.deleteMany({ where: { productId: id } });
     await tx.sizeStock.deleteMany({ where: { productId: id } });
-
-    // Itens de carrinho / encomenda e reviews que referem o produto
     await tx.cartItem.deleteMany({ where: { productId: id } });
     await tx.orderItem.deleteMany({ where: { productId: id } });
     await tx.review.deleteMany({ where: { productId: id } });
-
-    // Por fim, o próprio produto
     await tx.product.delete({ where: { id } });
   });
 
-  // Refresca esta página
   revalidatePath("/admin/products");
 }
 
-export default async function ProductsPage() {
+/* ---------- page ---------- */
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string; page?: string };
+}) {
+  const q = (searchParams?.q || "").trim();
+  const LIMIT = 10;
+  const pageParam = Number(searchParams?.page ?? "1");
+  // calculado depois de ter totalPages; por agora assume 1
+  let page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+
+  // filtro simples: procura em name, team, season e slug
+  const where = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: "insensitive" as const } },
+          { team: { contains: q, mode: "insensitive" as const } },
+          { season: { contains: q, mode: "insensitive" as const } },
+          { slug: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const total = await prisma.product.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+  page = clamp(page, 1, totalPages);
+
   const products = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
+    where,
+    orderBy: [{ createdAt: "desc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
@@ -54,8 +79,19 @@ export default async function ProductsPage() {
       imageUrls: true,
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
+      slug: true,
     },
+    skip: (page - 1) * LIMIT,
+    take: LIMIT,
   });
+
+  const queryForLink = (p: number) => {
+    const usp = new URLSearchParams();
+    if (q) usp.set("q", q);
+    usp.set("page", String(p));
+    const qs = usp.toString();
+    return `/admin/products?${qs}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -63,15 +99,33 @@ export default async function ProductsPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold">Products</h1>
-            <p className="text-sm text-gray-500">List of all store products.</p>
+            <p className="text-sm text-gray-500">
+              Manage your products. {total > 0 ? `${total} result${total === 1 ? "" : "s"}.` : "No results."}
+            </p>
           </div>
 
-          <Link
-            href="/admin/products/new"
-            className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900 transition"
-          >
-            Create New Product
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* Search box */}
+            <form action="/admin/products" method="get" className="relative">
+              <input
+                type="search"
+                name="q"
+                defaultValue={q}
+                placeholder="Search products…"
+                className="w-64 rounded-xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              {/* mantém a página 1 ao pesquisar */}
+              <input type="hidden" name="page" value="1" />
+            </form>
+
+            <Link
+              href="/admin/products/new"
+              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900 transition"
+            >
+              Create New Product
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -94,7 +148,7 @@ export default async function ProductsPage() {
               {products.length === 0 && (
                 <tr>
                   <td className="py-3 text-gray-500" colSpan={8}>
-                    No products yet.
+                    No products found.
                   </td>
                 </tr>
               )}
@@ -136,7 +190,7 @@ export default async function ProductsPage() {
                       )}
                     </td>
 
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pr-0">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/admin/products/${p.id}`}
@@ -145,7 +199,6 @@ export default async function ProductsPage() {
                           Edit
                         </Link>
 
-                        {/* Delete button (red trash) */}
                         <form action={deleteProductAction}>
                           <input type="hidden" name="id" value={p.id} />
                           <button
@@ -153,6 +206,11 @@ export default async function ProductsPage() {
                             title="Delete product"
                             aria-label={`Delete ${p.name}`}
                             className="inline-flex items-center justify-center rounded-xl border px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={(e) => {
+                              if (!confirm(`Delete “${p.name}”? This cannot be undone.`)) {
+                                e.preventDefault();
+                              }
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -165,6 +223,30 @@ export default async function ProductsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const p = i + 1;
+              const active = p === page;
+              return (
+                <Link
+                  key={p}
+                  href={queryForLink(p)}
+                  className={`min-w-[2rem] text-center rounded-lg border px-2.5 py-1.5 text-sm ${
+                    active
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "hover:bg-gray-50"
+                  }`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {p}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
