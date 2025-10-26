@@ -1,14 +1,32 @@
+// src/app/api/admin/create-product/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Garante Node.js (Prisma não funciona em Edge)
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-function getAllStrings(v: FormDataEntryValue[] | undefined): string[] {
-  if (!v) return [];
-  return v.map((x) => (typeof x === "string" ? x : "")).filter(Boolean);
+/* ================== Helpers ================== */
+function getAllStrings(list: FormDataEntryValue[] | undefined): string[] {
+  if (!list) return [];
+  return list.map((x) => (typeof x === "string" ? x : "")).filter(Boolean);
 }
 
+function toSlug(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function parsePriceToCents(raw: string): number {
+  const n = Number(String(raw).replace(",", "."));
+  if (!Number.isFinite(n) || n < 0) return NaN;
+  return Math.round(n * 100);
+}
+
+/* ================== Handler ================== */
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
@@ -24,43 +42,64 @@ export async function POST(req: Request) {
       );
     }
 
-    const priceCents = Math.round(parseFloat(priceStr) * 100);
-    if (!Number.isFinite(priceCents) || priceCents < 0) {
+    const basePrice = parsePriceToCents(priceStr);
+    if (!Number.isFinite(basePrice)) {
       return NextResponse.json({ error: "Invalid price." }, { status: 400 });
     }
 
-    const season = String(form.get("season") || "").trim() || null;
-    const description = String(form.get("description") || "").trim() || null;
+    const season = (String(form.get("season") || "").trim() || null) as string | null;
+    const description = (String(form.get("description") || "").trim() || null) as
+      | string
+      | null;
+
     const badges = getAllStrings(form.getAll("badges"));
-    const imageUrls = getAllStrings(form.getAll("imageUrls")); // ← URLs do Vercel Blob
+    const imageUrlsRaw = getAllStrings(form.getAll("imageUrls"));
+
+    // Só aceita URLs http(s) — os do Vercel Blob já são https://...public.blob.vercel-storage.com
+    const imageUrls = imageUrlsRaw.filter((u) => /^https?:\/\//i.test(u));
+
+    if (imageUrls.length === 0) {
+      return NextResponse.json(
+        { error: "At least one image url is required." },
+        { status: 400 }
+      );
+    }
+
+    // Sizes
     const sizeGroup = (String(form.get("sizeGroup") || "adult") as "adult" | "kid");
     const sizes = getAllStrings(form.getAll("sizes"));
 
-    // ⬇️ IMPORTANTE: este create assume que o teu Product tem:
-    // - basePrice    Int
-    // - badges       String[]    (Postgres text[])
-    // - imageUrls    String[]    (Postgres text[])
-    // Se ainda não tiveres estes campos, cria uma migration ou,
-    // como alternativa temporária, podes guardar em JSON (ver comentários abaixo).
-    const product = await prisma.product.create({
+    // Slug único
+    const base = toSlug(
+      `${team ? team + " " : ""}${name}${season ? " " + season : ""}`
+    );
+    let slug = base || toSlug(name) || `product-${Date.now()}`;
+    let suffix = 1;
+    while (await prisma.product.findUnique({ where: { slug } })) {
+      slug = `${base}-${suffix++}`;
+    }
+
+    // Criação do produto
+    const created = await prisma.product.create({
       data: {
         name,
         team,
         season,
         description,
-        basePrice: priceCents,
-        badges,     // text[]
-        imageUrls,  // text[]
-      } as any, // ← 'as any' evita erro caso o tipo gerado ainda não conheça estes campos (até correres a migration)
-      select: { id: true },
+        slug,
+        basePrice,     // Int (cêntimos)
+        badges,        // String[] (Postgres text[])
+        imageUrls,     // String[] (Postgres text[])
+      },
+      select: { id: true, slug: true },
     });
 
-    // Guardar stocks das sizes (se existir a tabela SizeStock)
+    // Tenta criar stocks (ignora se não existir a tabela)
     try {
       if (sizes.length > 0) {
         await prisma.sizeStock.createMany({
           data: sizes.map((s) => ({
-            productId: product.id,
+            productId: created.id,
             size: s,
             available: true,
           })),
@@ -68,11 +107,14 @@ export async function POST(req: Request) {
         });
       }
     } catch {
-      // Se não existir a tabela SizeStock, ignoramos silenciosamente
+      // Silencioso se SizeStock não existir no schema
     }
 
-    return NextResponse.json({ ok: true, id: product.id });
-  } catch (err) {
+    return NextResponse.json(
+      { ok: true, id: created.id, slug: created.slug, sizeGroup, sizes },
+      { status: 201 }
+    );
+  } catch (err: any) {
     console.error("create-product error:", err);
     return NextResponse.json({ error: "Failed to create product." }, { status: 500 });
   }
