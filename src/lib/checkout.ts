@@ -3,7 +3,10 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 
 /** Recalcula o preço de 1 unidade com base em basePrice + deltas das opções */
-async function computeUnitPrice(productId: string, optionsJson: Record<string, string | null> | null) {
+async function computeUnitPrice(
+  productId: string,
+  optionsJson: Record<string, string | null> | null
+) {
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: { options: { include: { values: true } } },
@@ -15,7 +18,7 @@ async function computeUnitPrice(productId: string, optionsJson: Record<string, s
     for (const group of product.options) {
       const chosen = optionsJson[group.key];
       if (!chosen) continue;
-      const val = group.values.find(v => v.value === chosen);
+      const val = group.values.find((v) => v.value === chosen);
       if (val) price += val.priceDelta;
     }
   }
@@ -40,18 +43,37 @@ export async function createOrderFromCart() {
     include: {
       items: {
         include: {
-          product: { select: { id: true, name: true, images: true, basePrice: true, slug: true, team: true } },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              imageUrls: true, // ✅ substitui "images"
+              basePrice: true,
+              slug: true,
+              team: true,
+            },
+          },
         },
       },
     },
   });
+
   if (!cart || cart.items.length === 0) {
     throw new Error('Cart empty');
   }
 
   // Recalcular preços com base nos produtos e opções atuais
   let subtotal = 0;
-  const orderItemsData = [];
+  const orderItemsData: Array<{
+    productId: string;
+    name: string;
+    image: string | null;
+    qty: number;
+    unitPrice: number;
+    totalPrice: number;
+    snapshotJson: any;
+  }> = [];
+
   for (const it of cart.items) {
     const optionsJson = (it as any).optionsJson as Record<string, string | null> | null;
     const unitPrice = await computeUnitPrice(it.productId, optionsJson);
@@ -61,7 +83,7 @@ export async function createOrderFromCart() {
     orderItemsData.push({
       productId: it.productId,
       name: it.product.name,
-      image: it.product.images?.[0] ?? null,
+      image: it.product.imageUrls?.[0] ?? null, // ✅ usa imageUrls
       qty: it.qty,
       unitPrice,
       totalPrice,
@@ -69,6 +91,8 @@ export async function createOrderFromCart() {
         team: it.product.team,
         productSlug: it.product.slug,
         optionsJson,
+        // (opcional) retro-compat: poderias guardar todas as imagens
+        // images: Array.isArray(it.product.imageUrls) ? it.product.imageUrls : [],
       } as any,
     });
   }
