@@ -74,6 +74,9 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   },
 ];
 
+const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]);
+const MAX_BYTES = 8 * 1024 * 1024;
+
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
@@ -118,26 +121,42 @@ export default function NewProductPage() {
     );
   }
 
-  // ⬇️ Upload direto com @vercel/blob/client
-  async function handleImagesSelected(files: FileList | null) {
+  // ⬇️ Upload direto com @vercel/blob/client (robusto e incremental)
+  async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
-    try {
-      const uploaded: string[] = [];
-      for (const file of Array.from(files)) {
-        // Requer rota server que devolve URL assinado: /api/blob/upload
+
+    const errors: string[] = [];
+    for (const file of Array.from(files)) {
+      // validação igual à da API
+      if (!ALLOWED.has(file.type)) {
+        errors.push(`${file.name}: unsupported type`);
+        continue;
+      }
+      if (file.size > MAX_BYTES) {
+        errors.push(`${file.name}: bigger than 8MB`);
+        continue;
+      }
+
+      try {
         const { url } = await upload(file.name, file, {
           access: "public",
           handleUploadUrl: "/api/blob/upload",
         });
-        uploaded.push(url);
+        // acrescenta imediatamente ao state (não perde as anteriores)
+        setImageUrls((prev) => (prev.includes(url) ? prev : [...prev, url]));
+      } catch (e: any) {
+        errors.push(`${file.name}: ${e?.message ?? "upload failed"}`);
       }
-      setImageUrls((prev) => [...prev, ...uploaded]);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to upload images. Please try again.");
-    } finally {
-      setUploading(false);
+    }
+
+    // limpa o input para permitir escolher os mesmos ficheiros novamente
+    if (input) input.value = "";
+
+    setUploading(false);
+
+    if (errors.length) {
+      alert("Some files failed:\n" + errors.join("\n"));
     }
   }
 
@@ -255,7 +274,7 @@ export default function NewProductPage() {
               type="file"
               multiple
               accept="image/*"
-              onChange={(e) => handleImagesSelected(e.target.files)}
+              onChange={(e) => handleImagesSelected(e.target.files, e.target)}
               className="block w-full rounded-xl border px-3 py-2 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-900"
             />
             <p className="text-xs text-gray-500">
