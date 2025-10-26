@@ -15,7 +15,6 @@ function fmtMoneyFromCents(cents: number, currency = "EUR") {
     cents / 100
   );
 }
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -43,22 +42,23 @@ async function deleteProductAction(formData: FormData) {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams?: { q?: string; page?: string };
+  // Next 15: searchParams é Promise<>
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const q = (searchParams?.q || "").trim();
+  const sp = await searchParams;
+  const q = (sp?.q || "").trim();
   const LIMIT = 10;
-  const pageParam = Number(searchParams?.page ?? "1");
-  // calculado depois de ter totalPages; por agora assume 1
+  const pageParam = Number(sp?.page ?? "1");
   let page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   // filtro simples: procura em name, team, season e slug
   const where = q
     ? {
         OR: [
-          { name: { contains: q, mode: "insensitive" as const } },
-          { team: { contains: q, mode: "insensitive" as const } },
+          { name:   { contains: q, mode: "insensitive" as const } },
+          { team:   { contains: q, mode: "insensitive" as const } },
           { season: { contains: q, mode: "insensitive" as const } },
-          { slug: { contains: q, mode: "insensitive" as const } },
+          { slug:   { contains: q, mode: "insensitive" as const } },
         ],
       }
     : {};
@@ -89,8 +89,7 @@ export default async function ProductsPage({
     const usp = new URLSearchParams();
     if (q) usp.set("q", q);
     usp.set("page", String(p));
-    const qs = usp.toString();
-    return `/admin/products?${qs}`;
+    return `/admin/products?${usp.toString()}`;
   };
 
   return (
@@ -115,7 +114,7 @@ export default async function ProductsPage({
                 className="w-64 rounded-xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
               <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              {/* mantém a página 1 ao pesquisar */}
+              {/* ao pesquisar, volta sempre à página 1 */}
               <input type="hidden" name="page" value="1" />
             </form>
 
@@ -235,9 +234,7 @@ export default async function ProductsPage({
                   key={p}
                   href={queryForLink(p)}
                   className={`min-w-[2rem] text-center rounded-lg border px-2.5 py-1.5 text-sm ${
-                    active
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "hover:bg-gray-50"
+                    active ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-50"
                   }`}
                   aria-current={active ? "page" : undefined}
                 >
