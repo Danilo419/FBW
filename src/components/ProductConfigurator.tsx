@@ -38,6 +38,29 @@ const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
+/* ========= Helper para extrair a “competição base” do badge =========
+   Exemplos:
+   - "La Liga – League Badge"  -> "laliga"
+   - "La Liga - Champion"      -> "laliga"
+   - "LaLiga_Champion"         -> "laliga"
+   - "UCL_Starball"            -> "ucl"
+*/
+function competitionKey(value: string, label?: string) {
+  const take = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
+
+  // 1) Se tiver underscore, pega antes do primeiro "_"
+  if (value.includes("_")) return take(value.split("_")[0]);
+
+  // 2) Se tiver hífens/en-dash no label (ou no value), pega a parte antes do primeiro separador
+  const source = label || value;
+  const parts = source.split(/–|—|-/); // en dash, em dash, hyphen
+  if (parts.length > 1) return take(parts[0]);
+
+  // 3) fallback: tira a parte alfabética inicial contínua
+  const m = (value.match(/^[A-Za-z]+/) || [value])[0];
+  return take(m);
+}
+
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
@@ -142,6 +165,7 @@ export default function ProductConfigurator({ product }: Props) {
     !!badgesGroup;
 
   const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
+
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
@@ -156,6 +180,36 @@ export default function ProductConfigurator({ product }: Props) {
         arr = arr.filter((v) => v !== value);
       }
       return { ...prev, [key]: arr.length ? arr : null };
+    });
+  }
+
+  // 🔒 Lógica especial para BADGES: não deixar 2 da mesma competição
+  function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
+    setSelected((prev) => {
+      const current = prev[group.key];
+      let arr: string[] = Array.isArray(current)
+        ? [...current]
+        : typeof current === "string" && current
+        ? [current]
+        : [];
+
+      const mapByValue = new Map(group.values.map((v) => [v.value, v]));
+      const newV = mapByValue.get(value);
+      const newKey = competitionKey(value, newV?.label);
+
+      if (checked) {
+        // remove qualquer já selecionado com a mesma competição
+        arr = arr.filter((v) => {
+          const vv = mapByValue.get(v);
+          const k = competitionKey(v, vv?.label);
+          return k !== newKey;
+        });
+        if (!arr.includes(value)) arr.push(value);
+      } else {
+        arr = arr.filter((v) => v !== value);
+      }
+
+      return { ...prev, [group.key]: arr.length ? arr : null };
     });
   }
 
@@ -495,7 +549,14 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Badges (FREE) */}
         {showBadgePicker && badgesGroup && (
-          <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
+          <GroupBlock
+            group={badgesGroup}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+            onToggleBadge={toggleBadge}   // 🔒 usa lógica de conflito por competição
+            forceFree
+          />
         )}
 
         {/* Other groups */}
@@ -593,12 +654,14 @@ function GroupBlock({
   selected,
   onPickRadio,
   onToggleAddon,
+  onToggleBadge,
   forceFree,
 }: {
   group: OptionGroupUI;
   selected: SelectedState;
   onPickRadio: (key: string, value: string) => void;
   onToggleAddon: (key: string, value: string, checked: boolean) => void;
+  onToggleBadge?: (group: OptionGroupUI, value: string, checked: boolean) => void;
   forceFree?: boolean;
 }) {
   if (group.type === "SIZE") return null;
@@ -665,7 +728,11 @@ function GroupBlock({
                   type="checkbox"
                   className="accent-blue-600"
                   checked={!!active}
-                  onChange={(e) => onToggleAddon(group.key, v.value, e.target.checked)}
+                  onChange={(e) =>
+                    group.key === "badges" && onToggleBadge
+                      ? onToggleBadge(group, v.value, e.target.checked)
+                      : onToggleAddon(group.key, v.value, e.target.checked)
+                  }
                 />
                 <span>{v.label}</span>
               </div>
