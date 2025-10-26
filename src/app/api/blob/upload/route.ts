@@ -2,31 +2,41 @@
 import { NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
 
-// Node runtime
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-/**
- * Recebe a chamada do cliente (upload helper) e devolve um URL assinado de upload.
- * Podes restringir tipos, controlar nomes, etc. nos callbacks.
- */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
     const result = await handleUpload({
       request,
       body,
+      // Define regras antes de gerar o token/URL assinado
       onBeforeGenerateToken: async () => ({
-        // restringe a tipos de imagem se quiseres:
-        // allowedContentTypes: ["image/jpeg", "image/png", "image/webp"],
+        maximumSizeInBytes: 8 * 1024 * 1024, // 8MB
+        allowedContentTypes: [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/avif",
+          "image/gif",
+        ],
+        // opcional: restringir origens (frontends) autorizadas
+        // allowedOrigins: ["http://localhost:3000", "https://teu-dominio.com"],
       }),
-      onUploadCompleted: async () => {
-        // opcional: logging/auditoria
+      // Callback depois do upload concluir (opcional: logging/auditoria)
+      onUploadCompleted: async ({ blob }) => {
+        console.log("Blob uploaded:", blob.url);
       },
     });
 
     return NextResponse.json(result);
-  } catch (err) {
-    console.error("blob upload route error:", err);
-    return NextResponse.json({ error: "Failed to generate upload URL" }, { status: 500 });
+  } catch (err: any) {
+    console.error("blob.upload.error:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to generate upload URL" },
+      { status: 500 }
+    );
   }
 }
