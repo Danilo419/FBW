@@ -90,7 +90,7 @@ model Product {
   basePrice   Int              // cents
   description String?          // texto livre por produto
 
-  // Imagens hospedadas (ex.: Vercel Blob)
+  // Imagens hospedadas (ex.: Vercel Blob/Cloud)
   imageUrls String[] @default([])
 
   // Badges selecionados (ex.: "ucl-winners", "premier-league-champions", etc.)
@@ -322,14 +322,20 @@ model OrderItem {
  */
 model Review {
   id        String   @id @default(cuid())
-  userId    String?
-  productId String?
-  rating    Int // 1..5
-  comment   String?
-  createdAt DateTime @default(now())
 
-  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // relações obrigatórias
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // dados do review
+  rating    Int
+  comment   String?
+  imageUrls String[] @default([]) // ✅ novo
+
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([productId])

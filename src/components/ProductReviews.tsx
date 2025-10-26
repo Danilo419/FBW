@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Star, MessageSquare, Send, Loader2, UserRound, Sparkles, MessageCircle } from "lucide-react";
+import {
+  Star,
+  MessageSquare,
+  Send,
+  Loader2,
+  Sparkles,
+  MessageCircle,
+  X,
+  Image as ImageIcon,
+} from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /* Contracts                                                          */
@@ -13,6 +22,7 @@ type Review = {
   comment?: string | null;
   createdAt: string; // ISO
   user?: ReviewUser | null;
+  imageUrls?: string[] | null; // ✅ novo
 };
 type ReviewsResponse = { reviews: Review[]; average: number; total: number };
 
@@ -44,7 +54,7 @@ function initials(name?: string | null) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Read-only stars (cheias e amarelas, com preenchimento parcial)     */
+/* Read-only stars (com parcial)                                      */
 /* ------------------------------------------------------------------ */
 function ReadOnlyStars({ value, size = 16 }: { value: number; size?: number }) {
   const v = clamp(value);
@@ -57,9 +67,7 @@ function ReadOnlyStars({ value, size = 16 }: { value: number; size?: number }) {
         const filled = i < full ? 1 : i === full ? partial : 0;
         return (
           <div className="relative" key={i} style={{ width: size, height: size }}>
-            {/* base cinza preenchida */}
             <Star className="absolute inset-0 text-gray-300" width={size} height={size} fill="currentColor" />
-            {/* parte amarela (clip) */}
             <Star
               className="absolute inset-0 text-amber-500"
               width={size}
@@ -68,7 +76,6 @@ function ReadOnlyStars({ value, size = 16 }: { value: number; size?: number }) {
               style={{ clipPath: `inset(0 ${100 - filled * 100}% 0 0)` }}
               aria-hidden
             />
-            {/* contorno suave */}
             <Star className="absolute inset-0 text-amber-700/25" width={size} height={size} fill="none" />
           </div>
         );
@@ -78,7 +85,7 @@ function ReadOnlyStars({ value, size = 16 }: { value: number; size?: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Selector de estrelas (amarelas cheias)                             */
+/* Selector de estrelas                                               */
 /* ------------------------------------------------------------------ */
 function SelectStars({
   value,
@@ -111,12 +118,7 @@ function SelectStars({
               aria-label={`${idx} star${idx > 1 ? "s" : ""}`}
             >
               {active && <span className="absolute -inset-1 rounded-full bg-amber-300/25 blur-[6px]" />}
-              <Star
-                width={size}
-                height={size}
-                className={active ? "text-amber-500" : "text-gray-300"}
-                fill="currentColor"
-              />
+              <Star width={size} height={size} className={active ? "text-amber-500" : "text-gray-300"} fill="currentColor" />
               <Star width={size} height={size} className="absolute inset-0 text-black/10" fill="none" />
             </button>
           );
@@ -128,7 +130,7 @@ function SelectStars({
 }
 
 /* ------------------------------------------------------------------ */
-/* Item de review — compacto e sem “espaços brancos”                   */
+/* Item de review                                                     */
 /* ------------------------------------------------------------------ */
 function ReviewItem({ r }: { r: Review }) {
   const name = r.user?.name || "Anonymous";
@@ -148,7 +150,6 @@ function ReviewItem({ r }: { r: Review }) {
           />
         ) : (
           <div className="h-10 w-10 rounded-full grid place-items-center bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 ring-1 ring-black/5">
-            {/* fallback com iniciais */}
             <span className="text-xs font-semibold">{initials(name)}</span>
           </div>
         )}
@@ -160,7 +161,23 @@ function ReviewItem({ r }: { r: Review }) {
             <ReadOnlyStars value={r.rating} />
             <span className="ml-auto text-xs text-gray-500">{timeAgo(r.createdAt)}</span>
           </div>
+
           {r.comment && <p className="mt-1 text-sm text-gray-700 break-words">{r.comment}</p>}
+
+          {/* ✅ imagens do review */}
+          {r.imageUrls && r.imageUrls.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {r.imageUrls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={url}
+                    alt={`Review image ${i + 1}`}
+                    className="h-20 w-20 object-cover rounded-lg ring-1 ring-black/10 hover:brightness-110 transition"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </li>
@@ -168,7 +185,7 @@ function ReviewItem({ r }: { r: Review }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Barras de distribuição                                              */
+/* Barras de distribuição                                             */
 /* ------------------------------------------------------------------ */
 function Distribution({ reviews }: { reviews: Review[] }) {
   const totals = useMemo(() => {
@@ -202,7 +219,7 @@ function Distribution({ reviews }: { reviews: Review[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Mini confetti ⭐✨                                                   */
+/* Mini confetti ⭐✨                                                  */
 /* ------------------------------------------------------------------ */
 function Confetti({ show }: { show: boolean }) {
   if (!show) return null;
@@ -236,6 +253,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState("");
+  const [files, setFiles] = useState<File[]>([]); // ✅ novo
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
@@ -263,17 +281,27 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     setError(null);
     setOk(false);
     try {
+      const formData = new FormData();
+      formData.append("productId", productId);
+      formData.append("rating", String(rating));
+      formData.append("comment", comment.trim());
+
+      // ✅ envia as imagens (limite 4)
+      files.slice(0, 4).forEach((f) => formData.append("images", f));
+
       const res = await fetch("/api/reviews", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, rating, comment: comment.trim() || null }),
+        body: formData, // multipart/form-data
       });
+
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j?.error || "Failed to submit review.");
       }
+
       setComment("");
       setRating(0);
+      setFiles([]);
       setOk(true);
       await load();
       setTimeout(() => setOk(false), 800);
@@ -289,8 +317,16 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
   const total = data?.total ?? 0;
   const reviews = data?.reviews ?? [];
 
-  // para o “dial”
+  // dial
   const deg = (clamp(average) / 5) * 360;
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(e.target.files || []);
+    // validações simples
+    const onlyImages = chosen.filter((f) => /^image\//.test(f.type));
+    const limited = onlyImages.slice(0, 4);
+    setFiles(limited);
+  }
 
   return (
     <section className="mt-10">
@@ -317,16 +353,12 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       {/* Layout 2 colunas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
         {/* Formulário */}
-        <form
-          onSubmit={onSubmit}
-          className="relative rounded-3xl border bg-white/80 p-5 shadow-sm ring-1 ring-black/5"
-        >
+        <form onSubmit={onSubmit} className="relative rounded-3xl border bg-white/80 p-5 shadow-sm ring-1 ring-black/5">
           <Confetti show={ok} />
+
           <div className="flex items-center justify-between gap-4">
             <div className="text-sm font-medium text-gray-700">Your rating</div>
-            <div className="rounded-full border bg-white/70 px-3 py-1 text-xs text-gray-600">
-              Ratings 0–5 are allowed
-            </div>
+            <div className="rounded-full border bg-white/70 px-3 py-1 text-xs text-gray-600">Ratings 0–5 are allowed</div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -336,6 +368,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             </div>
           </div>
 
+          {/* Comentário */}
           <div className="mt-4 relative">
             <div className="pointer-events-none absolute left-3 top-3 text-gray-400">
               <MessageSquare className="h-4 w-4" />
@@ -351,9 +384,47 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             <div className="mt-1 text-xs text-gray-400 text-right">{comment.length}/1000</div>
           </div>
 
+          {/* ✅ Upload de imagens */}
+          <div className="mt-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+              <ImageIcon className="h-4 w-4 text-blue-500" />
+              Add images (optional, up to 4)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onFileChange}
+              className="mt-2 block w-full text-sm text-gray-600"
+            />
+            {files.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {files.map((f, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={URL.createObjectURL(f)}
+                      alt="preview"
+                      className="h-20 w-20 object-cover rounded-lg ring-1 ring-black/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFiles((arr) => arr.filter((_, j) => j !== i))}
+                      className="absolute -top-1 -right-1 bg-white rounded-full p-1 shadow"
+                      aria-label="Remove image"
+                      title="Remove"
+                    >
+                      <X className="h-3 w-3 text-gray-700" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Submit */}
           <div className="mt-4 flex items-center gap-3">
             <button
-              disabled={submitting || rating < 0 || rating > 5}
+              disabled={submitting || rating <= 0 || rating > 5}
               className="relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-sm font-medium text-white shadow-md transition hover:brightness-110 active:scale-[.98] disabled:opacity-60"
             >
               {submitting ? (
@@ -377,12 +448,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           <div className="grid grid-cols-[auto_1fr] gap-5 items-center">
             {/* Dial circular */}
             <div className="relative h-28 w-28">
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: `conic-gradient(#f59e0b ${deg}deg, #e5e7eb ${deg}deg)`,
-                }}
-              />
+              <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(#f59e0b ${deg}deg, #e5e7eb ${deg}deg)` }} />
               <div className="absolute inset-2 rounded-full bg-white shadow-inner" />
               <div className="absolute inset-0 grid place-items-center">
                 <div className="text-center">
@@ -405,7 +471,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
         </div>
       </div>
 
-      {/* Recent reviews — compacto, com divide entre itens e sem “cards” pesados */}
+      {/* Recent reviews */}
       <div className="mt-6 rounded-3xl border bg-white/80 p-5 shadow-sm ring-1 ring-black/5">
         <div className="flex items-center gap-2 text-base font-semibold">
           <MessageCircle className="h-4 w-4 text-blue-600" />
