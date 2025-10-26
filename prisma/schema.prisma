@@ -86,15 +86,18 @@ model Product {
   slug        String  @unique
   name        String
   team        String
-  season      String? // e.g. "25/26"
-  basePrice   Int // cents
-  description String? // texto livre por produto
+  season      String?          // e.g. "25/26"
+  basePrice   Int              // cents
+  description String?          // texto livre por produto
 
   // Imagens hospedadas (ex.: Vercel Blob)
   imageUrls String[] @default([])
 
   // Badges selecionados (ex.: "ucl-winners", "premier-league-champions", etc.)
   badges String[] @default([])
+
+  // Flag para controlar a secção "Name & Number"
+  allowNameNumber Boolean @default(true)
 
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
@@ -124,7 +127,7 @@ model SizeStock {
 model OptionGroup {
   id        String     @id @default(cuid())
   productId String
-  key       String // "size", "customization", "shorts", "socks", "badges", ...
+  key       String     // "size", "customization", "shorts", "socks", "badges", ...
   label     String
   type      OptionType
   required  Boolean    @default(false)
@@ -167,7 +170,7 @@ enum OptionType {
  */
 model Player {
   id        String   @id @default(cuid())
-  team      String // e.g., "Real Madrid"
+  team      String   // e.g., "Real Madrid"
   name      String
   number    Int
   position  String?
