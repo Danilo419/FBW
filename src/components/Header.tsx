@@ -47,16 +47,16 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       const run = () => {
         const y = window.scrollY || 0;
         const goingDown = y > lastYRef.current;
-        const passed = y > 40;
+        theLoop: {
+          const passed = y > 40;
+          // do not hide when menus/search are open
+          const lockHeader = mobileOpen || userOpen || showSearchMobile;
 
-        // do not hide when menus/search are open
-        const lockHeader = mobileOpen || userOpen || showSearchMobile;
-
-        if (!lockHeader) {
-          if (passed && goingDown) setHidden(true);
-          else setHidden(false);
+          if (!lockHeader) {
+            if (passed && goingDown) setHidden(true);
+            else setHidden(false);
+          }
         }
-
         lastYRef.current = y;
         rafRef.current = null;
       };
@@ -652,6 +652,8 @@ function SearchBar({
                         fill
                         sizes="48px"
                         className="object-cover"
+                        unoptimized   // 👈 permite thumbnails do Vercel Blob sem mexer no next.config
+                        loading="lazy"
                       />
                     </div>
                     <div className="flex-1 min-w-0">

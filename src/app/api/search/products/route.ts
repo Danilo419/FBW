@@ -1,6 +1,6 @@
 // src/app/api/search/products/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const revalidate = 0;
@@ -12,7 +12,7 @@ type ItemOut = {
   slug: string;
   // preço em EUR (converte de basePrice em cêntimos)
   price: number;
-  imageUrl?: string | null;
+  imageUrl?: string | null; // ← miniatura para o preview
   // mantido por compatibilidade com a UI (aqui não há relação Club)
   clubName?: string | null;
 };
@@ -48,9 +48,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const q = (searchParams.get("q") || "").trim();
     const limitParam = Number(searchParams.get("limit"));
-    const limit = Number.isFinite(limitParam)
-      ? Math.max(1, Math.min(24, limitParam))
-      : 12;
+    const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(24, limitParam)) : 12;
 
     if (q.length < 2) {
       return NextResponse.json({ items: [] as ItemOut[] }, { status: 200 });
@@ -58,22 +56,20 @@ export async function GET(req: NextRequest) {
 
     const terms = q.split(/\s+/).filter(Boolean);
 
-    // Estratégia:
-    //  - OR (frase completa) -> bate "Real Madrid" diretamente
-    //  - OR (AND por termo)  -> cada palavra tem de aparecer em pelo menos um dos campos
+    // Busca por frase completa + todos os termos
     const products = await prisma.product.findMany({
       where: {
         OR: [
-          { name:   { contains: q, mode: "insensitive" } },
-          { team:   { contains: q, mode: "insensitive" } },
-          { slug:   { contains: q, mode: "insensitive" } },
+          { name: { contains: q, mode: "insensitive" } },
+          { team: { contains: q, mode: "insensitive" } },
+          { slug: { contains: q, mode: "insensitive" } },
           { season: { contains: q, mode: "insensitive" } },
           {
             AND: terms.map((t) => ({
               OR: [
-                { name:   { contains: t, mode: "insensitive" as const } },
-                { team:   { contains: t, mode: "insensitive" as const } },
-                { slug:   { contains: t, mode: "insensitive" as const } },
+                { name: { contains: t, mode: "insensitive" as const } },
+                { team: { contains: t, mode: "insensitive" as const } },
+                { slug: { contains: t, mode: "insensitive" as const } },
                 { season: { contains: t, mode: "insensitive" as const } },
               ],
             })),
@@ -85,7 +81,7 @@ export async function GET(req: NextRequest) {
         name: true,
         slug: true,
         basePrice: true, // cêntimos
-        imageUrls: true, // ✅ string[]
+        imageUrls: true, // ✅ array de imagens
       },
       take: limit,
       orderBy: { name: "asc" }, // ordem base; depois reordenamos por relevância
@@ -96,11 +92,11 @@ export async function GET(req: NextRequest) {
       name: p.name,
       slug: p.slug,
       price: Math.max(0, (p.basePrice ?? 0) / 100), // EUR
-      imageUrl: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : null,
+      imageUrl: Array.isArray(p.imageUrls) && p.imageUrls.length > 0 ? p.imageUrls[0] : null, // ✅ thumb
       clubName: null,
     }));
 
-    // Afinar ainda mais no servidor: garantir AND por termo no nome (e opcional clubName)
+    // Refinamento extra no servidor (AND por termo)
     const loweredTerms = terms.map((t) => t.toLowerCase());
     const narrowed = mapped.filter((it) => {
       const hay = (it.name + " " + (it.clubName || "")).toLowerCase();
