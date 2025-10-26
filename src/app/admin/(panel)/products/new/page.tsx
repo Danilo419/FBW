@@ -1,8 +1,9 @@
 // src/app/admin/(panel)/products/new/page.tsx
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import { upload } from "@vercel/blob/client"; // upload direto do browser
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { upload } from "@vercel/blob/client";
+import Image from "next/image";
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
@@ -84,13 +85,15 @@ export default function NewProductPage() {
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
-  // Badges (multi-select)
+  // Badges
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
+  const [badgeQuery, setBadgeQuery] = useState("");
 
-  // Images → upload direto para Blob; guardamos apenas URLs
+  // Images (URLs, ordenáveis)
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
+  /* ===================== Sizes ===================== */
   function handleSizeGroupChange(e: ChangeEvent<HTMLSelectElement>) {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
@@ -102,33 +105,42 @@ export default function NewProductPage() {
       setSelectedAdult([]);
     }
   }
-
   function toggleAdult(size: string) {
-    setSelectedAdult((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
-    );
+    setSelectedAdult((prev) => (prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]));
   }
-
   function toggleKid(size: string) {
-    setSelectedKid((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
-    );
+    setSelectedKid((prev) => (prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]));
   }
 
+  /* ===================== Badges ===================== */
   function toggleBadge(value: string) {
-    setSelectedBadges((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
+    setSelectedBadges((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   }
+
+  // Lista achatada para pesquisa
+  const ALL_BADGES: (BadgeOption & { group: string })[] = useMemo(() => {
+    return BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })));
+  }, []);
+
+  const filteredBadges = useMemo(() => {
+    const q = badgeQuery.trim().toLowerCase();
+    if (!q) return [];
+    return ALL_BADGES.filter(
+      (b) => b.label.toLowerCase().includes(q) || b.value.toLowerCase().includes(q) || b.group.toLowerCase().includes(q)
+    ).slice(0, 50); // segurança
+  }, [badgeQuery, ALL_BADGES]);
+
+  /* ===================== Images ===================== */
 
   // helper p/ nome único
   const uniqueName = (file: File) => {
     const safe = file.name.replace(/\s+/g, "_");
-    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto ? (crypto as any).randomUUID() : String(Date.now());
     return `${id}_${safe}`;
   };
 
-  // ⬇️ Upload direto com @vercel/blob/client (robusto e incremental + nomes únicos)
+  // Upload direto (nomes únicos, incremental)
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -145,7 +157,7 @@ export default function NewProductPage() {
       }
 
       try {
-        const name = uniqueName(file); // ← evita “blob already exists”
+        const name = uniqueName(file);
         const { url } = await upload(name, file, {
           access: "public",
           handleUploadUrl: "/api/blob/upload",
@@ -156,7 +168,7 @@ export default function NewProductPage() {
       }
     }
 
-    if (input) input.value = ""; // poder selecionar os mesmos ficheiros de novo
+    if (input) input.value = "";
     setUploading(false);
 
     if (errors.length) {
@@ -164,6 +176,23 @@ export default function NewProductPage() {
     }
   }
 
+  // Reordenar (drag & drop ou botões)
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  function move(from: number, to: number) {
+    setImageUrls((prev) => {
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+      const arr = [...prev];
+      const [it] = arr.splice(from, 1);
+      arr.splice(to, 0, it);
+      return arr;
+    });
+  }
+  function removeAt(idx: number) {
+    setImageUrls((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  /* ===================== Submit ===================== */
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -177,7 +206,7 @@ export default function NewProductPage() {
     // Badges
     selectedBadges.forEach((b) => formData.append("badges", b));
 
-    // Image URLs (apenas URLs)
+    // Imagens (apenas URLs)
     imageUrls.forEach((u) => formData.append("imageUrls", u));
     formData.delete("images");
 
@@ -201,6 +230,7 @@ export default function NewProductPage() {
     setSizeGroup("adult");
     setSelectedBadges([]);
     setImageUrls([]);
+    setBadgeQuery("");
   }
 
   return (
@@ -271,8 +301,8 @@ export default function NewProductPage() {
             />
           </div>
 
-          {/* Images (upload direto → Blob) */}
-          <div className="space-y-2">
+          {/* Images */}
+          <div className="space-y-3">
             <label className="text-sm font-medium">Images</label>
             <input
               type="file"
@@ -282,14 +312,70 @@ export default function NewProductPage() {
               className="block w-full rounded-xl border px-3 py-2 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-900"
             />
             <p className="text-xs text-gray-500">
-              Files are uploaded directly to storage. The first URL will be the main image.
+              Files are uploaded directly to storage. The first image is used as the main image. Drag to reorder.
             </p>
 
             {imageUrls.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {imageUrls.map((u, i) => (
-                  <div key={u} className="rounded-xl border p-1 text-xs">
-                    <div className="truncate">{i + 1}. {u.split("/").pop()}</div>
+                  <div
+                    key={u}
+                    className="group relative rounded-xl border bg-white overflow-hidden"
+                    draggable
+                    onDragStart={() => setDragIndex(i)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragIndex != null) move(dragIndex, i);
+                      setDragIndex(null);
+                    }}
+                    title={u}
+                  >
+                    <Image
+                      src={u}
+                      alt={`image ${i + 1}`}
+                      unoptimized
+                      width={400}
+                      height={400}
+                      className="aspect-[3/4] w-full object-contain bg-white"
+                    />
+
+                    {/* controls */}
+                    <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 opacity-0 group-hover:opacity-100 transition">
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => move(i, Math.max(0, i - 1))}
+                          className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
+                          aria-label="Move left"
+                          title="Move left"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => move(i, Math.min(imageUrls.length - 1, i + 1))}
+                          className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
+                          aria-label="Move right"
+                          title="Move right"
+                        >
+                          →
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAt(i)}
+                        className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white text-red-600"
+                        aria-label="Remove image"
+                        title="Remove image"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    {/* index badge */}
+                    <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 text-white text-[11px] px-1.5 py-0.5">
+                      {i + 1}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -297,38 +383,73 @@ export default function NewProductPage() {
             {uploading && <p className="text-xs text-blue-600">Uploading images…</p>}
           </div>
 
-          {/* Badges */}
+          {/* Badges com pesquisa */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
-              Select one or more patches to show on the product page (league, champion, UEFA, etc.).
+              Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if they are hidden by the filter.
             </p>
 
-            <div className="space-y-5">
-              {BADGE_GROUPS.map((group) => (
-                <fieldset key={group.title} className="space-y-2">
-                  <legend className="text-xs font-semibold uppercase text-gray-500">
-                    {group.title}
-                  </legend>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {group.items.map((opt) => (
-                      <label
-                        key={opt.value}
-                        className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
+            <input
+              type="text"
+              value={badgeQuery}
+              onChange={(e) => setBadgeQuery(e.target.value)}
+              placeholder="Search badges…"
+              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+            />
+
+            {badgeQuery.trim().length === 0 ? (
+              <div className="text-xs text-gray-500">
+                Start typing to see available badges.
+              </div>
+            ) : filteredBadges.length === 0 ? (
+              <div className="text-xs text-gray-500">No badges found.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2">
+                {filteredBadges.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
+                    title={opt.group}
+                  >
+                    <input
+                      type="checkbox"
+                      value={opt.value}
+                      checked={selectedBadges.includes(opt.value)}
+                      onChange={() => toggleBadge(opt.value)}
+                    />
+                    <span className="text-sm">{opt.label}</span>
+                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                      {opt.group.split(" – ")[0]}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {/* Selecionados (sempre visíveis) */}
+            {selectedBadges.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedBadges.map((val) => {
+                    const meta = ALL_BADGES.find((b) => b.value === val);
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => toggleBadge(val)}
+                        className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs hover:bg-gray-50"
+                        title="Remove"
                       >
-                        <input
-                          type="checkbox"
-                          value={opt.value}
-                          checked={selectedBadges.includes(opt.value)}
-                          onChange={() => toggleBadge(opt.value)}
-                        />
-                          <span className="text-sm">{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
-            </div>
+                        {meta?.label ?? val}
+                        <span aria-hidden>×</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Size group selection */}
