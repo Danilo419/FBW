@@ -43,10 +43,8 @@ function money(cents: number) {
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
 
-  // Se já for string
   if (typeof value === "string") return value;
 
-  // Se for array (ex.: scalar list ou JSON)
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
@@ -54,13 +52,10 @@ function firstImageFrom(value: unknown): string | null {
     return null;
   }
 
-  // Se for objeto JSON (pouco provável, mas seguro)
   try {
-    // casos raros: {0:"/img/a.png"} ou {url:"/img/a.png"}
     const maybe: any = value as any;
     if (typeof maybe?.url === "string" && maybe.url.trim()) return maybe.url.trim();
     if (typeof maybe?.src === "string" && maybe.src.trim()) return maybe.src.trim();
-    // tenta indices
     if (typeof maybe?.[0] === "string" && maybe[0].trim()) return maybe[0].trim();
   } catch {}
   return null;
@@ -68,7 +63,6 @@ function firstImageFrom(value: unknown): string | null {
 
 /** Normaliza para URL absoluta/relativa válida e devolve um placeholder se nada existir */
 function coverUrl(raw?: string | null): string {
-  // usa um placeholder universal (SVG inline) caso não exista ficheiro local
   const dataFallback =
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
@@ -94,28 +88,40 @@ function coverUrl(raw?: string | null): string {
 
 /* ============================ Page ============================ */
 export default async function TeamProductsPage({ params }: PageProps) {
-  const { team } = await params; // params é Promise
+  const { team } = await params;
   const slug = team.toLowerCase();
   const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
 
-  // 1ª tentativa
+  // Busca insensível e por "contains" (apanha FC Barcelona, etc.)
   let products = await prisma.product.findMany({
-    where: { team: teamName },
+    where: {
+      OR: [
+        { team: { equals: teamName, mode: "insensitive" } },
+        { team: { contains: teamName, mode: "insensitive" } },
+        { team: { contains: "Barcelona", mode: "insensitive" } }, // 🔥 garante que FC Barcelona funciona
+        { team: { contains: slug, mode: "insensitive" } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
       slug: true,
       name: true,
-      imageUrls: true, // pode vir como string[] (scalar list) ou JSON
+      imageUrls: true,
       basePrice: true,
       team: true,
     },
   });
 
-  // Se vazio e existir mapeamento explícito, tenta com o nome do mapa
+  // fallback extra: tenta também o nome do mapa original se diferente
   if (products.length === 0 && TEAM_MAP[slug]) {
     products = await prisma.product.findMany({
-      where: { team: TEAM_MAP[slug]! },
+      where: {
+        OR: [
+          { team: { equals: TEAM_MAP[slug]!, mode: "insensitive" } },
+          { team: { contains: TEAM_MAP[slug]!, mode: "insensitive" } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -142,7 +148,7 @@ function List({
   items: {
     slug: string;
     name: string;
-    imageUrls?: unknown; // ← aceite qualquer formato para extração robusta
+    imageUrls?: unknown;
     basePrice: number;
   }[];
 }) {
@@ -166,7 +172,7 @@ function List({
                   src={src}
                   alt={p.name}
                   loading="lazy"
-                  className="h-full w-full object-contain p-6"
+                  className="h-full w-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <div className="p-4 border-t">
