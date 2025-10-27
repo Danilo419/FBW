@@ -139,7 +139,7 @@ export default async function ClubProductsPage({
       id: true,
       slug: true,
       name: true,
-      imageUrls: true, // ✅ único campo de imagens
+      imageUrls: true, // ✅ único campo de imagens existente
       basePrice: true,
       team: true,
     },
