@@ -232,7 +232,7 @@ function Confetti({ show }: { show: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* MAIN                                                               */
+/* MAIN (com upload direto ao Cloudinary)                             */
 /* ------------------------------------------------------------------ */
 export default function ReviewsPanel({ productId }: { productId: string }) {
   const [data, setData] = useState<ReviewsResponse | null>(null);
@@ -240,11 +240,12 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
-  // Dropzone UI
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -254,15 +255,11 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       const res = await fetch(`/api/reviews?productId=${productId}`, { cache: "no-store" });
       const json = (await res.json()) as ReviewsResponse;
       setData(json);
-    } catch (e) {
-      console.error(e);
     } finally {
       setLoading(false);
     }
   }
-  useEffect(() => {
-    load();
-  }, [productId]);
+  useEffect(() => { load(); }, [productId]);
 
   /** valida e adiciona imagens ao estado */
   function addFiles(incoming: File[]) {
@@ -270,7 +267,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     const MAX_MB = 5;
     const errs: string[] = [];
 
-    // filtrar apenas imagens e até 5MB
     const cleaned = incoming.filter((f) => {
       const okType = /^image\//.test(f.type);
       const okSize = f.size <= MAX_MB * 1024 * 1024;
@@ -279,14 +275,11 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       return okType && okSize;
     });
 
-    // evitar duplicados por name+size
     const existingKey = new Set(files.map((f) => `${f.name}-${f.size}`));
     const unique = cleaned.filter((f) => !existingKey.has(`${f.name}-${f.size}`));
 
     const next = [...files, ...unique].slice(0, MAX);
-    if (files.length + unique.length > MAX) {
-      errs.push(`Máximo de ${MAX} imagens.`);
-    }
+    if (files.length + unique.length > MAX) errs.push(`Máximo de ${MAX} imagens.`);
 
     if (errs.length) {
       setError(errs.join(" "));
@@ -297,7 +290,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
 
   function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     addFiles(Array.from(e.target.files || []));
-    // limpar o input para permitir re-selecionar o mesmo ficheiro depois
     e.currentTarget.value = "";
   }
 
@@ -305,12 +297,60 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
-    const fls = Array.from(e.dataTransfer.files || []);
-    addFiles(fls);
+    addFiles(Array.from(e.dataTransfer.files || []));
   }
 
   function openPicker() {
     inputRef.current?.click();
+  }
+
+  /* -------- Upload direto ao Cloudinary -------- */
+  async function getSignature() {
+    const r = await fetch("/api/reviews/upload-signature", { method: "POST" });
+    if (!r.ok) throw new Error("Failed to get upload signature");
+    return (await r.json()) as {
+      timestamp: number;
+      folder: string;
+      signature: string;
+      cloudName: string;
+      apiKey: string;
+    };
+  }
+
+  async function uploadDirect(selected: File[]): Promise<string[]> {
+    if (!selected.length) return [];
+    setUploading(true);
+    setUploadPct(0);
+
+    const { timestamp, folder, signature, cloudName, apiKey } = await getSignature();
+    const urls: string[] = [];
+    let done = 0;
+
+    for (const file of selected) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("api_key", apiKey);
+      fd.append("timestamp", String(timestamp));
+      fd.append("signature", signature);
+      fd.append("folder", folder);
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.secure_url) {
+        throw new Error(json?.error?.message || "Cloudinary upload failed");
+      }
+
+      urls.push(json.secure_url as string);
+      done += 1;
+      setUploadPct(Math.round((done / selected.length) * 100));
+    }
+
+    setUploading(false);
+    setUploadPct(100);
+    return urls;
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -319,14 +359,24 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     setError(null);
     setOk(false);
     try {
-      const formData = new FormData();
-      formData.append("productId", productId);
-      formData.append("rating", String(rating));
-      formData.append("comment", comment.trim());
-      files.forEach((f) => formData.append("images", f));
+      // 1) Upload direto das imagens e obter URLs
+      const imageUrls = await uploadDirect(files);
 
-      const res = await fetch("/api/reviews", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed to submit review.");
+      // 2) Enviar review leve (JSON) – sem multipart (evita 413)
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, rating, comment: comment.trim(), imageUrls }),
+      });
+
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+          const j = await res.json();
+          if (j?.error) msg = j.error;
+        } catch {}
+        throw new Error(msg);
+      }
 
       setComment("");
       setFiles([]);
@@ -403,7 +453,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             <div className="mt-1 text-xs text-gray-400 text-right">{comment.length}/1000</div>
           </div>
 
-          {/* ✅ Upload de imagens — Dropzone estilizado */}
+          {/* Dropzone estilizado */}
           <div className="mt-4">
             <label
               onDragOver={(e) => {
@@ -438,7 +488,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
                     .
                   </div>
 
-                  {/* Previews */}
                   {files.length > 0 && (
                     <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-3">
                       {files.map((f, i) => (
@@ -460,6 +509,12 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
                           <div className="mt-1 truncate text-[11px] text-gray-500">{f.name}</div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {uploading && (
+                    <div className="mt-3 h-2 w-full rounded-full bg-gray-100 overflow-hidden ring-1 ring-black/5">
+                      <div className="h-full bg-blue-500 transition-all" style={{ width: `${uploadPct}%` }} />
                     </div>
                   )}
                 </div>
@@ -486,7 +541,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
               />
             </label>
 
-            {/* status linha fina */}
             <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
               <span>{files.length}/4 selected</span>
               {error && <span className="text-red-600">{error}</span>}
@@ -496,7 +550,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           {/* Submit */}
           <div className="mt-5 flex items-center gap-3">
             <button
-              disabled={submitting || rating <= 0 || rating > 5}
+              disabled={submitting || rating <= 0 || rating > 5 || uploading}
               className="relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-sm font-medium text-white shadow-md transition hover:brightness-110 active:scale-[.98] disabled:opacity-60"
             >
               {submitting ? (
@@ -519,7 +573,10 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           <div className="grid grid-cols-[auto_1fr] gap-5 items-center">
             {/* Dial circular */}
             <div className="relative h-28 w-28">
-              <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(#f59e0b ${deg}deg, #e5e7eb ${deg}deg)` }} />
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{ background: `conic-gradient(#f59e0b ${deg}deg, #e5e7eb ${deg}deg)` }}
+              />
               <div className="absolute inset-2 rounded-full bg-white shadow-inner" />
               <div className="absolute inset-0 grid place-items-center">
                 <div className="text-center">
