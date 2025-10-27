@@ -272,20 +272,31 @@ function Lightbox({
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative inline-flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={onClose}
-          className="absolute -top-10 right-0 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5" />
-        </button>
+      {/* Botão fechar FIXO ao viewport (nunca sai da página) */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="fixed z-[90] rounded-full bg-white/95 p-2 shadow ring-1 ring-black/10 hover:brightness-105"
+        aria-label="Close"
+        style={{
+          // respeita áreas seguras (iPhone com notch, etc.)
+          right: "max(1rem, env(safe-area-inset-right))",
+          top: "max(1rem, env(safe-area-inset-top))",
+        }}
+      >
+        <X className="h-5 w-5" />
+      </button>
 
+      {/* contentor */}
+      <div className="relative inline-flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        {/* Imagem (ajusta ao viewport) */}
         <div className="relative">
           <img
             src={current}
@@ -293,6 +304,8 @@ function Lightbox({
             className="block w-auto h-auto max-w-[95vw] max-h-[85vh] object-contain select-none"
             draggable={false}
           />
+
+          {/* Navegação */}
           {urls.length > 1 && (
             <>
               <button
@@ -313,6 +326,7 @@ function Lightbox({
           )}
         </div>
 
+        {/* Thumbnails */}
         {urls.length > 1 && (
           <div className="mt-3 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 w-full justify-items-center">
             {urls.map((u, i) => (
@@ -400,7 +414,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
 
     const next = [...files, ...unique].slice(0, MAX);
     if (files.length + unique.length > MAX) errs.push(`Máximo de ${MAX} imagens.`);
-
     if (errs.length) {
       setError(errs.join(" "));
       setTimeout(() => setError(null), 3500);
@@ -697,7 +710,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
         {/* Estatísticas */}
         <div className="rounded-3xl border bg-white/80 p-5 shadow-sm ring-1 ring-black/5">
           <div className="grid grid-cols-[auto_1fr] gap-5 items-center">
-            {/* Dial circular */}
             <div className="relative h-28 w-28">
               <div
                 className="absolute inset-0 rounded-full"
