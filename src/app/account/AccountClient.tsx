@@ -42,6 +42,41 @@ function formatDate(iso: string) {
   }
 }
 
+/* ========= Cloudinary helpers (upload direto) ========= */
+async function getAvatarSignature() {
+  const r = await fetch('/api/account/upload-signature', { method: 'POST' });
+  if (!r.ok) throw new Error('Failed to get signature');
+  return (await r.json()) as {
+    timestamp: number;
+    folder: string;
+    signature: string;
+    cloudName: string;
+    apiKey: string;
+  };
+}
+async function uploadAvatarToCloudinary(file: File) {
+  const { timestamp, folder, signature, cloudName, apiKey } = await getAvatarSignature();
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('api_key', apiKey);
+  fd.append('timestamp', String(timestamp));
+  fd.append('signature', signature);
+  fd.append('folder', folder);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: fd,
+  });
+  const j = await res.json();
+  if (!res.ok || !j?.secure_url) throw new Error(j?.error?.message || 'Upload failed');
+  return j.secure_url as string;
+}
+function isValidImg(file: File) {
+  const okType = /^image\/(jpe?g|png|webp|gif)$/i.test(file.type);
+  const okSize = file.size <= 8 * 1024 * 1024; // 8MB
+  return okType && okSize;
+}
+
 /* ========= Componente principal ========= */
 export default function AccountClient(props: Props) {
   const [tab, setTab] = useState<'overview' | 'profile' | 'security'>('overview');
@@ -129,7 +164,7 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-/* ========= PROFILE (upload via /api/upload) ========= */
+/* ========= PROFILE (upload direto ao Cloudinary) ========= */
 function ProfileForm({ email, defaultName, defaultImage }: Props) {
   const [name, setName] = useState(defaultName || '');
   const [image, setImage] = useState<string>(defaultImage || '');
@@ -138,17 +173,11 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
   const [ok, setOk] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  // Faz upload se houver ficheiro e devolve o secure_url
   async function uploadIfNeeded(): Promise<string | null> {
     if (!file) return null;
-
-    const form = new FormData();
-    form.append("file", file);
-
-    const res = await fetch("/api/upload", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || "Upload failed");
-
-    return data.url as string;
+    if (!isValidImg(file)) throw new Error('Escolhe uma imagem JPG/PNG/WebP até 8 MB.');
+    return await uploadAvatarToCloudinary(file);
   }
 
   const onSave = async () => {
@@ -162,31 +191,34 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
         finalImage = uploadedUrl ?? finalImage;
       }
 
-      const res = await fetch("/api/account/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/account/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, image: finalImage }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to update profile");
+      if (!res.ok) throw new Error(data?.error || 'Failed to update profile');
 
-      setImage(data?.user?.image ?? finalImage ?? "");
+      setImage(data?.user?.image ?? finalImage ?? '');
       setFile(null);
-      setOk("Profile updated successfully");
+      setOk('Profile updated successfully');
     } catch (e: any) {
-      setErr(e?.message ?? "Something went wrong");
+      setErr(e?.message ?? 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
   const onFileChange = (f: File | null) => {
-    setFile(f);
-    if (f) {
-      const url = URL.createObjectURL(f);
-      setImage(url);
+    if (!f) { setFile(null); return; }
+    if (!isValidImg(f)) {
+      setErr('Escolhe uma imagem JPG/PNG/WebP até 8 MB.');
+      setTimeout(() => setErr(null), 2500);
+      return;
     }
+    setFile(f);
+    setImage(URL.createObjectURL(f)); // preview local
   };
 
   return (
@@ -198,7 +230,7 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
           <Avatar src={image || undefined} name={name || email} size={96} />
           <UploadFromDevice onPick={onFileChange} />
           <div className="text-xs text-gray-500 text-center">
-            JPG/PNG até 8MB. A imagem será comprimida.
+            JPG/PNG/WebP até 8MB.
           </div>
         </div>
 
@@ -224,7 +256,7 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
                 className="w-full py-2 outline-none"
                 value={image}
                 onChange={(e) => setImage(e.target.value)}
-                placeholder="https://… or /uploads/..."
+                placeholder="https://… (ou será preenchido após upload)"
               />
             </div>
           </label>
@@ -294,7 +326,6 @@ function SecurityForm() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-6">
       <h2 className="text-xl font-semibold mb-4">Security</h2>
 
-      {/* ──> UMA COLUNA (cada campo numa linha) */}
       <div className="grid gap-4">
         <PasswordInput
           label="Current password"
