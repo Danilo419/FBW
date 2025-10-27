@@ -98,7 +98,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
       OR: [
         { team: { equals: teamName, mode: "insensitive" } },
         { team: { contains: teamName, mode: "insensitive" } },
-        { team: { contains: "Barcelona", mode: "insensitive" } }, // 🔥 garante que FC Barcelona funciona
+        { team: { contains: "Barcelona", mode: "insensitive" } },
         { team: { contains: slug, mode: "insensitive" } },
       ],
     },
@@ -113,7 +113,6 @@ export default async function TeamProductsPage({ params }: PageProps) {
     },
   });
 
-  // fallback extra: tenta também o nome do mapa original se diferente
   if (products.length === 0 && TEAM_MAP[slug]) {
     products = await prisma.product.findMany({
       where: {
@@ -153,10 +152,11 @@ function List({
   }[];
 }) {
   return (
-    <div className="container-fw py-10 space-y-8">
+    <div className="container-fw py-8 space-y-6">
       <h1 className="text-2xl sm:text-3xl font-extrabold">{team} — Products</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Grade mais densa, igual à outra página */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
         {items.map((p) => {
           const first = firstImageFrom(p.imageUrls);
           const src = coverUrl(first);
@@ -164,20 +164,29 @@ function List({
             <a
               key={p.slug}
               href={`/products/${p.slug}`}
-              className="rounded-2xl border bg-white overflow-hidden hover:shadow-md transition ring-1 ring-black/5"
+              className="group block rounded-xl border bg-white overflow-hidden ring-1 ring-black/5 transition hover:shadow-md hover:-translate-y-0.5"
             >
-              <div className="aspect-[3/4] w-full bg-white">
+              {/* Imagem ocupa mais, sem padding interno, com cover (como na outra página) */}
+              <div className="relative aspect-[4/5] w-full bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={src}
                   alt={p.name}
                   loading="lazy"
-                  className="h-full w-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
-              <div className="p-4 border-t">
-                <div className="font-semibold">{p.name}</div>
-                <div className="text-sm text-gray-600">{money(p.basePrice)}</div>
+
+              {/* Caption compacto, com nome em 1 linha e preço à direita */}
+              <div className="p-3 border-t">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-semibold text-sm leading-snug line-clamp-1">
+                    {p.name}
+                  </div>
+                  <div className="text-sm text-gray-700 whitespace-nowrap">
+                    {money(p.basePrice)}
+                  </div>
+                </div>
               </div>
             </a>
           );
