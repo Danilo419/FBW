@@ -527,14 +527,14 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       {/* Cabeçalho */}
       <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-r from-slate-50 via-white to-cyan-50 p-5 ring-1 ring-black/5">
         <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl" />
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight">
             <span className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-600" />
               Ratings & Reviews
             </span>
           </h2>
-          <div className="mt-1 md:mt-2 flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
+          <div className="translate-y-[2px] flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
             <ReadOnlyStars value={average} />
             <span className="text-sm text-gray-700">
               <span className="font-semibold">{average.toFixed(1)}</span>/5
