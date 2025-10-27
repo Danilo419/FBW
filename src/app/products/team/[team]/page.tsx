@@ -155,7 +155,7 @@ function List({
     <div className="container-fw py-8 space-y-6">
       <h1 className="text-2xl sm:text-3xl font-extrabold">{team} — Products</h1>
 
-      {/* Grade mais densa, igual à outra página */}
+      {/* Grade densa */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
         {items.map((p) => {
           const first = firstImageFrom(p.imageUrls);
@@ -166,7 +166,7 @@ function List({
               href={`/products/${p.slug}`}
               className="group block rounded-xl border bg-white overflow-hidden ring-1 ring-black/5 transition hover:shadow-md hover:-translate-y-0.5"
             >
-              {/* Imagem ocupa mais, sem padding interno, com cover (como na outra página) */}
+              {/* Imagem cheia */}
               <div className="relative aspect-[4/5] w-full bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -177,16 +177,12 @@ function List({
                 />
               </div>
 
-              {/* Caption compacto, com nome em 1 linha e preço à direita */}
+              {/* Caption sem truncar: nome em várias linhas + preço por baixo */}
               <div className="p-3 border-t">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold text-sm leading-snug line-clamp-1">
-                    {p.name}
-                  </div>
-                  <div className="text-sm text-gray-700 whitespace-nowrap">
-                    {money(p.basePrice)}
-                  </div>
+                <div className="font-semibold text-sm leading-snug whitespace-normal break-words">
+                  {p.name}
                 </div>
+                <div className="mt-1 text-sm text-gray-700">{money(p.basePrice)}</div>
               </div>
             </a>
           );
