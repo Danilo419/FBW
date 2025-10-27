@@ -122,7 +122,7 @@ export default async function ClubsPage() {
     // prioriza asset; se não houver, usa DB
     const chosen = assetImg ?? firstDbImg;
 
-    // guarda só a primeira vez que encontrar esse clube
+    // guarda só a primeira vez que encontrar esse clube em questão
     if (!map.has(team)) map.set(team, chosen);
   }
 
