@@ -39,13 +39,57 @@ function money(cents: number) {
   });
 }
 
-function coverUrl(raw?: string | null) {
-  const placeholder = "/img/placeholder.png"; // garante ter este ficheiro em /public/img
-  if (!raw) return placeholder;
-  const url = raw.trim();
-  if (!url) return placeholder;
-  if (url.startsWith("http")) return url;
-  return url.startsWith("/") ? url : `/${url}`;
+/** Extrai a primeira imagem válida de qualquer formato possível vindo da BD */
+function firstImageFrom(value: unknown): string | null {
+  if (!value) return null;
+
+  // Se já for string
+  if (typeof value === "string") return value;
+
+  // Se for array (ex.: scalar list ou JSON)
+  if (Array.isArray(value)) {
+    for (const v of value) {
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return null;
+  }
+
+  // Se for objeto JSON (pouco provável, mas seguro)
+  try {
+    // casos raros: {0:"/img/a.png"} ou {url:"/img/a.png"}
+    const maybe: any = value as any;
+    if (typeof maybe?.url === "string" && maybe.url.trim()) return maybe.url.trim();
+    if (typeof maybe?.src === "string" && maybe.src.trim()) return maybe.src.trim();
+    // tenta indices
+    if (typeof maybe?.[0] === "string" && maybe[0].trim()) return maybe[0].trim();
+  } catch {}
+  return null;
+}
+
+/** Normaliza para URL absoluta/relativa válida e devolve um placeholder se nada existir */
+function coverUrl(raw?: string | null): string {
+  // usa um placeholder universal (SVG inline) caso não exista ficheiro local
+  const dataFallback =
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
+        <defs>
+          <linearGradient id='g' x1='0' x2='1'>
+            <stop stop-color='#eef2ff' offset='0'/>
+            <stop stop-color='#e0f2fe' offset='1'/>
+          </linearGradient>
+        </defs>
+        <rect width='100%' height='100%' fill='url(#g)'/>
+        <g fill='#94a3b8' font-family='system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial' font-size='22'>
+          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'>No image</text>
+        </g>
+      </svg>`
+    );
+
+  const p = raw?.trim();
+  if (!p) return dataFallback;
+  if (p.startsWith("http")) return p;
+  return p.startsWith("/") ? p : `/${p}`;
 }
 
 /* ============================ Page ============================ */
@@ -62,7 +106,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
       id: true,
       slug: true,
       name: true,
-      imageUrls: true, // único campo de imagens
+      imageUrls: true, // pode vir como string[] (scalar list) ou JSON
       basePrice: true,
       team: true,
     },
@@ -98,7 +142,7 @@ function List({
   items: {
     slug: string;
     name: string;
-    imageUrls?: string[] | null;
+    imageUrls?: unknown; // ← aceite qualquer formato para extração robusta
     basePrice: number;
   }[];
 }) {
@@ -108,7 +152,8 @@ function List({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((p) => {
-          const src = coverUrl(p.imageUrls?.[0] ?? null);
+          const first = firstImageFrom(p.imageUrls);
+          const src = coverUrl(first);
           return (
             <a
               key={p.slug}
