@@ -132,7 +132,7 @@ function SelectStars({
 }
 
 /* ------------------------------------------------------------------ */
-/* Review Item (usa callback p/ abrir lightbox)                       */
+/* Review Item                                                        */
 /* ------------------------------------------------------------------ */
 function ReviewItem({ r, onImageClick }: { r: Review; onImageClick: (urls: string[], index: number) => void }) {
   const name = r.user?.name || "Anonymous";
@@ -240,7 +240,7 @@ function Confetti({ show }: { show: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Lightbox (abre dentro do site)                                     */
+/* Lightbox                                                           */
 /* ------------------------------------------------------------------ */
 function Lightbox({
   urls,
@@ -248,12 +248,14 @@ function Lightbox({
   onClose,
   onPrev,
   onNext,
+  setIndex,
 }: {
   urls: string[];
   index: number;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
+  setIndex: (i: number) => void;
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -275,27 +277,27 @@ function Lightbox({
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className="relative max-w-6xl w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close */}
+      {/* contentor sem “barras” laterais */}
+      <div className="relative inline-flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        {/* Botão fechar */}
         <button
           onClick={onClose}
-          className="absolute -top-10 right-0 md:top-0 md:-right-10 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
+          className="absolute -top-10 right-0 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
 
-        {/* Image */}
-        <div className="relative w-full rounded-2xl bg-white/5 ring-1 ring-white/10 overflow-hidden">
+        {/* Imagem (ajusta ao viewport) */}
+        <div className="relative">
           <img
             src={current}
             alt="Review image"
-            className="max-h-[80vh] w-full object-contain bg-white"
+            className="block w-auto h-auto max-w-[95vw] max-h-[85vh] object-contain select-none"
+            draggable={false}
           />
-          {/* Nav */}
+
+          {/* Navegação */}
           {urls.length > 1 && (
             <>
               <button
@@ -316,24 +318,17 @@ function Lightbox({
           )}
         </div>
 
-        {/* Thumbs */}
+        {/* Thumbnails */}
         {urls.length > 1 && (
-          <div className="mt-3 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+          <div className="mt-3 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 w-full justify-items-center">
             {urls.map((u, i) => (
               <button
                 key={i}
-                onClick={() => {}}
-                className={`rounded-lg overflow-hidden ring-2 ${
-                  i === index ? "ring-blue-500" : "ring-transparent"
-                }`}
+                onClick={() => setIndex(i)}
+                className={`rounded-lg overflow-hidden ring-2 ${i === index ? "ring-blue-500" : "ring-transparent"}`}
                 aria-label={`Go to image ${i + 1}`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClickCapture={() => {
-                  // navegar diretamente
-                  // (o onClick acima já impede foco feio)
-                }}
               >
-                <img src={u} className="h-14 w-full object-cover" alt={`Thumb ${i + 1}`} onClick={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onPointerUp={(e)=>e.stopPropagation()} />
+                <img src={u} className="h-14 w-20 object-cover" alt={`Thumb ${i + 1}`} draggable={false} />
               </button>
             ))}
           </div>
@@ -344,7 +339,7 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/* MAIN (com upload direto ao Cloudinary)                             */
+/* MAIN                                                               */
 /* ------------------------------------------------------------------ */
 export default function ReviewsPanel({ productId }: { productId: string }) {
   const [data, setData] = useState<ReviewsResponse | null>(null);
@@ -358,7 +353,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
-  // Lightbox state
+  // Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxUrls, setLightboxUrls] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -368,7 +363,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     setLightboxIndex(index);
     setLightboxOpen(true);
   }, []);
-
   const closeLightbox = useCallback(() => setLightboxOpen(false), []);
   const prevImage = useCallback(
     () => setLightboxIndex((i) => (i - 1 + lightboxUrls.length) % lightboxUrls.length),
@@ -393,7 +387,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     load();
   }, [productId]);
 
-  /** valida e adiciona imagens ao estado */
+  /* upload: validação e helpers ------------------------------------ */
   function addFiles(incoming: File[]) {
     const MAX = 4;
     const MAX_MB = 5;
@@ -438,7 +432,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     inputRef.current?.click();
   }
 
-  /* -------- Upload direto ao Cloudinary -------- */
   async function getSignature() {
     const r = await fetch("/api/reviews/upload-signature", { method: "POST" });
     if (!r.ok) throw new Error("Failed to get upload signature");
@@ -493,10 +486,8 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     setError(null);
     setOk(false);
     try {
-      // 1) Upload direto das imagens e obter URLs
       const imageUrls = await uploadDirect(files);
 
-      // 2) Enviar review leve (JSON) – sem multipart (evita 413)
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -536,14 +527,14 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       {/* Cabeçalho */}
       <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-r from-slate-50 via-white to-cyan-50 p-5 ring-1 ring-black/5">
         <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl" />
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <h2 className="text-lg font-semibold tracking-tight">
             <span className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-600" />
               Ratings & Reviews
             </span>
           </h2>
-          <div className="flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
+          <div className="mt-1 md:mt-2 flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
             <ReadOnlyStars value={average} />
             <span className="text-sm text-gray-700">
               <span className="font-semibold">{average.toFixed(1)}</span>/5
@@ -765,6 +756,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           onClose={closeLightbox}
           onPrev={prevImage}
           onNext={nextImage}
+          setIndex={setLightboxIndex}
         />
       )}
     </section>
