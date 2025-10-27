@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   Star,
   MessageSquare,
@@ -11,6 +11,8 @@ import {
   X,
   Image as ImageIcon,
   UploadCloud,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -130,9 +132,9 @@ function SelectStars({
 }
 
 /* ------------------------------------------------------------------ */
-/* Review Item                                                        */
+/* Review Item (usa callback p/ abrir lightbox)                       */
 /* ------------------------------------------------------------------ */
-function ReviewItem({ r }: { r: Review }) {
+function ReviewItem({ r, onImageClick }: { r: Review; onImageClick: (urls: string[], index: number) => void }) {
   const name = r.user?.name || "Anonymous";
   const photo = r.user?.image || null;
 
@@ -158,13 +160,19 @@ function ReviewItem({ r }: { r: Review }) {
           {r.imageUrls && r.imageUrls.length > 0 && (
             <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
               {r.imageUrls.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="group">
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onImageClick(r.imageUrls!, i)}
+                  className="group block focus:outline-none"
+                  aria-label={`Open image ${i + 1} of ${r.imageUrls!.length}`}
+                >
                   <img
                     src={url}
                     alt={`Review image ${i + 1}`}
                     className="h-24 w-full object-cover rounded-lg ring-1 ring-black/10 group-hover:brightness-110 transition"
                   />
-                </a>
+                </button>
               ))}
             </div>
           )}
@@ -232,6 +240,110 @@ function Confetti({ show }: { show: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Lightbox (abre dentro do site)                                     */
+/* ------------------------------------------------------------------ */
+function Lightbox({
+  urls,
+  index,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  urls: string[];
+  index: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onPrev();
+      if (e.key === "ArrowRight") onNext();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, onPrev, onNext]);
+
+  if (!urls.length) return null;
+  const current = urls[index];
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative max-w-6xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute -top-10 right-0 md:top-0 md:-right-10 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        {/* Image */}
+        <div className="relative w-full rounded-2xl bg-white/5 ring-1 ring-white/10 overflow-hidden">
+          <img
+            src={current}
+            alt="Review image"
+            className="max-h-[80vh] w-full object-contain bg-white"
+          />
+          {/* Nav */}
+          {urls.length > 1 && (
+            <>
+              <button
+                onClick={onPrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={onNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Thumbs */}
+        {urls.length > 1 && (
+          <div className="mt-3 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+            {urls.map((u, i) => (
+              <button
+                key={i}
+                onClick={() => {}}
+                className={`rounded-lg overflow-hidden ring-2 ${
+                  i === index ? "ring-blue-500" : "ring-transparent"
+                }`}
+                aria-label={`Go to image ${i + 1}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClickCapture={() => {
+                  // navegar diretamente
+                  // (o onClick acima já impede foco feio)
+                }}
+              >
+                <img src={u} className="h-14 w-full object-cover" alt={`Thumb ${i + 1}`} onClick={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onPointerUp={(e)=>e.stopPropagation()} />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* MAIN (com upload direto ao Cloudinary)                             */
 /* ------------------------------------------------------------------ */
 export default function ReviewsPanel({ productId }: { productId: string }) {
@@ -246,8 +358,26 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
-  const [dragOver, setDragOver] = useState(false);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrls, setLightboxUrls] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = useCallback((urls: string[], index: number) => {
+    setLightboxUrls(urls);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  }, []);
+
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const prevImage = useCallback(
+    () => setLightboxIndex((i) => (i - 1 + lightboxUrls.length) % lightboxUrls.length),
+    [lightboxUrls.length]
+  );
+  const nextImage = useCallback(
+    () => setLightboxIndex((i) => (i + 1) % lightboxUrls.length),
+    [lightboxUrls.length]
+  );
 
   async function load() {
     setLoading(true);
@@ -302,6 +432,8 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     addFiles(Array.from(e.dataTransfer.files || []));
   }
 
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   function openPicker() {
     inputRef.current?.click();
   }
@@ -422,7 +554,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
 
         {/* Aviso logo abaixo do título */}
         <p className="mt-2 text-xs text-gray-600">
-          You must have an account and be logged in.
+          You must have an account and be logged in to make a review.
         </p>
       </div>
 
@@ -558,7 +690,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           <div className="mt-5 flex items-center gap-3">
             <button
               disabled={submitting || rating <= 0 || rating > 5 || uploading}
-              className="relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-sm font-medium text-white shadow-md transition hover:brightness-110 active:scale-[.98] disabled:opacity-60"
+              className="relative inline-flex items-centered gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-sm font-medium text-white shadow-md transition hover:brightness-110 active:scale-[.98] disabled:opacity-60"
             >
               {submitting ? (
                 <>
@@ -620,11 +752,21 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
         ) : (
           <ul className="mt-3 divide-y divide-gray-100">
             {reviews.map((r) => (
-              <ReviewItem r={r} key={r.id} />
+              <ReviewItem r={r} key={r.id} onImageClick={openLightbox} />
             ))}
           </ul>
         )}
       </div>
+
+      {lightboxOpen && (
+        <Lightbox
+          urls={lightboxUrls}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={prevImage}
+          onNext={nextImage}
+        />
+      )}
     </section>
   );
 }
