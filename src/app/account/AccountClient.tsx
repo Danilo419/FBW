@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   UploadCloud,
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 /* ========= Tipos das props ========= */
 type Props = {
@@ -143,7 +144,7 @@ function Overview({
           </div>
         </InfoCard>
 
-        <InfoCard label="Provider">
+      <InfoCard label="Provider">
           <div className="mt-1 font-semibold">{provider}</div>
         </InfoCard>
 
@@ -166,6 +167,7 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
 
 /* ========= PROFILE (upload direto ao Cloudinary) ========= */
 function ProfileForm({ email, defaultName, defaultImage }: Props) {
+  const { update } = useSession(); // ✅ para refrescar sessão no próprio separador
   const [name, setName] = useState(defaultName || '');
   const [image, setImage] = useState<string>(defaultImage || '');
   const [file, setFile] = useState<File | null>(null);
@@ -200,9 +202,20 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to update profile');
 
+      // UI local
       setImage(data?.user?.image ?? finalImage ?? '');
       setFile(null);
       setOk('Profile updated successfully');
+
+      // 🔔 Notifica outros separadores + Header para refrescar
+      try {
+        localStorage.setItem('profile:updated', String(Date.now()));
+        window.dispatchEvent(new Event('profile:updated'));
+      } catch {}
+
+      // 🔁 Refresca sessão neste separador (NextAuth)
+      try { await update?.(); } catch {}
+
     } catch (e: any) {
       setErr(e?.message ?? 'Something went wrong');
     } finally {

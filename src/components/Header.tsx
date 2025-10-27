@@ -24,11 +24,8 @@ import {
  * e.g. <Header cartCount={cart.totalQty} />
  */
 export default function Header({ cartCount = 0 }: { cartCount?: number }) {
-  // Safe pattern: avoid destructuring directly (prevents SSR/undefined errors)
-  const s = useSession();
-  const session = s?.data;
-  const status = s?.status;
-
+  // ✅ pegar também no 'update' do NextAuth para forçar refresh da sessão
+  const { data: session, status, update } = useSession();
   const isAdmin = (session?.user as any)?.isAdmin === true;
 
   const [userOpen, setUserOpen] = useState(false);
@@ -47,15 +44,12 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       const run = () => {
         const y = window.scrollY || 0;
         const goingDown = y > lastYRef.current;
-        theLoop: {
-          const passed = y > 40;
-          // do not hide when menus/search are open
-          const lockHeader = mobileOpen || userOpen || showSearchMobile;
+        // do not hide when menus/search are open
+        const lockHeader = mobileOpen || userOpen || showSearchMobile;
 
-          if (!lockHeader) {
-            if (passed && goingDown) setHidden(true);
-            else setHidden(false);
-          }
+        if (!lockHeader) {
+          const passed = y > 40;
+          setHidden(passed && goingDown);
         }
         lastYRef.current = y;
         rafRef.current = null;
@@ -98,6 +92,46 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
     };
   }, [userOpen]);
 
+  /* ==========================================================
+     🔁 Mantém a sessão fresca para refletir a nova imagem
+     - foco/visibilidade
+     - broadcast via localStorage ('profile:updated')
+     - custom Event ('profile:updated')
+     ========================================================== */
+  useEffect(() => {
+    if (!update) return;
+
+    const refresh = () => {
+      // só tenta quando autenticado; evita spam
+      if (status === "authenticated") update();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    const onFocus = () => refresh();
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "profile:updated") refresh();
+    };
+
+    const onCustom = () => refresh();
+
+    window.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("storage", onStorage);
+    // permite: window.dispatchEvent(new Event('profile:updated'))
+    window.addEventListener("profile:updated", onCustom as any);
+
+    return () => {
+      window.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("profile:updated", onCustom as any);
+    };
+  }, [status, update]);
+
   const avatarSrc = session?.user?.image || undefined;
   const displayName = session?.user?.name || session?.user?.email || "User";
 
@@ -135,10 +169,10 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
         {/* Right: Search pushed to the right + Cart + User */}
         <div className="ml-auto flex items-center gap-3">
-          {/* Search (desktop) — now right aligned and prettier */}
+          {/* Search (desktop) */}
           <SearchBar className="hidden lg:block" />
 
-          {/* Cart (desktop) — âncora para a animação fly-to-cart */}
+          {/* Cart (desktop) */}
           <Link
             href="/cart"
             aria-label="Open cart"
@@ -168,7 +202,8 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 aria-expanded={userOpen}
                 aria-controls="user-menu"
               >
-                <Avatar src={avatarSrc} name={displayName} size={40} />
+                {/* 👇 key baseada no URL para forçar re-render quando a imagem muda */}
+                <Avatar key={avatarSrc || "__"} src={avatarSrc} name={displayName} size={40} />
                 <ChevronDown
                   className={`h-5 w-5 transition-transform ${userOpen ? "rotate-180" : ""}`}
                 />
@@ -249,9 +284,9 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           <span className="sr-only">FootballWorld</span>
         </Link>
 
-        {/* Right side (mobile): search + cart + avatar/login */}
+        {/* Right side (mobile) */}
         <div className="flex items-center gap-2">
-          {/* Search toggle (mobile) */}
+          {/* Search toggle */}
           <button
             aria-label="Open search"
             onClick={() => setShowSearchMobile((v) => !v)}
@@ -261,7 +296,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <Search className="h-5 w-5" />
           </button>
 
-          {/* Cart (mobile) — âncora para a animação fly-to-cart */}
+          {/* Cart */}
           <Link
             href="/cart"
             aria-label="Open cart"
@@ -288,7 +323,8 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               aria-expanded={userOpen}
               aria-controls="user-menu-mobile"
             >
-              <Avatar src={avatarSrc} name={displayName} size={36} />
+              {/* 👇 key força re-render no mobile também */}
+              <Avatar key={avatarSrc || "__m"} src={avatarSrc} name={displayName} size={36} />
             </button>
           ) : (
             <Link
@@ -421,7 +457,7 @@ function SearchBar({
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ProductSearchItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [active, setActive] = useState<number>(-1); // keyboard highlight
+  const [active, setActive] = useState<number>(-1);
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -479,7 +515,6 @@ function SearchBar({
         const data = await r.json();
         const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
 
-        // 🔎 Afinar no cliente: todas as palavras têm de existir em name/clubName
         const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
         const narrowed = arr.filter((it) => {
           const hay = (it.name + " " + (it.clubName || "")).toLowerCase();
@@ -506,7 +541,7 @@ function SearchBar({
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     if (term.trim().length < 2) {
       setItems([]);
-      setOpen(Boolean(term.trim().length)); // fecha quando apaga
+      setOpen(Boolean(term.trim().length));
       setLoading(false);
       setError(null);
       return;
@@ -519,7 +554,6 @@ function SearchBar({
     };
   }, [term, fetchResults]);
 
-  // Handle submit
   const onSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     setOpen(false);
@@ -530,15 +564,11 @@ function SearchBar({
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
-  // Keyboard nav
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((i) => {
-        const next = Math.min(i + 1, (items?.length ?? 0) - 1);
-        return next;
-      });
+      setActive((i) => Math.min(i + 1, (items?.length ?? 0) - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((i) => Math.max(i - 1, -1));
@@ -549,10 +579,8 @@ function SearchBar({
         setOpen(false);
         setActive(-1);
         onSubmitted?.();
-        // ✅ caminho correto
         router.push(`/products/${it.slug}`);
       }
-      // else will submit the form default
     } else if (e.key === "Escape") {
       setOpen(false);
       setActive(-1);
@@ -569,7 +597,6 @@ function SearchBar({
         onSubmit={onSubmit}
         className={`group relative`}
       >
-        {/* Gradient border wrapper */}
         <div className="p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
           <div className="relative rounded-full bg-white/80 backdrop-blur ring-1 ring-black/5 hover:ring-gray-300 focus-within:ring-blue-500 transition">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -610,20 +637,13 @@ function SearchBar({
           aria-label="Search suggestions"
           className="absolute z-50 mt-2 w-[min(30rem,92vw)] rounded-2xl border bg-white/95 backdrop-blur shadow-2xl ring-1 ring-black/5 overflow-hidden"
         >
-          {loading && (
-            <div className="p-4 text-sm text-gray-500">A procurar…</div>
-          )}
-
-          {!loading && error && (
-            <div className="p-4 text-sm text-red-600">{error}</div>
-          )}
-
+          {loading && <div className="p-4 text-sm text-gray-500">A procurar…</div>}
+          {!loading && error && <div className="p-4 text-sm text-red-600">{error}</div>}
           {!loading && !error && term.trim().length >= 2 && items.length === 0 && (
             <div className="p-4 text-sm text-gray-600">
               Sem resultados para “<span className="font-semibold">{term}</span>”.
             </div>
           )}
-
           {!loading && !error && items.length > 0 && (
             <ul className="max-h-[70vh] overflow-auto">
               {items.map((it, idx) => (
@@ -638,7 +658,6 @@ function SearchBar({
                       setOpen(false);
                       setActive(-1);
                       onSubmitted?.();
-                      // ✅ caminho correto
                       router.push(`/products/${it.slug}`);
                     }}
                     className={`w-full flex items-center gap-3 p-2.5 text-left transition ${
@@ -652,26 +671,20 @@ function SearchBar({
                         fill
                         sizes="48px"
                         className="object-cover"
-                        unoptimized   // 👈 permite thumbnails do Vercel Blob sem mexer no next.config
+                        unoptimized
                         loading="lazy"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="truncate text-sm font-medium">
-                        <Highlight text={it.name} query={term} />
-                      </div>
+                      <div className="truncate text-sm font-medium">{it.name}</div>
                       <div className="truncate text-xs text-gray-500">
-                        {it.clubName ? <Highlight text={it.clubName} query={term} /> : "Product"}
+                        {it.clubName || "Product"}
                       </div>
                     </div>
-                    <div className="shrink-0 text-sm font-semibold">
-                      {formatPrice(it.price)}
-                    </div>
+                    <div className="shrink-0 text-sm font-semibold">{formatPrice(it.price)}</div>
                   </button>
                 </li>
               ))}
-
-              {/* See all results */}
               <li className="border-t">
                 <Link
                   href={`/search?q=${encodeURIComponent(term.trim())}`}
@@ -691,27 +704,6 @@ function SearchBar({
       )}
     </div>
   );
-}
-
-function Highlight({ text, query }: { text: string; query: string }) {
-  if (!query) return <>{text}</>;
-  const q = query.trim();
-  try {
-    const idx = text.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return <>{text}</>;
-    const before = text.slice(0, idx);
-    const match = text.slice(idx, idx + q.length);
-    const after = text.slice(idx + q.length);
-    return (
-      <>
-        {before}
-        <mark className="bg-yellow-200/80 rounded px-0.5">{match}</mark>
-        {after}
-      </>
-    );
-  } catch {
-    return <>{text}</>;
-  }
 }
 
 function formatPrice(price: number) {
@@ -810,11 +802,7 @@ function MobileLink({
   onClick?: () => void;
 }) {
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="block rounded-xl px-3 py-3 hover:bg-gray-50"
-    >
+    <Link href={href} onClick={onClick} className="block rounded-xl px-3 py-3 hover:bg-gray-50">
       {children}
     </Link>
   );
@@ -832,7 +820,6 @@ function MobileDrawer({
 }) {
   return (
     <>
-      {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity md:hidden ${
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -840,7 +827,6 @@ function MobileDrawer({
         aria-hidden="true"
         onClick={onClose}
       />
-      {/* Panel */}
       <aside
         className={`fixed inset-y-0 left-0 w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr_auto]
           transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}
