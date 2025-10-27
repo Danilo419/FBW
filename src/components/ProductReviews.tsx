@@ -277,9 +277,7 @@ function Lightbox({
       role="dialog"
       aria-modal="true"
     >
-      {/* contentor sem “barras” laterais */}
       <div className="relative inline-flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        {/* Botão fechar */}
         <button
           onClick={onClose}
           className="absolute -top-10 right-0 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
@@ -288,7 +286,6 @@ function Lightbox({
           <X className="h-5 w-5" />
         </button>
 
-        {/* Imagem */}
         <div className="relative">
           <img
             src={current}
@@ -296,8 +293,6 @@ function Lightbox({
             className="block w-auto h-auto max-w-[95vw] max-h-[85vh] object-contain select-none"
             draggable={false}
           />
-
-          {/* Navegação */}
           {urls.length > 1 && (
             <>
               <button
@@ -318,7 +313,6 @@ function Lightbox({
           )}
         </div>
 
-        {/* Thumbnails */}
         {urls.length > 1 && (
           <div className="mt-3 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 w-full justify-items-center">
             {urls.map((u, i) => (
@@ -527,21 +521,23 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       {/* Cabeçalho */}
       <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-r from-slate-50 via-white to-cyan-50 p-5 ring-1 ring-black/5">
         <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl" />
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">
+        {/* Reservamos espaço à direita para o “pill” absoluto */}
+        <div className="pr-44">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center">
             <span className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-600" />
               Ratings & Reviews
             </span>
           </h2>
-          {/* ▼ desce o “pill” ~6px e centra no eixo cruzado */}
-          <div className="self-center mt-[6px] flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
-            <ReadOnlyStars value={average} />
-            <span className="text-sm text-gray-700">
-              <span className="font-semibold">{average.toFixed(1)}</span>/5
-            </span>
-            <span className="text-xs text-gray-500">({total})</span>
-          </div>
+        </div>
+
+        {/* Pill ABSOLUTO: centrado verticalmente no cabeçalho */}
+        <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1 shadow-sm">
+          <ReadOnlyStars value={average} />
+          <span className="text-sm text-gray-700">
+            <span className="font-semibold">{average.toFixed(1)}</span>/5
+          </span>
+          <span className="text-xs text-gray-500">({total})</span>
         </div>
 
         <p className="mt-2 text-xs text-gray-600">
@@ -701,6 +697,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
         {/* Estatísticas */}
         <div className="rounded-3xl border bg-white/80 p-5 shadow-sm ring-1 ring-black/5">
           <div className="grid grid-cols-[auto_1fr] gap-5 items-center">
+            {/* Dial circular */}
             <div className="relative h-28 w-28">
               <div
                 className="absolute inset-0 rounded-full"
