@@ -9,6 +9,7 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+/* ============================ utils ============================ */
 function slugify(s?: string | null) {
   const base = (s ?? "").trim();
   return base
@@ -26,6 +27,75 @@ function titleFromSlug(slug: string) {
     .join(" ");
 }
 
+/** Extrai a primeira imagem de vários formatos possíveis */
+function firstImageFrom(value: unknown): string | null {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    const s = value.trim();
+    return s || null;
+  }
+
+  if (Array.isArray(value)) {
+    for (const v of value) {
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (v && typeof (v as any).url === "string" && (v as any).url.trim())
+        return (v as any).url.trim();
+      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
+        return (v as any).src.trim();
+    }
+    return null;
+  }
+
+  try {
+    const any: any = value;
+    if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
+    if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
+  } catch {}
+
+  return null;
+}
+
+/** Normaliza caminho local e aceita URLs externas */
+function normalizeLocalPath(p?: string | null): string | null {
+  if (!p) return null;
+  let s = p.trim();
+  if (!s) return null;
+
+  // remove prefixo "public/" se existir
+  s = s.replace(/^public[\\/]/i, "");
+
+  // barras windows -> unix
+  s = s.replace(/\\/g, "/");
+
+  // se for http/https, deixa como está
+  if (/^https?:\/\//i.test(s)) return s;
+
+  // força "/" inicial para servir a partir de /public
+  if (!s.startsWith("/")) s = "/" + s;
+
+  return s;
+}
+
+/** Produz um URL final com fallback visível */
+function coverUrl(raw?: string | null): string {
+  const fallback =
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
+        <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#eef2ff' offset='0'/><stop stop-color='#e0f2fe' offset='1'/></linearGradient></defs>
+        <rect width='100%' height='100%' fill='url(#g)'/>
+        <g fill='#94a3b8' font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22'>
+          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'>No image</text>
+        </g>
+      </svg>`
+    );
+
+  const n = normalizeLocalPath(raw);
+  return n || fallback;
+}
+
+/* ===================== static params (dev only) ===================== */
 /**
  * Em ambiente de build na Vercel, não pré-gera nada para não bater no DB.
  * Em dev local, podes continuar a pré-gerar se quiseres.
@@ -44,6 +114,7 @@ export async function generateStaticParams() {
     .map((team) => ({ club: slugify(team) }));
 }
 
+/* =============================== page =============================== */
 export default async function ClubProductsPage({
   params,
 }: {
@@ -68,7 +139,7 @@ export default async function ClubProductsPage({
       id: true,
       slug: true,
       name: true,
-      imageUrls: true, // ✅ substitui "images"
+      imageUrls: true, // ✅ único campo de imagens
       basePrice: true,
       team: true,
     },
@@ -98,28 +169,27 @@ export default async function ClubProductsPage({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((p) => {
-          const img =
-            (Array.isArray(p.imageUrls) && p.imageUrls.length > 0
-              ? p.imageUrls[0]
-              : undefined) ?? "/placeholder.png";
+          const first = firstImageFrom(p.imageUrls);
+          const src = coverUrl(first);
 
           return (
             <Link
               key={p.id}
               href={`/products/${p.slug}`}
-              className="group rounded-2xl border bg-white overflow-hidden"
+              className="group rounded-2xl border bg-white overflow-hidden ring-1 ring-black/5 hover:shadow-md transition"
             >
-              <div className="relative aspect-[4/5]">
+              <div className="relative aspect-[4/5] bg-white">
                 <Image
-                  src={img}
+                  src={src}
                   alt={p.name}
                   fill
+                  unoptimized
                   sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
-                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                  className="object-contain p-6 transition-transform duration-300 group-hover:scale-105"
                   priority={false}
                 />
               </div>
-              <div className="p-3">
+              <div className="p-3 border-t">
                 <div className="text-xs text-gray-500">{p.team ?? teamName}</div>
                 <div className="font-semibold line-clamp-2">{p.name}</div>
                 <div className="mt-1 text-sm text-gray-700">
