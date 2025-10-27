@@ -288,7 +288,7 @@ function Lightbox({
           <X className="h-5 w-5" />
         </button>
 
-        {/* Imagem (ajusta ao viewport) */}
+        {/* Imagem */}
         <div className="relative">
           <img
             src={current}
@@ -387,7 +387,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
     load();
   }, [productId]);
 
-  /* upload: validação e helpers ------------------------------------ */
+  /* upload helpers */
   function addFiles(incoming: File[]) {
     const MAX = 4;
     const MAX_MB = 5;
@@ -534,7 +534,8 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
               Ratings & Reviews
             </span>
           </h2>
-          <div className="translate-y-[2px] flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
+          {/* ▼ desce o “pill” ~6px e centra no eixo cruzado */}
+          <div className="self-center mt-[6px] flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1">
             <ReadOnlyStars value={average} />
             <span className="text-sm text-gray-700">
               <span className="font-semibold">{average.toFixed(1)}</span>/5
@@ -543,7 +544,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           </div>
         </div>
 
-        {/* Aviso logo abaixo do título */}
         <p className="mt-2 text-xs text-gray-600">
           You must have an account and be logged in to make a review.
         </p>
@@ -701,7 +701,6 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
         {/* Estatísticas */}
         <div className="rounded-3xl border bg-white/80 p-5 shadow-sm ring-1 ring-black/5">
           <div className="grid grid-cols-[auto_1fr] gap-5 items-center">
-            {/* Dial circular */}
             <div className="relative h-28 w-28">
               <div
                 className="absolute inset-0 rounded-full"
