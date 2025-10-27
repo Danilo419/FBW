@@ -259,7 +259,9 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, [productId]);
+  useEffect(() => {
+    load();
+  }, [productId]);
 
   /** valida e adiciona imagens ao estado */
   function addFiles(incoming: File[]) {
@@ -417,6 +419,11 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             <span className="text-xs text-gray-500">({total})</span>
           </div>
         </div>
+
+        {/* Aviso logo abaixo do título */}
+        <p className="mt-2 text-xs text-gray-600">
+          You must have an account and be logged in.
+        </p>
       </div>
 
       {/* Layout 2 colunas */}
