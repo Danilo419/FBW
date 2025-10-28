@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-/** Sempre runtime (sem cache) */
+/** Sempre runtime (sem cache/ISR) */
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,10 +27,11 @@ function titleFromSlug(slug: string) {
     .join(" ");
 }
 
-/** Extrai a primeira imagem válida */
+/** Extrai a primeira imagem válida de vários formatos */
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
   if (typeof value === "string") return value.trim() || null;
+
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
@@ -40,16 +41,19 @@ function firstImageFrom(value: unknown): string | null {
         return (v as any).src.trim();
     }
   }
-  if (typeof (value as any)?.url === "string") return (value as any).url.trim();
-  if (typeof (value as any)?.src === "string") return (value as any).src.trim();
+
+  const any: any = value;
+  if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
+  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
   return null;
 }
 
-/** Normaliza caminho local */
+/** Normaliza caminho local e aceita URLs externas */
 function normalizeLocalPath(p?: string | null): string | null {
   if (!p) return null;
   let s = p.trim();
   if (!s) return null;
+
   s = s.replace(/^public[\\/]/i, "").replace(/\\/g, "/");
   if (/^https?:\/\//i.test(s)) return s;
   if (!s.startsWith("/")) s = "/" + s;
@@ -62,10 +66,10 @@ function coverUrl(raw?: string | null): string {
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
-        <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#f1f5f9' offset='0'/><stop stop-color='#e0f2fe' offset='1'/></linearGradient></defs>
+        <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#f8fafc' offset='0'/><stop stop-color='#e0f2fe' offset='1'/></linearGradient></defs>
         <rect width='100%' height='100%' fill='url(#g)'/>
         <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-          font-family='sans-serif' font-size='22' fill='#94a3b8'>No image</text>
+          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#94a3b8'>No image</text>
       </svg>`
     );
 
@@ -81,7 +85,7 @@ export default async function ClubProductsPage({
 }) {
   const { club } = await params;
 
-  // Mapeia nome real do clube
+  // Mapear slug -> nome real do clube
   const teams = await prisma.product.findMany({
     select: { team: true },
     distinct: ["team"],
@@ -89,11 +93,18 @@ export default async function ClubProductsPage({
   const matchedTeam = teams.find((t) => slugify(t.team) === club)?.team ?? null;
   const teamName = matchedTeam ?? titleFromSlug(club);
 
-  // Busca produtos
+  // Produtos do clube
   const products = await prisma.product.findMany({
     where: { team: teamName },
     orderBy: { name: "asc" },
-    select: { id: true, slug: true, name: true, imageUrls: true, basePrice: true, team: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      imageUrls: true,
+      basePrice: true,
+      team: true,
+    },
   });
 
   if (!products.length) notFound();
@@ -105,58 +116,95 @@ export default async function ClubProductsPage({
     });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-sky-50 px-6 sm:px-10 py-12">
-      <div className="max-w-7xl mx-auto space-y-10">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* background “hero” com blobs suaves */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
+        <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-100/40 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-600 to-indigo-600 text-transparent bg-clip-text">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-700 via-indigo-700 to-sky-700 text-transparent bg-clip-text">
             {teamName} — Products
           </h1>
+
           <Link
             href="/products"
-            className="px-5 py-2.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium text-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-300/80 bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-slate-50 hover:border-sky-300 transition font-medium text-sm"
           >
-            ← Back to all products
+            <span>←</span> Back to all products
           </Link>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        {/* Grid de produtos */}
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {products.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
+
             return (
               <Link
                 key={p.id}
                 href={`/products/${p.slug}`}
-                className="group relative bg-white rounded-3xl overflow-hidden shadow-sm ring-1 ring-gray-200 hover:shadow-2xl hover:-translate-y-1 transform transition duration-300"
+                aria-label={p.name}
+                className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
               >
-                {/* Imagem */}
-                <div className="relative aspect-[4/5] bg-gradient-to-b from-gray-50 to-gray-100">
-                  <Image
-                    src={src}
-                    alt={p.name}
-                    fill
-                    unoptimized
-                    sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
-                    className="object-contain p-6 transition-transform duration-300 group-hover:scale-110"
-                  />
-                </div>
+                <div className="rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
+                  {/* imagem */}
+                  <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+                    <Image
+                      src={src}
+                      alt={p.name}
+                      fill
+                      unoptimized
+                      sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
+                      className="object-contain p-6 sm:p-7 md:p-6 lg:p-6 transition-transform duration-300 group-hover:scale-110"
+                    />
 
-                {/* Info */}
-                <div className="p-5 border-t border-gray-100">
-                  <div className="text-xs uppercase tracking-wide text-sky-600 font-semibold mb-1">
-                    {p.team ?? teamName}
+                    {/* brilho muito suave no hover (sem badges) */}
+                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
                   </div>
-                  <div className="text-base font-bold text-gray-900 leading-tight line-clamp-2">
-                    {p.name}
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-gray-800">
-                    {money(p.basePrice)}
+
+                  {/* info */}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                          {p.team ?? teamName}
+                        </div>
+                        <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
+                          {p.name}
+                        </div>
+                      </div>
+
+                      {/* price chip (não é badge de produto, é o preço) */}
+                      <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
+                        {money(p.basePrice)}
+                      </div>
+                    </div>
+
+                    {/* linha separadora minimal */}
+                    <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+
+                    {/* CTA minimalista */}
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <span className="transition group-hover:translate-x-0.5">
+                        View product
+                      </span>
+                      <svg
+                        className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-
-                {/* Glow no hover */}
-                <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/5 to-sky-100/30 pointer-events-none" />
               </Link>
             );
           })}
