@@ -2,9 +2,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
+/* ============================ Config ============================ */
+export const revalidate = 60;
+
 type PageProps = { params: Promise<{ team: string }> };
 
-// Mapa slug -> nome exatamente como está na BD
 const TEAM_MAP: Record<string, string> = {
   "real-madrid": "Real Madrid",
   barcelona: "FC Barcelona",
@@ -21,7 +23,7 @@ const TEAM_MAP: Record<string, string> = {
   "vitoria-sc": "Vitória SC",
 };
 
-// fallback simples caso falte no mapa
+/* ============================ Utils ============================ */
 function fallbackTitle(slug: string) {
   return slug
     .split("-")
@@ -29,9 +31,6 @@ function fallbackTitle(slug: string) {
     .join(" ");
 }
 
-export const revalidate = 60;
-
-/* ============================ Helpers ============================ */
 function money(cents: number) {
   return (cents / 100).toLocaleString(undefined, {
     style: "currency",
@@ -39,49 +38,42 @@ function money(cents: number) {
   });
 }
 
-/** Extrai a primeira imagem válida de qualquer formato possível vindo da BD */
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
-
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return value.trim() || null;
 
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
+      if (v && typeof (v as any).url === "string" && (v as any).url.trim())
+        return (v as any).url.trim();
+      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
+        return (v as any).src.trim();
     }
-    return null;
   }
 
-  try {
-    const maybe: any = value as any;
-    if (typeof maybe?.url === "string" && maybe.url.trim()) return maybe.url.trim();
-    if (typeof maybe?.src === "string" && maybe.src.trim()) return maybe.src.trim();
-    if (typeof maybe?.[0] === "string" && maybe[0].trim()) return maybe[0].trim();
-  } catch {}
+  const any: any = value;
+  if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
+  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
   return null;
 }
 
-/** Normaliza para URL absoluta/relativa válida e devolve um placeholder se nada existir */
 function coverUrl(raw?: string | null): string {
-  const dataFallback =
+  const fallback =
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
-        <defs>
-          <linearGradient id='g' x1='0' x2='1'>
-            <stop stop-color='#eef2ff' offset='0'/>
-            <stop stop-color='#e0f2fe' offset='1'/>
-          </linearGradient>
-        </defs>
+        <defs><linearGradient id='g' x1='0' x2='1'>
+          <stop stop-color='#f8fafc' offset='0'/>
+          <stop stop-color='#e0f2fe' offset='1'/>
+        </linearGradient></defs>
         <rect width='100%' height='100%' fill='url(#g)'/>
-        <g fill='#94a3b8' font-family='system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial' font-size='22'>
-          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'>No image</text>
-        </g>
+        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
+          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#94a3b8'>No image</text>
       </svg>`
     );
-
   const p = raw?.trim();
-  if (!p) return dataFallback;
+  if (!p) return fallback;
   if (p.startsWith("http")) return p;
   return p.startsWith("/") ? p : `/${p}`;
 }
@@ -92,13 +84,11 @@ export default async function TeamProductsPage({ params }: PageProps) {
   const slug = team.toLowerCase();
   const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
 
-  // Busca insensível e por "contains" (apanha FC Barcelona, etc.)
   let products = await prisma.product.findMany({
     where: {
       OR: [
         { team: { equals: teamName, mode: "insensitive" } },
         { team: { contains: teamName, mode: "insensitive" } },
-        { team: { contains: "Barcelona", mode: "insensitive" } },
         { team: { contains: slug, mode: "insensitive" } },
       ],
     },
@@ -152,41 +142,80 @@ function List({
   }[];
 }) {
   return (
-    <div className="container-fw py-8 space-y-6">
-      <h1 className="text-2xl sm:text-3xl font-extrabold">{team} — Products</h1>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Fundo elegante com blobs */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
+        <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-100/40 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
+      </div>
 
-      {/* Grade densa */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-        {items.map((p) => {
-          const first = firstImageFrom(p.imageUrls);
-          const src = coverUrl(first);
-          return (
-            <a
-              key={p.slug}
-              href={`/products/${p.slug}`}
-              className="group block rounded-xl border bg-white overflow-hidden ring-1 ring-black/5 transition hover:shadow-md hover:-translate-y-0.5"
-            >
-              {/* Imagem cheia */}
-              <div className="relative aspect-[4/5] w-full bg-white">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={p.name}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
+        {/* Título */}
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-700 via-indigo-700 to-sky-700 text-transparent bg-clip-text mb-10">
+          {team} — Products
+        </h1>
 
-              {/* Caption sem truncar: nome em várias linhas + preço por baixo */}
-              <div className="p-3 border-t">
-                <div className="font-semibold text-sm leading-snug whitespace-normal break-words">
-                  {p.name}
+        {/* Grade de produtos */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {items.map((p) => {
+            const src = coverUrl(firstImageFrom(p.imageUrls));
+            return (
+              <a
+                key={p.slug}
+                href={`/products/${p.slug}`}
+                className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
+              >
+                <div className="rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
+                  {/* imagem */}
+                  <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={p.name}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
+                    />
+                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
+                  </div>
+
+                  {/* texto */}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                          {team}
+                        </div>
+                        <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
+                          {p.name}
+                        </div>
+                      </div>
+                      <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
+                        {money(p.basePrice)}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <span className="transition group-hover:translate-x-0.5">
+                        View product
+                      </span>
+                      <svg
+                        className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-1 text-sm text-gray-700">{money(p.basePrice)}</div>
-              </div>
-            </a>
-          );
-        })}
+              </a>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
