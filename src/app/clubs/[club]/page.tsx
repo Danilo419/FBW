@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-/** Render sempre em runtime (sem SSG/ISR) */
+/** Sempre runtime (sem cache) */
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,15 +27,10 @@ function titleFromSlug(slug: string) {
     .join(" ");
 }
 
-/** Extrai a primeira imagem de vários formatos possíveis */
+/** Extrai a primeira imagem válida */
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
-
-  if (typeof value === "string") {
-    const s = value.trim();
-    return s || null;
-  }
-
+  if (typeof value === "string") return value.trim() || null;
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
@@ -44,50 +39,33 @@ function firstImageFrom(value: unknown): string | null {
       if (v && typeof (v as any).src === "string" && (v as any).src.trim())
         return (v as any).src.trim();
     }
-    return null;
   }
-
-  try {
-    const any: any = value;
-    if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
-    if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
-  } catch {}
-
+  if (typeof (value as any)?.url === "string") return (value as any).url.trim();
+  if (typeof (value as any)?.src === "string") return (value as any).src.trim();
   return null;
 }
 
-/** Normaliza caminho local e aceita URLs externas */
+/** Normaliza caminho local */
 function normalizeLocalPath(p?: string | null): string | null {
   if (!p) return null;
   let s = p.trim();
   if (!s) return null;
-
-  // remove prefixo "public/" se existir
-  s = s.replace(/^public[\\/]/i, "");
-
-  // barras windows -> unix
-  s = s.replace(/\\/g, "/");
-
-  // se for http/https, deixa como está
+  s = s.replace(/^public[\\/]/i, "").replace(/\\/g, "/");
   if (/^https?:\/\//i.test(s)) return s;
-
-  // força "/" inicial para servir a partir de /public
   if (!s.startsWith("/")) s = "/" + s;
-
   return s;
 }
 
-/** Produz um URL final com fallback visível */
+/** Fallback elegante */
 function coverUrl(raw?: string | null): string {
   const fallback =
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
-        <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#eef2ff' offset='0'/><stop stop-color='#e0f2fe' offset='1'/></linearGradient></defs>
+        <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#f1f5f9' offset='0'/><stop stop-color='#e0f2fe' offset='1'/></linearGradient></defs>
         <rect width='100%' height='100%' fill='url(#g)'/>
-        <g fill='#94a3b8' font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22'>
-          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'>No image</text>
-        </g>
+        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
+          font-family='sans-serif' font-size='22' fill='#94a3b8'>No image</text>
       </svg>`
     );
 
@@ -95,54 +73,27 @@ function coverUrl(raw?: string | null): string {
   return n || fallback;
 }
 
-/* ===================== static params (dev only) ===================== */
-/**
- * Em ambiente de build na Vercel, não pré-gera nada para não bater no DB.
- * Em dev local, podes continuar a pré-gerar se quiseres.
- */
-export async function generateStaticParams() {
-  if (process.env.VERCEL) return [];
-
-  const rows = await prisma.product.findMany({
-    select: { team: true },
-    distinct: ["team"],
-  });
-
-  return rows
-    .map((r) => r.team)
-    .filter((t): t is string => !!t && t.trim().length > 0)
-    .map((team) => ({ club: slugify(team) }));
-}
-
-/* =============================== page =============================== */
+/* =============================== PAGE =============================== */
 export default async function ClubProductsPage({
   params,
 }: {
   params: Promise<{ club: string }>;
 }) {
-  // ✅ o teu router fornece params como Promise
   const { club } = await params;
 
-  // Lista de equipas distintas para mapear slug -> nome real
+  // Mapeia nome real do clube
   const teams = await prisma.product.findMany({
     select: { team: true },
     distinct: ["team"],
   });
-
   const matchedTeam = teams.find((t) => slugify(t.team) === club)?.team ?? null;
   const teamName = matchedTeam ?? titleFromSlug(club);
 
+  // Busca produtos
   const products = await prisma.product.findMany({
     where: { team: teamName },
     orderBy: { name: "asc" },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      imageUrls: true, // ✅ único campo de imagens existente
-      basePrice: true,
-      team: true,
-    },
+    select: { id: true, slug: true, name: true, imageUrls: true, basePrice: true, team: true },
   });
 
   if (!products.length) notFound();
@@ -154,51 +105,62 @@ export default async function ClubProductsPage({
     });
 
   return (
-    <div className="container-fw py-10 space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight">
-          {teamName} — Products
-        </h1>
-        <Link
-          href="/products"
-          className="rounded-full px-4 py-2 border hover:bg-gray-50 text-sm"
-        >
-          ← Back to all products
-        </Link>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-sky-50 px-6 sm:px-10 py-12">
+      <div className="max-w-7xl mx-auto space-y-10">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-600 to-indigo-600 text-transparent bg-clip-text">
+            {teamName} — Products
+          </h1>
+          <Link
+            href="/products"
+            className="px-5 py-2.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium text-sm"
+          >
+            ← Back to all products
+          </Link>
+        </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map((p) => {
-          const first = firstImageFrom(p.imageUrls);
-          const src = coverUrl(first);
-
-          return (
-            <Link
-              key={p.id}
-              href={`/products/${p.slug}`}
-              className="group rounded-2xl border bg-white overflow-hidden ring-1 ring-black/5 hover:shadow-md transition"
-            >
-              <div className="relative aspect-[4/5] bg-white">
-                <Image
-                  src={src}
-                  alt={p.name}
-                  fill
-                  unoptimized
-                  sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
-                  className="object-contain p-6 transition-transform duration-300 group-hover:scale-105"
-                  priority={false}
-                />
-              </div>
-              <div className="p-3 border-t">
-                <div className="text-xs text-gray-500">{p.team ?? teamName}</div>
-                <div className="font-semibold line-clamp-2">{p.name}</div>
-                <div className="mt-1 text-sm text-gray-700">
-                  {money(p.basePrice)}
+        {/* Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {products.map((p) => {
+            const src = coverUrl(firstImageFrom(p.imageUrls));
+            return (
+              <Link
+                key={p.id}
+                href={`/products/${p.slug}`}
+                className="group relative bg-white rounded-3xl overflow-hidden shadow-sm ring-1 ring-gray-200 hover:shadow-2xl hover:-translate-y-1 transform transition duration-300"
+              >
+                {/* Imagem */}
+                <div className="relative aspect-[4/5] bg-gradient-to-b from-gray-50 to-gray-100">
+                  <Image
+                    src={src}
+                    alt={p.name}
+                    fill
+                    unoptimized
+                    sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
+                    className="object-contain p-6 transition-transform duration-300 group-hover:scale-110"
+                  />
                 </div>
-              </div>
-            </Link>
-          );
-        })}
+
+                {/* Info */}
+                <div className="p-5 border-t border-gray-100">
+                  <div className="text-xs uppercase tracking-wide text-sky-600 font-semibold mb-1">
+                    {p.team ?? teamName}
+                  </div>
+                  <div className="text-base font-bold text-gray-900 leading-tight line-clamp-2">
+                    {p.name}
+                  </div>
+                  <div className="mt-2 text-lg font-semibold text-gray-800">
+                    {money(p.basePrice)}
+                  </div>
+                </div>
+
+                {/* Glow no hover */}
+                <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/5 to-sky-100/30 pointer-events-none" />
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
