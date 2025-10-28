@@ -10,12 +10,12 @@ import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilit
 import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
 import type { OptionType } from "@prisma/client";
 
-/* ==================== Helpers ==================== */
+/* =============== Helpers =============== */
 function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
-/* ==================== Regras S→4XL (com “fantasmas”) ==================== */
+/* =============== Regras S→4XL (com “fantasmas”) =============== */
 const ADULT_ALLOWED_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 type AllowedAdult = (typeof ADULT_ALLOWED_ORDER)[number];
 
@@ -48,22 +48,16 @@ function sortByOrder<T extends { size: string }>(list: T[], order: readonly stri
     (a, b) => indexInOrder(a.size.toUpperCase(), order) - indexInOrder(b.size.toUpperCase(), order)
   );
 }
-
-/** Completa S→4XL com “fantasmas” (sem id real, sem toggle) */
-function completeAdultsWithGhosts<
-  T extends { id?: string; size: string; available?: boolean }
->(rows: T[]) {
+function completeAdultsWithGhosts<T extends { id?: string; size: string; available?: boolean }>(rows: T[]) {
   const by = new Map(rows.map((r) => [r.size.toUpperCase(), r]));
   return ADULT_ALLOWED_ORDER.map((sz) => {
     const hit = by.get(sz);
     if (hit) return { ...hit, __ghost: false as const };
-    return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & {
-      __ghost: true;
-    };
+    return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & { __ghost: true };
   });
 }
 
-/* ==================== Badge catalog (EN) ==================== */
+/* =============== Badge Catalog (EN) =============== */
 type BadgeOption = { value: string; label: string };
 const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   {
@@ -123,16 +117,12 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
     ],
   },
-  {
-    title: "International Club",
-    items: [{ value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" }],
-  },
+  { title: "International Club", items: [{ value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" }] },
 ];
 
 export default async function ProductEditPage({
   params,
 }: {
-  // Next 15: params pode ser Promise
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -140,20 +130,18 @@ export default async function ProductEditPage({
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
-      sizes: true, // { id, productId, size, available }
+      sizes: true,
       options: {
         where: { type: "SIZE" as OptionType },
         include: { values: { select: { value: true, label: true } } },
       },
     },
-    // Nota: Prisma devolve também campos escalares (e.g., imageUrls, badges, etc.)
   });
   if (!product) return notFound();
 
-  // Badge selection inicial (assumindo coluna string[] 'badges')
-  const selectedBadges = new Set<string>((product as any).badges ?? []);
+  const selectedInitial: string[] = (product as any).badges ?? [];
 
-  // (Opcional) ainda respeitamos o grupo SIZE, mas a seguir vamos completar com fantasmas
+  // size logic
   const sizeGroup = product.options[0] ?? null;
   const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
@@ -164,14 +152,12 @@ export default async function ProductEditPage({
         )
       : null;
 
-  // 1) Normaliza tamanhos adultos existentes (ignora kids) e filtra S→4XL
   const normalizedAdults = product.sizes
     .filter((s) => !isKidsLabel(s.size))
     .map((s) => ({ ...s, size: normalizeAdultSizeLabel(s.size) }))
     .filter((s) => isAllowedAdultSize(s.size))
     .filter((s) => (allowedFromGroup ? allowedFromGroup.has(s.size) : true));
 
-  // 2) Dedup (mantém o com available=true se houver duplicados)
   const dedupMap = new Map<string, (typeof normalizedAdults)[number]>();
   for (const s of normalizedAdults) {
     const key = s.size.toUpperCase();
@@ -179,14 +165,14 @@ export default async function ProductEditPage({
     if (!prev) dedupMap.set(key, s);
     else if (prev.available === false && s.available === true) dedupMap.set(key, s);
   }
-  const dedupList = Array.from(dedupMap.values());
-
-  // 3) Completa com “fantasmas” para S, M, L, XL, 2XL, 3XL, 4XL
-  const completed = completeAdultsWithGhosts(dedupList);
-
-  // 4) Ordena e usa contagem fixa (7)
+  const completed = completeAdultsWithGhosts(Array.from(dedupMap.values()));
   const viewSizes = sortByOrder(completed, ADULT_ALLOWED_ORDER);
   const originCount = ADULT_ALLOWED_ORDER.length;
+
+  // prepara dados p/ o script (flat list p/ pesquisa)
+  const ALL_BADGES = BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })));
+  const BADGES_JSON = JSON.stringify(ALL_BADGES);
+  const SELECTED_JSON = JSON.stringify(selectedInitial);
 
   return (
     <div className="space-y-6">
@@ -199,7 +185,7 @@ export default async function ProductEditPage({
 
       {/* ==== General info + Images + Badges (form submits to updateProduct) ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
-        <form action={updateProduct} className="grid gap-6">
+        <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -257,63 +243,164 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* Images (drag, add, remove, reorder) — mantém compat: outputs imagesText */}
+          {/* Images */}
           <ImagesEditor
             name="imagesText"
             initialImages={(product as any).imageUrls ?? []}
             alt={product.name}
           />
 
-          {/* Badges editor (checkboxes agrupados) */}
+          {/* Badges - Search UI (JS inline sem client component) */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
-              Select any patches (league, champions, UEFA, etc.). Your current selections are pre-checked.
+              Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if hidden by the filter.
             </p>
 
-            <div className="space-y-4">
-              {BADGE_GROUPS.map((group) => (
-                <fieldset key={group.title} className="rounded-xl border p-3">
-                  <legend className="px-1 text-xs font-semibold uppercase text-gray-600">
-                    {group.title}
-                  </legend>
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {group.items.map((opt) => {
-                      const checked = selectedBadges.has(opt.value);
-                      return (
-                        <label
-                          key={opt.value}
-                          className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
-                          title={group.title}
-                        >
-                          <input
-                            type="checkbox"
-                            name="badges"
-                            value={opt.value}
-                            defaultChecked={checked}
-                          />
-                          <span className="text-sm">{opt.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-              ))}
+            <input
+              id="badge-query"
+              type="text"
+              placeholder="Search badges…"
+              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+              autoComplete="off"
+            />
+
+            <div id="badge-hint" className="text-xs text-gray-500">
+              Start typing to see available badges.
             </div>
+
+            <div
+              id="badge-results"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden"
+            />
+
+            {/* Selecionados */}
+            <div id="badge-selected-wrap" className="space-y-2 hidden">
+              <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
+              <div id="badge-selected" className="flex flex-wrap gap-2" />
+            </div>
+
+            {/* container invisível onde ficam os inputs name="badges" */}
+            <div id="badge-hidden-inputs" className="hidden" />
           </div>
 
           <div>
-            <button
-              type="submit"
-              className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
-            >
+            <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
               Save product
             </button>
           </div>
         </form>
+
+        {/* Script de pesquisa/seleção (sem React) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  const BADGES = ${BADGES_JSON};
+  const INITIAL = new Set(${SELECTED_JSON});
+  const form = document.getElementById('edit-product-form');
+  const q = document.getElementById('badge-query');
+  const results = document.getElementById('badge-results');
+  const hint = document.getElementById('badge-hint');
+  const selWrap = document.getElementById('badge-selected-wrap');
+  const selectedDiv = document.getElementById('badge-selected');
+  const hiddenInputs = document.getElementById('badge-hidden-inputs');
+
+  const selected = new Set(INITIAL);
+
+  function syncHiddenInputs() {
+    hiddenInputs.innerHTML = '';
+    selected.forEach((val) => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'badges';
+      inp.value = val;
+      hiddenInputs.appendChild(inp);
+    });
+    selWrap.classList.toggle('hidden', selected.size === 0);
+    renderSelected();
+  }
+
+  function renderSelected() {
+    selectedDiv.innerHTML = '';
+    selected.forEach((val) => {
+      const meta = BADGES.find(b => b.value === val);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs hover:bg-gray-50';
+      btn.title = 'Remove';
+      btn.textContent = (meta && meta.label) ? meta.label + ' ×' : (val + ' ×');
+      btn.addEventListener('click', () => { selected.delete(val); syncHiddenInputs(); renderResults(); });
+      selectedDiv.appendChild(btn);
+    });
+  }
+
+  function makeOptionRow(opt) {
+    const label = document.createElement('label');
+    label.className = 'inline-flex items-center gap-2 rounded-xl border px-3 py-2';
+    label.title = opt.group;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = selected.has(opt.value);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selected.add(opt.value);
+      else selected.delete(opt.value);
+      syncHiddenInputs();
+    });
+
+    const span = document.createElement('span');
+    span.className = 'text-sm';
+    span.textContent = opt.label;
+
+    const tag = document.createElement('span');
+    tag.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600';
+    tag.textContent = opt.group.split(' – ')[0];
+
+    label.appendChild(cb);
+    label.appendChild(span);
+    label.appendChild(tag);
+    return label;
+  }
+
+  function renderResults() {
+    const query = (q.value || '').trim().toLowerCase();
+    if (!query) {
+      results.classList.add('hidden');
+      hint.classList.remove('hidden');
+      results.innerHTML = '';
+      return;
+    }
+    hint.classList.add('hidden');
+    results.classList.remove('hidden');
+
+    const filtered = BADGES.filter(b =>
+      b.label.toLowerCase().includes(query) ||
+      b.value.toLowerCase().includes(query) ||
+      b.group.toLowerCase().includes(query)
+    ).slice(0, 50);
+
+    results.innerHTML = '';
+    if (filtered.length === 0) {
+      const div = document.createElement('div');
+      div.className = 'text-xs text-gray-500';
+      div.textContent = 'No badges found.';
+      results.appendChild(div);
+      return;
+    }
+    filtered.forEach(opt => results.appendChild(makeOptionRow(opt)));
+  }
+
+  q.addEventListener('input', renderResults);
+  // Inicializa com selecionados existentes
+  syncHiddenInputs();
+  renderResults();
+})();`,
+          }}
+        />
       </section>
 
-      {/* ==== Sizes & Availability (com “fantasmas”) ==== */}
+      {/* ==== Sizes & Availability ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>
