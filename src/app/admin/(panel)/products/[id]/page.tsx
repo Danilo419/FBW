@@ -10,6 +10,7 @@ import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilit
 import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
 import type { OptionType } from "@prisma/client";
 
+/* ==================== Helpers ==================== */
 function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
@@ -62,6 +63,72 @@ function completeAdultsWithGhosts<
   });
 }
 
+/* ==================== Badge catalog (EN) ==================== */
+type BadgeOption = { value: string; label: string };
+const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
+  {
+    title: "Domestic Leagues – Europe (Top 8)",
+    items: [
+      { value: "premier-league-regular", label: "Premier League – League Badge" },
+      { value: "premier-league-champions", label: "Premier League – Champions (Gold)" },
+
+      { value: "la-liga-regular", label: "La Liga – League Badge" },
+      { value: "la-liga-champions", label: "La Liga – Champion" },
+
+      { value: "serie-a-regular", label: "Serie A – League Badge" },
+      { value: "serie-a-scudetto", label: "Italy – Scudetto (Serie A Champion)" },
+
+      { value: "bundesliga-regular", label: "Bundesliga – League Badge" },
+      { value: "bundesliga-champions", label: "Bundesliga – Champion (Meister Badge)" },
+
+      { value: "ligue1-regular", label: "Ligue 1 – League Badge" },
+      { value: "ligue1-champions", label: "Ligue 1 – Champion" },
+
+      { value: "primeira-liga-regular", label: "Primeira Liga (Portugal) – League Badge" },
+      { value: "primeira-liga-champions", label: "Primeira Liga – Champion" },
+
+      { value: "eredivisie-regular", label: "Eredivisie – League Badge" },
+      { value: "eredivisie-champions", label: "Eredivisie – Champion" },
+
+      { value: "scottish-premiership-regular", label: "Scottish Premiership – League Badge" },
+      { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
+    ],
+  },
+  {
+    title: "Domestic Leagues – Others mentioned",
+    items: [
+      { value: "mls-regular", label: "MLS – League Badge" },
+      { value: "mls-champions", label: "MLS – Champions (MLS Cup Holders)" },
+
+      { value: "brasileirao-regular", label: "Brazil – Brasileirão – League Badge" },
+      { value: "brasileirao-champions", label: "Brazil – Brasileirão – Champion" },
+
+      { value: "super-lig-regular", label: "Turkey – Süper Lig – League Badge" },
+      { value: "super-lig-champions", label: "Turkey – Süper Lig – Champion (if applicable)" },
+
+      { value: "spl-saudi-regular", label: "Saudi Pro League – League Badge" },
+      { value: "spl-saudi-champions", label: "Saudi Pro League – Champion (if applicable)" },
+    ],
+  },
+  {
+    title: "UEFA Competitions",
+    items: [
+      { value: "ucl-regular", label: "UEFA Champions League – Starball Badge" },
+      { value: "ucl-winners", label: "UEFA Champions League – Winners Badge" },
+
+      { value: "uel-regular", label: "UEFA Europa League – Badge" },
+      { value: "uel-winners", label: "UEFA Europa League – Winners Badge" },
+
+      { value: "uecl-regular", label: "UEFA Europa Conference League – Badge" },
+      { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
+    ],
+  },
+  {
+    title: "International Club",
+    items: [{ value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" }],
+  },
+];
+
 export default async function ProductEditPage({
   params,
 }: {
@@ -79,9 +146,12 @@ export default async function ProductEditPage({
         include: { values: { select: { value: true, label: true } } },
       },
     },
-    // Usando apenas include: Prisma devolve todos os campos escalares (inclui imageUrls)
+    // Nota: Prisma devolve também campos escalares (e.g., imageUrls, badges, etc.)
   });
   if (!product) return notFound();
+
+  // Badge selection inicial (assumindo coluna string[] 'badges')
+  const selectedBadges = new Set<string>((product as any).badges ?? []);
 
   // (Opcional) ainda respeitamos o grupo SIZE, mas a seguir vamos completar com fantasmas
   const sizeGroup = product.options[0] ?? null;
@@ -123,10 +193,11 @@ export default async function ProductEditPage({
       <header className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-extrabold">Edit product</h1>
         <p className="text-sm text-gray-500">
-          Update general information, images and size availability.
+          Update general information, images, badges and size availability.
         </p>
       </header>
 
+      {/* ==== General info + Images + Badges (form submits to updateProduct) ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <form action={updateProduct} className="grid gap-6">
           <input type="hidden" name="id" defaultValue={product.id} />
@@ -186,12 +257,50 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* Editor de Imagens (drag, add, remove, reorder). Submete `imagesText` */}
+          {/* Images (drag, add, remove, reorder) — mantém compat: outputs imagesText */}
           <ImagesEditor
             name="imagesText"
-            initialImages={product.imageUrls ?? []} // 👈 atualizado para imageUrls
+            initialImages={(product as any).imageUrls ?? []}
             alt={product.name}
           />
+
+          {/* Badges editor (checkboxes agrupados) */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Badges (optional)</label>
+            <p className="text-xs text-gray-500">
+              Select any patches (league, champions, UEFA, etc.). Your current selections are pre-checked.
+            </p>
+
+            <div className="space-y-4">
+              {BADGE_GROUPS.map((group) => (
+                <fieldset key={group.title} className="rounded-xl border p-3">
+                  <legend className="px-1 text-xs font-semibold uppercase text-gray-600">
+                    {group.title}
+                  </legend>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {group.items.map((opt) => {
+                      const checked = selectedBadges.has(opt.value);
+                      return (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
+                          title={group.title}
+                        >
+                          <input
+                            type="checkbox"
+                            name="badges"
+                            value={opt.value}
+                            defaultChecked={checked}
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          </div>
 
           <div>
             <button
@@ -204,6 +313,7 @@ export default async function ProductEditPage({
         </form>
       </section>
 
+      {/* ==== Sizes & Availability (com “fantasmas”) ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>
