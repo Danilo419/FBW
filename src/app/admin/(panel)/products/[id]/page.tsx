@@ -9,6 +9,7 @@ import { updateProduct } from "@/app/admin/(panel)/products/actions";
 import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilityToggle";
 import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
 import type { OptionType } from "@prisma/client";
+import Script from "next/script";
 
 /* =============== Helpers =============== */
 function centsToInput(cents: number) {
@@ -65,25 +66,18 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "premier-league-regular", label: "Premier League – League Badge" },
       { value: "premier-league-champions", label: "Premier League – Champions (Gold)" },
-
       { value: "la-liga-regular", label: "La Liga – League Badge" },
       { value: "la-liga-champions", label: "La Liga – Champion" },
-
       { value: "serie-a-regular", label: "Serie A – League Badge" },
       { value: "serie-a-scudetto", label: "Italy – Scudetto (Serie A Champion)" },
-
       { value: "bundesliga-regular", label: "Bundesliga – League Badge" },
       { value: "bundesliga-champions", label: "Bundesliga – Champion (Meister Badge)" },
-
       { value: "ligue1-regular", label: "Ligue 1 – League Badge" },
       { value: "ligue1-champions", label: "Ligue 1 – Champion" },
-
       { value: "primeira-liga-regular", label: "Primeira Liga (Portugal) – League Badge" },
       { value: "primeira-liga-champions", label: "Primeira Liga – Champion" },
-
       { value: "eredivisie-regular", label: "Eredivisie – League Badge" },
       { value: "eredivisie-champions", label: "Eredivisie – Champion" },
-
       { value: "scottish-premiership-regular", label: "Scottish Premiership – League Badge" },
       { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
     ],
@@ -93,13 +87,10 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "mls-regular", label: "MLS – League Badge" },
       { value: "mls-champions", label: "MLS – Champions (MLS Cup Holders)" },
-
       { value: "brasileirao-regular", label: "Brazil – Brasileirão – League Badge" },
       { value: "brasileirao-champions", label: "Brazil – Brasileirão – Champion" },
-
       { value: "super-lig-regular", label: "Turkey – Süper Lig – League Badge" },
       { value: "super-lig-champions", label: "Turkey – Süper Lig – Champion (if applicable)" },
-
       { value: "spl-saudi-regular", label: "Saudi Pro League – League Badge" },
       { value: "spl-saudi-champions", label: "Saudi Pro League – Champion (if applicable)" },
     ],
@@ -109,10 +100,8 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "ucl-regular", label: "UEFA Champions League – Starball Badge" },
       { value: "ucl-winners", label: "UEFA Champions League – Winners Badge" },
-
       { value: "uel-regular", label: "UEFA Europa League – Badge" },
       { value: "uel-winners", label: "UEFA Europa League – Winners Badge" },
-
       { value: "uecl-regular", label: "UEFA Europa Conference League – Badge" },
       { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
     ],
@@ -141,7 +130,7 @@ export default async function ProductEditPage({
 
   const selectedInitial: string[] = (product as any).badges ?? [];
 
-  // size logic
+  // sizes
   const sizeGroup = product.options[0] ?? null;
   const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
@@ -169,7 +158,6 @@ export default async function ProductEditPage({
   const viewSizes = sortByOrder(completed, ADULT_ALLOWED_ORDER);
   const originCount = ADULT_ALLOWED_ORDER.length;
 
-  // prepara dados p/ o script (flat list p/ pesquisa)
   const ALL_BADGES = BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })));
   const BADGES_JSON = JSON.stringify(ALL_BADGES);
   const SELECTED_JSON = JSON.stringify(selectedInitial);
@@ -183,7 +171,6 @@ export default async function ProductEditPage({
         </p>
       </header>
 
-      {/* ==== General info + Images + Badges (form submits to updateProduct) ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
@@ -191,66 +178,34 @@ export default async function ProductEditPage({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="col-span-2">
               <label className="text-xs font-medium text-gray-600">Name</label>
-              <input
-                name="name"
-                defaultValue={product.name}
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                required
-              />
+              <input name="name" defaultValue={product.name} className="mt-1 w-full rounded-xl border px-3 py-2" required />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600">Team</label>
-              <input
-                name="team"
-                defaultValue={product.team ?? ""}
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                required
-              />
+              <input name="team" defaultValue={product.team ?? ""} className="mt-1 w-full rounded-xl border px-3 py-2" required />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600">Season</label>
-              <input
-                name="season"
-                defaultValue={product.season ?? ""}
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                placeholder="e.g. 25/26"
-              />
+              <input name="season" defaultValue={product.season ?? ""} className="mt-1 w-full rounded-xl border px-3 py-2" placeholder="e.g. 25/26" />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600">Base price (EUR)</label>
-              <input
-                name="price"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={centsToInput(product.basePrice)}
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                required
-              />
+              <input name="price" type="number" step="0.01" min="0" defaultValue={centsToInput(product.basePrice)} className="mt-1 w-full rounded-xl border px-3 py-2" required />
             </div>
 
             <div className="col-span-2">
               <label className="text-xs font-medium text-gray-600">Description</label>
-              <textarea
-                name="description"
-                defaultValue={product.description ?? ""}
-                className="mt-1 w-full rounded-xl border px-3 py-2 min-h-[120px]"
-                placeholder="Product description..."
-              />
+              <textarea name="description" defaultValue={product.description ?? ""} className="mt-1 w-full rounded-xl border px-3 py-2 min-h-[120px]" placeholder="Product description..." />
             </div>
           </div>
 
           {/* Images */}
-          <ImagesEditor
-            name="imagesText"
-            initialImages={(product as any).imageUrls ?? []}
-            alt={product.name}
-          />
+          <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
 
-          {/* Badges - Search UI (JS inline sem client component) */}
+          {/* Badges - Search UI */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
@@ -269,18 +224,13 @@ export default async function ProductEditPage({
               Start typing to see available badges.
             </div>
 
-            <div
-              id="badge-results"
-              className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden"
-            />
+            <div id="badge-results" className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden" />
 
-            {/* Selecionados */}
             <div id="badge-selected-wrap" className="space-y-2 hidden">
               <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
               <div id="badge-selected" className="flex flex-wrap gap-2" />
             </div>
 
-            {/* container invisível onde ficam os inputs name="badges" */}
             <div id="badge-hidden-inputs" className="hidden" />
           </div>
 
@@ -291,8 +241,8 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script de pesquisa/seleção (sem React) */}
-        <script
+        {/* Script com nonce via next/script (funciona com CSP) */}
+        <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
@@ -305,6 +255,8 @@ export default async function ProductEditPage({
   const selWrap = document.getElementById('badge-selected-wrap');
   const selectedDiv = document.getElementById('badge-selected');
   const hiddenInputs = document.getElementById('badge-hidden-inputs');
+
+  if (!q || !results || !hint || !selWrap || !selectedDiv || !hiddenInputs) return;
 
   const selected = new Set(INITIAL);
 
@@ -404,7 +356,7 @@ export default async function ProductEditPage({
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>
-          <span className="text-xs text-gray-500">
+        <span className="text-xs text-gray-500">
             Showing {viewSizes.length} of {originCount} adult sizes (S–4XL)
           </span>
         </div>
@@ -457,8 +409,7 @@ export default async function ProductEditPage({
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Sizes shown are fixed to S–4XL. Entries marked as <strong>ghost</strong> don’t exist in
-          the database yet; create them (via seed/Studio) to enable the toggle.
+          Sizes shown are fixed to S–4XL. Entries marked as <strong>ghost</strong> don’t exist in the database yet; create them (via seed/Studio) to enable the toggle.
         </p>
       </section>
     </div>
