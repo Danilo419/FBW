@@ -202,26 +202,23 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* ===== Upload local (PC) -> injeta em imagesText como data URLs ===== */}
+          {/* ===== Upload real (Vercel Blob) — mesmo fluxo do NewProductPage ===== */}
           <div className="space-y-2 rounded-2xl border p-3">
             <label className="text-sm font-medium">Upload images from your computer</label>
             <input
-              id="local-images-input"
+              id="blob-images-input"
               type="file"
               accept="image/*"
               multiple
               className="block w-full rounded-xl border px-3 py-2"
             />
-            <p className="text-[11px] text-gray-500">
-              As imagens selecionadas serão convertidas para <code>data URL</code> e adicionadas à lista do editor de imagens.
-              Recomendo 1500–2500px no lado maior. Tamanho total grande pode tornar o envio do formulário pesado.
-            </p>
-
-            {/* preview simples (miniaturas) */}
-            <div id="local-images-preview" className="mt-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
+            <div className="flex items-center gap-2 text-[11px] text-gray-500">
+              <span id="blob-upload-status">No uploads yet.</span>
+            </div>
+            <div id="blob-images-preview" className="mt-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
           </div>
 
-          {/* Images (continue a usar o teu componente) */}
+          {/* Images (mantém o teu componente) */}
           <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
 
           {/* Badges - Search UI */}
@@ -260,7 +257,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script: badges search (mantido) */}
+        {/* Script: badges search (igual) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -363,89 +360,90 @@ export default async function ProductEditPage({
   }
 
   q.addEventListener('input', renderResults);
-  // Inicializa com selecionados existentes
   syncHiddenInputs();
   renderResults();
 })();`,
           }}
         />
 
-        {/* Script: Upload local -> injeta nas imagens */}
-        <Script id="local-upload-to-imagesText" strategy="afterInteractive"
+        {/* Script: Upload Vercel Blob -> mesmo comportamento do NewProductPage */}
+        <Script id="blob-upload" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const input = document.getElementById('local-images-input');
-  const preview = document.getElementById('local-images-preview');
+  const input = document.getElementById('blob-images-input');
+  const status = document.getElementById('blob-upload-status');
+  const preview = document.getElementById('blob-images-preview');
 
-  function findImagesTextField() {
-    // tenta apanhar o campo que o ImagesEditor cria (textarea/hidden com name="imagesText")
+  const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/avif","image/gif"]);
+  const MAX_BYTES = 8 * 1024 * 1024;
+
+  function imagesField() {
     return document.querySelector('[name="imagesText"]');
   }
-
-  function appendToImagesText(urls) {
-    const field = findImagesTextField();
+  function appendUrls(urls) {
+    const field = imagesField();
     if (!field) return;
-
     const current = (field.value || '').trim();
     const list = current ? current.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean) : [];
     urls.forEach(u => { if (u && !list.includes(u)) list.push(u); });
     field.value = list.join('\\n');
-
-    // dispara eventos para o ImagesEditor reagir
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
   }
-
-  function readFilesAsDataURL(files) {
-    const jobs = [];
-    for (const f of files) {
-      if (!f.type.startsWith('image/')) continue;
-      // opcional: limitar a ~10MB por ficheiro para evitar formularios gigantes
-      if (f.size > 10 * 1024 * 1024) {
-        console.warn('Skipping large image (>10MB):', f.name);
-        continue;
-      }
-      jobs.push(new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = reject;
-        r.readAsDataURL(f);
-      }));
-    }
-    return Promise.all(jobs);
-  }
-
   function addPreview(urls) {
-    if (!preview) return;
     urls.forEach(u => {
       const img = document.createElement('img');
       img.src = u;
-      img.alt = 'local upload';
+      img.alt = 'uploaded';
       img.className = 'w-full aspect-square object-cover rounded-lg border';
       preview.appendChild(img);
     });
   }
 
-  if (input) {
-    input.addEventListener('change', async () => {
-      const files = input.files || [];
-      if (!files.length) return;
-      try {
-        const urls = await readFilesAsDataURL(files);
-        const strUrls = urls.map(String).filter(Boolean);
-        if (strUrls.length) {
-          appendToImagesText(strUrls);
-          addPreview(strUrls);
-        }
-        // limpa o input para permitir re-selecionar os mesmos ficheiros
-        input.value = '';
-      } catch (err) {
-        console.error('Failed to read local images:', err);
-        alert('Falha a ler algumas imagens locais.');
-      }
-    });
+  async function uploadOne(file) {
+    // Igual ao teu NewProductPage (usa a MESMA rota /api/blob/upload)
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/api/blob/upload', { method: 'POST', body: form });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return (data && (data.url || (data.blob && data.blob.url))) || null;
   }
+
+  input?.addEventListener('change', async () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+
+    const queue = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
+    const rejected = files.filter(f => !queue.includes(f));
+    if (rejected.length) {
+      alert('Alguns ficheiros foram ignorados (tipo não suportado ou > 8MB).');
+    }
+
+    status.textContent = 'Uploading 0/' + queue.length + '...';
+
+    const MAX_AT_ONCE = 3;
+    let done = 0;
+    const urls = [];
+
+    for (let i = 0; i < queue.length; i += MAX_AT_ONCE) {
+      const chunk = queue.slice(i, i + MAX_AT_ONCE);
+      const results = await Promise.allSettled(chunk.map(uploadOne));
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) urls.push(r.value);
+        done += 1;
+        status.textContent = 'Uploading ' + done + '/' + queue.length + '...';
+      });
+    }
+
+    status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
+    if (urls.length) {
+      appendUrls(urls);
+      addPreview(urls);
+    }
+    input.value = '';
+  });
 })();`,
           }}
         />
