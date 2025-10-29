@@ -1,4 +1,3 @@
-// src/app/products/team/[team]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
@@ -24,12 +23,11 @@ const TEAM_MAP: Record<string, string> = {
 };
 
 /* ============================ Promo map ============================ */
-/** basePrice(cents) -> compareAtPrice(cents) */
 const SALE_MAP: Record<number, number> = {
-  3499: 10000, // 34,99€ → 100€
-  3999: 11000, // 39,99€ → 110€
-  4499: 15000, // 44,99€ → 150€
-  4999: 16000, // 49,99€ → 160€
+  3499: 10000,
+  3999: 11000,
+  4499: 15000,
+  4999: 16000,
 };
 
 function getCompareAt(basePriceCents: number) {
@@ -54,7 +52,6 @@ function money(cents: number) {
   });
 }
 
-/** Divide o preço em partes para estilização (€ / euros / cêntimos) */
 function priceParts(cents: number) {
   const euros = Math.floor(cents / 100).toString();
   const dec = (cents % 100).toString().padStart(2, "0");
@@ -64,20 +61,15 @@ function priceParts(cents: number) {
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
   if (typeof value === "string") return value.trim() || null;
-
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
       if (v && typeof (v as any).url === "string" && (v as any).url.trim())
         return (v as any).url.trim();
-      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
-        return (v as any).src.trim();
     }
   }
-
   const any: any = value;
   if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
-  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
   return null;
 }
 
@@ -86,17 +78,13 @@ function coverUrl(raw?: string | null): string {
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
-        <defs><linearGradient id='g' x1='0' x2='1'>
-          <stop stop-color='#f8fafc' offset='0'/>
-          <stop stop-color='#e0f2fe' offset='1'/>
-        </linearGradient></defs>
-        <rect width='100%' height='100%' fill='url(#g)'/>
+        <rect width='100%' height='100%' fill='#f3f4f6'/>
         <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#94a3b8'>No image</text>
+          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#9ca3af'>No image</text>
       </svg>`
     );
-  const p = raw?.trim();
-  if (!p) return fallback;
+  if (!raw) return fallback;
+  const p = raw.trim();
   if (p.startsWith("http")) return p;
   return p.startsWith("/") ? p : `/${p}`;
 }
@@ -107,7 +95,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
   const slug = team.toLowerCase();
   const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
 
-  let products = await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: {
       OR: [
         { team: { equals: teamName, mode: "insensitive" } },
@@ -116,35 +104,8 @@ export default async function TeamProductsPage({ params }: PageProps) {
       ],
     },
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      imageUrls: true,
-      basePrice: true,
-      team: true,
-    },
+    select: { id: true, slug: true, name: true, imageUrls: true, basePrice: true, team: true },
   });
-
-  if (products.length === 0 && TEAM_MAP[slug]) {
-    products = await prisma.product.findMany({
-      where: {
-        OR: [
-          { team: { equals: TEAM_MAP[slug]!, mode: "insensitive" } },
-          { team: { contains: TEAM_MAP[slug]!, mode: "insensitive" } },
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        imageUrls: true,
-        basePrice: true,
-        team: true,
-      },
-    });
-  }
 
   if (products.length === 0) notFound();
 
@@ -161,26 +122,23 @@ function List({
     slug: string;
     name: string;
     imageUrls?: unknown;
-    basePrice: number; // cents
+    basePrice: number;
   }[];
 }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Fundo elegante com blobs */}
+      {/* Fundo */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
-        <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-100/40 blur-3xl" />
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
+        <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/30 blur-3xl" />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
-        {/* Título preto */}
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
 
-        {/* Grade de produtos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
@@ -191,80 +149,61 @@ function List({
               <a
                 key={p.slug}
                 href={`/products/${p.slug}`}
-                className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
+                className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
               >
-                <div className="relative rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
-                  {/* Sticker vermelho */}
-                  {sale && (
-                    <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
-                      -{sale.pct}%
-                    </div>
-                  )}
+                {/* Sticker vermelho */}
+                {sale && (
+                  <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+                    -{sale.pct}%
+                  </div>
+                )}
 
-                  {/* Imagem */}
-                  <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt={p.name}
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
-                    />
-                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
+                <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={p.name}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+
+                <div className="p-5">
+                  <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                    {team}
+                  </div>
+                  <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+                    {p.name}
                   </div>
 
-                  {/* Info + Preços */}
-                  <div className="p-5">
-                    <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                      {team}
-                    </div>
-                    <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
-                      {p.name}
-                    </div>
-
-                    {/* Bloco de preço atrativo */}
-                    <div className="mt-4">
-                      {/* antigo riscado (só se for sale) */}
-                      {sale && (
-                        <div className="mb-1 text-[13px] font-medium text-slate-500 line-through">
-                          {money(sale.compareAt)}
-                        </div>
-                      )}
-
-                      {/* PRICE PILL novo: gradiente + gloss */}
-                      <div className="relative inline-flex items-baseline gap-1 rounded-full px-3.5 py-1.5 text-white shadow-md ring-1 ring-sky-500/30 bg-gradient-to-r from-sky-600 to-indigo-600 transition group-hover:shadow-lg group-hover:from-sky-500 group-hover:to-indigo-600">
-                        {/* brilho suave */}
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/35 to-transparent opacity-40"
-                        />
-                        <span className="relative text-base font-semibold leading-none">
-                          {parts.sym}
-                        </span>
-                        <span className="relative text-2xl font-bold leading-none tracking-tight">
-                          {parts.int}
-                        </span>
-                        <span className="relative text-sm font-semibold leading-none translate-y-[1px]">
-                          .{parts.dec}
-                        </span>
+                  {/* Preço refinado */}
+                  <div className="mt-4">
+                    {sale && (
+                      <div className="mb-1 text-[13px] text-slate-500 line-through">
+                        {money(sale.compareAt)}
                       </div>
-                    </div>
-
-                    {/* Linha & CTA */}
-                    <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <span className="transition group-hover:translate-x-0.5">
-                        View product
+                    )}
+                    <div className="flex items-end gap-0.5 text-slate-900">
+                      <span className="text-[15px] font-medium translate-y-[1px]">{parts.sym}</span>
+                      <span className="text-2xl font-semibold tracking-tight leading-none">
+                        {parts.int}
                       </span>
-                      <svg
-                        className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
-                      </svg>
+                      <span className="text-[13px] font-medium translate-y-[1px]">,{parts.dec}</span>
                     </div>
+                  </div>
+
+                  <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <span className="transition group-hover:translate-x-0.5">
+                      View product
+                    </span>
+                    <svg
+                      className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                    </svg>
                   </div>
                 </div>
               </a>
