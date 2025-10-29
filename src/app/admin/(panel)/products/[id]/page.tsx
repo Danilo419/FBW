@@ -220,7 +220,7 @@ export default async function ProductEditPage({
               </div>
             </div>
 
-            {/* O teu editor continua igual: lê/escreve em name="imagesText" */}
+            {/* Editor existente: lê/escreve em name="imagesText" */}
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
@@ -260,7 +260,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script: badges search (inalterado) */}
+        {/* Script: badges search */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -369,9 +369,7 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload Vercel Blob integrado na secção "Images"
-            - Mesmo comportamento do NewProductPage
-            - Sem bloco separado de upload */}
+        {/* Script: Upload para Vercel Blob integrado na área "Images" */}
         <Script id="blob-upload-into-images" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
