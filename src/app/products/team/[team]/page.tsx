@@ -140,13 +140,12 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      {/* ⚖️ Mesma largura útil da página de pesquisa */}
-      <div className="mx-auto max-w-screen-2xl px-6 sm:px-10 py-12">
+      {/* 🔁 Igual ao ResultsClient: sem max-w, mesma grid e gap */}
+      <div className="px-6 sm:px-10 py-12">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
 
-        {/* 🧱 Mesma grelha e gap da search */}
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
@@ -166,7 +165,7 @@ function List({
                   </div>
                 )}
 
-                {/* Card em coluna (altura consistente + footer fixo) */}
+                {/* Card em coluna (igual ao ResultsClient) */}
                 <div className="flex flex-col h-full">
                   {/* Imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
@@ -197,18 +196,18 @@ function List({
                       )}
                       <div className="flex items-end gap-0.5 text-slate-900">
                         <span className="text-[15px] font-medium translate-y-[1px]">
-                          €
+                          {parts.sym}
                         </span>
                         <span className="text-2xl font-semibold tracking-tight leading-none">
-                          {Math.floor(p.basePrice / 100)}
+                          {parts.int}
                         </span>
                         <span className="text-[13px] font-medium translate-y-[1px]">
-                          ,{(p.basePrice % 100).toString().padStart(2, "0")}
+                          ,{parts.dec}
                         </span>
                       </div>
                     </div>
 
-                    {/* Footer preso ao fundo + CTA centrada verticalmente */}
+                    {/* Footer preso ao fundo + CTA centrada verticalmente (h-12) */}
                     <div className="mt-auto">
                       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                       <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
