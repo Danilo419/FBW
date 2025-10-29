@@ -9,10 +9,10 @@ type UIProduct = {
   slug?: string;
   img?: string;
   price?: number; // EUR (ex.: 34.99)
+  team?: string | null; // <- pode vir da API
 };
 
 /* ============================ Promo map (EUR) ============================ */
-/** preço atual (€) -> preço antigo (€) */
 const SALE_MAP_EUR: Record<number, number> = {
   34.99: 100,
   39.99: 110,
@@ -27,7 +27,8 @@ function toCents(eur?: number | null) {
 
 function getSale(priceEur?: number | null) {
   if (typeof priceEur !== "number") return null;
-  const oldEur = SALE_MAP_EUR[Number(priceEur.toFixed(2)) as keyof typeof SALE_MAP_EUR];
+  const key = Number(priceEur.toFixed(2));
+  const oldEur = SALE_MAP_EUR[key as keyof typeof SALE_MAP_EUR];
   if (!oldEur) return null;
   const now = toCents(priceEur)!;
   const old = toCents(oldEur)!;
@@ -46,17 +47,46 @@ function pricePartsFromCents(cents: number) {
   return { sym: "€", int: euros, dec };
 }
 
-function imgFallback() {
-  return (
-    "data:image/svg+xml;utf8," +
-    encodeURIComponent(
-      `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
-        <rect width='100%' height='100%' fill='#f3f4f6'/>
-        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
-      </svg>`
-    )
-  );
+/* ========= Heurística simples para extrair clube do nome quando a API não envia ========= */
+const STOP_WORDS = [
+  "home", "away", "second", "third", "fourth", "jersey", "shirt", "kit",
+  "adult", "kids", "youth",
+];
+const YEAR_RE = /\b(19|20)\d{2}\/?(?:\d{2})?\b/gi;
+
+function guessTeamFromName(name?: string): string | null {
+  if (!name) return null;
+  let s = name.replace(YEAR_RE, "").trim();
+
+  // corta no primeiro stop word (ex.: "FC Barcelona Third Jersey" -> "FC Barcelona")
+  const lower = s.toLowerCase();
+  let cutIdx = -1;
+  for (const w of STOP_WORDS) {
+    const i = lower.indexOf(` ${w} `);
+    if (i !== -1) cutIdx = cutIdx === -1 ? i : Math.min(cutIdx, i);
+  }
+  if (cutIdx !== -1) s = s.slice(0, cutIdx).trim();
+
+  // remove números/resíduos finais
+  s = s.replace(/\s+\d+.*/, "").trim();
+
+  // normalizações rápidas
+  s = s
+    .replace(/^club\s+de\s+futebol\s+/i, "")
+    .replace(/^futebol\s+clube\s+/i, "")
+    .replace(/^sport\s+club\s+/i, "")
+    .replace(/^sporting\s+clube\s+de\s+/i, "")
+    .replace(/\s+football\s+club$/i, "")
+    .replace(/\s+fc$/i, (m) => (/\bbarcelona\b|\bporto\b|\bbenfica\b/i.test(s) ? "" : m)) // mantém FC quando for parte do nome
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!s) return null;
+
+  // Se o nome incluir "FC <Team>" mostra só o <Team> em maiúsculas como no resto do site
+  const fc = s.match(/^(?:[A-Z]{0,3}\s*)?(?:FC|S?L|SC)\s+(.+)$/i);
+  const out = (fc ? fc[1] : s).trim();
+  return out ? out.toUpperCase() : null;
 }
 
 /* ============================ Componente ============================ */
@@ -66,7 +96,6 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Sempre que a query muda (navegação ou submit), refaz o fetch
   useEffect(() => {
     setQ(initialQuery);
   }, [initialQuery]);
@@ -145,6 +174,12 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
         const sale = cents != null ? getSale(p.price!) : null;
         const parts = cents != null ? pricePartsFromCents(cents) : null;
 
+        // etiqueta: usa p.team se houver; senão, tenta adivinhar; fallback "Product"
+        const teamLabel =
+          (typeof p.team === "string" && p.team.trim()) ||
+          guessTeamFromName(p.name) ||
+          "Product";
+
         return (
           <a
             key={String(p.id)}
@@ -165,7 +200,17 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   alt={p.name}
-                  src={p.img || imgFallback()}
+                  src={
+                    p.img ||
+                    "data:image/svg+xml;utf8," +
+                      encodeURIComponent(
+                        `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
+                          <rect width='100%' height='100%' fill='#f3f4f6'/>
+                          <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
+                            font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
+                        </svg>`
+                      )
+                  }
                   loading="lazy"
                   className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
                 />
@@ -173,9 +218,9 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
 
               {/* Conteúdo */}
               <div className="p-5 flex flex-col grow">
-                {/* (Opcional) etiqueta pequena – aqui usamos 'SEARCH' para manter o mesmo respiro visual */}
+                {/* Etiqueta com o nome do clube */}
                 <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                  Search
+                  {teamLabel}
                 </div>
 
                 <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
@@ -192,11 +237,15 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
 
                   {parts && (
                     <div className="flex items-end gap-0.5 text-slate-900">
-                      <span className="text-[15px] font-medium translate-y-[1px]">{parts.sym}</span>
+                      <span className="text-[15px] font-medium translate-y-[1px]">
+                        {parts.sym}
+                      </span>
                       <span className="text-2xl font-semibold tracking-tight leading-none">
                         {parts.int}
                       </span>
-                      <span className="text-[13px] font-medium translate-y-[1px]">,{parts.dec}</span>
+                      <span className="text-[13px] font-medium translate-y-[1px]">
+                        ,{parts.dec}
+                      </span>
                     </div>
                   )}
                 </div>
