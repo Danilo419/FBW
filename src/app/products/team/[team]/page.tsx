@@ -24,12 +24,11 @@ const TEAM_MAP: Record<string, string> = {
 };
 
 /* ============================ Promo map ============================ */
-/** basePrice(cents) -> compareAtPrice(cents) */
 const SALE_MAP: Record<number, number> = {
-  3499: 10000, // 34,99€ -> 100,00€
-  3999: 11000, // 39,99€ -> 110,00€
-  4499: 15000, // 44,99€ -> 150,00€
-  4999: 16000, // 49,99€ -> 160,00€
+  3499: 10000, // 34,99€ → 100€
+  3999: 11000, // 39,99€ → 110€
+  4499: 15000, // 44,99€ → 150€
+  4999: 16000, // 49,99€ → 160€
 };
 
 function getCompareAt(basePriceCents: number) {
@@ -154,12 +153,12 @@ function List({
     slug: string;
     name: string;
     imageUrls?: unknown;
-    basePrice: number; // cents
+    basePrice: number;
   }[];
 }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Fundo elegante com blobs */}
+      {/* Fundo suave */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
         <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
@@ -173,11 +172,11 @@ function List({
           {team} — Products
         </h1>
 
-        {/* Grade de produtos */}
+        {/* Grelha */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
-            const sale = getCompareAt(p.basePrice); // {compareAt, pct} | null
+            const sale = getCompareAt(p.basePrice);
 
             return (
               <a
@@ -186,14 +185,14 @@ function List({
                 className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
               >
                 <div className="relative rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
-                  {/* Sticker de desconto */}
+                  {/* Sticker vermelho */}
                   {sale && (
                     <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-bold shadow-md ring-1 ring-red-700/40">
                       -{sale.pct}%
                     </div>
                   )}
 
-                  {/* imagem */}
+                  {/* Imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -202,47 +201,34 @@ function List({
                       loading="lazy"
                       className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
                     />
-                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
                   </div>
 
-                  {/* texto */}
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                          {team}
-                        </div>
-                        <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
-                          {p.name}
-                        </div>
-                      </div>
-
-                      {/* preço atual */}
-                      <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
-                        {money(p.basePrice)}
-                      </div>
+                  {/* Texto */}
+                  <div className="p-5 relative">
+                    <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                      {team}
+                    </div>
+                    <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
+                      {p.name}
                     </div>
 
-                    {/* preços / compare-at */}
-                    <div className="mt-2 flex items-center gap-3">
-                      {sale ? (
-                        <>
-                          <span className="text-sm text-slate-500 line-through">
-                            {money(sale.compareAt)}
-                          </span>
-                          <span className="text-sm font-semibold text-emerald-700">
-                            {money(p.basePrice)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-slate-700">
+                    {/* Preço (único, com o antigo riscado sobreposto) */}
+                    <div className="mt-4 flex items-center">
+                      <div className="relative inline-block">
+                        <span className="text-xl font-extrabold text-slate-900 group-hover:text-sky-800 transition">
                           {money(p.basePrice)}
                         </span>
-                      )}
+
+                        {sale && (
+                          <span className="absolute -top-3 -right-8 text-[13px] font-semibold text-gray-600 line-through drop-shadow-[0_0_1px_#000]/30 select-none">
+                            {money(sale.compareAt)}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Linha & CTA */}
                     <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
                     <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
                       <span className="transition group-hover:translate-x-0.5">
                         View product
