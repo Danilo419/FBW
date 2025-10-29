@@ -54,6 +54,13 @@ function money(cents: number) {
   });
 }
 
+/** Divide o preço em partes para estilização (€ / euros / cêntimos) */
+function priceParts(cents: number) {
+  const euros = Math.floor(cents / 100).toString();
+  const dec = (cents % 100).toString().padStart(2, "0");
+  return { sym: "€", int: euros, dec };
+}
+
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
   if (typeof value === "string") return value.trim() || null;
@@ -178,6 +185,7 @@ function List({
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
             const sale = getCompareAt(p.basePrice);
+            const parts = priceParts(p.basePrice);
 
             return (
               <a
@@ -214,7 +222,7 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* Bloco de preço refinado */}
+                    {/* Bloco de preço atrativo */}
                     <div className="mt-4">
                       {/* antigo riscado (só se for sale) */}
                       {sale && (
@@ -223,10 +231,21 @@ function List({
                         </div>
                       )}
 
-                      {/* preço atual — pill claro e elegante, com grossura menor */}
-                      <div className="inline-flex items-center rounded-full bg-white/90 px-3 py-1.5 ring-1 ring-slate-200 shadow-[0_1px_2px_rgba(0,0,0,.06)]">
-                        <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-                          {money(p.basePrice)}
+                      {/* PRICE PILL novo: gradiente + gloss */}
+                      <div className="relative inline-flex items-baseline gap-1 rounded-full px-3.5 py-1.5 text-white shadow-md ring-1 ring-sky-500/30 bg-gradient-to-r from-sky-600 to-indigo-600 transition group-hover:shadow-lg group-hover:from-sky-500 group-hover:to-indigo-600">
+                        {/* brilho suave */}
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/35 to-transparent opacity-40"
+                        />
+                        <span className="relative text-base font-semibold leading-none">
+                          {parts.sym}
+                        </span>
+                        <span className="relative text-2xl font-bold leading-none tracking-tight">
+                          {parts.int}
+                        </span>
+                        <span className="relative text-sm font-semibold leading-none translate-y-[1px]">
+                          .{parts.dec}
                         </span>
                       </div>
                     </div>
