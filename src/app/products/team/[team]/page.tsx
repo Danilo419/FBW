@@ -140,12 +140,14 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
+      {/* ⚖️ Mesma largura útil da página de pesquisa */}
+      <div className="mx-auto max-w-screen-2xl px-6 sm:px-10 py-12">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        {/* 🧱 Mesma grelha e gap da search */}
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
             const sale = getCompareAt(p.basePrice);
@@ -164,7 +166,7 @@ function List({
                   </div>
                 )}
 
-                {/* Card em coluna */}
+                {/* Card em coluna (altura consistente + footer fixo) */}
                 <div className="flex flex-col h-full">
                   {/* Imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
@@ -195,13 +197,13 @@ function List({
                       )}
                       <div className="flex items-end gap-0.5 text-slate-900">
                         <span className="text-[15px] font-medium translate-y-[1px]">
-                          {parts.sym}
+                          €
                         </span>
                         <span className="text-2xl font-semibold tracking-tight leading-none">
-                          {parts.int}
+                          {Math.floor(p.basePrice / 100)}
                         </span>
                         <span className="text-[13px] font-medium translate-y-[1px]">
-                          ,{parts.dec}
+                          ,{(p.basePrice % 100).toString().padStart(2, "0")}
                         </span>
                       </div>
                     </div>
