@@ -141,8 +141,8 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      {/* Container um pouco mais largo */}
-      <div className="mx-auto max-w-screen-2xl px-6 sm:px-10 py-12">
+      {/* 🎯 largura afinada para igualar o ResultsClient visualmente */}
+      <div className="mx-auto max-w-[1360px] px-6 sm:px-10 py-12">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
@@ -151,10 +151,9 @@ function List({
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
-            const compare = getCompareAt(p.basePrice);
-
             const euros = Math.floor(p.basePrice / 100).toString();
             const dec = (p.basePrice % 100).toString().padStart(2, "0");
+            const compare = getCompareAt(p.basePrice);
 
             return (
               <a
@@ -169,7 +168,7 @@ function List({
                   </div>
                 )}
 
-                {/* Card em coluna (altura consistente + footer fixo) */}
+                {/* Card em coluna */}
                 <div className="flex flex-col h-full">
                   {/* Imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
