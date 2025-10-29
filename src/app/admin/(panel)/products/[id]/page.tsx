@@ -212,7 +212,6 @@ export default async function ProductEditPage({
                   type="button"
                   id="blob-images-button"
                   className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
-                  title="Add images from your computer"
                 >
                   Add from computer
                 </button>
@@ -220,7 +219,7 @@ export default async function ProductEditPage({
               </div>
             </div>
 
-            {/* Editor existente: lê/escreve em name="imagesText" */}
+            {/* Editor existente */}
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
@@ -260,7 +259,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script: badges search */}
+        {/* Script: badges search (igual) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -369,7 +368,7 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload + INSERÇÃO via UI (simula colar URL e clicar “Add”) */}
+        {/* Script: Upload + adicionar forçosamente no grid */}
         <Script id="blob-upload-into-images" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -383,7 +382,7 @@ export default async function ProductEditPage({
   const MAX_AT_ONCE = 3;
 
   // encontra os controlos do ImagesEditor
-  function findAddControls() {
+  function getAddBox() {
     const urlInput = Array.from(document.querySelectorAll('input'))
       .find(el => el.placeholder && el.placeholder.toLowerCase().includes('paste an image url'));
     const addBtn = Array.from(document.querySelectorAll('button'))
@@ -391,20 +390,43 @@ export default async function ProductEditPage({
     return { urlInput, addBtn };
   }
 
-  // usa o próprio fluxo do componente (preenche input e clica "Add")
-  async function addViaUI(urls) {
-    const { urlInput, addBtn } = findAddControls();
-    if (!urlInput || !addBtn) return false; // fallback mais abaixo
-    for (const u of urls) {
-      urlInput.value = u;
-      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
-      addBtn.click();
-      await new Promise(r => setTimeout(r, 30));
-    }
-    return true;
+  // check se já existe um card com este URL (há um input por card com o URL)
+  function gridHasUrl(url) {
+    const vals = Array.from(document.querySelectorAll('input[type="text"]'))
+      .map(i => (i.value || '').trim());
+    return vals.includes(url.trim());
   }
 
-  // fallback: escreve directamente no hidden/textarea "imagesText"
+  // força a sequência: preencher input -> input/change -> Enter -> click Add
+  async function tryAddViaUI(url) {
+    const { urlInput, addBtn } = getAddBox();
+    if (!urlInput || !addBtn) return false;
+
+    const u = url.trim();
+    urlInput.focus();
+    urlInput.value = u;
+
+    urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    urlInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const kd = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+    const ku = new KeyboardEvent('keyup', { key: 'Enter', bubbles: true });
+    urlInput.dispatchEvent(kd);
+    urlInput.dispatchEvent(ku);
+
+    // pequena pausa para React sincronizar estado
+    await new Promise(r => setTimeout(r, 30));
+    addBtn.click();
+
+    // aguarda o DOM atualizar
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 40));
+      if (gridHasUrl(u)) return true;
+    }
+    return gridHasUrl(u);
+  }
+
+  // fallback: escreve diretamente no hidden/textarea "imagesText" e dispara eventos
   function appendToHidden(urls) {
     const field = document.querySelector('[name="imagesText"]');
     if (!field) return false;
@@ -422,7 +444,6 @@ export default async function ProductEditPage({
     if (file.size > MAX_BYTES) throw new Error('File too large');
 
     const { upload } = await import("https://esm.sh/@vercel/blob@0.23.3/client");
-
     const safe = file.name.replace(/\\s+/g, "_");
     const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
       ? crypto.randomUUID()
@@ -462,13 +483,19 @@ export default async function ProductEditPage({
 
     status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
 
-    if (urls.length) {
-      const ok = await addViaUI(urls);
-      if (!ok) appendToHidden(urls);
-      status.textContent += ' Added ' + urls.length + '/' + urls.length + '.';
+    // tentar via UI um a um; se falhar, fallback para o hidden
+    const failures = [];
+    for (const u of urls) {
+      const ok = await tryAddViaUI(u);
+      if (!ok) failures.push(u);
     }
+    if (failures.length) appendToHidden(failures);
 
+    // limpar input e feedback final
     input.value = '';
+    status.textContent += failures.length
+      ? ' (added via fallback: ' + failures.length + ')'
+      : ' Added ' + urls.length + '/' + urls.length + '.';
   });
 })();`,
           }}
@@ -517,7 +544,6 @@ export default async function ProductEditPage({
                     <button
                       type="button"
                       className="cursor-not-allowed text-xs rounded-lg border px-2 py-1 text-gray-400"
-                      title="Create this size in DB to enable"
                       disabled
                     >
                       Unavailable
