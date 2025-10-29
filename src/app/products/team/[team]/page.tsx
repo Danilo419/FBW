@@ -24,6 +24,7 @@ const TEAM_MAP: Record<string, string> = {
 };
 
 /* ============================ Promo map ============================ */
+/** basePrice(cents) -> compareAtPrice(cents) */
 const SALE_MAP: Record<number, number> = {
   3499: 10000, // 34,99€ → 100€
   3999: 11000, // 39,99€ → 110€
@@ -153,12 +154,12 @@ function List({
     slug: string;
     name: string;
     imageUrls?: unknown;
-    basePrice: number;
+    basePrice: number; // cents
   }[];
 }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Fundo suave */}
+      {/* Fundo elegante com blobs */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
         <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
@@ -167,16 +168,16 @@ function List({
       </div>
 
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
-        {/* Título */}
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-700 via-indigo-700 to-sky-700 text-transparent bg-clip-text mb-10">
+        {/* Título em preto (sem gradiente) */}
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
 
-        {/* Grelha */}
+        {/* Grade de produtos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
-            const sale = getCompareAt(p.basePrice);
+            const sale = getCompareAt(p.basePrice); // {compareAt, pct} | null
 
             return (
               <a
@@ -185,9 +186,9 @@ function List({
                 className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
               >
                 <div className="relative rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
-                  {/* Sticker vermelho */}
+                  {/* Sticker vermelho com % */}
                   {sale && (
-                    <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-bold shadow-md ring-1 ring-red-700/40">
+                    <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
                       -{sale.pct}%
                     </div>
                   )}
@@ -201,10 +202,11 @@ function List({
                       loading="lazy"
                       className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
                     />
+                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
                   </div>
 
-                  {/* Texto */}
-                  <div className="p-5 relative">
+                  {/* Info + Preços */}
+                  <div className="p-5">
                     <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
                       {team}
                     </div>
@@ -212,18 +214,27 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* Preço (único, com o antigo riscado sobreposto) */}
-                    <div className="mt-4 flex items-center">
-                      <div className="relative inline-block">
-                        <span className="text-xl font-extrabold text-slate-900 group-hover:text-sky-800 transition">
+                    {/* Bloco de preço com visual melhorado */}
+                    <div className="mt-4">
+                      {/* Preço antigo riscado acima (só se houver sale) */}
+                      {sale && (
+                        <div className="mb-1 text-[13px] font-semibold text-gray-600/90 line-through">
+                          {money(sale.compareAt)}
+                        </div>
+                      )}
+
+                      {/* Chip escuro com contorno no texto */}
+                      <div className="inline-flex items-baseline gap-1 rounded-2xl px-3 py-1.5 bg-gradient-to-b from-slate-900 to-black text-white ring-1 ring-black/10 shadow-sm">
+                        {/* Para dar “contorno” preto no número usamos múltiplos text-shadows */}
+                        <span
+                          className="text-lg sm:text-xl font-extrabold tracking-tight"
+                          style={{
+                            textShadow:
+                              "0 0 1px #000, 0 0 1px #000, 0.5px 0.5px 0 #000",
+                          }}
+                        >
                           {money(p.basePrice)}
                         </span>
-
-                        {sale && (
-                          <span className="absolute -top-3 -right-8 text-[13px] font-semibold text-gray-600 line-through drop-shadow-[0_0_1px_#000]/30 select-none">
-                            {money(sale.compareAt)}
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -237,6 +248,7 @@ function List({
                         className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                         viewBox="0 0 20 20"
                         fill="currentColor"
+                        aria-hidden="true"
                       >
                         <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
                       </svg>
