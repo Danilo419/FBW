@@ -369,7 +369,7 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload para Vercel Blob integrado na área "Images" */}
+        {/* Script: Upload REAL para Vercel Blob usando o cliente oficial no browser */}
         <Script id="blob-upload-into-images" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -396,13 +396,28 @@ export default async function ProductEditPage({
     f.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
+  // === AQUI está a diferença: usamos o cliente oficial @vercel/blob no browser ===
   async function uploadOne(file) {
-    const form = new FormData();
-    form.append('file', file);
-    const res = await fetch('/api/blob/upload', { method: 'POST', body: form });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    return (data && (data.url || (data.blob && data.blob.url))) || null;
+    if (!ALLOWED.has(file.type)) throw new Error('Unsupported type');
+    if (file.size > MAX_BYTES) throw new Error('File too large');
+
+    // carrega dinamicamente o cliente
+    const { upload } = await import("https://esm.sh/@vercel/blob@0.23.3/client");
+
+    // nome único e seguro
+    const safe = file.name.replace(/\\s+/g, "_");
+    const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+      ? crypto.randomUUID()
+      : String(Date.now());
+    const name = id + "_" + safe;
+
+    // upload real para o Blob (a tua rota /api/blob/upload gera o token)
+    const { url } = await upload(name, file, {
+      access: "public",
+      handleUploadUrl: "/api/blob/upload",
+    });
+
+    return url; // <- devolve sempre o URL público
   }
 
   btn?.addEventListener('click', () => input?.click());
