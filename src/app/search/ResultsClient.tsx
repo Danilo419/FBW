@@ -8,19 +8,58 @@ type UIProduct = {
   name: string;
   slug?: string;
   img?: string;
-  price?: number; // EUR
+  price?: number; // EUR (ex.: 34.99)
 };
 
-function formatEUR(value: number) {
-  try {
-    return value
-      .toLocaleString("pt-PT", { style: "currency", currency: "EUR" })
-      .replace(/\s/g, "");
-  } catch {
-    return `${value.toFixed(2)}€`;
-  }
+/* ============================ Promo map (EUR) ============================ */
+/** preço atual (€) -> preço antigo (€) */
+const SALE_MAP_EUR: Record<number, number> = {
+  34.99: 100,
+  39.99: 110,
+  44.99: 150,
+  49.99: 160,
+};
+
+function toCents(eur?: number | null) {
+  if (typeof eur !== "number" || Number.isNaN(eur)) return null;
+  return Math.round(eur * 100);
 }
 
+function getSale(priceEur?: number | null) {
+  if (typeof priceEur !== "number") return null;
+  const oldEur = SALE_MAP_EUR[Number(priceEur.toFixed(2)) as keyof typeof SALE_MAP_EUR];
+  if (!oldEur) return null;
+  const now = toCents(priceEur)!;
+  const old = toCents(oldEur)!;
+  const pct = Math.round((1 - now / old) * 100);
+  return { compareAtCents: old, pct };
+}
+
+function money(cents: number) {
+  return (cents / 100).toLocaleString(undefined, { style: "currency", currency: "EUR" });
+}
+
+/** Divide o preço em partes para estilização (€ / euros / cêntimos) */
+function pricePartsFromCents(cents: number) {
+  const euros = Math.floor(cents / 100).toString();
+  const dec = (cents % 100).toString().padStart(2, "0");
+  return { sym: "€", int: euros, dec };
+}
+
+function imgFallback() {
+  return (
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
+        <rect width='100%' height='100%' fill='#f3f4f6'/>
+        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
+          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
+      </svg>`
+    )
+  );
+}
+
+/* ============================ Componente ============================ */
 export default function ResultsClient({ initialQuery }: { initialQuery: string }) {
   const [q, setQ] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
@@ -65,22 +104,24 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
   }, [q]);
 
   if (!q) {
-    return (
-      <p className="text-gray-500">
-        Type something in the search box above.
-      </p>
-    );
+    return <p className="text-gray-500">Type something in the search box above.</p>;
   }
 
   if (loading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="rounded-3xl border bg-white/60 animate-pulse overflow-hidden">
-            <div className="aspect-[4/5] bg-gray-200" />
-            <div className="p-4 space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-3/4" />
-              <div className="h-3 bg-gray-200 rounded w-1/3" />
+          <div
+            key={i}
+            className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+          >
+            <div className="aspect-[4/5] bg-slate-100" />
+            <div className="p-5">
+              <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
+              <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
+              <div className="h-3 w-20 bg-slate-200 rounded" />
+              <div className="mt-6 h-px bg-slate-200/70" />
+              <div className="h-12" />
             </div>
           </div>
         ))}
@@ -89,60 +130,95 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
   }
 
   if (error) {
-    return (
-      <p className="text-red-600">
-        {error}
-      </p>
-    );
+    return <p className="text-red-600">{error}</p>;
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {results.length === 0 && (
-        <p className="text-gray-500 col-span-full">
-          No products found. Try another term.
-        </p>
+        <p className="text-gray-500 col-span-full">No products found. Try another term.</p>
       )}
 
       {results.map((p) => {
         const href = p.slug ? `/products/${p.slug}` : undefined;
-        const priceLabel =
-          typeof p.price === "number" ? formatEUR(p.price) : undefined;
+        const cents = typeof p.price === "number" ? toCents(p.price)! : null;
+        const sale = cents != null ? getSale(p.price!) : null;
+        const parts = cents != null ? pricePartsFromCents(cents) : null;
 
         return (
           <a
             key={String(p.id)}
             href={href}
-            className="group rounded-3xl border bg-white/60 backdrop-blur hover:bg-white transition shadow-sm hover:shadow-lg overflow-hidden flex flex-col"
+            className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
           >
-            <div className="relative aspect-[4/5]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                alt={p.name}
-                src={
-                  p.img ||
-                  "https://dummyimage.com/800x1000/f3f4f6/8f9094&text=No+image"
-                }
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
-            </div>
+            {/* Sticker vermelho com % */}
+            {sale && (
+              <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+                -{sale.pct}%
+              </div>
+            )}
 
-            <div className="p-4 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate font-medium">{p.name}</div>
-                {href && (
-                  <div className="text-xs text-gray-500 group-hover:underline">
-                    Open product page
-                  </div>
-                )}
+            {/* Layout em coluna para fixar footer */}
+            <div className="flex flex-col h-full">
+              {/* Imagem */}
+              <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt={p.name}
+                  src={p.img || imgFallback()}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                />
               </div>
 
-              {priceLabel && (
-                <div className="shrink-0 text-sm font-semibold text-black">
-                  {priceLabel}
+              {/* Conteúdo */}
+              <div className="p-5 flex flex-col grow">
+                {/* (Opcional) etiqueta pequena – aqui usamos 'SEARCH' para manter o mesmo respiro visual */}
+                <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                  Search
                 </div>
-              )}
+
+                <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+                  {p.name}
+                </div>
+
+                {/* Preços */}
+                <div className="mt-4">
+                  {sale && (
+                    <div className="mb-1 text-[13px] text-slate-500 line-through">
+                      {money(sale.compareAtCents)}
+                    </div>
+                  )}
+
+                  {parts && (
+                    <div className="flex items-end gap-0.5 text-slate-900">
+                      <span className="text-[15px] font-medium translate-y-[1px]">{parts.sym}</span>
+                      <span className="text-2xl font-semibold tracking-tight leading-none">
+                        {parts.int}
+                      </span>
+                      <span className="text-[13px] font-medium translate-y-[1px]">,{parts.dec}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer preso ao fundo com CTA centrada verticalmente */}
+                <div className="mt-auto">
+                  <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                  <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <span className="transition group-hover:translate-x-0.5">
+                      View product
+                    </span>
+                    <svg
+                      className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             </div>
           </a>
         );
