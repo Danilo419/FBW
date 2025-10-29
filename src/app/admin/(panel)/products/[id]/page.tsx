@@ -32,8 +32,8 @@ function isAllowedAdultSize(label: string): label is AllowedAdult {
 }
 function isKidsLabel(s: string) {
   const t = s.trim().toUpperCase();
-  if (/^\d+\s*Y$/.test(t)) return true;             // 6Y
-  if (/^\d+\s*-\s*\d+\s*Y$/.test(t)) return true;   // 10-11Y
+  if (/^\d+\s*Y$/.test(t)) return true;
+  if (/^\d+\s*-\s*\d+\s*Y$/.test(t)) return true;
   if (/^\d+\s*(YR|YRS|YEAR|YEARS)$/.test(t)) return true;
   if (/^\d+\s*(ANOS|AÑOS)$/.test(t)) return true;
   if (/^(KID|KIDS|CHILD|JUNIOR|JR)\b/.test(t)) return true;
@@ -369,7 +369,7 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload REAL para Vercel Blob usando o cliente oficial no browser */}
+        {/* Script: Upload + INSERÇÃO via UI (simula colar URL e clicar “Add”) */}
         <Script id="blob-upload-into-images" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -382,42 +382,59 @@ export default async function ProductEditPage({
   const MAX_BYTES = 8 * 1024 * 1024;
   const MAX_AT_ONCE = 3;
 
-  function field() {
-    return document.querySelector('[name="imagesText"]');
-  }
-  function appendUrls(urls) {
-    const f = field();
-    if (!f) return;
-    const current = (f.value || '').trim();
-    const list = current ? current.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean) : [];
-    urls.forEach(u => { if (u && !list.includes(u)) list.push(u); });
-    f.value = list.join('\\n');
-    f.dispatchEvent(new Event('input', { bubbles: true }));
-    f.dispatchEvent(new Event('change', { bubbles: true }));
+  // encontra os controlos do ImagesEditor
+  function findAddControls() {
+    const urlInput = Array.from(document.querySelectorAll('input'))
+      .find(el => el.placeholder && el.placeholder.toLowerCase().includes('paste an image url'));
+    const addBtn = Array.from(document.querySelectorAll('button'))
+      .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
+    return { urlInput, addBtn };
   }
 
-  // === AQUI está a diferença: usamos o cliente oficial @vercel/blob no browser ===
+  // usa o próprio fluxo do componente (preenche input e clica "Add")
+  async function addViaUI(urls) {
+    const { urlInput, addBtn } = findAddControls();
+    if (!urlInput || !addBtn) return false; // fallback mais abaixo
+    for (const u of urls) {
+      urlInput.value = u;
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      addBtn.click();
+      await new Promise(r => setTimeout(r, 30));
+    }
+    return true;
+  }
+
+  // fallback: escreve directamente no hidden/textarea "imagesText"
+  function appendToHidden(urls) {
+    const field = document.querySelector('[name="imagesText"]');
+    if (!field) return false;
+    const current = (field.value || '').trim();
+    const list = current ? current.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean) : [];
+    urls.forEach(u => { if (u && !list.includes(u)) list.push(u); });
+    field.value = list.join('\\n');
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
   async function uploadOne(file) {
     if (!ALLOWED.has(file.type)) throw new Error('Unsupported type');
     if (file.size > MAX_BYTES) throw new Error('File too large');
 
-    // carrega dinamicamente o cliente
     const { upload } = await import("https://esm.sh/@vercel/blob@0.23.3/client");
 
-    // nome único e seguro
     const safe = file.name.replace(/\\s+/g, "_");
     const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
       ? crypto.randomUUID()
       : String(Date.now());
     const name = id + "_" + safe;
 
-    // upload real para o Blob (a tua rota /api/blob/upload gera o token)
     const { url } = await upload(name, file, {
       access: "public",
       handleUploadUrl: "/api/blob/upload",
     });
 
-    return url; // <- devolve sempre o URL público
+    return url;
   }
 
   btn?.addEventListener('click', () => input?.click());
@@ -444,7 +461,13 @@ export default async function ProductEditPage({
     }
 
     status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
-    if (urls.length) appendUrls(urls);
+
+    if (urls.length) {
+      const ok = await addViaUI(urls);
+      if (!ok) appendToHidden(urls);
+      status.textContent += ' Added ' + urls.length + '/' + urls.length + '.';
+    }
+
     input.value = '';
   });
 })();`,
