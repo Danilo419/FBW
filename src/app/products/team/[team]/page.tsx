@@ -223,9 +223,9 @@ function List({
                         </div>
                       )}
 
-                      {/* preço atual — pill claro e elegante */}
+                      {/* preço atual — pill claro e elegante, com grossura menor */}
                       <div className="inline-flex items-center rounded-full bg-white/90 px-3 py-1.5 ring-1 ring-slate-200 shadow-[0_1px_2px_rgba(0,0,0,.06)]">
-                        <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+                        <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
                           {money(p.basePrice)}
                         </span>
                       </div>
