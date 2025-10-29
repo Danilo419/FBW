@@ -146,7 +146,8 @@ export default async function ProductEditPage({
     .filter((s) => isAllowedAdultSize(s.size))
     .filter((s) => (allowedFromGroup ? allowedFromGroup.has(s.size) : true));
 
-  const dedupMap = new Map<string, (typeof normalizedAdults)[number]>();
+  // ✅ Corrigido: generics do Map (antes havia um '>>' extra que partia o TS)
+  const dedupMap = new Map<string, typeof normalizedAdults[number]>();
   for (const s of normalizedAdults) {
     const key = s.size.toUpperCase();
     const prev = dedupMap.get(key);
@@ -171,15 +172,17 @@ export default async function ProductEditPage({
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
-        {/* ========== CSS para esconder qualquer UI de URLs no ImagesEditor ========== */}
+        {/* Esconder qualquer UI de URL e o botão “Add” */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
+/* Inputs de URL (por thumb e o campo de colar URL) */
 section .images-editor input[type="text"] { display:none !important; }
 section .images-editor [placeholder*="Paste an image URL"] { display:none !important; }
 `,
           }}
         />
+
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
 
@@ -210,7 +213,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
             </div>
           </div>
 
-          {/* ====== Images (APENAS upload local) ====== */}
+          {/* ====== Images (upload local + auto-adicionar) ====== */}
           <div className="space-y-2 images-editor">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Images</label>
@@ -267,13 +270,32 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           </div>
         </form>
 
-        {/* Script: badges */}
+        {/* Script: esconder o botão “Add” do editor (caso exista) */}
+        <Script id="hide-add-button" strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  const root = document.querySelector('.images-editor');
+  if (!root) return;
+  function hide() {
+    root.querySelectorAll('button').forEach(b => {
+      const t = (b.textContent || '').trim().toLowerCase();
+      if (t === 'add') b.style.display = 'none';
+    });
+  }
+  hide();
+  new MutationObserver(hide).observe(root, { childList: true, subtree: true });
+})();`,
+          }}
+        />
+
+        {/* Script: badges (inalterado) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const BADGES = ${BADGES_JSON};
-  const INITIAL = new Set(${SELECTED_JSON});
+  const BADGES = ${JSON.stringify(ALL_BADGES)};
+  const INITIAL = new Set(${JSON.stringify(selectedInitial)});
   const form = document.getElementById('edit-product-form');
   const q = document.getElementById('badge-query');
   const results = document.getElementById('badge-results');
@@ -376,7 +398,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
-        {/* Script: Upload local -> Vercel Blob -> inserir no campo oculto (sem UI de URLs) */}
+        {/* Script: Upload local -> Vercel Blob -> inserir automaticamente nas miniaturas */}
         <Script id="blob-upload-only-local" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -389,6 +411,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   const MAX_BYTES = 8 * 1024 * 1024;
   const MAX_AT_ONCE = 3;
 
+  // Atualiza o campo oculto que o ImagesEditor usa para renderizar as thumbs
   function appendToHidden(urls) {
     const field = document.querySelector('[name="imagesText"]');
     if (!field) return false;
@@ -443,6 +466,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
       });
     }
 
+    // Auto: adiciona imediatamente ao campo usado pelo ImagesEditor (sem botão “Add”)
     appendToHidden(urls);
 
     input.value = '';
