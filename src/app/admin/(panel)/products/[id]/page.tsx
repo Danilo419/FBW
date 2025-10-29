@@ -130,7 +130,6 @@ export default async function ProductEditPage({
 
   const selectedInitial: string[] = (product as any).badges ?? [];
 
-  // sizes
   const sizeGroup = product.options[0] ?? null;
   const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
@@ -202,7 +201,7 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* ====== Images (com botão de upload integrado) ====== */}
+          {/* ====== Images ====== */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Images</label>
@@ -218,12 +217,10 @@ export default async function ProductEditPage({
                 <input id="blob-images-input" type="file" accept="image/*" multiple className="hidden" />
               </div>
             </div>
-
-            {/* Editor existente */}
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
-          {/* Badges - Search UI */}
+          {/* Badges */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
@@ -259,7 +256,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script: badges search (igual) */}
+        {/* Script: badges */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -368,7 +365,7 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload + adicionar forçosamente no grid */}
+        {/* Script: Upload (Blob) + fix do controlled input do ImagesEditor */}
         <Script id="blob-upload-into-images" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -381,52 +378,60 @@ export default async function ProductEditPage({
   const MAX_BYTES = 8 * 1024 * 1024;
   const MAX_AT_ONCE = 3;
 
-  // encontra os controlos do ImagesEditor
-  function getAddBox() {
-    const urlInput = Array.from(document.querySelectorAll('input'))
-      .find(el => el.placeholder && el.placeholder.toLowerCase().includes('paste an image url'));
-    const addBtn = Array.from(document.querySelectorAll('button'))
-      .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
+  // encontra a caixa "Paste an image URL..." e o botão Add correspondente
+  function getUi() {
+    const urlInput = Array.from(document.querySelectorAll('input[type="text"]'))
+      .find(el => (el.placeholder || '').toLowerCase().includes('paste an image url'));
+    let addBtn = null;
+    if (urlInput) {
+      const root = urlInput.closest('div');
+      if (root) {
+        addBtn = Array.from(root.parentElement?.querySelectorAll('button') || [])
+          .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
+      }
+    }
     return { urlInput, addBtn };
   }
 
-  // check se já existe um card com este URL (há um input por card com o URL)
+  // usar o setter nativo para atualizar inputs controlados por React
+  function setReactInputValue(el, value) {
+    const proto = Object.getPrototypeOf(el);
+    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (desc && desc.set) {
+      desc.set.call(el, value);
+    } else {
+      el.value = value;
+    }
+  }
+
   function gridHasUrl(url) {
     const vals = Array.from(document.querySelectorAll('input[type="text"]'))
       .map(i => (i.value || '').trim());
     return vals.includes(url.trim());
   }
 
-  // força a sequência: preencher input -> input/change -> Enter -> click Add
   async function tryAddViaUI(url) {
-    const { urlInput, addBtn } = getAddBox();
+    const { urlInput, addBtn } = getUi();
     if (!urlInput || !addBtn) return false;
 
     const u = url.trim();
     urlInput.focus();
-    urlInput.value = u;
-
+    setReactInputValue(urlInput, u);
     urlInput.dispatchEvent(new Event('input', { bubbles: true }));
     urlInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    const kd = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
-    const ku = new KeyboardEvent('keyup', { key: 'Enter', bubbles: true });
-    urlInput.dispatchEvent(kd);
-    urlInput.dispatchEvent(ku);
-
-    // pequena pausa para React sincronizar estado
+    // pequena espera para React sincronizar o estado
     await new Promise(r => setTimeout(r, 30));
     addBtn.click();
 
-    // aguarda o DOM atualizar
-    for (let i = 0; i < 10; i++) {
-      await new Promise(r => setTimeout(r, 40));
+    // aguarda o DOM refletir
+    for (let i = 0; i < 12; i++) {
+      await new Promise(r => setTimeout(r, 50));
       if (gridHasUrl(u)) return true;
     }
     return gridHasUrl(u);
   }
 
-  // fallback: escreve diretamente no hidden/textarea "imagesText" e dispara eventos
   function appendToHidden(urls) {
     const field = document.querySelector('[name="imagesText"]');
     if (!field) return false;
@@ -481,9 +486,7 @@ export default async function ProductEditPage({
       });
     }
 
-    status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
-
-    // tentar via UI um a um; se falhar, fallback para o hidden
+    // Tentar inserir via UI (controlado), senão fallback para o hidden
     const failures = [];
     for (const u of urls) {
       const ok = await tryAddViaUI(u);
@@ -491,11 +494,8 @@ export default async function ProductEditPage({
     }
     if (failures.length) appendToHidden(failures);
 
-    // limpar input e feedback final
     input.value = '';
-    status.textContent += failures.length
-      ? ' (added via fallback: ' + failures.length + ')'
-      : ' Added ' + urls.length + '/' + urls.length + '.';
+    status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + (failures.length ? ' (added via fallback: ' + failures.length + ')' : '.');
   });
 })();`,
           }}
