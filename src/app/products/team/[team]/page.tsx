@@ -25,10 +25,10 @@ const TEAM_MAP: Record<string, string> = {
 
 /* ============================ Promo map ============================ */
 const SALE_MAP: Record<number, number> = {
-  3499: 10000, // €34,99 → €100,00
-  3999: 11000, // €39,99 → €110,00
-  4499: 15000, // €44,99 → €150,00
-  4999: 16000, // €49,99 → €160,00
+  3499: 10000,
+  3999: 11000,
+  4499: 15000,
+  4999: 16000,
 };
 
 function getCompareAt(basePriceCents: number) {
@@ -51,12 +51,6 @@ function money(cents: number) {
     style: "currency",
     currency: "EUR",
   });
-}
-
-function priceParts(cents: number) {
-  const euros = Math.floor(cents / 100).toString();
-  const dec = (cents % 100).toString().padStart(2, "0");
-  return { sym: "€", int: euros, dec };
 }
 
 function firstImageFrom(value: unknown): string | null {
@@ -110,7 +104,14 @@ export default async function TeamProductsPage({ params }: PageProps) {
       ],
     },
     orderBy: { createdAt: "desc" },
-    select: { id: true, slug: true, name: true, imageUrls: true, basePrice: true, team: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      imageUrls: true,
+      basePrice: true,
+      team: true,
+    },
   });
 
   if (!products.length) notFound();
@@ -140,17 +141,20 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      {/* 🔁 Igual ao ResultsClient: sem max-w, mesma grid e gap */}
+      {/* 🔒 Igual ao ResultsClient: mesmo padding horizontal e grelha */}
       <div className="px-6 sm:px-10 py-12">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
 
+        {/* Mesmas colunas e gap do ResultsClient */}
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
-            const sale = getCompareAt(p.basePrice);
-            const parts = priceParts(p.basePrice);
+            const compare = getCompareAt(p.basePrice);
+
+            const euros = Math.floor(p.basePrice / 100).toString();
+            const dec = (p.basePrice % 100).toString().padStart(2, "0");
 
             return (
               <a
@@ -159,13 +163,13 @@ function List({
                 className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
               >
                 {/* Sticker vermelho */}
-                {sale && (
+                {compare && (
                   <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
-                    -{sale.pct}%
+                    -{compare.pct}%
                   </div>
                 )}
 
-                {/* Card em coluna (igual ao ResultsClient) */}
+                {/* Card em coluna (altura consistente + footer fixo) */}
                 <div className="flex flex-col h-full">
                   {/* Imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
@@ -187,27 +191,23 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* Preço */}
+                    {/* Preços (idêntico ao ResultsClient) */}
                     <div className="mt-4">
-                      {sale && (
+                      {compare && (
                         <div className="mb-1 text-[13px] text-slate-500 line-through">
-                          {money(sale.compareAt)}
+                          {money(compare.compareAt)}
                         </div>
                       )}
                       <div className="flex items-end gap-0.5 text-slate-900">
-                        <span className="text-[15px] font-medium translate-y-[1px]">
-                          {parts.sym}
-                        </span>
+                        <span className="text-[15px] font-medium translate-y-[1px]">€</span>
                         <span className="text-2xl font-semibold tracking-tight leading-none">
-                          {parts.int}
+                          {euros}
                         </span>
-                        <span className="text-[13px] font-medium translate-y-[1px]">
-                          ,{parts.dec}
-                        </span>
+                        <span className="text-[13px] font-medium translate-y-[1px]">,{dec}</span>
                       </div>
                     </div>
 
-                    {/* Footer preso ao fundo + CTA centrada verticalmente (h-12) */}
+                    {/* Footer preso ao fundo + CTA centrada verticalmente */}
                     <div className="mt-auto">
                       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                       <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
