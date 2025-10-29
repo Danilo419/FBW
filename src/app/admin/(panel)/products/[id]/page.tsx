@@ -202,24 +202,27 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* ===== Upload real (Vercel Blob) — mesmo fluxo do NewProductPage ===== */}
-          <div className="space-y-2 rounded-2xl border p-3">
-            <label className="text-sm font-medium">Upload images from your computer</label>
-            <input
-              id="blob-images-input"
-              type="file"
-              accept="image/*"
-              multiple
-              className="block w-full rounded-xl border px-3 py-2"
-            />
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span id="blob-upload-status">No uploads yet.</span>
+          {/* ====== Images (com botão de upload integrado) ====== */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Images</label>
+              <div className="flex items-center gap-2">
+                <span id="blob-images-status" className="text-[11px] text-gray-500"></span>
+                <button
+                  type="button"
+                  id="blob-images-button"
+                  className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
+                  title="Add images from your computer"
+                >
+                  Add from computer
+                </button>
+                <input id="blob-images-input" type="file" accept="image/*" multiple className="hidden" />
+              </div>
             </div>
-            <div id="blob-images-preview" className="mt-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
-          </div>
 
-          {/* Images (mantém o teu componente) */}
-          <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
+            {/* O teu editor continua igual: lê/escreve em name="imagesText" */}
+            <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
+          </div>
 
           {/* Badges - Search UI */}
           <div className="space-y-3">
@@ -257,7 +260,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script: badges search (igual) */}
+        {/* Script: badges search (inalterado) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -366,43 +369,36 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload Vercel Blob -> mesmo comportamento do NewProductPage */}
-        <Script id="blob-upload" strategy="afterInteractive"
+        {/* Script: Upload Vercel Blob integrado na secção "Images"
+            - Mesmo comportamento do NewProductPage
+            - Sem bloco separado de upload */}
+        <Script id="blob-upload-into-images" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
+  const btn = document.getElementById('blob-images-button');
   const input = document.getElementById('blob-images-input');
-  const status = document.getElementById('blob-upload-status');
-  const preview = document.getElementById('blob-images-preview');
+  const status = document.getElementById('blob-images-status');
 
   const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/avif","image/gif"]);
   const MAX_BYTES = 8 * 1024 * 1024;
+  const MAX_AT_ONCE = 3;
 
-  function imagesField() {
+  function field() {
     return document.querySelector('[name="imagesText"]');
   }
   function appendUrls(urls) {
-    const field = imagesField();
-    if (!field) return;
-    const current = (field.value || '').trim();
+    const f = field();
+    if (!f) return;
+    const current = (f.value || '').trim();
     const list = current ? current.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean) : [];
     urls.forEach(u => { if (u && !list.includes(u)) list.push(u); });
-    field.value = list.join('\\n');
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-  function addPreview(urls) {
-    urls.forEach(u => {
-      const img = document.createElement('img');
-      img.src = u;
-      img.alt = 'uploaded';
-      img.className = 'w-full aspect-square object-cover rounded-lg border';
-      preview.appendChild(img);
-    });
+    f.value = list.join('\\n');
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+    f.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   async function uploadOne(file) {
-    // Igual ao teu NewProductPage (usa a MESMA rota /api/blob/upload)
     const form = new FormData();
     form.append('file', file);
     const res = await fetch('/api/blob/upload', { method: 'POST', body: form });
@@ -411,21 +407,18 @@ export default async function ProductEditPage({
     return (data && (data.url || (data.blob && data.blob.url))) || null;
   }
 
+  btn?.addEventListener('click', () => input?.click());
+
   input?.addEventListener('change', async () => {
     const files = Array.from(input.files || []);
     if (!files.length) return;
 
     const queue = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
     const rejected = files.filter(f => !queue.includes(f));
-    if (rejected.length) {
-      alert('Alguns ficheiros foram ignorados (tipo não suportado ou > 8MB).');
-    }
+    if (rejected.length) alert('Ignored some files (unsupported type or > 8MB).');
 
+    let done = 0, urls = [];
     status.textContent = 'Uploading 0/' + queue.length + '...';
-
-    const MAX_AT_ONCE = 3;
-    let done = 0;
-    const urls = [];
 
     for (let i = 0; i < queue.length; i += MAX_AT_ONCE) {
       const chunk = queue.slice(i, i + MAX_AT_ONCE);
@@ -438,10 +431,7 @@ export default async function ProductEditPage({
     }
 
     status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
-    if (urls.length) {
-      appendUrls(urls);
-      addPreview(urls);
-    }
+    if (urls.length) appendUrls(urls);
     input.value = '';
   });
 })();`,
