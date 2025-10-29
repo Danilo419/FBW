@@ -168,7 +168,7 @@ function List({
       </div>
 
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
-        {/* Título em preto (sem gradiente) */}
+        {/* Título preto */}
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
@@ -177,7 +177,7 @@ function List({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
-            const sale = getCompareAt(p.basePrice); // {compareAt, pct} | null
+            const sale = getCompareAt(p.basePrice);
 
             return (
               <a
@@ -186,7 +186,7 @@ function List({
                 className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
               >
                 <div className="relative rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
-                  {/* Sticker vermelho com % */}
+                  {/* Sticker vermelho */}
                   {sale && (
                     <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
                       -{sale.pct}%
@@ -214,25 +214,18 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* Bloco de preço com visual melhorado */}
+                    {/* Bloco de preço refinado */}
                     <div className="mt-4">
-                      {/* Preço antigo riscado acima (só se houver sale) */}
+                      {/* antigo riscado (só se for sale) */}
                       {sale && (
-                        <div className="mb-1 text-[13px] font-semibold text-gray-600/90 line-through">
+                        <div className="mb-1 text-[13px] font-medium text-slate-500 line-through">
                           {money(sale.compareAt)}
                         </div>
                       )}
 
-                      {/* Chip escuro com contorno no texto */}
-                      <div className="inline-flex items-baseline gap-1 rounded-2xl px-3 py-1.5 bg-gradient-to-b from-slate-900 to-black text-white ring-1 ring-black/10 shadow-sm">
-                        {/* Para dar “contorno” preto no número usamos múltiplos text-shadows */}
-                        <span
-                          className="text-lg sm:text-xl font-extrabold tracking-tight"
-                          style={{
-                            textShadow:
-                              "0 0 1px #000, 0 0 1px #000, 0.5px 0.5px 0 #000",
-                          }}
-                        >
+                      {/* preço atual — pill claro e elegante */}
+                      <div className="inline-flex items-center rounded-full bg-white/90 px-3 py-1.5 ring-1 ring-slate-200 shadow-[0_1px_2px_rgba(0,0,0,.06)]">
+                        <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
                           {money(p.basePrice)}
                         </span>
                       </div>
