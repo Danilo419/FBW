@@ -202,7 +202,26 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* Images */}
+          {/* ===== Upload local (PC) -> injeta em imagesText como data URLs ===== */}
+          <div className="space-y-2 rounded-2xl border p-3">
+            <label className="text-sm font-medium">Upload images from your computer</label>
+            <input
+              id="local-images-input"
+              type="file"
+              accept="image/*"
+              multiple
+              className="block w-full rounded-xl border px-3 py-2"
+            />
+            <p className="text-[11px] text-gray-500">
+              As imagens selecionadas serão convertidas para <code>data URL</code> e adicionadas à lista do editor de imagens.
+              Recomendo 1500–2500px no lado maior. Tamanho total grande pode tornar o envio do formulário pesado.
+            </p>
+
+            {/* preview simples (miniaturas) */}
+            <div id="local-images-preview" className="mt-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
+          </div>
+
+          {/* Images (continue a usar o teu componente) */}
           <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
 
           {/* Badges - Search UI */}
@@ -241,7 +260,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script com nonce via next/script (funciona com CSP) */}
+        {/* Script: badges search (mantido) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -350,13 +369,93 @@ export default async function ProductEditPage({
 })();`,
           }}
         />
+
+        {/* Script: Upload local -> injeta nas imagens */}
+        <Script id="local-upload-to-imagesText" strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  const input = document.getElementById('local-images-input');
+  const preview = document.getElementById('local-images-preview');
+
+  function findImagesTextField() {
+    // tenta apanhar o campo que o ImagesEditor cria (textarea/hidden com name="imagesText")
+    return document.querySelector('[name="imagesText"]');
+  }
+
+  function appendToImagesText(urls) {
+    const field = findImagesTextField();
+    if (!field) return;
+
+    const current = (field.value || '').trim();
+    const list = current ? current.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean) : [];
+    urls.forEach(u => { if (u && !list.includes(u)) list.push(u); });
+    field.value = list.join('\\n');
+
+    // dispara eventos para o ImagesEditor reagir
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function readFilesAsDataURL(files) {
+    const jobs = [];
+    for (const f of files) {
+      if (!f.type.startsWith('image/')) continue;
+      // opcional: limitar a ~10MB por ficheiro para evitar formularios gigantes
+      if (f.size > 10 * 1024 * 1024) {
+        console.warn('Skipping large image (>10MB):', f.name);
+        continue;
+      }
+      jobs.push(new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(f);
+      }));
+    }
+    return Promise.all(jobs);
+  }
+
+  function addPreview(urls) {
+    if (!preview) return;
+    urls.forEach(u => {
+      const img = document.createElement('img');
+      img.src = u;
+      img.alt = 'local upload';
+      img.className = 'w-full aspect-square object-cover rounded-lg border';
+      preview.appendChild(img);
+    });
+  }
+
+  if (input) {
+    input.addEventListener('change', async () => {
+      const files = input.files || [];
+      if (!files.length) return;
+      try {
+        const urls = await readFilesAsDataURL(files);
+        const strUrls = urls.map(String).filter(Boolean);
+        if (strUrls.length) {
+          appendToImagesText(strUrls);
+          addPreview(strUrls);
+        }
+        // limpa o input para permitir re-selecionar os mesmos ficheiros
+        input.value = '';
+      } catch (err) {
+        console.error('Failed to read local images:', err);
+        alert('Falha a ler algumas imagens locais.');
+      }
+    });
+  }
+})();`,
+          }}
+        />
       </section>
 
       {/* ==== Sizes & Availability ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>
-        <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500">
             Showing {viewSizes.length} of {originCount} adult sizes (S–4XL)
           </span>
         </div>
