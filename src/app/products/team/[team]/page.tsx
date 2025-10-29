@@ -1,3 +1,4 @@
+// src/app/products/team/[team]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
@@ -24,10 +25,10 @@ const TEAM_MAP: Record<string, string> = {
 
 /* ============================ Promo map ============================ */
 const SALE_MAP: Record<number, number> = {
-  3499: 10000,
-  3999: 11000,
-  4499: 15000,
-  4999: 16000,
+  3499: 10000, // €34,99 → €100,00
+  3999: 11000, // €39,99 → €110,00
+  4499: 15000, // €44,99 → €150,00
+  4999: 16000, // €49,99 → €160,00
 };
 
 function getCompareAt(basePriceCents: number) {
@@ -61,15 +62,20 @@ function priceParts(cents: number) {
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
   if (typeof value === "string") return value.trim() || null;
+
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
       if (v && typeof (v as any).url === "string" && (v as any).url.trim())
         return (v as any).url.trim();
+      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
+        return (v as any).src.trim();
     }
   }
+
   const any: any = value;
   if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
+  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
   return null;
 }
 
@@ -107,7 +113,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
     select: { id: true, slug: true, name: true, imageUrls: true, basePrice: true, team: true },
   });
 
-  if (products.length === 0) notFound();
+  if (!products.length) notFound();
 
   return <List team={products[0].team!} items={products} />;
 }
@@ -158,52 +164,65 @@ function List({
                   </div>
                 )}
 
-                <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={src}
-                    alt={p.name}
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-
-                <div className="p-5">
-                  <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                    {team}
-                  </div>
-                  <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
-                    {p.name}
+                {/* Card em coluna */}
+                <div className="flex flex-col h-full">
+                  {/* Imagem */}
+                  <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={p.name}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                    />
                   </div>
 
-                  {/* Preço refinado */}
-                  <div className="mt-4">
-                    {sale && (
-                      <div className="mb-1 text-[13px] text-slate-500 line-through">
-                        {money(sale.compareAt)}
-                      </div>
-                    )}
-                    <div className="flex items-end gap-0.5 text-slate-900">
-                      <span className="text-[15px] font-medium translate-y-[1px]">{parts.sym}</span>
-                      <span className="text-2xl font-semibold tracking-tight leading-none">
-                        {parts.int}
-                      </span>
-                      <span className="text-[13px] font-medium translate-y-[1px]">,{parts.dec}</span>
+                  {/* Conteúdo */}
+                  <div className="p-5 flex flex-col grow">
+                    <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                      {team}
                     </div>
-                  </div>
+                    <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+                      {p.name}
+                    </div>
 
-                  <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <span className="transition group-hover:translate-x-0.5">
-                      View product
-                    </span>
-                    <svg
-                      className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
-                    </svg>
+                    {/* Preço */}
+                    <div className="mt-4">
+                      {sale && (
+                        <div className="mb-1 text-[13px] text-slate-500 line-through">
+                          {money(sale.compareAt)}
+                        </div>
+                      )}
+                      <div className="flex items-end gap-0.5 text-slate-900">
+                        <span className="text-[15px] font-medium translate-y-[1px]">
+                          {parts.sym}
+                        </span>
+                        <span className="text-2xl font-semibold tracking-tight leading-none">
+                          {parts.int}
+                        </span>
+                        <span className="text-[13px] font-medium translate-y-[1px]">
+                          ,{parts.dec}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Footer preso ao fundo + CTA centrada verticalmente */}
+                    <div className="mt-auto">
+                      <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                      <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <span className="transition group-hover:translate-x-0.5">
+                          View product
+                        </span>
+                        <svg
+                          className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </a>
