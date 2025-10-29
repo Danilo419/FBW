@@ -141,13 +141,13 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      {/* 🔒 Igual ao ResultsClient: mesmo padding horizontal e grelha */}
-      <div className="px-6 sm:px-10 py-12">
+      {/* 🔧 Container estreito para igualar a Search */}
+      <div className="mx-auto max-w-screen-xl px-6 sm:px-10 py-12">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
 
-        {/* Mesmas colunas e gap do ResultsClient */}
+        {/* Mesmas colunas e gap */}
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
@@ -191,7 +191,7 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* Preços (idêntico ao ResultsClient) */}
+                    {/* Preços */}
                     <div className="mt-4">
                       {compare && (
                         <div className="mb-1 text-[13px] text-slate-500 line-through">
