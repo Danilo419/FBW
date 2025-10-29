@@ -173,16 +173,10 @@ export default async function ProductEditPage({
       <section className="rounded-2xl bg-white p-5 shadow border">
         {/* ========== CSS para esconder qualquer UI de URLs no ImagesEditor ========== */}
         <style
-          // global para não depender de classes internas
           dangerouslySetInnerHTML={{
             __html: `
-/* esconder inputs de URL por baixo de cada miniatura */
 section .images-editor input[type="text"] { display:none !important; }
-/* esconder linha "Paste an image URL and click Add" e botão Add */
 section .images-editor [placeholder*="Paste an image URL"] { display:none !important; }
-section .images-editor button { /* só esconder o botão Add da linha inferior */
-  /* mantemos botões internos do editor (seta, remover, etc.) */
-}
 `,
           }}
         />
@@ -234,7 +228,6 @@ section .images-editor button { /* só esconder o botão Add da linha inferior *
               </div>
             </div>
 
-            {/* Mantemos o componente para mostrar miniaturas e guardar no campo oculto */}
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
@@ -274,7 +267,7 @@ section .images-editor button { /* só esconder o botão Add da linha inferior *
           </div>
         </form>
 
-        {/* Script: badges (inalterado) */}
+        {/* Script: badges */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -383,7 +376,7 @@ section .images-editor button { /* só esconder o botão Add da linha inferior *
           }}
         />
 
-        {/* Script: Upload local -> Vercel Blob -> inserir direto na lista (sem URLs visíveis) */}
+        {/* Script: Upload local -> Vercel Blob -> inserir no campo oculto (sem UI de URLs) */}
         <Script id="blob-upload-only-local" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -450,7 +443,6 @@ section .images-editor button { /* só esconder o botão Add da linha inferior *
       });
     }
 
-    // Atualiza o campo oculto (ImagesEditor re-renderiza as miniaturas)
     appendToHidden(urls);
 
     input.value = '';
