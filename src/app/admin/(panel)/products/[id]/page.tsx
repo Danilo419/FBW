@@ -171,6 +171,21 @@ export default async function ProductEditPage({
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
+        {/* ========== CSS para esconder qualquer UI de URLs no ImagesEditor ========== */}
+        <style
+          // global para não depender de classes internas
+          dangerouslySetInnerHTML={{
+            __html: `
+/* esconder inputs de URL por baixo de cada miniatura */
+section .images-editor input[type="text"] { display:none !important; }
+/* esconder linha "Paste an image URL and click Add" e botão Add */
+section .images-editor [placeholder*="Paste an image URL"] { display:none !important; }
+section .images-editor button { /* só esconder o botão Add da linha inferior */
+  /* mantemos botões internos do editor (seta, remover, etc.) */
+}
+`,
+          }}
+        />
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
 
@@ -201,8 +216,8 @@ export default async function ProductEditPage({
             </div>
           </div>
 
-          {/* ====== Images ====== */}
-          <div className="space-y-2">
+          {/* ====== Images (APENAS upload local) ====== */}
+          <div className="space-y-2 images-editor">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Images</label>
               <div className="flex items-center gap-2">
@@ -211,16 +226,19 @@ export default async function ProductEditPage({
                   type="button"
                   id="blob-images-button"
                   className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
+                  title="Add images from your computer"
                 >
                   Add from computer
                 </button>
                 <input id="blob-images-input" type="file" accept="image/*" multiple className="hidden" />
               </div>
             </div>
+
+            {/* Mantemos o componente para mostrar miniaturas e guardar no campo oculto */}
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
-          {/* Badges */}
+          {/* ====== Badges ====== */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
@@ -256,7 +274,7 @@ export default async function ProductEditPage({
           </div>
         </form>
 
-        {/* Script: badges */}
+        {/* Script: badges (inalterado) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -365,8 +383,8 @@ export default async function ProductEditPage({
           }}
         />
 
-        {/* Script: Upload (Blob) + fix do controlled input do ImagesEditor */}
-        <Script id="blob-upload-into-images" strategy="afterInteractive"
+        {/* Script: Upload local -> Vercel Blob -> inserir direto na lista (sem URLs visíveis) */}
+        <Script id="blob-upload-only-local" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
@@ -377,60 +395,6 @@ export default async function ProductEditPage({
   const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/avif","image/gif"]);
   const MAX_BYTES = 8 * 1024 * 1024;
   const MAX_AT_ONCE = 3;
-
-  // encontra a caixa "Paste an image URL..." e o botão Add correspondente
-  function getUi() {
-    const urlInput = Array.from(document.querySelectorAll('input[type="text"]'))
-      .find(el => (el.placeholder || '').toLowerCase().includes('paste an image url'));
-    let addBtn = null;
-    if (urlInput) {
-      const root = urlInput.closest('div');
-      if (root) {
-        addBtn = Array.from(root.parentElement?.querySelectorAll('button') || [])
-          .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
-      }
-    }
-    return { urlInput, addBtn };
-  }
-
-  // usar o setter nativo para atualizar inputs controlados por React
-  function setReactInputValue(el, value) {
-    const proto = Object.getPrototypeOf(el);
-    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
-    if (desc && desc.set) {
-      desc.set.call(el, value);
-    } else {
-      el.value = value;
-    }
-  }
-
-  function gridHasUrl(url) {
-    const vals = Array.from(document.querySelectorAll('input[type="text"]'))
-      .map(i => (i.value || '').trim());
-    return vals.includes(url.trim());
-  }
-
-  async function tryAddViaUI(url) {
-    const { urlInput, addBtn } = getUi();
-    if (!urlInput || !addBtn) return false;
-
-    const u = url.trim();
-    urlInput.focus();
-    setReactInputValue(urlInput, u);
-    urlInput.dispatchEvent(new Event('input', { bubbles: true }));
-    urlInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-    // pequena espera para React sincronizar o estado
-    await new Promise(r => setTimeout(r, 30));
-    addBtn.click();
-
-    // aguarda o DOM refletir
-    for (let i = 0; i < 12; i++) {
-      await new Promise(r => setTimeout(r, 50));
-      if (gridHasUrl(u)) return true;
-    }
-    return gridHasUrl(u);
-  }
 
   function appendToHidden(urls) {
     const field = document.querySelector('[name="imagesText"]');
@@ -486,16 +450,11 @@ export default async function ProductEditPage({
       });
     }
 
-    // Tentar inserir via UI (controlado), senão fallback para o hidden
-    const failures = [];
-    for (const u of urls) {
-      const ok = await tryAddViaUI(u);
-      if (!ok) failures.push(u);
-    }
-    if (failures.length) appendToHidden(failures);
+    // Atualiza o campo oculto (ImagesEditor re-renderiza as miniaturas)
+    appendToHidden(urls);
 
     input.value = '';
-    status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + (failures.length ? ' (added via fallback: ' + failures.length + ')' : '.');
+    status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
   });
 })();`,
           }}
