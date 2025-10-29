@@ -141,8 +141,8 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      {/* 🔧 Container estreito para igualar a Search */}
-      <div className="mx-auto max-w-screen-xl px-6 sm:px-10 py-12">
+      {/* Container um pouco mais largo */}
+      <div className="mx-auto max-w-screen-2xl px-6 sm:px-10 py-12">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
           {team} — Products
         </h1>
