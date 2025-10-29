@@ -23,6 +23,22 @@ const TEAM_MAP: Record<string, string> = {
   "vitoria-sc": "Vitória SC",
 };
 
+/* ============================ Promo map ============================ */
+/** basePrice(cents) -> compareAtPrice(cents) */
+const SALE_MAP: Record<number, number> = {
+  3499: 10000, // 34,99€ -> 100,00€
+  3999: 11000, // 39,99€ -> 110,00€
+  4499: 15000, // 44,99€ -> 150,00€
+  4999: 16000, // 49,99€ -> 160,00€
+};
+
+function getCompareAt(basePriceCents: number) {
+  const compareAt = SALE_MAP[basePriceCents];
+  if (!compareAt) return null;
+  const pct = Math.round((1 - basePriceCents / compareAt) * 100);
+  return { compareAt, pct };
+}
+
 /* ============================ Utils ============================ */
 function fallbackTitle(slug: string) {
   return slug
@@ -138,7 +154,7 @@ function List({
     slug: string;
     name: string;
     imageUrls?: unknown;
-    basePrice: number;
+    basePrice: number; // cents
   }[];
 }) {
   return (
@@ -161,13 +177,22 @@ function List({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
+            const sale = getCompareAt(p.basePrice); // {compareAt, pct} | null
+
             return (
               <a
                 key={p.slug}
                 href={`/products/${p.slug}`}
                 className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
               >
-                <div className="rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
+                <div className="relative rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
+                  {/* Sticker de desconto */}
+                  {sale && (
+                    <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-bold shadow-md ring-1 ring-red-700/40">
+                      -{sale.pct}%
+                    </div>
+                  )}
+
                   {/* imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -191,9 +216,29 @@ function List({
                           {p.name}
                         </div>
                       </div>
+
+                      {/* preço atual */}
                       <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
                         {money(p.basePrice)}
                       </div>
+                    </div>
+
+                    {/* preços / compare-at */}
+                    <div className="mt-2 flex items-center gap-3">
+                      {sale ? (
+                        <>
+                          <span className="text-sm text-slate-500 line-through">
+                            {money(sale.compareAt)}
+                          </span>
+                          <span className="text-sm font-semibold text-emerald-700">
+                            {money(p.basePrice)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-slate-700">
+                          {money(p.basePrice)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
