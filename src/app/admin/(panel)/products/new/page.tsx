@@ -81,7 +81,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
-  // Sizes default
+  // ✅ Agora os tamanhos “não selecionados” não aparecem: só mostramos os escolhidos.
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
@@ -98,19 +98,37 @@ export default function NewProductPage() {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
     if (group === "adult") {
-      setSelectedAdult([...ADULT_SIZES]);
+      // por omissão, todos os adultos visíveis; kids ficam vazios
+      setSelectedAdult((prev) => (prev.length ? prev : [...ADULT_SIZES]));
       setSelectedKid([]);
     } else {
-      setSelectedKid([...KID_SIZES]);
+      setSelectedKid((prev) => (prev.length ? prev : [...KID_SIZES]));
       setSelectedAdult([]);
     }
   }
-  function toggleAdult(size: string) {
-    setSelectedAdult((prev) => (prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]));
+
+  // Helpers para adicionar/remover
+  function addAdult(size: string) {
+    setSelectedAdult((prev) => (prev.includes(size) ? prev : [...prev, size]));
   }
-  function toggleKid(size: string) {
-    setSelectedKid((prev) => (prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]));
+  function removeAdult(size: string) {
+    setSelectedAdult((prev) => prev.filter((s) => s !== size));
   }
+  function addKid(size: string) {
+    setSelectedKid((prev) => (prev.includes(size) ? prev : [...prev, size]));
+  }
+  function removeKid(size: string) {
+    setSelectedKid((prev) => prev.filter((s) => s !== size));
+  }
+
+  const remainingAdult = useMemo(
+    () => ADULT_SIZES.filter((s) => !selectedAdult.includes(s)),
+    [selectedAdult]
+  );
+  const remainingKid = useMemo(
+    () => KID_SIZES.filter((s) => !selectedKid.includes(s)),
+    [selectedKid]
+  );
 
   /* ===================== Badges ===================== */
   function toggleBadge(value: string) {
@@ -127,12 +145,11 @@ export default function NewProductPage() {
     if (!q) return [];
     return ALL_BADGES.filter(
       (b) => b.label.toLowerCase().includes(q) || b.value.toLowerCase().includes(q) || b.group.toLowerCase().includes(q)
-    ).slice(0, 50); // segurança
+    ).slice(0, 50);
   }, [badgeQuery, ALL_BADGES]);
 
   /* ===================== Images ===================== */
 
-  // helper p/ nome único
   const uniqueName = (file: File) => {
     const safe = file.name.replace(/\s+/g, "_");
     const id =
@@ -140,7 +157,6 @@ export default function NewProductPage() {
     return `${id}_${safe}`;
   };
 
-  // Upload direto (nomes únicos, incremental)
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -176,7 +192,6 @@ export default function NewProductPage() {
     }
   }
 
-  // Reordenar (drag & drop ou botões)
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   function move(from: number, to: number) {
@@ -198,7 +213,7 @@ export default function NewProductPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // Sizes
+    // Sizes – apenas os selecionados são enviados (os outros “não existem”)
     formData.append("sizeGroup", sizeGroup);
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
@@ -231,6 +246,106 @@ export default function NewProductPage() {
     setSelectedBadges([]);
     setImageUrls([]);
     setBadgeQuery("");
+  }
+
+  // ====== Componente reutilizável para gerir tamanhos (só mostra selecionados) ======
+  function SizesManager({
+    title,
+    selected,
+    all,
+    onRemove,
+    onAddOne,
+    onAddAll,
+    onClear,
+  }: {
+    title: string;
+    selected: string[];
+    all: string[];
+    onRemove: (s: string) => void;
+    onAddOne: (s: string) => void;
+    onAddAll: () => void;
+    onClear: () => void;
+  }) {
+    const remaining = all.filter((s) => !selected.includes(s));
+    const [pick, setPick] = useState<string>("");
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold uppercase text-gray-500">{title}</div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onAddAll}
+              className="rounded-lg border px-2.5 py-1 text-xs hover:bg-gray-50"
+              title="Add all sizes"
+            >
+              Add all
+            </button>
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-lg border px-2.5 py-1 text-xs text-red-600 hover:bg-red-50"
+              title="Clear all sizes"
+            >
+              Clear all
+            </button>
+          </div>
+        </div>
+
+        {/* Chips — só tamanhos selecionados (os não selecionados NÃO aparecem) */}
+        {selected.length === 0 ? (
+          <div className="text-xs text-gray-500">No sizes selected.</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {selected.map((s) => (
+              <span
+                key={s}
+                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs bg-white"
+                title={`Remove ${s}`}
+              >
+                {s}
+                <button
+                  type="button"
+                  onClick={() => onRemove(s)}
+                  className="rounded-full px-1 text-gray-600 hover:bg-gray-100"
+                  aria-label={`Remove ${s}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Adicionar um tamanho de volta (lista só mostra os que faltam) */}
+        <div className="flex items-center gap-2">
+          <select
+            value={pick}
+            onChange={(e) => setPick(e.target.value)}
+            className="rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+          >
+            <option value="">Add size…</option>
+            {remaining.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!pick}
+            onClick={() => {
+              if (pick) onAddOne(pick);
+              setPick("");
+            }}
+            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -399,9 +514,7 @@ export default function NewProductPage() {
             />
 
             {badgeQuery.trim().length === 0 ? (
-              <div className="text-xs text-gray-500">
-                Start typing to see available badges.
-              </div>
+              <div className="text-xs text-gray-500">Start typing to see available badges.</div>
             ) : filteredBadges.length === 0 ? (
               <div className="text-xs text-gray-500">No badges found.</div>
             ) : (
@@ -465,56 +578,34 @@ export default function NewProductPage() {
               <option value="kid">Kid sizes</option>
             </select>
             <p className="text-xs text-gray-500">
-              Selecting one group automatically enables only its sizes.
+              Only selected sizes are shown below. Removing um size faz com que ele não exista no produto.
             </p>
 
-            {/* Adult list */}
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase text-gray-500">Adult</div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {ADULT_SIZES.map((s) => (
-                  <label
-                    key={s}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 ${
-                      sizeGroup === "kid" ? "opacity-40" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      value={s}
-                      checked={selectedAdult.includes(s)}
-                      disabled={sizeGroup === "kid"}
-                      onChange={() => toggleAdult(s)}
-                    />
-                    <span className="text-sm">{s}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            {/* Adult (apenas quando ativo) */}
+            {sizeGroup === "adult" && (
+              <SizesManager
+                title="Adult"
+                selected={selectedAdult}
+                all={ADULT_SIZES}
+                onRemove={removeAdult}
+                onAddOne={addAdult}
+                onAddAll={() => setSelectedAdult([...ADULT_SIZES])}
+                onClear={() => setSelectedAdult([])}
+              />
+            )}
 
-            {/* Kid list */}
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase text-gray-500">Kid</div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {KID_SIZES.map((s) => (
-                  <label
-                    key={s}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 ${
-                      sizeGroup === "adult" ? "opacity-40" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      value={s}
-                      checked={selectedKid.includes(s)}
-                      disabled={sizeGroup === "adult"}
-                      onChange={() => toggleKid(s)}
-                    />
-                    <span className="text-sm">{s}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            {/* Kid (apenas quando ativo) */}
+            {sizeGroup === "kid" && (
+              <SizesManager
+                title="Kid"
+                selected={selectedKid}
+                all={KID_SIZES}
+                onRemove={removeKid}
+                onAddOne={addKid}
+                onAddAll={() => setSelectedKid([...KID_SIZES])}
+                onClear={() => setSelectedKid([])}
+              />
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3">
