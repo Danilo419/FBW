@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+/* ====================== Tipos ====================== */
 type Props = {
   /** Nome do campo hidden enviado no submit (ex.: "imagesText") */
   name: string;
@@ -12,19 +13,99 @@ type Props = {
   alt?: string;
 };
 
+/* ====================== Utils ====================== */
+function norm(u: string) {
+  return (u ?? "").trim();
+}
+function uniqueMerge(base: string[], add: string[]) {
+  const set = new Set(base.map(norm).filter(Boolean));
+  add.forEach((u) => {
+    const t = norm(u);
+    if (t && !set.has(t)) set.add(t);
+  });
+  return Array.from(set);
+}
+function linesToArray(v: string) {
+  return (v ?? "")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+function arraysEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/* =================================================== */
 export default function ImagesEditor({ name, initialImages, alt }: Props) {
   const [images, setImages] = useState<string[]>(
     () => (initialImages ?? []).filter(Boolean)
   );
   const [newUrl, setNewUrl] = useState("");
+  const hiddenRef = useRef<HTMLInputElement | null>(null);
   const dragIndex = useRef<number | null>(null);
 
   const joined = useMemo(() => images.join("\n"), [images]);
 
+  /* ---------- Sincroniza o hidden quando o estado muda ---------- */
+  useEffect(() => {
+    const el = hiddenRef.current;
+    if (!el) return;
+    // Evita loops: só atualiza se o valor mudou de facto
+    if (el.value !== joined) {
+      el.value = joined;
+      // dispara eventos caso alguém esteja a observar
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }, [joined]);
+
+  /* ---------- Ouve alterações externas ao hidden (scripts) ---------- */
+  useEffect(() => {
+    const el = hiddenRef.current;
+    if (!el) return;
+
+    const syncFromHidden = () => {
+      const arr = linesToArray(el.value);
+      if (!arraysEqual(arr, images)) setImages(arr);
+    };
+
+    el.addEventListener("input", syncFromHidden);
+    el.addEventListener("change", syncFromHidden);
+
+    return () => {
+      el.removeEventListener("input", syncFromHidden);
+      el.removeEventListener("change", syncFromHidden);
+    };
+  }, [images]);
+
+  /* ---------- API global opcional para integrações ---------- */
+  useEffect(() => {
+    const w = window as any;
+    w.__imagesEditor = w.__imagesEditor || {};
+    const api = {
+      append: (urls: string[]) =>
+        setImages((prev) => uniqueMerge(prev, urls || [])),
+      replace: (urls: string[]) => setImages((urls || []).map(norm).filter(Boolean)),
+      get: () => images.slice(),
+    };
+    w.__imagesEditor[name] = api;
+
+    // Cleanup ao desmontar
+    return () => {
+      if (w.__imagesEditor && w.__imagesEditor[name]) {
+        delete w.__imagesEditor[name];
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, images]);
+
+  /* ---------- Ações locais ---------- */
   function addUrl() {
     const url = newUrl.trim();
     if (!url) return;
-    setImages((prev) => [...prev, url]);
+    setImages((prev) => uniqueMerge(prev, [url]));
     setNewUrl("");
   }
 
@@ -37,8 +118,7 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
   }
 
   function onDragOver(e: React.DragEvent<HTMLDivElement>) {
-    // Necessário para permitir drop
-    e.preventDefault();
+    e.preventDefault(); // Necessário para permitir drop
   }
 
   function onDrop(i: number) {
@@ -71,7 +151,14 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
   return (
     <div className="space-y-3">
       {/* Campo hidden sincronizado para o submit do form */}
-      <input type="hidden" name={name} value={joined} readOnly />
+      <input
+        ref={hiddenRef}
+        type="hidden"
+        name={name}
+        value={joined}
+        readOnly
+        data-editor-name={name}
+      />
 
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Images</h3>
@@ -157,7 +244,7 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
         ))}
       </div>
 
-      {/* Adicionar nova URL */}
+      {/* Adicionar nova URL (pode ser ocultado por CSS na página, se quiseres) */}
       <div className="flex gap-2">
         <input
           value={newUrl}
