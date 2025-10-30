@@ -38,25 +38,13 @@ const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-/* ========= Helper para extrair a “competição base” do badge =========
-   Exemplos:
-   - "La Liga – League Badge"  -> "laliga"
-   - "La Liga - Champion"      -> "laliga"
-   - "LaLiga_Champion"         -> "laliga"
-   - "UCL_Starball"            -> "ucl"
-*/
+/* ========= Helper para extrair a “competição base” do badge ========= */
 function competitionKey(value: string, label?: string) {
   const take = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
-
-  // 1) Se tiver underscore, pega antes do primeiro "_"
   if (value.includes("_")) return take(value.split("_")[0]);
-
-  // 2) Se tiver hífens/en-dash no label (ou no value), pega a parte antes do primeiro separador
   const source = label || value;
-  const parts = source.split(/–|—|-/); // en dash, em dash, hyphen
+  const parts = source.split(/–|—|-/);
   if (parts.length > 1) return take(parts[0]);
-
-  // 3) fallback: tira a parte alfabética inicial contínua
   const m = (value.match(/^[A-Za-z]+/) || [value])[0];
   return take(m);
 }
@@ -72,10 +60,9 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  /* ---------- Images (garantir que mostram sem configurar domains) ---------- */
+  /* ---------- Images ---------- */
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
-
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
   /* ---------- Thumbs (max 6 visíveis) ---------- */
@@ -101,6 +88,8 @@ export default function ProductConfigurator({ product }: Props) {
     () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999 })),
     [kid]
   );
+
+  // Normaliza e calcula tamanhos disponíveis
   const sizes: SizeUI[] = useMemo(
     () =>
       (product.sizes && product.sizes.length > 0 ? product.sizes : inferred).map((s) => ({
@@ -110,27 +99,35 @@ export default function ProductConfigurator({ product }: Props) {
     [product.sizes, inferred]
   );
 
+  // 🚫 NOVO: esconder completamente tamanhos indisponíveis (stock <= 0)
+  const availableSizes: SizeUI[] = useMemo(
+    () => sizes.filter((s) => (s.stock ?? 0) > 0),
+    [sizes]
+  );
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
   const pickSize = (size: string) => {
-    const found = sizes.find((s) => s.size === size);
-    if (!found || (found.stock ?? 0) <= 0) return;
+    const found = availableSizes.find((s) => s.size === size);
+    if (!found) return; // ignora se não existir/estiver indisponível
     setSelectedSize(size);
     setSelected((s) => ({ ...s, size }));
   };
+
+  // Se o size selecionado deixar de estar disponível, limpa
   useEffect(() => {
     if (!selectedSize) return;
-    const found = sizes.find((s) => s.size === selectedSize);
-    if (!found || (found.stock ?? 0) <= 0) {
+    const stillAvailable = availableSizes.some((s) => s.size === selectedSize);
+    if (!stillAvailable) {
       setSelectedSize(null);
       setSelected((s) => ({ ...s, size: null }));
     }
-  }, [sizes, selectedSize]);
+  }, [availableSizes, selectedSize]);
 
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
 
-  // ✅ Se não houver customization no DB, cria um grupo "sintético" (FREE)
   const customizationGroup: OptionGroupUI | undefined =
     customizationGroupFromDb ??
     ({
@@ -183,7 +180,7 @@ export default function ProductConfigurator({ product }: Props) {
     });
   }
 
-  // 🔒 Lógica especial para BADGES: não deixar 2 da mesma competição
+  // 🔒 Lógica especial para BADGES
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[group.key];
@@ -198,7 +195,6 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
-        // remove qualquer já selecionado com a mesma competição
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -321,8 +317,8 @@ export default function ProductConfigurator({ product }: Props) {
       alert("Please choose a size first.");
       return;
     }
-    const sel = sizes.find((s) => s.size === selectedSize);
-    if (!sel || (sel.stock ?? 0) <= 0) {
+    const sel = availableSizes.find((s) => s.size === selectedSize);
+    if (!sel) {
       alert("This size is unavailable.");
       return;
     }
@@ -386,7 +382,7 @@ export default function ProductConfigurator({ product }: Props) {
               className="object-contain"
               sizes="(min-width: 1024px) 540px, 100vw"
               priority
-              unoptimized   // ✅ evita whitelist de domínios no next.config
+              unoptimized
             />
           </div>
 
@@ -404,7 +400,6 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Thumbs — destaque interno (NÃO usa ring) */}
         {images.length > 1 && (
           <div className="mt-4">
             <div
@@ -427,15 +422,12 @@ export default function ProductConfigurator({ product }: Props) {
                         isActive ? "border-transparent" : "hover:opacity-90"
                       )}
                     >
-                      {/* Moldura azul 100% interna ao botão */}
                       {isActive && (
                         <span
                           aria-hidden
                           className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
                         />
                       )}
-
-                      {/* Imagem recortada dentro, com pequeno afastamento das bordas */}
                       <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
                         <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" unoptimized />
                       </span>
@@ -464,22 +456,18 @@ export default function ProductConfigurator({ product }: Props) {
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
-          {sizes.length > 0 ? (
+          {availableSizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {sizes.map((s) => {
-                const unavailable = (s.stock ?? 0) <= 0;
-                const isActive = (selected.size as string) === s.size && !unavailable;
+              {availableSizes.map((s) => {
+                const isActive = (selected.size as string) === s.size;
                 return (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => pickSize(s.size)}
-                    disabled={unavailable}
-                    aria-disabled={unavailable}
-                    title={unavailable ? "Unavailable" : `Select size ${s.size}`}
+                    title={`Select size ${s.size}`}
                     className={cx(
-                      "rounded-xl px-3 py-2 border text-sm transition",
-                      unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
+                      "rounded-xl px-3 py-2 border text-sm transition hover:bg-gray-50",
                       isActive && "bg-blue-600 text-white border-blue-600"
                     )}
                     aria-pressed={isActive}
@@ -500,7 +488,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Customization (FREE) — usa o do DB ou o sintético */}
+        {/* Customization (FREE) */}
         {customizationGroup && (
           <GroupBlock
             group={customizationGroup}
@@ -554,7 +542,7 @@ export default function ProductConfigurator({ product }: Props) {
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
-            onToggleBadge={toggleBadge}   // 🔒 usa lógica de conflito por competição
+            onToggleBadge={toggleBadge}
             forceFree
           />
         )}
