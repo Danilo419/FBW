@@ -394,7 +394,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
-        {/* Script: Upload local -> Blob -> preencher o campo "Paste..." e clicar em "Add" */}
+        {/* Script: Upload local -> Blob -> INSERIR diretamente no ImagesEditor */}
         <Script id="blob-upload-auto-add" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -403,23 +403,29 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   const input = document.getElementById('blob-images-input');
   const status = document.getElementById('blob-images-status');
 
+  // Tem de corresponder ao prop "name" do <ImagesEditor />
+  const EDITOR_NAME = "imagesText";
+
   const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/avif","image/gif"]);
   const MAX_BYTES = 8 * 1024 * 1024;
   const MAX_AT_ONCE = 3;
 
   function pushIntoEditor(urls) {
+    // 1) Novo método: API do ImagesEditor
+    const api = (window.__imagesEditor && window.__imagesEditor[EDITOR_NAME]) || null;
+    if (api && typeof api.append === "function") {
+      try { api.append(urls); return; } catch (_) {}
+    }
+    // 2) Fallback para UI antiga (se existir)
     const root = document.querySelector('.images-editor');
     if (!root) return;
     const paste = root.querySelector('input[placeholder*="Paste"]');
     const addBtn = Array.from(root.querySelectorAll('button'))
       .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
-
     if (!paste || !addBtn) return;
-
     urls.forEach(u => {
       paste.value = u;
       paste.dispatchEvent(new Event('input', { bubbles: true }));
-      // mesmo escondido por CSS, o click funciona:
       addBtn.click();
     });
   }
@@ -466,8 +472,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
       });
     }
 
-    // Insere via UI interna (mesmo escondida)
-    pushIntoEditor(urls);
+    if (urls.length) pushIntoEditor(urls);
 
     input.value = '';
     status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
