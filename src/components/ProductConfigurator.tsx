@@ -17,7 +17,7 @@ type OptionGroupUI = {
   required: boolean;
   values: OptionValueUI[];
 };
-type SizeUI = { id: string; size: string; stock: number };
+type SizeUI = { id: string; size: string; stock?: number | null; available?: boolean | null };
 type ProductUI = {
   id: string;
   slug: string;
@@ -27,7 +27,7 @@ type ProductUI = {
   basePrice: number;
   images: string[];
   optionGroups: OptionGroupUI[];
-  sizes?: SizeUI[];
+  sizes?: SizeUI[]; // <- deve vir com {size, available?, stock?}
 };
 
 type SelectedState = Record<string, string | string[] | null>;
@@ -38,7 +38,7 @@ const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-/* ========= Helper para extrair a “competição base” do badge ========= */
+/* ========= Helper p/ badges ========= */
 function competitionKey(value: string, label?: string) {
   const take = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
   if (value.includes("_")) return take(value.split("_")[0]);
@@ -65,7 +65,7 @@ export default function ProductConfigurator({ product }: Props) {
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbs (max 6 visíveis) ---------- */
+  /* ---------- Thumbs ---------- */
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
@@ -84,45 +84,46 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Sizes ---------- */
   const kid = isKidProduct(product.name);
+
+  // Se não vierem tamanhos da BD, inferimos a grelha (todos disponíveis).
   const inferred: SizeUI[] = useMemo(
-    () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999 })),
+    () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999, available: true })),
     [kid]
   );
 
-  // Normaliza e calcula tamanhos disponíveis
+  // Mantém TODOS os tamanhos existentes; não filtra indisponíveis.
   const sizes: SizeUI[] = useMemo(
     () =>
       (product.sizes && product.sizes.length > 0 ? product.sizes : inferred).map((s) => ({
-        ...s,
+        id: s.id ?? s.size,
         size: String(s.size).toUpperCase(),
+        stock: typeof s.stock === "number" ? s.stock : null,
+        available: s.available ?? true,
       })),
     [product.sizes, inferred]
   );
 
-  // 🚫 NOVO: esconder completamente tamanhos indisponíveis (stock <= 0)
-  const availableSizes: SizeUI[] = useMemo(
-    () => sizes.filter((s) => (s.stock ?? 0) > 0),
-    [sizes]
-  );
+  // Regra de indisponibilidade no storefront
+  const isUnavailable = (s: SizeUI) => (s.available === false) || (!!s.stock && s.stock <= 0);
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const pickSize = (size: string) => {
-    const found = availableSizes.find((s) => s.size === size);
-    if (!found) return; // ignora se não existir/estiver indisponível
+    const found = sizes.find((s) => s.size === size);
+    if (!found || isUnavailable(found)) return;
     setSelectedSize(size);
-    setSelected((s) => ({ ...s, size }));
+    setSelected((st) => ({ ...st, size }));
   };
 
-  // Se o size selecionado deixar de estar disponível, limpa
+  // Se o tamanho selecionado ficar indisponível, limpa
   useEffect(() => {
     if (!selectedSize) return;
-    const stillAvailable = availableSizes.some((s) => s.size === selectedSize);
-    if (!stillAvailable) {
+    const found = sizes.find((s) => s.size === selectedSize);
+    if (!found || isUnavailable(found)) {
       setSelectedSize(null);
-      setSelected((s) => ({ ...s, size: null }));
+      setSelected((st) => ({ ...st, size: null }));
     }
-  }, [availableSizes, selectedSize]);
+  }, [sizes, selectedSize]);
 
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
@@ -140,12 +141,7 @@ export default function ProductConfigurator({ product }: Props) {
         { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
         { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
         { id: "c-badge", value: "badge", label: "Competition Badge", priceDelta: 0 },
-        {
-          id: "c-both",
-          value: "name-number-badge",
-          label: "Name & Number + Competition Badge",
-          priceDelta: 0,
-        },
+        { id: "c-both", value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
       ],
     } as OptionGroupUI);
 
@@ -180,7 +176,6 @@ export default function ProductConfigurator({ product }: Props) {
     });
   }
 
-  // 🔒 Lógica especial para BADGES
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[group.key];
@@ -204,7 +199,6 @@ export default function ProductConfigurator({ product }: Props) {
       } else {
         arr = arr.filter((v) => v !== value);
       }
-
       return { ...prev, [group.key]: arr.length ? arr : null };
     });
   }
@@ -317,8 +311,8 @@ export default function ProductConfigurator({ product }: Props) {
       alert("Please choose a size first.");
       return;
     }
-    const sel = availableSizes.find((s) => s.size === selectedSize);
-    if (!sel) {
+    const sel = sizes.find((s) => s.size === selectedSize);
+    if (!sel || isUnavailable(sel)) {
       alert("This size is unavailable.");
       return;
     }
@@ -456,18 +450,22 @@ export default function ProductConfigurator({ product }: Props) {
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
-          {availableSizes.length > 0 ? (
+          {sizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {availableSizes.map((s) => {
-                const isActive = (selected.size as string) === s.size;
+              {sizes.map((s) => {
+                const unavailable = isUnavailable(s);
+                const isActive = (selected.size as string) === s.size && !unavailable;
                 return (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => pickSize(s.size)}
-                    title={`Select size ${s.size}`}
+                    disabled={unavailable}
+                    aria-disabled={unavailable}
+                    title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                     className={cx(
-                      "rounded-xl px-3 py-2 border text-sm transition hover:bg-gray-50",
+                      "rounded-xl px-3 py-2 border text-sm transition",
+                      unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
                       isActive && "bg-blue-600 text-white border-blue-600"
                     )}
                     aria-pressed={isActive}
@@ -493,7 +491,7 @@ export default function ProductConfigurator({ product }: Props) {
           <GroupBlock
             group={customizationGroup}
             selected={selected}
-            onPickRadio={setRadio}
+            onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))}
             onToggleAddon={toggleAddon}
             forceFree
           />
@@ -540,7 +538,7 @@ export default function ProductConfigurator({ product }: Props) {
           <GroupBlock
             group={badgesGroup}
             selected={selected}
-            onPickRadio={setRadio}
+            onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))}
             onToggleAddon={toggleAddon}
             onToggleBadge={toggleBadge}
             forceFree
@@ -549,7 +547,7 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Other groups */}
         {otherGroups.map((g) => (
-          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
+          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))} onToggleAddon={toggleAddon} />
         ))}
 
         {/* Qty + Total */}
