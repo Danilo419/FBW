@@ -2,12 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   handleUpload,
-  type HandleUploadBody, // <- tipagem do body exigida pela tua versão
+  type HandleUploadBody,
 } from "@vercel/blob/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Tipagem usada no callback de upload completo
+ */
 type UploadCompletedArgs = {
   blob: { url: string };
   tokenPayload?: unknown;
@@ -15,8 +18,7 @@ type UploadCompletedArgs = {
 
 export async function POST(req: NextRequest) {
   try {
-    // A tua versão do handleUpload requer 'body' tipado como HandleUploadBody.
-    // Tentamos ler JSON; se não vier (ex.: outra etapa), usamos {} tipado.
+    // ================== 1. Garante corpo tipado ==================
     let body: HandleUploadBody;
     try {
       body = (await req.json()) as HandleUploadBody;
@@ -24,12 +26,13 @@ export async function POST(req: NextRequest) {
       body = {} as HandleUploadBody;
     }
 
+    // ================== 2. Executa upload ==================
     const result = await handleUpload({
       request: req,
-      body, // <-- agora com o tipo correto
+      body,
       onBeforeGenerateToken: async () => ({
         pathname: "footballworld/products",
-        access: "public",
+        access: "public", // URLs públicas
         maximumSizeInBytes: 8 * 1024 * 1024, // 8 MB
         allowedContentTypes: [
           "image/jpeg",
@@ -38,24 +41,22 @@ export async function POST(req: NextRequest) {
           "image/avif",
           "image/gif",
         ],
-        // allowedOrigins: ["http://localhost:3000","https://teu-dominio.com"], // opcional
+        // allowedOrigins: ["http://localhost:3000", "https://teu-dominio.com"], // opcional
       }),
       onUploadCompleted: async ({ blob }: UploadCompletedArgs) => {
         console.log("✅ Blob uploaded:", blob.url);
       },
     });
 
-    // A tua build expõe o union:
-    // - { type: "blob.generate-client-token", clientToken: string }
-    // - { type: "blob.upload-completed", response: "ok" }  // nota: 'ok' string, sem .json()
+    // ================== 3. Retorna resposta apropriada ==================
     if (result.type === "blob.generate-client-token") {
       return NextResponse.json({ clientToken: result.clientToken });
     }
     if (result.type === "blob.upload-completed") {
-      // O URL público é devolvido ao cliente pelo upload() — aqui só confirmamos.
       return NextResponse.json({ ok: true });
     }
 
+    // Caso não corresponda a nenhum tipo conhecido
     return NextResponse.json({ error: "Unexpected state" }, { status: 500 });
   } catch (err: any) {
     console.error("❌ blob.upload.error:", err);

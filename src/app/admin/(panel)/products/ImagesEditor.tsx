@@ -25,12 +25,6 @@ function uniqueMerge(base: string[], add: string[]) {
   });
   return Array.from(set);
 }
-function linesToArray(v: string) {
-  return (v ?? "")
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
 function arraysEqual(a: string[], b: string[]) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
@@ -42,7 +36,6 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
   const [images, setImages] = useState<string[]>(
     () => (initialImages ?? []).filter(Boolean)
   );
-  const [newUrl, setNewUrl] = useState("");
   const hiddenRef = useRef<HTMLInputElement | null>(null);
   const dragIndex = useRef<number | null>(null);
 
@@ -52,75 +45,69 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
   useEffect(() => {
     const el = hiddenRef.current;
     if (!el) return;
-    // Evita loops: só atualiza se o valor mudou de facto
     if (el.value !== joined) {
       el.value = joined;
-      // dispara eventos caso alguém esteja a observar
       el.dispatchEvent(new Event("input", { bubbles: true }));
       el.dispatchEvent(new Event("change", { bubbles: true }));
     }
   }, [joined]);
 
-  /* ---------- Ouve alterações externas ao hidden (scripts) ---------- */
+  /* ---------- Ouve alterações externas ao hidden (se houver) ---------- */
   useEffect(() => {
     const el = hiddenRef.current;
     if (!el) return;
 
     const syncFromHidden = () => {
-      const arr = linesToArray(el.value);
+      const arr = (el.value ?? "")
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       if (!arraysEqual(arr, images)) setImages(arr);
     };
 
     el.addEventListener("input", syncFromHidden);
     el.addEventListener("change", syncFromHidden);
-
     return () => {
       el.removeEventListener("input", syncFromHidden);
       el.removeEventListener("change", syncFromHidden);
     };
   }, [images]);
 
-  /* ---------- API global opcional para integrações ---------- */
+  /* ---------- API global para integração com o script de upload ---------- */
   useEffect(() => {
     const w = window as any;
     w.__imagesEditor = w.__imagesEditor || {};
     const api = {
       append: (urls: string[]) =>
         setImages((prev) => uniqueMerge(prev, urls || [])),
-      replace: (urls: string[]) => setImages((urls || []).map(norm).filter(Boolean)),
+      replace: (urls: string[]) =>
+        setImages((urls || []).map(norm).filter(Boolean)),
       get: () => images.slice(),
+      removeAt: (i: number) =>
+        setImages((prev) => prev.filter((_, idx) => idx !== i)),
+      move: (i: number, delta: number) =>
+        setImages((prev) => {
+          const arr = [...prev];
+          const j = i + delta;
+          if (j < 0 || j >= arr.length) return arr;
+          const [moved] = arr.splice(i, 1);
+          arr.splice(j, 0, moved);
+          return arr;
+        }),
     };
     w.__imagesEditor[name] = api;
-
-    // Cleanup ao desmontar
     return () => {
-      if (w.__imagesEditor && w.__imagesEditor[name]) {
-        delete w.__imagesEditor[name];
-      }
+      if (w.__imagesEditor && w.__imagesEditor[name]) delete w.__imagesEditor[name];
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, images]);
 
-  /* ---------- Ações locais ---------- */
-  function addUrl() {
-    const url = newUrl.trim();
-    if (!url) return;
-    setImages((prev) => uniqueMerge(prev, [url]));
-    setNewUrl("");
-  }
-
-  function removeAt(i: number) {
-    setImages((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
+  /* ---------- Interações locais ---------- */
   function onDragStart(i: number) {
     dragIndex.current = i;
   }
-
   function onDragOver(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault(); // Necessário para permitir drop
+    e.preventDefault();
   }
-
   function onDrop(i: number) {
     const from = dragIndex.current;
     dragIndex.current = null;
@@ -133,41 +120,17 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
     });
   }
 
-  function move(i: number, delta: number) {
-    setImages((prev) => {
-      const arr = [...prev];
-      const j = i + delta;
-      if (j < 0 || j >= arr.length) return arr;
-      const [moved] = arr.splice(i, 1);
-      arr.splice(j, 0, moved);
-      return arr;
-    });
-  }
-
-  function updateAt(i: number, url: string) {
-    setImages((prev) => prev.map((v, idx) => (idx === i ? url : v)));
-  }
-
   return (
-    <div className="space-y-3">
-      {/* Campo hidden sincronizado para o submit do form */}
-      <input
-        ref={hiddenRef}
-        type="hidden"
-        name={name}
-        value={joined}
-        readOnly
-        data-editor-name={name}
-      />
+    <div className="space-y-3 images-editor">
+      {/* Hidden sincronizado para o submit */}
+      <input ref={hiddenRef} type="hidden" name={name} value={joined} readOnly />
 
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Images</h3>
-        <span className="text-xs text-gray-500">
-          First image = main thumbnail
-        </span>
+        <span className="text-xs text-gray-500">First image = main thumbnail</span>
       </div>
 
-      {/* Grid de previews com drag-and-drop */}
+      {/* Grelha de previews com drag-and-drop (sem inputs de URL) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {images.map((url, idx) => (
           <div
@@ -193,6 +156,7 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
                   No image
                 </div>
               )}
+
               {idx === 0 && (
                 <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
                   Main
@@ -200,70 +164,60 @@ export default function ImagesEditor({ name, initialImages, alt }: Props) {
               )}
             </div>
 
-            {/* Barra de ações (aparece ao passar o rato) */}
+            {/* Barra de ações */}
             <div className="absolute inset-x-0 bottom-0 flex gap-1 p-1 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition">
               <button
                 type="button"
-                onClick={() => move(idx, -1)}
+                onClick={() =>
+                  setImages((prev) => {
+                    const arr = [...prev];
+                    if (idx <= 0) return arr;
+                    const [moved] = arr.splice(idx, 1);
+                    arr.splice(idx - 1, 0, moved);
+                    return arr;
+                  })
+                }
                 className="rounded-md border border-white/30 bg-white/20 px-2 py-1 text-[10px] text-white hover:bg-white/30"
-                aria-label="Move left"
                 title="Move left"
+                aria-label="Move left"
               >
                 ←
               </button>
               <button
                 type="button"
-                onClick={() => move(idx, +1)}
+                onClick={() =>
+                  setImages((prev) => {
+                    const arr = [...prev];
+                    if (idx >= arr.length - 1) return arr;
+                    const [moved] = arr.splice(idx, 1);
+                    arr.splice(idx + 1, 0, moved);
+                    return arr;
+                  })
+                }
                 className="rounded-md border border-white/30 bg-white/20 px-2 py-1 text-[10px] text-white hover:bg-white/30"
-                aria-label="Move right"
                 title="Move right"
+                aria-label="Move right"
               >
                 →
               </button>
               <button
                 type="button"
-                onClick={() => removeAt(idx)}
+                onClick={() =>
+                  setImages((prev) => prev.filter((_, i) => i !== idx))
+                }
                 className="ml-auto rounded-md border border-red-300 bg-red-600/80 px-2 py-1 text-[10px] text-white hover:bg-red-600"
-                aria-label="Remove"
                 title="Remove"
+                aria-label="Remove"
               >
                 Remove
               </button>
-            </div>
-
-            {/* Input inline para editar a URL */}
-            <div className="p-2 border-t bg-white">
-              <input
-                value={url}
-                onChange={(e) => updateAt(idx, e.target.value)}
-                className="w-full rounded-lg border px-2 py-1 text-xs font-mono"
-                placeholder="https://…/image.jpg"
-              />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Adicionar nova URL (pode ser ocultado por CSS na página, se quiseres) */}
-      <div className="flex gap-2">
-        <input
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
-          className="flex-1 rounded-xl border px-3 py-2 text-sm font-mono"
-          placeholder="Paste an image URL and click Add"
-        />
-        <button
-          type="button"
-          onClick={addUrl}
-          className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
-        >
-          Add
-        </button>
-      </div>
-
       <p className="text-xs text-gray-500">
-        Reorder by dragging, by the arrow buttons, or by editing URLs directly.
-        The first image is used as the main thumbnail in listings.
+        Reorder by dragging or with the arrow buttons. The first image is the main thumbnail in listings.
       </p>
     </div>
   );
