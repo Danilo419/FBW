@@ -545,7 +545,7 @@ export default function ProductConfigurator({ product }: Props) {
           />
         )}
 
-        {/* Other groups */}
+        {/* Other groupss */}
         {otherGroups.map((g) => (
           <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))} onToggleAddon={toggleAddon} />
         ))}
