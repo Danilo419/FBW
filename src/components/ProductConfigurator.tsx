@@ -27,7 +27,7 @@ type ProductUI = {
   basePrice: number;
   images: string[];
   optionGroups: OptionGroupUI[];
-  sizes?: SizeUI[]; // <- deve vir com {size, available?, stock?}
+  sizes?: SizeUI[]; // <- só os escolhidos na criação; cada um com available true/false
 };
 
 type SelectedState = Record<string, string | string[] | null>;
@@ -38,7 +38,7 @@ const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-/* ========= Helper p/ badges ========= */
+/* ========= Helper para badges ========= */
 function competitionKey(value: string, label?: string) {
   const take = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
   if (value.includes("_")) return take(value.split("_")[0]);
@@ -85,26 +85,29 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Sizes ---------- */
   const kid = isKidProduct(product.name);
 
-  // Se não vierem tamanhos da BD, inferimos a grelha (todos disponíveis).
-  const inferred: SizeUI[] = useMemo(
-    () => (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({ id: s, size: s, stock: 999, available: true })),
-    [kid]
-  );
-
-  // Mantém TODOS os tamanhos existentes; não filtra indisponíveis.
-  const sizes: SizeUI[] = useMemo(
-    () =>
-      (product.sizes && product.sizes.length > 0 ? product.sizes : inferred).map((s) => ({
+  // Se A BD trouxer tamanhos -> usa-os tal como estão (não inferir).
+  // Só inferimos quando o produto ainda não tem linhas de tamanho guardadas.
+  const sizes: SizeUI[] = useMemo(() => {
+    if (product.sizes && product.sizes.length > 0) {
+      return product.sizes.map((s) => ({
         id: s.id ?? s.size,
         size: String(s.size).toUpperCase(),
         stock: typeof s.stock === "number" ? s.stock : null,
         available: s.available ?? true,
-      })),
-    [product.sizes, inferred]
-  );
+      }));
+    }
+    const fallback = (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
+      id: s,
+      size: s,
+      stock: 999,
+      available: true,
+    }));
+    return fallback;
+  }, [product.sizes, kid]);
 
-  // Regra de indisponibilidade no storefront
-  const isUnavailable = (s: SizeUI) => (s.available === false) || (!!s.stock && s.stock <= 0);
+  // Regra: tamanhos existentes mas indisponíveis devem aparecer riscado/desativado
+  const isUnavailable = (s: SizeUI) =>
+    s.available === false || (typeof s.stock === "number" && s.stock <= 0);
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
@@ -115,7 +118,7 @@ export default function ProductConfigurator({ product }: Props) {
     setSelected((st) => ({ ...st, size }));
   };
 
-  // Se o tamanho selecionado ficar indisponível, limpa
+  // Se o size selecionado for tornado indisponível (via admin), limpa a seleção
   useEffect(() => {
     if (!selectedSize) return;
     const found = sizes.find((s) => s.size === selectedSize);
@@ -491,7 +494,7 @@ export default function ProductConfigurator({ product }: Props) {
           <GroupBlock
             group={customizationGroup}
             selected={selected}
-            onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))}
+            onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
             forceFree
           />
@@ -538,16 +541,16 @@ export default function ProductConfigurator({ product }: Props) {
           <GroupBlock
             group={badgesGroup}
             selected={selected}
-            onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))}
+            onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
             onToggleBadge={toggleBadge}
             forceFree
           />
         )}
 
-        {/* Other groupss */}
+        {/* Other groups */}
         {otherGroups.map((g) => (
-          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={(k, v) => setSelected((s) => ({ ...s, [k]: v || null }))} onToggleAddon={toggleAddon} />
+          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
         ))}
 
         {/* Qty + Total */}
