@@ -1,6 +1,7 @@
 // src/app/api/admin/create-product/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { OptionType } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,9 +87,7 @@ export async function POST(req: Request) {
     }
 
     const season = (String(form.get("season") || "").trim() || null) as string | null;
-    const description = (String(form.get("description") || "").trim() || null) as
-      | string
-      | null;
+    const description = (String(form.get("description") || "").trim() || null) as string | null;
 
     const badges = getAllStrings(form.getAll("badges"));          // ex.: ["ucl-regular", ...]
     const imageUrlsRaw = getAllStrings(form.getAll("imageUrls")); // URLs (Vercel Blob)
@@ -102,14 +101,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Sizes
+    // Sizes: apenas os selecionados no formulário
     const sizeGroup = (String(form.get("sizeGroup") || "adult") as "adult" | "kid");
-    const sizes = getAllStrings(form.getAll("sizes"));
+    const sizes = getAllStrings(form.getAll("sizes"))
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
 
     // Slug único
-    const base = toSlug(
-      `${team ? team + " " : ""}${name}${season ? " " + season : ""}`
-    );
+    const base = toSlug(`${team ? team + " " : ""}${name}${season ? " " + season : ""}`);
     let slug = base || toSlug(name) || `product-${Date.now()}`;
     let suffix = 1;
     while (await prisma.product.findUnique({ where: { slug } })) {
@@ -125,26 +124,28 @@ export async function POST(req: Request) {
         description,
         slug,
         basePrice,     // Int (cêntimos)
-        badges,        // String[] (Postgres text[])
+        badges,        // String[] (se a tua tabela Product tiver esta coluna)
         imageUrls,     // String[] (Postgres text[])
       },
       select: { id: true, slug: true },
     });
 
-    // 2) Tentar criar stocks simples (ignora se tabela não existir)
+    // 2) Criar APENAS os tamanhos escolhidos (sem preencher o resto)
+    // Usa o teu modelo real (no teu projeto é "SizeStock")
     try {
       if (sizes.length > 0) {
         await prisma.sizeStock.createMany({
           data: sizes.map((s) => ({
             productId: created.id,
-            size: s,
-            available: true,
+            size: s,          // já em maiúsculas
+            available: true,  // começa disponível; depois editas no admin
+            // stock: null      // se tiveres este campo e quiseres iniciar como null
           })),
           skipDuplicates: true,
         });
       }
     } catch {
-      // Silencioso se SizeStock não existir no schema
+      // Se o modelo SizeStock não existir no schema, ignorar silenciosamente
     }
 
     // 3) Bootstrapping de Option Groups para o configurador
@@ -154,18 +155,14 @@ export async function POST(req: Request) {
         productId: created.id,
         key: "customization",
         label: "Customization",
-        type: "RADIO",       // OptionType enum
+        type: OptionType.RADIO,
         required: true,
         values: {
           create: [
-            { value: "none", label: "No customization", priceDelta: 0 },
-            { value: "name-number", label: "Name & Number", priceDelta: 0 },
-            { value: "badge", label: "Competition Badge", priceDelta: 0 },
-            {
-              value: "name-number-badge",
-              label: "Name & Number + Competition Badge",
-              priceDelta: 0,
-            },
+            { value: "none",               label: "No customization",                         priceDelta: 0 },
+            { value: "name-number",        label: "Name & Number",                             priceDelta: 0 },
+            { value: "badge",              label: "Competition Badge",                         priceDelta: 0 },
+            { value: "name-number-badge",  label: "Name & Number + Competition Badge",         priceDelta: 0 },
           ],
         },
       },
@@ -178,7 +175,7 @@ export async function POST(req: Request) {
           productId: created.id,
           key: "badges",
           label: "Competition Badge",
-          type: "ADDON",
+          type: OptionType.ADDON,
           required: false,
           values: {
             create: badges.map((v) => ({

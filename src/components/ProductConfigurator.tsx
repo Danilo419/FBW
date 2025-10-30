@@ -27,7 +27,7 @@ type ProductUI = {
   basePrice: number;
   images: string[];
   optionGroups: OptionGroupUI[];
-  sizes?: SizeUI[]; // <- só os escolhidos na criação; cada um com available true/false
+  sizes?: SizeUI[]; // <- apenas os escolhidos na criação; cada um com available true/false
 };
 
 type SelectedState = Record<string, string | string[] | null>;
@@ -85,7 +85,7 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Sizes ---------- */
   const kid = isKidProduct(product.name);
 
-  // Se A BD trouxer tamanhos -> usa-os tal como estão (não inferir).
+  // Se a BD trouxer tamanhos -> usa-os tal como estão (não inferir).
   // Só inferimos quando o produto ainda não tem linhas de tamanho guardadas.
   const sizes: SizeUI[] = useMemo(() => {
     if (product.sizes && product.sizes.length > 0) {
