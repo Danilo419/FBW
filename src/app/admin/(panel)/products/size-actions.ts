@@ -35,7 +35,7 @@ export async function toggleSizeAvailability(sizeId: string) {
 
 /**
  * Compat: algumas UIs chamam setSizeUnavailable({ sizeId, unavailable }).
- * Mantemos esta assinatura para evitar refactors.
+ * Mantemos esta assinatura para conseguirmos evitar refactors.
  */
 export async function setSizeUnavailable(args: { sizeId: string; unavailable: boolean }) {
   const { sizeId, unavailable } = args;
