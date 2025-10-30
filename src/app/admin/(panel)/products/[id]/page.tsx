@@ -146,8 +146,7 @@ export default async function ProductEditPage({
     .filter((s) => isAllowedAdultSize(s.size))
     .filter((s) => (allowedFromGroup ? allowedFromGroup.has(s.size) : true));
 
-  // ✅ Corrigido: generics do Map (antes havia um '>>' extra que partia o TS)
-  const dedupMap = new Map<string, typeof normalizedAdults[number]>();
+  const dedupMap = new Map<string, (typeof normalizedAdults)[number]>();
   for (const s of normalizedAdults) {
     const key = s.size.toUpperCase();
     const prev = dedupMap.get(key);
@@ -172,11 +171,10 @@ export default async function ProductEditPage({
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
-        {/* Esconder qualquer UI de URL e o botão “Add” */}
+        {/* Esconder UI de URL e botão "Add" (continuam no DOM para uso programático) */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
-/* Inputs de URL (por thumb e o campo de colar URL) */
 section .images-editor input[type="text"] { display:none !important; }
 section .images-editor [placeholder*="Paste an image URL"] { display:none !important; }
 `,
@@ -213,7 +211,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
             </div>
           </div>
 
-          {/* ====== Images (upload local + auto-adicionar) ====== */}
+          {/* ====== Images (upload local + auto-add) ====== */}
           <div className="space-y-2 images-editor">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Images</label>
@@ -234,7 +232,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
-          {/* ====== Badges ====== */}
+          {/* ====== Badges (com pesquisa) ====== */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
@@ -270,7 +268,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           </div>
         </form>
 
-        {/* Script: esconder o botão “Add” do editor (caso exista) */}
+        {/* Script: esconder “Add” visivelmente (mas continua clicável via JS) */}
         <Script id="hide-add-button" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -289,21 +287,19 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
-        {/* Script: badges (inalterado) */}
+        {/* Script: badges (igual) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const BADGES = ${JSON.stringify(ALL_BADGES)};
-  const INITIAL = new Set(${JSON.stringify(selectedInitial)});
-  const form = document.getElementById('edit-product-form');
+  const BADGES = ${BADGES_JSON};
+  const INITIAL = new Set(${SELECTED_JSON});
   const q = document.getElementById('badge-query');
   const results = document.getElementById('badge-results');
   const hint = document.getElementById('badge-hint');
   const selWrap = document.getElementById('badge-selected-wrap');
   const selectedDiv = document.getElementById('badge-selected');
   const hiddenInputs = document.getElementById('badge-hidden-inputs');
-
   if (!q || !results || !hint || !selWrap || !selectedDiv || !hiddenInputs) return;
 
   const selected = new Set(INITIAL);
@@ -398,8 +394,8 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
-        {/* Script: Upload local -> Vercel Blob -> inserir automaticamente nas miniaturas */}
-        <Script id="blob-upload-only-local" strategy="afterInteractive"
+        {/* Script: Upload local -> Blob -> preencher o campo "Paste..." e clicar em "Add" */}
+        <Script id="blob-upload-auto-add" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
@@ -411,17 +407,21 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   const MAX_BYTES = 8 * 1024 * 1024;
   const MAX_AT_ONCE = 3;
 
-  // Atualiza o campo oculto que o ImagesEditor usa para renderizar as thumbs
-  function appendToHidden(urls) {
-    const field = document.querySelector('[name="imagesText"]');
-    if (!field) return false;
-    const current = (field.value || '').trim();
-    const list = current ? current.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean) : [];
-    urls.forEach(u => { if (u && !list.includes(u)) list.push(u); });
-    field.value = list.join('\\n');
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-    return true;
+  function pushIntoEditor(urls) {
+    const root = document.querySelector('.images-editor');
+    if (!root) return;
+    const paste = root.querySelector('input[placeholder*="Paste"]');
+    const addBtn = Array.from(root.querySelectorAll('button'))
+      .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
+
+    if (!paste || !addBtn) return;
+
+    urls.forEach(u => {
+      paste.value = u;
+      paste.dispatchEvent(new Event('input', { bubbles: true }));
+      // mesmo escondido por CSS, o click funciona:
+      addBtn.click();
+    });
   }
 
   async function uploadOne(file) {
@@ -466,8 +466,8 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
       });
     }
 
-    // Auto: adiciona imediatamente ao campo usado pelo ImagesEditor (sem botão “Add”)
-    appendToHidden(urls);
+    // Insere via UI interna (mesmo escondida)
+    pushIntoEditor(urls);
 
     input.value = '';
     status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
