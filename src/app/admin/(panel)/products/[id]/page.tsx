@@ -482,7 +482,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
         />
       </section>
 
-      {/* ==== Sizes & Availability ==== */}
+      {/* ==== Sizes and Availability ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>
