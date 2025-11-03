@@ -86,8 +86,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid price." }, { status: 400 });
     }
 
+    // ✅ aceita "on", "true", "1", "yes" ou apenas a presença do campo
+    const dcRaw = String(form.get("disableCustomization") ?? "").toLowerCase();
     const disableCustomization =
-      String(form.get("disableCustomization") || "").toLowerCase() === "true";
+      dcRaw === "true" ||
+      dcRaw === "on" ||
+      dcRaw === "1" ||
+      dcRaw === "yes" ||
+      (dcRaw === "" && form.has("disableCustomization"));
 
     const season = (String(form.get("season") || "").trim() || null) as string | null;
     const description = (String(form.get("description") || "").trim() || null) as string | null;
@@ -165,15 +171,15 @@ export async function POST(req: Request) {
         },
       });
     } else {
-      // Se não estiver desativado, decidimos os valores com base na existência de badges
+      // Se não estiver desativado, decide os valores com base na existência de badges
       const hasBadges = badges.length > 0;
       const valuesToCreate = [
-        { value: "none",              label: "No customization",                       priceDelta: 0 },
-        { value: "name-number",       label: "Name & Number",                          priceDelta: 0 },
+        { value: "none",              label: "No customization",                  priceDelta: 0 },
+        { value: "name-number",       label: "Name & Number",                     priceDelta: 0 },
         ...(hasBadges
           ? [
-              { value: "badge",             label: "Competition Badge",                      priceDelta: 0 },
-              { value: "name-number-badge", label: "Name & Number + Competition Badge",      priceDelta: 0 },
+              { value: "badge",             label: "Competition Badge",                 priceDelta: 0 },
+              { value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
             ]
           : []),
       ];
