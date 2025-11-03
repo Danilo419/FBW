@@ -142,7 +142,7 @@ export default async function ProductPage({
   });
   if (!core) notFound();
 
-  // 2) Relations em queries separadas (alinha 100% com o teu schema)
+  // 2) Relations em queries separadas
   const [sizesDb, groupsDb, valuesDb] = await Promise.all([
     prisma.sizeStock.findMany({
       where: { productId: core.id },
@@ -164,7 +164,25 @@ export default async function ProductPage({
   // 3) Converter para UI
   const sizes = toUISizes(sizesDb);
   const valuesByGroup = mapValuesByGroup(valuesDb);
-  const optionGroups = toUIGroups(groupsDb, valuesByGroup);
+  let optionGroups = toUIGroups(groupsDb, valuesByGroup);
+
+  // ===== NOVO: se não existir grupo 'badges', remover opções com "badge" do grupo 'customization'
+  const hasBadges = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
+  if (!hasBadges) {
+    optionGroups = optionGroups.map((g) => {
+      if (g.key !== "customization") return g;
+      const filtered = g.values.filter(
+        (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
+      );
+      return {
+        ...g,
+        values:
+          filtered.length > 0
+            ? filtered
+            : [{ id: "c-none", value: "none", label: "No customization", priceDelta: 0 }],
+      };
+    });
+  }
 
   const uiProduct: ProductUI = {
     id: String(core.id),
@@ -175,7 +193,7 @@ export default async function ProductPage({
     basePrice: Number(core.basePrice ?? 0),
     images: ensureArray(core.imageUrls),
     sizes,           // ✅ só os existentes; indisponíveis serão riscados no UI
-    optionGroups,
+    optionGroups,    // ✅ já sanitizado para esconder badges quando não existem
   };
 
   return (

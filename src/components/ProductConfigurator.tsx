@@ -132,7 +132,8 @@ export default function ProductConfigurator({ product }: Props) {
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
 
-  const customizationGroup: OptionGroupUI | undefined =
+  // Grupo base (pode vir da BD ou sintetizado)
+  const baseCustomizationGroup: OptionGroupUI | undefined =
     customizationGroupFromDb ??
     ({
       id: "synthetic-customization",
@@ -148,11 +149,41 @@ export default function ProductConfigurator({ product }: Props) {
       ],
     } as OptionGroupUI);
 
+  // >>> NOVO: se não houver badgesGroup, removemos todas as opções com "badge"
+  const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
+    if (!baseCustomizationGroup) return undefined;
+    if (badgesGroup) return baseCustomizationGroup;
+
+    const filteredValues = baseCustomizationGroup.values.filter(
+      (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
+    );
+
+    // Se por algum motivo ficar vazio (improvável), deixamos pelo menos "none"
+    const safeValues =
+      filteredValues.length > 0
+        ? filteredValues
+        : [{ id: "c-none", value: "none", label: "No customization", priceDelta: 0 }];
+
+    return {
+      ...baseCustomizationGroup,
+      values: safeValues,
+    };
+  }, [baseCustomizationGroup, badgesGroup]);
+
+  // Outros grupos (shorts, socks, etc. — fora size/customization/badges)
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
   );
 
   const customization = selected["customization"] ?? "";
+
+  // >>> NOVO: se não houver badges e a seleção tiver "badge", limpar para "none"
+  useEffect(() => {
+    if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
+      setSelected((s) => ({ ...s, customization: "none" }));
+    }
+  }, [badgesGroup, customization]);
+
   const showNameNumber =
     typeof customization === "string" && customization.toLowerCase().includes("name-number");
   const showBadgePicker =
@@ -193,6 +224,7 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
+        // Garante exclusividade por competição (ex.: só 1 UCL)
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -489,10 +521,10 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Customization (FREE) */}
-        {customizationGroup && (
+        {/* Customization (FREE) — só mostra se existir grupo efetivo */}
+        {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
           <GroupBlock
-            group={customizationGroup}
+            group={effectiveCustomizationGroup}
             selected={selected}
             onPickRadio={setRadio}
             onToggleAddon={toggleAddon}
@@ -536,7 +568,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* Badges (FREE) */}
+        {/* Badges (FREE) — só aparece se houver badgesGroup e a escolha tiver "badge" */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
