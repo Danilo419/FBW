@@ -128,44 +128,17 @@ export default function ProductConfigurator({ product }: Props) {
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
 
-  /**
-   * Lógica final para o grupo de Customization:
-   * - Se existir NA BD:
-   *    - Filtra "badge" quando não há badgesGroup
-   *    - Se, após filtro, ficar vazio → NÃO mostrar (undefined)
-   * - Se NÃO existir na BD:
-   *    - Sintetiza opções padrão (com/sem badge consoante badgesGroup)
-   */
+  // ✅ Só mostramos a secção se existir na BD e tiver valores (após filtros).
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
-    if (customizationGroupFromDb) {
-      const original = customizationGroupFromDb;
-      const filtered = badgesGroup
-        ? original.values
-        : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
-      if ((filtered?.length ?? 0) === 0) return undefined; // esconder totalmente
-      return { ...original, values: filtered };
-    }
+    if (!customizationGroupFromDb) return undefined;
 
-    // sintetizado apenas quando não existe grupo na BD
-    const values: OptionValueUI[] = badgesGroup
-      ? [
-          { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
-          { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
-          { id: "c-badge", value: "badge", label: "Competition Badge", priceDelta: 0 },
-          { id: "c-both", value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
-        ]
-      : [
-          { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
-          { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
-        ];
-    return {
-      id: "synthetic-customization",
-      key: "customization",
-      label: "Customization",
-      type: "RADIO",
-      required: true,
-      values,
-    };
+    const original = customizationGroupFromDb;
+    const filtered = badgesGroup
+      ? original.values
+      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+
+    if ((filtered?.length ?? 0) === 0) return undefined;
+    return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
   // Outros grupos (shorts, socks, etc. — fora size/customization/badges)
@@ -175,14 +148,14 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // Se a secção for escondida (grupo undefined), limpa seleção relacionada
+  // Se a secção for escondida, limpa seleção relacionada
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // se não houver badges e por algum motivo a seleção tiver "badge", limpa
+  // se não houver badges e a seleção tiver "badge", limpar
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
       setSelected((s) => ({ ...s, customization: "none" }));
@@ -199,7 +172,8 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) =>
+    setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -251,13 +225,18 @@ export default function ProductConfigurator({ product }: Props) {
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Sanitize ---------- */
-  const safeName = useMemo(() => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14), [custName]);
+  const safeName = useMemo(
+    () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
+    [custName]
+  );
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
+    const anchors = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
+    ).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
@@ -310,7 +289,8 @@ export default function ProductConfigurator({ product }: Props) {
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
-      transition: "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
+      transition:
+        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
       opacity: "0.9",
       transform: "translate3d(0,0,0) scale(1)",
     } as CSSStyleDeclaration);
@@ -590,7 +570,13 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Other groups */}
         {otherGroups.map((g) => (
-          <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
+          <GroupBlock
+            key={g.id}
+            group={g}
+            selected={selected}
+            onPickRadio={setRadio}
+            onToggleAddon={toggleAddon}
+          />
         ))}
 
         {/* Qty + Total */}
@@ -666,7 +652,10 @@ export default function ProductConfigurator({ product }: Props) {
                 <div className="font-semibold">Item added to cart</div>
                 <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
               </div>
-              <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
+              <button
+                className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                onClick={() => setShowToast(false)}
+              >
                 Close
               </button>
             </div>
@@ -788,14 +777,26 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform" fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      fill="none"
+      aria-hidden="true"
+    >
       <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform" fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      fill="none"
+      aria-hidden="true"
+    >
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
