@@ -85,6 +85,9 @@ export default function NewProductPage() {
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
+  // Personalization toggle (NOVO): remover completamente a secção "Customization" no produto
+  const [disableCustomization, setDisableCustomization] = useState(false);
+
   // Badges
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const [badgeQuery, setBadgeQuery] = useState("");
@@ -98,7 +101,6 @@ export default function NewProductPage() {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
     if (group === "adult") {
-      // por omissão, todos os adultos visíveis; kids ficam vazios
       setSelectedAdult((prev) => (prev.length ? prev : [...ADULT_SIZES]));
       setSelectedKid([]);
     } else {
@@ -149,7 +151,6 @@ export default function NewProductPage() {
   }, [badgeQuery, ALL_BADGES]);
 
   /* ===================== Images ===================== */
-
   const uniqueName = (file: File) => {
     const safe = file.name.replace(/\s+/g, "_");
     const id =
@@ -218,6 +219,9 @@ export default function NewProductPage() {
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
 
+    // Personalization toggle (NOVO)
+    formData.append("disableCustomization", disableCustomization ? "true" : "false");
+
     // Badges
     selectedBadges.forEach((b) => formData.append("badges", b));
 
@@ -246,6 +250,7 @@ export default function NewProductPage() {
     setSelectedBadges([]);
     setImageUrls([]);
     setBadgeQuery("");
+    setDisableCustomization(false);
   }
 
   // ====== Componente reutilizável para gerir tamanhos (só mostra selecionados) ======
@@ -498,6 +503,31 @@ export default function NewProductPage() {
             {uploading && <p className="text-xs text-blue-600">Uploading images…</p>}
           </div>
 
+          {/* === NOVO: Personalization (entre Images e Badges) === */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Personalization</label>
+            <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
+              <input
+                id="disableCustomization"
+                type="checkbox"
+                checked={disableCustomization}
+                onChange={(e) => setDisableCustomization(e.target.checked)}
+                className="mt-1"
+              />
+              <div>
+                <label htmlFor="disableCustomization" className="font-medium">
+                  Remove “Customization” section on product page
+                </label>
+                <p className="text-xs text-gray-600 mt-1">
+                  Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
+                  Your API should interpret this as <code>disableCustomization=true</code> and create an{" "}
+                  <code>optionGroup</code> with key <code>customization</code> but <strong>no values</strong>.
+                  With the current ProductConfigurator logic, an empty customization group means the section won’t render.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Badges com pesquisa */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
@@ -578,7 +608,7 @@ export default function NewProductPage() {
               <option value="kid">Kid sizes</option>
             </select>
             <p className="text-xs text-gray-500">
-              Only selected sizes are shown below. Removing um size faz com que ele não exista no produto.
+              Only selected sizes are shown below. Removing a size means it won’t exist in the product.
             </p>
 
             {/* Adult (apenas quando ativo) */}

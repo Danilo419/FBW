@@ -86,6 +86,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid price." }, { status: 400 });
     }
 
+    const disableCustomization =
+      String(form.get("disableCustomization") || "").toLowerCase() === "true";
+
     const season = (String(form.get("season") || "").trim() || null) as string | null;
     const description = (String(form.get("description") || "").trim() || null) as string | null;
 
@@ -131,15 +134,13 @@ export async function POST(req: Request) {
     });
 
     // 2) Criar APENAS os tamanhos escolhidos (sem preencher o resto)
-    // Usa o teu modelo real (no teu projeto é "SizeStock")
     try {
       if (sizes.length > 0) {
         await prisma.sizeStock.createMany({
           data: sizes.map((s) => ({
             productId: created.id,
-            size: s,          // já em maiúsculas
-            available: true,  // começa disponível; depois editas no admin
-            // stock: null      // se tiveres este campo e quiseres iniciar como null
+            size: s,
+            available: true,
           })),
           skipDuplicates: true,
         });
@@ -149,24 +150,45 @@ export async function POST(req: Request) {
     }
 
     // 3) Bootstrapping de Option Groups para o configurador
-    // 3.1 Customization (sempre)
-    await prisma.optionGroup.create({
-      data: {
-        productId: created.id,
-        key: "customization",
-        label: "Customization",
-        type: OptionType.RADIO,
-        required: true,
-        values: {
-          create: [
-            { value: "none",               label: "No customization",                         priceDelta: 0 },
-            { value: "name-number",        label: "Name & Number",                             priceDelta: 0 },
-            { value: "badge",              label: "Competition Badge",                         priceDelta: 0 },
-            { value: "name-number-badge",  label: "Name & Number + Competition Badge",         priceDelta: 0 },
-          ],
+
+    // 3.1 Customization
+    if (disableCustomization) {
+      // Cria o grupo, mas SEM valores → UI não mostra a secção
+      await prisma.optionGroup.create({
+        data: {
+          productId: created.id,
+          key: "customization",
+          label: "Customization",
+          type: OptionType.RADIO,
+          required: true,
+          // sem values
         },
-      },
-    });
+      });
+    } else {
+      // Se não estiver desativado, decidimos os valores com base na existência de badges
+      const hasBadges = badges.length > 0;
+      const valuesToCreate = [
+        { value: "none",              label: "No customization",                       priceDelta: 0 },
+        { value: "name-number",       label: "Name & Number",                          priceDelta: 0 },
+        ...(hasBadges
+          ? [
+              { value: "badge",             label: "Competition Badge",                      priceDelta: 0 },
+              { value: "name-number-badge", label: "Name & Number + Competition Badge",      priceDelta: 0 },
+            ]
+          : []),
+      ];
+
+      await prisma.optionGroup.create({
+        data: {
+          productId: created.id,
+          key: "customization",
+          label: "Customization",
+          type: OptionType.RADIO,
+          required: true,
+          values: { create: valuesToCreate },
+        },
+      });
+    }
 
     // 3.2 Badges (só se houver alguma escolhida no admin)
     if (badges.length > 0) {
@@ -189,7 +211,15 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { ok: true, id: created.id, slug: created.slug, sizeGroup, sizes },
+      {
+        ok: true,
+        id: created.id,
+        slug: created.slug,
+        sizeGroup,
+        sizes,
+        disableCustomization,
+        badgesCount: badges.length,
+      },
       { status: 201 }
     );
   } catch (err: any) {
