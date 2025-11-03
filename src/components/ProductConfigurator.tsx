@@ -85,8 +85,6 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Sizes ---------- */
   const kid = isKidProduct(product.name);
 
-  // Se a BD trouxer tamanhos -> usa-os tal como estão (não inferir).
-  // Só inferimos quando o produto ainda não tem linhas de tamanho guardadas.
   const sizes: SizeUI[] = useMemo(() => {
     if (product.sizes && product.sizes.length > 0) {
       return product.sizes.map((s) => ({
@@ -105,7 +103,6 @@ export default function ProductConfigurator({ product }: Props) {
     return fallback;
   }, [product.sizes, kid]);
 
-  // Regra: tamanhos existentes mas indisponíveis devem aparecer riscado/desativado
   const isUnavailable = (s: SizeUI) =>
     s.available === false || (typeof s.stock === "number" && s.stock <= 0);
 
@@ -118,7 +115,6 @@ export default function ProductConfigurator({ product }: Props) {
     setSelected((st) => ({ ...st, size }));
   };
 
-  // Se o size selecionado for tornado indisponível (via admin), limpa a seleção
   useEffect(() => {
     if (!selectedSize) return;
     const found = sizes.find((s) => s.size === selectedSize);
@@ -132,43 +128,45 @@ export default function ProductConfigurator({ product }: Props) {
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
   const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
 
-  // Grupo base (pode vir da BD ou sintetizado)
-  const baseCustomizationGroup: OptionGroupUI | undefined =
-    customizationGroupFromDb ??
-    ({
+  /**
+   * Lógica final para o grupo de Customization:
+   * - Se existir NA BD:
+   *    - Filtra "badge" quando não há badgesGroup
+   *    - Se, após filtro, ficar vazio → NÃO mostrar (undefined)
+   * - Se NÃO existir na BD:
+   *    - Sintetiza opções padrão (com/sem badge consoante badgesGroup)
+   */
+  const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
+    if (customizationGroupFromDb) {
+      const original = customizationGroupFromDb;
+      const filtered = badgesGroup
+        ? original.values
+        : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+      if ((filtered?.length ?? 0) === 0) return undefined; // esconder totalmente
+      return { ...original, values: filtered };
+    }
+
+    // sintetizado apenas quando não existe grupo na BD
+    const values: OptionValueUI[] = badgesGroup
+      ? [
+          { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
+          { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
+          { id: "c-badge", value: "badge", label: "Competition Badge", priceDelta: 0 },
+          { id: "c-both", value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
+        ]
+      : [
+          { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
+          { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
+        ];
+    return {
       id: "synthetic-customization",
       key: "customization",
       label: "Customization",
       type: "RADIO",
       required: true,
-      values: [
-        { id: "c-none", value: "none", label: "No customization", priceDelta: 0 },
-        { id: "c-nn", value: "name-number", label: "Name & Number", priceDelta: 0 },
-        { id: "c-badge", value: "badge", label: "Competition Badge", priceDelta: 0 },
-        { id: "c-both", value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
-      ],
-    } as OptionGroupUI);
-
-  // >>> NOVO: se não houver badgesGroup, removemos todas as opções com "badge"
-  const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
-    if (!baseCustomizationGroup) return undefined;
-    if (badgesGroup) return baseCustomizationGroup;
-
-    const filteredValues = baseCustomizationGroup.values.filter(
-      (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
-    );
-
-    // Se por algum motivo ficar vazio (improvável), deixamos pelo menos "none"
-    const safeValues =
-      filteredValues.length > 0
-        ? filteredValues
-        : [{ id: "c-none", value: "none", label: "No customization", priceDelta: 0 }];
-
-    return {
-      ...baseCustomizationGroup,
-      values: safeValues,
+      values,
     };
-  }, [baseCustomizationGroup, badgesGroup]);
+  }, [customizationGroupFromDb, badgesGroup]);
 
   // Outros grupos (shorts, socks, etc. — fora size/customization/badges)
   const otherGroups = product.optionGroups.filter(
@@ -177,7 +175,14 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // >>> NOVO: se não houver badges e a seleção tiver "badge", limpar para "none"
+  // Se a secção for escondida (grupo undefined), limpa seleção relacionada
+  useEffect(() => {
+    if (!effectiveCustomizationGroup && customization) {
+      setSelected((s) => ({ ...s, customization: null }));
+    }
+  }, [effectiveCustomizationGroup, customization]);
+
+  // se não houver badges e por algum motivo a seleção tiver "badge", limpa
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
       setSelected((s) => ({ ...s, customization: "none" }));
@@ -185,7 +190,10 @@ export default function ProductConfigurator({ product }: Props) {
   }, [badgesGroup, customization]);
 
   const showNameNumber =
-    typeof customization === "string" && customization.toLowerCase().includes("name-number");
+    !!effectiveCustomizationGroup &&
+    typeof customization === "string" &&
+    customization.toLowerCase().includes("name-number");
+
   const showBadgePicker =
     typeof customization === "string" &&
     customization.toLowerCase().includes("badge") &&
@@ -521,7 +529,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Customization (FREE) — só mostra se existir grupo efetivo */}
+        {/* Customization (FREE) — só mostra se existir grupo efetivo e tiver valores */}
         {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
           <GroupBlock
             group={effectiveCustomizationGroup}
