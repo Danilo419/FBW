@@ -81,11 +81,11 @@ const MAX_BYTES = 8 * 1024 * 1024;
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
-  // ✅ Agora os tamanhos “não selecionados” não aparecem: só mostramos os escolhidos.
+  // ✅ Só mostramos os tamanhos escolhidos.
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
-  // Personalization toggle (NOVO): remover completamente a secção "Customization" no produto
+  // NOVO: remover completamente o bloco "Customization" no produto
   const [disableCustomization, setDisableCustomization] = useState(false);
 
   // Badges
@@ -146,7 +146,10 @@ export default function NewProductPage() {
     const q = badgeQuery.trim().toLowerCase();
     if (!q) return [];
     return ALL_BADGES.filter(
-      (b) => b.label.toLowerCase().includes(q) || b.value.toLowerCase().includes(q) || b.group.toLowerCase().includes(q)
+      (b) =>
+        b.label.toLowerCase().includes(q) ||
+        b.value.toLowerCase().includes(q) ||
+        b.group.toLowerCase().includes(q)
     ).slice(0, 50);
   }, [badgeQuery, ALL_BADGES]);
 
@@ -214,7 +217,7 @@ export default function NewProductPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // Sizes – apenas os selecionados são enviados (os outros “não existem”)
+    // Sizes – apenas os selecionados são enviados
     formData.append("sizeGroup", sizeGroup);
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
@@ -253,7 +256,7 @@ export default function NewProductPage() {
     setDisableCustomization(false);
   }
 
-  // ====== Componente reutilizável para gerir tamanhos (só mostra selecionados) ======
+  // ====== Componente reutilizável para gerir tamanhos ======
   function SizesManager({
     title,
     selected,
@@ -298,7 +301,7 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {/* Chips — só tamanhos selecionados (os não selecionados NÃO aparecem) */}
+        {/* Chips — só tamanhos selecionados */}
         {selected.length === 0 ? (
           <div className="text-xs text-gray-500">No sizes selected.</div>
         ) : (
@@ -323,7 +326,7 @@ export default function NewProductPage() {
           </div>
         )}
 
-        {/* Adicionar um tamanho de volta (lista só mostra os que faltam) */}
+        {/* Adicionar um tamanho de volta */}
         <div className="flex items-center gap-2">
           <select
             value={pick}
@@ -520,9 +523,8 @@ export default function NewProductPage() {
                 </label>
                 <p className="text-xs text-gray-600 mt-1">
                   Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
-                  Your API should interpret this as <code>disableCustomization=true</code> and create an{" "}
-                  <code>optionGroup</code> with key <code>customization</code> but <strong>no values</strong>.
-                  With the current ProductConfigurator logic, an empty customization group means the section won’t render.
+                  This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
+                  <code>customization</code> option group with <strong>no values</strong>, and the product page will not render that block.
                 </p>
               </div>
             </div>
@@ -611,7 +613,7 @@ export default function NewProductPage() {
               Only selected sizes are shown below. Removing a size means it won’t exist in the product.
             </p>
 
-            {/* Adult (apenas quando ativo) */}
+            {/* Adult */}
             {sizeGroup === "adult" && (
               <SizesManager
                 title="Adult"
@@ -624,7 +626,7 @@ export default function NewProductPage() {
               />
             )}
 
-            {/* Kid (apenas quando ativo) */}
+            {/* Kid */}
             {sizeGroup === "kid" && (
               <SizesManager
                 title="Kid"
