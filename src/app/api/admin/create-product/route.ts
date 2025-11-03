@@ -133,13 +133,13 @@ export async function POST(req: Request) {
         description,
         slug,
         basePrice,     // Int (cêntimos)
-        badges,        // String[] (se a tua tabela Product tiver esta coluna)
-        imageUrls,     // String[] (Postgres text[])
+        badges,        // String[]
+        imageUrls,     // String[] (text[])
       },
       select: { id: true, slug: true },
     });
 
-    // 2) Criar APENAS os tamanhos escolhidos (sem preencher o resto)
+    // 2) Criar APENAS os tamanhos escolhidos
     try {
       if (sizes.length > 0) {
         await prisma.sizeStock.createMany({
@@ -155,27 +155,15 @@ export async function POST(req: Request) {
       // Se o modelo SizeStock não existir no schema, ignorar silenciosamente
     }
 
-    // 3) Bootstrapping de Option Groups para o configurador
+    // 3) Option Groups (para o configurador)
 
     // 3.1 Customization
-    if (disableCustomization) {
-      // Cria o grupo, mas SEM valores → UI não mostra a secção
-      await prisma.optionGroup.create({
-        data: {
-          productId: created.id,
-          key: "customization",
-          label: "Customization",
-          type: OptionType.RADIO,
-          required: true,
-          // sem values
-        },
-      });
-    } else {
-      // Se não estiver desativado, decide os valores com base na existência de badges
+    // 👉 Se estiver desativado, NÃO criamos o grupo. Assim a secção não aparece na UI.
+    if (!disableCustomization) {
       const hasBadges = badges.length > 0;
       const valuesToCreate = [
-        { value: "none",              label: "No customization",                  priceDelta: 0 },
-        { value: "name-number",       label: "Name & Number",                     priceDelta: 0 },
+        { value: "none",        label: "No customization",                 priceDelta: 0 },
+        { value: "name-number", label: "Name & Number",                    priceDelta: 0 },
         ...(hasBadges
           ? [
               { value: "badge",             label: "Competition Badge",                 priceDelta: 0 },
