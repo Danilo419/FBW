@@ -27,7 +27,9 @@ type ProductUI = {
   basePrice: number;
   images: string[];
   optionGroups: OptionGroupUI[];
-  sizes?: SizeUI[]; // <- apenas os escolhidos na criação; cada um com available true/false
+  sizes?: SizeUI[];
+  /** ✅ novo: badges guardados no produto (array de valores/keys) */
+  badges?: string[];
 };
 
 type SelectedState = Record<string, string | string[] | null>;
@@ -37,6 +39,56 @@ const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
+
+/* ============ Catálogo (label) para valores de badge conhecidos ============ */
+const BADGE_LABELS: Record<string, string> = {
+  // Ligas
+  "premier-league-regular": "Premier League – League Badge",
+  "premier-league-champions": "Premier League – Champions (Gold)",
+  "la-liga-regular": "La Liga – League Badge",
+  "la-liga-champions": "La Liga – Champion",
+  "serie-a-regular": "Serie A – League Badge",
+  "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
+  "bundesliga-regular": "Bundesliga – League Badge",
+  "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
+  "ligue1-regular": "Ligue 1 – League Badge",
+  "ligue1-champions": "Ligue 1 – Champion",
+  "primeira-liga-regular": "Primeira Liga – League Badge",
+  "primeira-liga-champions": "Primeira Liga – Champion",
+  "eredivisie-regular": "Eredivisie – League Badge",
+  "eredivisie-champions": "Eredivisie – Champion",
+  "scottish-premiership-regular": "Scottish Premiership – League Badge",
+  "scottish-premiership-champions": "Scottish Premiership – Champion",
+  // Outras ligas
+  "mls-regular": "MLS – League Badge",
+  "mls-champions": "MLS – Champions (MLS Cup Holders)",
+  "brasileirao-regular": "Brasileirão – League Badge",
+  "brasileirao-champions": "Brasileirão – Champion",
+  "super-lig-regular": "Süper Lig – League Badge",
+  "super-lig-champions": "Süper Lig – Champion",
+  "spl-saudi-regular": "Saudi Pro League – League Badge",
+  "spl-saudi-champions": "Saudi Pro League – Champion",
+  // UEFA
+  "ucl-regular": "UEFA Champions League – Starball Badge",
+  "ucl-winners": "UEFA Champions League – Winners Badge",
+  "uel-regular": "UEFA Europa League – Badge",
+  "uel-winners": "UEFA Europa League – Winners Badge",
+  "uecl-regular": "UEFA Europa Conference League – Badge",
+  "uecl-winners": "UEFA Europa Conference League – Winners Badge",
+  // Mundial de Clubes
+  "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
+};
+
+/** Humaniza um valor desconhecido para mostrar algo decente ao utilizador */
+function humanizeBadge(value: string) {
+  if (BADGE_LABELS[value]) return BADGE_LABELS[value];
+  // fallback: "ucl-regular" -> "Ucl Regular"
+  return value
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
 /* ========= Helper para badges ========= */
 function competitionKey(value: string, label?: string) {
@@ -126,9 +178,32 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
-  const badgesGroup = product.optionGroups.find((g) => g.key === "badges");
 
-  // ✅ Só mostramos a secção se existir na BD e tiver valores (após filtros).
+  /** ✅ Grupo virtual de badges construído a partir de `product.badges` (se não existir na BD) */
+  const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
+    if (!product.badges || product.badges.length === 0) return undefined;
+    const values: OptionValueUI[] = product.badges.map((v) => ({
+      id: v,
+      value: v,
+      label: humanizeBadge(v),
+      priceDelta: 0, // grátis
+    }));
+    return {
+      id: "badges-virtual",
+      key: "badges",
+      label: "Badges",
+      type: "ADDON",
+      required: false,
+      values,
+    };
+  }, [product.badges]);
+
+  /** Se existir grupo real na BD usa-o; senão usa o virtual derivado do produto */
+  const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
+    return product.optionGroups.find((g) => g.key === "badges") || badgesGroupVirtual;
+  }, [product.optionGroups, badgesGroupVirtual]);
+
+  // ✅ Só mostramos a secção customization se existir na BD e tiver valores (após filtros).
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
@@ -148,7 +223,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // Se a secção for escondida, limpa seleção relacionada
+  // Se a secção customization for escondida, limpa seleção relacionada
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
@@ -522,41 +597,41 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Personalization inputs (FREE) */}
         {showNameNumber && (
-          <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
-            <div className="text-sm text-gray-700">
-              Personalization{" "}
-              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                FREE
-              </span>
+            <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
+              <div className="text-sm text-gray-700">
+                Personalization{" "}
+                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                  FREE
+                </span>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-xs text-gray-600">Name (uppercase)</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. BELLINGHAM"
+                    value={custName}
+                    onChange={(e) => setCustName(e.target.value)}
+                    maxLength={20}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs text-gray-600">Number (0–99)</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 5"
+                    value={custNumber}
+                    onChange={(e) => setCustNumber(e.target.value)}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-xs text-gray-600">Name (uppercase)</span>
-                <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. BELLINGHAM"
-                  value={custName}
-                  onChange={(e) => setCustName(e.target.value)}
-                  maxLength={20}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs text-gray-600">Number (0–99)</span>
-                <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. 5"
-                  value={custNumber}
-                  onChange={(e) => setCustNumber(e.target.value)}
-                  inputMode="numeric"
-                  maxLength={2}
-                />
-              </label>
-            </div>
-            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
-          </div>
         )}
 
-        {/* Badges (FREE) — só aparece se houver badgesGroup e a escolha tiver "badge" */}
+        {/* Badges (FREE) — aparece se a escolha tiver "badge" e houver grupo (real ou virtual) */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
@@ -583,7 +658,7 @@ export default function ProductConfigurator({ product }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
-              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
               onClick={() => setQty((q) => Math.max(1, q - 1))}
               aria-label="Decrease quantity"
               disabled={pending}
@@ -592,7 +667,7 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
             <span className="min-w-[2ch] text-center">{qty}</span>
             <button
-              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
               onClick={() => setQty((q) => q + 1)}
               aria-label="Increase quantity"
               disabled={pending}
