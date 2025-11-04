@@ -242,10 +242,8 @@ export default function ProductConfigurator({ product }: Props) {
     typeof customization === "string" &&
     customization.toLowerCase().includes("name-number");
 
-  const showBadgePicker =
-    typeof customization === "string" &&
-    customization.toLowerCase().includes("badge") &&
-    !!badgesGroup;
+  // ✅ Mostrar badges sempre que houver um grupo (real ou virtual)
+  const showBadgePicker = !!badgesGroup;
 
   const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -631,7 +629,7 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
         )}
 
-        {/* Badges (FREE) — aparece se a escolha tiver "badge" e houver grupo (real ou virtual) */}
+        {/* Badges (FREE) — agora aparece sempre que houver grupo (real ou virtual) */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
