@@ -179,7 +179,7 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
-  /** ✅ Grupo virtual de badges construído a partir de `product.badges` (se não existir na BD) */
+  /** ✅ Grupo virtual de badges construído a partir de `product.badges` */
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
     const values: OptionValueUI[] = product.badges.map((v) => ({
@@ -198,9 +198,24 @@ export default function ProductConfigurator({ product }: Props) {
     };
   }, [product.badges]);
 
-  /** Se existir grupo real na BD usa-o; senão usa o virtual derivado do produto */
+  /**
+   * ✅ Merge do grupo real "badges" (BD) com o virtual (product.badges)
+   * - Mantém a ordem do real e adiciona valores que existam só no virtual.
+   * - Evita duplicados por `value`.
+   */
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
-    return product.optionGroups.find((g) => g.key === "badges") || badgesGroupVirtual;
+    const real = product.optionGroups.find((g) => g.key === "badges");
+    const virtual = badgesGroupVirtual;
+
+    if (!real && !virtual) return undefined;
+    if (real && !virtual) return real;
+    if (!real && virtual) return virtual;
+
+    const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
+    for (const v of virtual!.values) {
+      if (!map.has(v.value)) map.set(v.value, v);
+    }
+    return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
   // ✅ Só mostramos a secção customization se existir na BD e tiver valores (após filtros).
@@ -242,8 +257,10 @@ export default function ProductConfigurator({ product }: Props) {
     typeof customization === "string" &&
     customization.toLowerCase().includes("name-number");
 
-  // ✅ Mostrar badges sempre que houver um grupo (real ou virtual)
-  const showBadgePicker = !!badgesGroup;
+  const showBadgePicker =
+    typeof customization === "string" &&
+    customization.toLowerCase().includes("badge") &&
+    !!badgesGroup;
 
   const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -332,7 +349,7 @@ export default function ProductConfigurator({ product }: Props) {
       const d = Math.hypot(cx - imgCx, cy - imgCy);
       if (d < bestDist) {
         bestDist = d;
-        best = el;
+      best = el;
       }
     }
     return best.getBoundingClientRect();
@@ -595,41 +612,41 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Personalization inputs (FREE) */}
         {showNameNumber && (
-            <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
-              <div className="text-sm text-gray-700">
-                Personalization{" "}
-                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                  FREE
-                </span>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-xs text-gray-600">Name (uppercase)</span>
-                  <input
-                    className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. BELLINGHAM"
-                    value={custName}
-                    onChange={(e) => setCustName(e.target.value)}
-                    maxLength={20}
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-gray-600">Number (0–99)</span>
-                  <input
-                    className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. 5"
-                    value={custNumber}
-                    onChange={(e) => setCustNumber(e.target.value)}
-                    inputMode="numeric"
-                    maxLength={2}
-                  />
-                </label>
-              </div>
-              <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+          <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
+            <div className="text-sm text-gray-700">
+              Personalization{" "}
+              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                FREE
+              </span>
             </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-xs text-gray-600">Name (uppercase)</span>
+                <input
+                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. BELLINGHAM"
+                  value={custName}
+                  onChange={(e) => setCustName(e.target.value)}
+                  maxLength={20}
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-gray-600">Number (0–99)</span>
+                <input
+                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 5"
+                  value={custNumber}
+                  onChange={(e) => setCustNumber(e.target.value)}
+                  inputMode="numeric"
+                  maxLength={2}
+                />
+              </label>
+            </div>
+            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+          </div>
         )}
 
-        {/* Badges (FREE) — agora aparece sempre que houver grupo (real ou virtual) */}
+        {/* Badges (FREE) — aparece se a escolha tiver "badge" e houver grupo (real ou virtual) */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
