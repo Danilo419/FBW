@@ -5,11 +5,17 @@ export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { updateProduct } from "@/app/admin/(panel)/products/actions";
+import { updateProduct, setSelectedBadges } from "@/app/admin/(panel)/products/actions";
 import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilityToggle";
 import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
 import type { OptionType } from "@prisma/client";
 import Script from "next/script";
+
+/** ===== Wrapper server action que retorna void ===== */
+async function saveBadgesAction(formData: FormData): Promise<void> {
+  "use server";
+  await setSelectedBadges(formData);
+}
 
 /* =============== Helpers =============== */
 function centsToInput(cents: number) {
@@ -181,6 +187,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
+        {/* ====== Form principal: dados + imagens ====== */}
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
 
@@ -232,35 +239,6 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
-          {/* ====== Badges (com pesquisa) ====== */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Badges (optional)</label>
-            <p className="text-xs text-gray-500">
-              Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if hidden by the filter.
-            </p>
-
-            <input
-              id="badge-query"
-              type="text"
-              placeholder="Search badges…"
-              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-              autoComplete="off"
-            />
-
-            <div id="badge-hint" className="text-xs text-gray-500">
-              Start typing to see available badges.
-            </div>
-
-            <div id="badge-results" className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden" />
-
-            <div id="badge-selected-wrap" className="space-y-2 hidden">
-              <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
-              <div id="badge-selected" className="flex flex-wrap gap-2" />
-            </div>
-
-            <div id="badge-hidden-inputs" className="hidden" />
-          </div>
-
           <div>
             <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
               Save product
@@ -287,13 +265,53 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
-        {/* Script: badges (igual) */}
+        {/* ====== Form de badges (separado, grava em Product.badges) ====== */}
+        <form action={saveBadgesAction} id="badges-form" className="space-y-3 mt-8">
+          <input type="hidden" name="productId" value={product.id} />
+
+          <label className="text-sm font-medium">Badges (optional)</label>
+          <p className="text-xs text-gray-500">
+            Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if hidden by the filter.
+          </p>
+
+          <input
+            id="badge-query"
+            type="text"
+            placeholder="Search badges…"
+            className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+            autoComplete="off"
+          />
+
+          <div id="badge-hint" className="text-xs text-gray-500">
+            Start typing to see available badges.
+          </div>
+
+          <div id="badge-results" className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden" />
+
+          <div id="badge-selected-wrap" className="space-y-2 hidden">
+            <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
+            <div id="badge-selected" className="flex flex-wrap gap-2" />
+          </div>
+
+          {/* Aqui vão os hidden inputs com name="selectedBadges[]" */}
+          <div id="badge-hidden-inputs" className="hidden" />
+
+          <div className="pt-2">
+            <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+              Save badges
+            </button>
+          </div>
+        </form>
+
+        {/* Script: badges (escreve selectedBadges[] no form de badges) */}
         <Script id="badges-search" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const BADGES = ${BADGES_JSON};
-  const INITIAL = new Set(${SELECTED_JSON});
+  const BADGES = ${JSON.stringify(
+    BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })))
+  )};
+  const INITIAL = new Set(${JSON.stringify((product as any).badges ?? [])});
   const q = document.getElementById('badge-query');
   const results = document.getElementById('badge-results');
   const hint = document.getElementById('badge-hint');
@@ -309,7 +327,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
     selected.forEach((val) => {
       const inp = document.createElement('input');
       inp.type = 'hidden';
-      inp.name = 'badges';
+      inp.name = 'selectedBadges[]';
       inp.value = val;
       hiddenInputs.appendChild(inp);
     });
@@ -394,7 +412,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           }}
         />
 
-        {/* Script: Upload local -> Blob -> INSERIR diretamente no ImagesEditor */}
+        {/* Script: Upload local -> Blob -> inserir no ImagesEditor */}
         <Script id="blob-upload-auto-add" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -411,17 +429,17 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   const MAX_AT_ONCE = 3;
 
   function pushIntoEditor(urls) {
-    // 1) Novo método: API do ImagesEditor
-    const api = (window.__imagesEditor && window.__imagesEditor[EDITOR_NAME]) || null;
+    // 1) API do ImagesEditor (se existir)
+    const api = (window as any).__imagesEditor && (window as any).__imagesEditor[EDITOR_NAME];
     if (api && typeof api.append === "function") {
       try { api.append(urls); return; } catch (_) {}
     }
-    // 2) Fallback para UI antiga (se existir)
-    const root = document.querySelector('.images-editor');
+    // 2) Fallback para UI antiga
+    const root = document.querySelector('.images-editor') as HTMLElement | null;
     if (!root) return;
-    const paste = root.querySelector('input[placeholder*="Paste"]');
+    const paste = root.querySelector('input[placeholder*="Paste"]') as HTMLInputElement | null;
     const addBtn = Array.from(root.querySelectorAll('button'))
-      .find(b => (b.textContent || '').trim().toLowerCase() === 'add');
+      .find(b => ((b.textContent || '').trim().toLowerCase() === 'add')) as HTMLButtonElement | undefined;
     if (!paste || !addBtn) return;
     urls.forEach(u => {
       paste.value = u;
