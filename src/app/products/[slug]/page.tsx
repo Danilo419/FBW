@@ -42,6 +42,8 @@ type ProductUI = {
   images: string[];  // mapeado de imageUrls
   sizes: SizeUI[];   // apenas os que existem na BD
   optionGroups: OptionGroupUI[];
+  /** ✅ novo: array de badges guardados diretamente no produto */
+  badges?: string[];
 };
 
 /* ===================== Helpers ===================== */
@@ -127,7 +129,7 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
 
-  // 1) Core do produto
+  // 1) Core do produto (✅ já inclui badges)
   const core = await prisma.product.findUnique({
     where: { slug },
     select: {
@@ -138,6 +140,7 @@ export default async function ProductPage({
       description: true,
       basePrice: true,
       imageUrls: true,
+      badges: true, // <<<<<<<<<<<<<< inclui badges do produto
     },
   });
   if (!core) notFound();
@@ -166,9 +169,10 @@ export default async function ProductPage({
   const valuesByGroup = mapValuesByGroup(valuesDb);
   let optionGroups = toUIGroups(groupsDb, valuesByGroup);
 
-  // ===== NOVO: se não existir grupo 'badges', remover opções com "badge" do grupo 'customization'
-  const hasBadges = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
-  if (!hasBadges) {
+  // Se não existir grupo 'badges' com valores, limpamos entradas "badge" do grupo 'customization'
+  // (o ProductConfigurator já cria um grupo virtual com base em product.badges)
+  const hasBadgesGroup = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
+  if (!hasBadgesGroup) {
     optionGroups = optionGroups.map((g) => {
       if (g.key !== "customization") return g;
       const filtered = g.values.filter(
@@ -192,8 +196,10 @@ export default async function ProductPage({
     description: core.description,
     basePrice: Number(core.basePrice ?? 0),
     images: ensureArray(core.imageUrls),
-    sizes,           // ✅ só os existentes; indisponíveis serão riscados no UI
-    optionGroups,    // ✅ já sanitizado para esconder badges quando não existem
+    sizes,
+    optionGroups,
+    /** ✅ passa o array guardado na BD para o Configurator gerar o grupo virtual */
+    badges: ensureArray(core.badges),
   };
 
   return (
