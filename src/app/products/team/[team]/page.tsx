@@ -26,7 +26,7 @@ const TEAM_MAP: Record<string, string> = {
 /* ============================ Promo map ============================ */
 /** Mapa de preço base (em cêntimos) -> preço riscado (em cêntimos) */
 const SALE_MAP: Record<number, number> = {
-  2999: 7000, // 29,99€ → ~70€
+  2999: 7000,  // 29,99€ → ~70€
   3499: 10000, // 34,99€ → ~100€
   3999: 12000, // 39,99€ → ~120€  (ATUALIZADO de 110€ para 120€)
   4499: 15000, // 44,99€ → ~150€
@@ -48,10 +48,12 @@ function fallbackTitle(slug: string) {
     .join(" ");
 }
 
-function money(cents: number) {
-  return (cents / 100).toLocaleString(undefined, {
+/** Formata com símbolo do euro DEPOIS do valor, ex.: 1 234,56 € */
+function moneyAfterEUR(cents: number) {
+  return (cents / 100).toLocaleString("pt-PT", {
     style: "currency",
     currency: "EUR",
+    currencyDisplay: "symbol",
   });
 }
 
@@ -196,15 +198,16 @@ function List({
                     <div className="mt-4">
                       {compare && (
                         <div className="mb-1 text-[13px] text-slate-500 line-through">
-                          {money(compare.compareAt)}
+                          {moneyAfterEUR(compare.compareAt)}
                         </div>
                       )}
                       <div className="flex items-end gap-0.5 text-slate-900">
-                        <span className="text-[15px] font-medium translate-y-[1px]">€</span>
                         <span className="text-2xl font-semibold tracking-tight leading-none">
                           {euros}
                         </span>
                         <span className="text-[13px] font-medium translate-y-[1px]">,{dec}</span>
+                        {/* Símbolo do euro DEPOIS do valor */}
+                        <span className="text-[15px] font-medium translate-y-[1px]">&nbsp;€</span>
                       </div>
                     </div>
 

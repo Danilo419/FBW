@@ -37,15 +37,20 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-function money(cents: number) {
-  return (cents / 100).toLocaleString(undefined, { style: "currency", currency: "EUR" });
+/** Formata número com 2 casas e símbolo do euro **depois** (ex.: "150,00 €") */
+function moneyAfter(cents: number) {
+  const n = (cents / 100).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${n} €`;
 }
 
-/** Divide o preço em partes para estilização (€ / euros / cêntimos) */
+/** Divide o preço em partes para estilização (euros / cêntimos, símbolo vai **depois**) */
 function pricePartsFromCents(cents: number) {
   const euros = Math.floor(cents / 100).toString();
   const dec = (cents % 100).toString().padStart(2, "0");
-  return { sym: "€", int: euros, dec };
+  return { int: euros, dec, sym: "€" };
 }
 
 /* ========= Heurística simples para extrair clube do nome quando a API não envia ========= */
@@ -232,20 +237,20 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
                 <div className="mt-4">
                   {sale && (
                     <div className="mb-1 text-[13px] text-slate-500 line-through">
-                      {money(sale.compareAtCents)}
+                      {moneyAfter(sale.compareAtCents)}
                     </div>
                   )}
 
                   {parts && (
                     <div className="flex items-end gap-0.5 text-slate-900">
-                      <span className="text-[15px] font-medium translate-y-[1px]">
-                        {parts.sym}
-                      </span>
                       <span className="text-2xl font-semibold tracking-tight leading-none">
                         {parts.int}
                       </span>
                       <span className="text-[13px] font-medium translate-y-[1px]">
                         ,{parts.dec}
+                      </span>
+                      <span className="text-[15px] font-medium translate-y-[1px]">
+                        {" "}{parts.sym}
                       </span>
                     </div>
                   )}
