@@ -48,7 +48,7 @@ function fallbackTitle(slug: string) {
     .join(" ");
 }
 
-/** Formata com símbolo do euro DEPOIS do valor, ex.: 1 234,56 € */
+/** Formata com símbolo do euro DEPOIS do valor, ex.: "1 234,56 €" */
 function moneyAfterEUR(cents: number) {
   return (cents / 100).toLocaleString("pt-PT", {
     style: "currency",
@@ -201,13 +201,14 @@ function List({
                           {moneyAfterEUR(compare.compareAt)}
                         </div>
                       )}
-                      <div className="flex items-end gap-0.5 text-slate-900">
+
+                      {/* === Mesmo layout/spacing do ResultsClient === */}
+                      <div className="flex items-end text-slate-900">
                         <span className="text-2xl font-semibold tracking-tight leading-none">
                           {euros}
                         </span>
                         <span className="text-[13px] font-medium translate-y-[1px]">,{dec}</span>
-                        {/* Símbolo do euro DEPOIS do valor */}
-                        <span className="text-[15px] font-medium translate-y-[1px]">&nbsp;€</span>
+                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">€</span>
                       </div>
                     </div>
 
