@@ -24,11 +24,12 @@ const TEAM_MAP: Record<string, string> = {
 };
 
 /* ============================ Promo map ============================ */
+/** Mapa de preço base (em cêntimos) -> preço riscado (em cêntimos) */
 const SALE_MAP: Record<number, number> = {
-  3499: 10000,
-  3999: 11000,
-  4499: 15000,
-  4999: 16000,
+  3499: 10000, // 34,99€ → ~100€
+  3999: 12000, // 39,99€ → ~120€  (ATUALIZADO de 110€ para 120€)
+  4499: 15000, // 44,99€ → ~150€
+  4999: 16000, // 49,99€ → ~160€
 };
 
 function getCompareAt(basePriceCents: number) {
@@ -103,7 +104,7 @@ export default async function TeamProductsPage({ params }: PageProps) {
         { team: { contains: slug, mode: "insensitive" } },
       ],
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" }, // ou "desc" conforme preferires
     select: {
       id: true,
       slug: true,
