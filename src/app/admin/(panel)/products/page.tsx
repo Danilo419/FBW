@@ -89,6 +89,11 @@ export default async function ProductsPage({
     return `/admin/products?${usp.toString()}`;
   };
 
+  /* ---------- simple numeric pagination (1..N) ---------- */
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
   return (
     <div className="space-y-6">
       <header className="space-y-3">
@@ -96,7 +101,10 @@ export default async function ProductsPage({
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold">Products</h1>
             <p className="text-sm text-gray-500">
-              Manage your products. {total > 0 ? `${total} result${total === 1 ? "" : "s"}.` : "No results."}
+              Manage your products.{" "}
+              {total > 0
+                ? `${total} result${total === 1 ? "" : "s"}.`
+                : "No results."}
             </p>
           </div>
 
@@ -187,7 +195,11 @@ export default async function ProductsPage({
                         >
                           Edit
                         </Link>
-                        <DeleteButton id={p.id} name={p.name} action={deleteProductAction} />
+                        <DeleteButton
+                          id={p.id}
+                          name={p.name}
+                          action={deleteProductAction}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -196,6 +208,68 @@ export default async function ProductsPage({
             </tbody>
           </table>
         </div>
+
+        {/* ---------- pagination ---------- */}
+        {totalPages > 1 && (
+          <nav
+            aria-label="Pagination"
+            className="mt-4 flex items-center justify-between gap-3"
+          >
+            {/* Prev */}
+            <div>
+              {hasPrev ? (
+                <Link
+                  href={queryForLink(page - 1)}
+                  className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+                >
+                  Anterior
+                </Link>
+              ) : (
+                <span className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400 cursor-not-allowed">
+                  Anterior
+                </span>
+              )}
+            </div>
+
+            {/* Page numbers */}
+            <ul className="flex flex-wrap items-center gap-1">
+              {pages.map((p) =>
+                p === page ? (
+                  <li key={p}>
+                    <span className="inline-flex min-w-9 justify-center rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white">
+                      {p}
+                    </span>
+                  </li>
+                ) : (
+                  <li key={p}>
+                    <Link
+                      href={queryForLink(p)}
+                      className="inline-flex min-w-9 justify-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      {p}
+                    </Link>
+                  </li>
+                )
+              )}
+            </ul>
+
+            {/* Next */}
+            <div>
+              {hasNext ? (
+                <Link
+                  href={queryForLink(page + 1)}
+                  className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+                >
+                  Seguinte
+                </Link>
+              ) : (
+                <span className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400 cursor-not-allowed">
+                  Seguinte
+                </span>
+              )}
+            </div>
+          </nav>
+        )}
       </section>
     </div>
   );
