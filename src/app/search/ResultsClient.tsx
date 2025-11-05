@@ -83,7 +83,7 @@ function guessTeamFromName(name?: string): string | null {
     .replace(/^sport\s+club\s+/i, "")
     .replace(/^sporting\s+clube\s+de\s+/i, "")
     .replace(/\s+football\s+club$/i, "")
-    .replace(/\s+fc$/i, (m) => (/\bbarcelona\b|\bporto\b|\bbenfica\b/i.test(s) ? "" : m)) // mantém FC quando for parte do nome
+    .replace(/\s+fc$/i, (m) => (/\bbarcelona\b|\bporto\b|\bbenfica\b/i.test(s) ? "" : m))
     .replace(/\s{2,}/g, " ")
     .trim();
 
@@ -242,15 +242,16 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
                   )}
 
                   {parts && (
-                    <div className="flex items-end gap-0.5 text-slate-900">
+                    <div className="flex items-end text-slate-900">
                       <span className="text-2xl font-semibold tracking-tight leading-none">
                         {parts.int}
                       </span>
                       <span className="text-[13px] font-medium translate-y-[1px]">
                         ,{parts.dec}
                       </span>
-                      <span className="text-[15px] font-medium translate-y-[1px]">
-                        {" "}{parts.sym}
+                      {/* Espaço ligeiramente maior antes do símbolo */}
+                      <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                        {parts.sym}
                       </span>
                     </div>
                   )}
