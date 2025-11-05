@@ -14,6 +14,7 @@ type UIProduct = {
 
 /* ============================ Promo map (EUR) ============================ */
 const SALE_MAP_EUR: Record<number, number> = {
+  29.99: 70,
   34.99: 100,
   39.99: 120,
   44.99: 150,

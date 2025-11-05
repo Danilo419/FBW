@@ -26,6 +26,7 @@ const TEAM_MAP: Record<string, string> = {
 /* ============================ Promo map ============================ */
 /** Mapa de preço base (em cêntimos) -> preço riscado (em cêntimos) */
 const SALE_MAP: Record<number, number> = {
+  2999: 7000, // 29,99€ → ~70€
   3499: 10000, // 34,99€ → ~100€
   3999: 12000, // 39,99€ → ~120€  (ATUALIZADO de 110€ para 120€)
   4499: 15000, // 44,99€ → ~150€
