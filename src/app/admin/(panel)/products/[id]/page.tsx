@@ -112,7 +112,13 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
     ],
   },
-  { title: "International Club", items: [{ value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" }] },
+  {
+    title: "International Club",
+    items: [
+      { value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" },
+      { value: "intercontinental-cup-champions", label: "FIFA Intercontinental Cup – Champions Badge" },
+    ],
+  },
 ];
 
 export default async function ProductEditPage({

@@ -71,7 +71,10 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   },
   {
     title: "International Club",
-    items: [{ value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" }],
+    items: [
+      { value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" },
+      { value: "intercontinental-cup-champions", label: "FIFA Intercontinental Cup – Champions Badge" },
+    ],
   },
 ];
 
