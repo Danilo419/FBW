@@ -227,7 +227,7 @@ const NAME_TO_SLUG: Record<string, string> = (() => {
 /** Garante que a string fornecida (nome ou slug) é devolvida como slug oficial */
 function ensureSlug(input: string): string {
   const norm = normalizeForSlug(input);
-  if (clubSlugToTeamName[norm]) return norm;      // já é slug oficial
+  if (clubSlugToTeamName[norm]) return norm;        // já é slug oficial
   if (NAME_TO_SLUG[norm]) return NAME_TO_SLUG[norm]; // é nome/alias conhecido
   return norm; // fallback
 }
