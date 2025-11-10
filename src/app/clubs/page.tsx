@@ -2,97 +2,26 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ArrowRight } from "lucide-react";
+import {
+  leagueClubs,
+  slugFromTeamName,
+  clubImg,
+  type LeagueKey,
+} from "@/lib/shop-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/* ---------------- helpers -> assets/clubs/<league>/<club>.png ---------------- */
-function slugify(s?: string | null) {
-  const base = (s ?? "").trim();
-  return base
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-type LeagueKey =
-  | "premier-league"
-  | "la-liga"
-  | "serie-a"
-  | "bundesliga"
-  | "ligue-1"
-  | "eredivisie"
-  | "primeira-liga"
-  | "scottish-premiership"
-  | "brasileirao";
-
-const leagueClubs: Record<LeagueKey, string[]> = {
-  "premier-league": [
-    "arsenal","aston-villa","bournemouth","brentford","brighton",
-    "chelsea","crystal-palace","everton","fulham","leeds-united",
-    "burnley","liverpool","manchester-city","manchester-united","newcastle-united",
-    "nottingham-forest","sunderland","tottenham-hotspur","west-ham-united","wolverhampton-wanderers",
-  ],
-  "la-liga": [
-    "real-madrid","barcelona","atletico-madrid","athletic-club","real-sociedad",
-    "villarreal","real-betis","sevilla","valencia","girona",
-    "getafe","celta-vigo","osasuna","rayo-vallecano","alaves",
-    "mallorca","las-palmas","leganes","real-valladolid","espanyol",
-  ],
-  "serie-a": [
-    "inter","ac-milan","juventus","napoli","roma",
-    "lazio","atalanta","fiorentina","bologna","torino",
-    "genoa","monza","udinese","empoli","lecce",
-    "cagliari","hellas-verona","como","venezia","parma",
-  ],
-  "bundesliga": [
-    "bayern-munich","borussia-dortmund","rb-leipzig","bayer-leverkusen","vfb-stuttgart",
-    "eintracht-frankfurt","sc-freiburg","union-berlin","wolfsburg","mainz-05",
-    "augsburg","borussia-monchengladbach","bochum","heidenheim","werder-bremen",
-    "hoffenheim","holstein-kiel","st-pauli",
-  ],
-  "ligue-1": [
-    "psg","marseille","lyon","monaco","lille",
-    "nice","rennes","nantes","montpellier","strasbourg",
-    "reims","toulouse","lens","brest","angers",
-    "saint-etienne","auxerre","metz",
-  ],
-  "eredivisie": [
-    "ajax","psv","feyenoord","az-alkmaar","fc-twente",
-    "utrecht","heerenveen","nec-nijmegen","sparta-rotterdam","go-ahead-eagles",
-    "pec-zwolle","heracles","fortuna-sittard","rkc-waalwijk","vitesse",
-    "almere-city","excelsior","fc-volendam",
-  ],
-  "primeira-liga": [
-    "benfica","porto","sporting","braga","vitoria-sc",
-    "boavista","rio-ave","famalicao","gil-vicente","estoril",
-    "portimonense","casa-pia","farense","moreirense","arouca",
-    "estoril-praia","santa-clara","estoril-2",
-  ],
-  "scottish-premiership": [
-    "celtic","rangers","aberdeen","hearts","hibernian",
-    "motherwell","st-johnstone","st-mirren","kilmarnock","dundee",
-    "ross-county","dundee-united",
-  ],
-  "brasileirao": [
-    "flamengo","palmeiras","corinthians","sao-paulo","santos",
-    "fluminense","botafogo","vasco-da-gama","cruzeiro","atletico-mineiro",
-    "gremio","internacional","bahia","fortaleza","athletico-pr",
-    "cuiaba","goias","red-bull-bragantino","america-mg","coritiba",
-  ],
-};
-
+/* ---------------- usar SEMPRE as helpers da lib ---------------- */
 function findClubAsset(teamName: string): string | null {
-  const slug = slugify(teamName);
+  const slug = slugFromTeamName(teamName); // ✅ normaliza com aliases (Atlético -> atletico-madrid)
   for (const [league, clubs] of Object.entries(leagueClubs) as [LeagueKey, string[]][]) {
-    if (clubs.includes(slug)) return `/assets/clubs/${league}/${slug}.png`;
+    if (clubs.includes(slug)) {
+      return clubImg(league, slug); // ✅ gera o path correto
+    }
   }
   return null;
 }
-
-/* ---------------------------------------------------------------------------------------------- */
 
 type ClubCard = { name: string; image?: string | null; slug: string };
 
@@ -110,10 +39,11 @@ export default async function ClubsPage() {
 
     const assetImg = findClubAsset(team);
     const arr = Array.isArray(r.imageUrls) ? r.imageUrls : [];
-    const firstDbImg =
-      arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
+    const firstDbImg = arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
 
-    map.set(team, { image: assetImg ?? firstDbImg, slug: slugify(team) });
+    // ✅ usa o slug normalizado central (compatível com /products/team/[slug])
+    const slug = slugFromTeamName(team);
+    map.set(team, { image: assetImg ?? firstDbImg, slug });
   }
 
   const clubs: ClubCard[] = Array.from(map.entries())
@@ -135,7 +65,6 @@ export default async function ClubsPage() {
             className="group block"
           >
             <div className="relative aspect-[4/5] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
-              {/* imagem */}
               {club.image ? (
                 <img
                   src={club.image}
@@ -144,14 +73,10 @@ export default async function ClubsPage() {
                   loading="eager"
                 />
               ) : (
-                /* fallback bonito sem depender de ficheiro externo */
                 <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
               )}
 
-              {/* brilho suave nas bordas no hover */}
               <div className="pointer-events-none absolute inset-0 ring-0 group-hover:ring-2 group-hover:ring-blue-500/40 transition" />
-
-              {/* gradiente para legibilidade + CTA */}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
               <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition">
                 <div className="flex items-center justify-between text-white text-xs sm:text-sm">
