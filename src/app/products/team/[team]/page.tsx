@@ -1,11 +1,17 @@
 // src/app/products/team/[team]/page.tsx
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
 
 /* ============================ Config ============================ */
 export const revalidate = 60;
 
-type PageProps = { params: Promise<{ team: string }> };
+type PageProps = {
+  params: Promise<{ team: string }>;
+  searchParams?: Promise<{ page?: string }>;
+};
+
+const PAGE_SIZE = 12;
 
 const TEAM_MAP: Record<string, string> = {
   "real-madrid": "Real Madrid",
@@ -24,11 +30,10 @@ const TEAM_MAP: Record<string, string> = {
 };
 
 /* ============================ Promo map ============================ */
-/** Mapa de preço base (em cêntimos) -> preço riscado (em cêntimos) */
 const SALE_MAP: Record<number, number> = {
   2999: 7000,  // 29,99€ → ~70€
   3499: 10000, // 34,99€ → ~100€
-  3999: 12000, // 39,99€ → ~120€  (ATUALIZADO de 110€ para 120€)
+  3999: 12000, // 39,99€ → ~120€
   4499: 15000, // 44,99€ → ~150€
   4999: 16000, // 49,99€ → ~160€
 };
@@ -48,7 +53,6 @@ function fallbackTitle(slug: string) {
     .join(" ");
 }
 
-/** Formata com símbolo do euro DEPOIS do valor, ex.: "1 234,56 €" */
 function moneyAfterEUR(cents: number) {
   return (cents / 100).toLocaleString("pt-PT", {
     style: "currency",
@@ -94,20 +98,33 @@ function coverUrl(raw?: string | null): string {
 }
 
 /* ============================ Page ============================ */
-export default async function TeamProductsPage({ params }: PageProps) {
+export default async function TeamProductsPage({ params, searchParams }: PageProps) {
   const { team } = await params;
   const slug = team.toLowerCase();
   const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
 
+  const sp = (await searchParams) ?? {};
+  const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+
+  // ✅ Tipagem explícita e sem "as const"
+  const where: Prisma.ProductWhereInput = {
+    OR: [
+      { team: { equals: teamName } }, // não precisa de mode
+      { team: { contains: teamName, mode: "insensitive" } },
+      { team: { contains: slug, mode: "insensitive" } },
+    ],
+  };
+
+  const totalCount = await prisma.product.count({ where });
+  if (!totalCount) notFound();
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const currentPage = Math.min(Math.max(1, requestedPage), totalPages);
+  const skip = (currentPage - 1) * PAGE_SIZE;
+
   const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { team: { equals: teamName, mode: "insensitive" } },
-        { team: { contains: teamName, mode: "insensitive" } },
-        { team: { contains: slug, mode: "insensitive" } },
-      ],
-    },
-    orderBy: { createdAt: "asc" }, // ou "desc" conforme preferires
+    where,
+    orderBy: { createdAt: "asc" },
     select: {
       id: true,
       slug: true,
@@ -116,17 +133,28 @@ export default async function TeamProductsPage({ params }: PageProps) {
       basePrice: true,
       team: true,
     },
+    take: PAGE_SIZE,
+    skip,
   });
 
-  if (!products.length) notFound();
-
-  return <List team={products[0].team!} items={products} />;
+  return (
+    <List
+      team={teamName}
+      items={products}
+      totalPages={totalPages}
+      currentPage={currentPage}
+      teamSlug={slug}
+    />
+  );
 }
 
 /* ============================ UI ============================ */
 function List({
   team,
   items,
+  totalPages,
+  currentPage,
+  teamSlug,
 }: {
   team: string;
   items: {
@@ -135,6 +163,9 @@ function List({
     imageUrls?: unknown;
     basePrice: number;
   }[];
+  totalPages: number;
+  currentPage: number;
+  teamSlug: string;
 }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -145,13 +176,10 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      {/* 🎯 largura afinada para igualar o ResultsClient visualmente */}
       <div className="mx-auto max-w-[1360px] px-6 sm:px-10 py-12">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-black mb-10">
-          {team} — Products
-        </h1>
+        {/* (Título removido como pedido) */}
 
-        {/* Mesmas colunas e gap */}
+        {/* Grid de produtos */}
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
@@ -165,16 +193,13 @@ function List({
                 href={`/products/${p.slug}`}
                 className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
               >
-                {/* Sticker vermelho */}
                 {compare && (
                   <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
                     -{compare.pct}%
                   </div>
                 )}
 
-                {/* Card em coluna */}
                 <div className="flex flex-col h-full">
-                  {/* Imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -185,7 +210,6 @@ function List({
                     />
                   </div>
 
-                  {/* Conteúdo */}
                   <div className="p-5 flex flex-col grow">
                     <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
                       {team}
@@ -194,7 +218,6 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* Preços */}
                     <div className="mt-4">
                       {compare && (
                         <div className="mb-1 text-[13px] text-slate-500 line-through">
@@ -202,7 +225,6 @@ function List({
                         </div>
                       )}
 
-                      {/* === Mesmo layout/spacing do ResultsClient === */}
                       <div className="flex items-end text-slate-900">
                         <span className="text-2xl font-semibold tracking-tight leading-none">
                           {euros}
@@ -212,7 +234,6 @@ function List({
                       </div>
                     </div>
 
-                    {/* Footer preso ao fundo + CTA centrada verticalmente */}
                     <div className="mt-auto">
                       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                       <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -235,6 +256,38 @@ function List({
             );
           })}
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <nav
+            className="mt-12 flex justify-center"
+            role="navigation"
+            aria-label="Paginação de produtos"
+          >
+            <ul className="flex flex-wrap items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
+                const isActive = n === currentPage;
+                const href = `/products/team/${teamSlug}?page=${n}`;
+                return (
+                  <li key={n}>
+                    <a
+                      href={href}
+                      aria-current={isActive ? "page" : undefined}
+                      className={[
+                        "min-w-9 px-3 h-9 inline-flex items-center justify-center rounded-lg border text-sm transition",
+                        isActive
+                          ? "border-sky-600 bg-sky-600 text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700",
+                      ].join(" ")}
+                    >
+                      {n}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        )}
       </div>
     </div>
   );
