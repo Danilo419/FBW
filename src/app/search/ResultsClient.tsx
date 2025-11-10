@@ -9,7 +9,7 @@ type UIProduct = {
   slug?: string;
   img?: string;
   price?: number; // EUR (ex.: 34.99)
-  team?: string | null; // <- pode vir da API
+  team?: string | null; // <- pode vir da API (às vezes com sufixos, ex.: "Madrid Retro")
 };
 
 /* ============================ Promo map (EUR) ============================ */
@@ -53,54 +53,58 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Heurística simples para extrair clube do nome quando a API não envia ========= */
-const STOP_WORDS = [
-  "home", "away", "second", "third", "fourth", "jersey", "shirt", "kit",
-  "adult", "kids", "youth",
+/* ========= Extração do NOME DO CLUBE (sempre só o clube) =========
+   - Tenta o campo p.team
+   - Se não der, tenta no p.name
+   - Ignora sufixos como "Retro", "Training", cores, etc.            */
+const CLUB_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
+  [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
+  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\bsevilla\b/i, "Sevilla FC"],
+  [/\breal\s*sociedad\b/i, "Real Sociedad"],
+  [/\bvillarreal\b/i, "Villarreal"],
+  [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
+  [/\bfc\s*porto|porto\b/i, "FC Porto"],
+  [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
+  [/\bsc\s*braga|braga\b/i, "SC Braga"],
+  [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
 ];
-const YEAR_RE = /\b(19|20)\d{2}\/?(?:\d{2})?\b/gi;
 
-function guessTeamFromName(name?: string): string | null {
-  if (!name) return null;
-  let s = name.replace(YEAR_RE, "").trim();
+function normalizeStr(s?: string | null) {
+  return (s ?? "").replace(/\s{2,}/g, " ").trim();
+}
 
-  // corta no primeiro stop word (ex.: "FC Barcelona Third Jersey" -> "FC Barcelona")
-  const lower = s.toLowerCase();
-  let cutIdx = -1;
-  for (const w of STOP_WORDS) {
-    const i = lower.indexOf(` ${w} `);
-    if (i !== -1) cutIdx = cutIdx === -1 ? i : Math.min(cutIdx, i);
-  }
-  if (cutIdx !== -1) s = s.slice(0, cutIdx).trim();
-
-  // remove números/resíduos finais
-  s = s.replace(/\s+\d+.*/, "").trim();
-
-  // normalizações rápidas
-  s = s
-    .replace(/^club\s+de\s+futebol\s+/i, "")
-    .replace(/^futebol\s+clube\s+/i, "")
-    .replace(/^sport\s+club\s+/i, "")
-    .replace(/^sporting\s+clube\s+de\s+/i, "")
-    .replace(/\s+football\s+club$/i, "")
-    .replace(/\s+fc$/i, (m) => (/\bbarcelona\b|\bporto\b|\bbenfica\b/i.test(s) ? "" : m))
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
+function clubFromString(input?: string | null): string | null {
+  const s = normalizeStr(input);
   if (!s) return null;
 
-  // Se o nome incluir "FC <Team>" mostra só o <Team> em maiúsculas como no resto do site
-  const fc = s.match(/^(?:[A-Z]{0,3}\s*)?(?:FC|S?L|SC)\s+(.+)$/i);
-  const out = (fc ? fc[1] : s).trim();
-  return out ? out.toUpperCase() : null;
+  for (const [re, club] of CLUB_PATTERNS) {
+    if (re.test(s)) return club;
+  }
+  return null;
+}
+
+/** Obtém SEMPRE só o nome do clube (capitalização normal; o chip usa uppercase no CSS) */
+function getClubLabel(p: UIProduct): string {
+  // 1) tenta a partir do campo team (mesmo que venha "Madrid Retro", etc.)
+  const byTeam = clubFromString(p.team);
+  if (byTeam) return byTeam;
+
+  // 2) tenta a partir do nome do produto
+  const byName = clubFromString(p.name);
+  if (byName) return byName;
+
+  // 3) fallback
+  return "Club";
 }
 
 /* ============================ Componente ============================ */
-/** 
- * Agora sem barra de pesquisa: 
- * - se `initialQuery` vier vazio, tenta buscar todos os produtos (API deve suportar q vazio)
- * - mostra no máximo 12 por página
- * - paginação no fim: "1, 2, 3, ..."
+/**
+ * - Mostra no máximo 12 por página
+ * - Paginação no fim: « 1 2 3 »
+ * - Chip azul mostra sempre APENAS o nome do clube
  */
 export default function ResultsClient({ initialQuery = "" }: { initialQuery?: string }) {
   const [loading, setLoading] = useState(false);
@@ -111,7 +115,7 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
 
-  // sempre que o query inicial mudar (ou no mount), faz fetch
+  // fetch inicial / quando muda query
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -125,7 +129,7 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
         const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
         if (!cancelled) {
           setResults(arr);
-          setPage(1); // reset página ao mudar resultados
+          setPage(1);
         }
       })
       .catch((e) => {
@@ -141,25 +145,21 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
     };
   }, [initialQuery]);
 
-  // calcular páginas
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(results.length / PAGE_SIZE)),
     [results.length]
   );
 
-  // garantir que a página atual é válida quando os dados mudam
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
-  // slice dos produtos da página
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
     return results.slice(start, end);
   }, [results, page]);
 
-  // UX: rolar ao topo quando muda de página
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -205,11 +205,8 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
           const sale = cents != null ? getSale(p.price!) : null;
           const parts = cents != null ? pricePartsFromCents(cents) : null;
 
-          // etiqueta: usa p.team se houver; senão, tenta adivinhar; fallback "Product"
-          const teamLabel =
-            (typeof p.team === "string" && p.team.trim()) ||
-            guessTeamFromName(p.name) ||
-            "Product";
+          // 🔵 Sempre só o clube
+          const teamLabel = getClubLabel(p);
 
           return (
             <a
@@ -224,7 +221,7 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
                 </div>
               )}
 
-              {/* Layout em coluna para fixar footer */}
+              {/* Card */}
               <div className="flex flex-col h-full">
                 {/* Imagem */}
                 <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
@@ -249,7 +246,7 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
 
                 {/* Conteúdo */}
                 <div className="p-5 flex flex-col grow">
-                  {/* Etiqueta com o nome do clube */}
+                  {/* Chip azul — só o clube */}
                   <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
                     {teamLabel}
                   </div>
@@ -274,7 +271,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
                         <span className="text-[13px] font-medium translate-y-[1px]">
                           ,{parts.dec}
                         </span>
-                        {/* Espaço ligeiramente maior antes do símbolo */}
                         <span className="text-[15px] font-medium translate-y-[1px] ml-1">
                           {parts.sym}
                         </span>
@@ -282,7 +278,7 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
                     )}
                   </div>
 
-                  {/* Footer preso ao fundo com CTA centrada verticalmente */}
+                  {/* Footer */}
                   <div className="mt-auto">
                     <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                     <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -306,10 +302,9 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
         })}
       </div>
 
-      {/* Paginação no fim: 1, 2, 3, ... */}
+      {/* Paginação no fim: « 1 2 3 » */}
       {totalPages > 1 && (
         <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-          {/* Botão anterior */}
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -320,7 +315,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
             «
           </button>
 
-          {/* Números */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             {Array.from({ length: totalPages }).map((_, idx) => {
               const n = idx + 1;
@@ -344,7 +338,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
             })}
           </div>
 
-          {/* Botão seguinte */}
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
