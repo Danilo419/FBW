@@ -97,50 +97,38 @@ function coverUrl(raw?: string | null): string {
   return p.startsWith("/") ? p : `/${p}`;
 }
 
-/* ======= Heurística p/ extrair equipa quando a API não envia ======= */
-const STOP_WORDS = [
-  "home",
-  "away",
-  "second",
-  "third",
-  "fourth",
-  "jersey",
-  "shirt",
-  "kit",
-  "adult",
-  "kids",
-  "youth",
-];
-const YEAR_RE = /\b(19|20)\d{2}\/?(?:\d{2})?\b/gi;
+/* ========= Construção do "chip" azul a partir do nome ========= */
+/** Remove a temporada (ex.: 06/07, 24/25, 2016/17, 2017) do fim */
+const YEAR_TAIL_RE = /(?:\b(19|20)\d{2}(?:\/\d{2})?|\b\d{2}\/\d{2})\s*$/i;
+/** Corta sufixos do tipo "Home|Away|Third|Fourth (Jersey|Shirt|Kit) ..." */
+const VARIANT_KIT_TAIL_RE =
+  /\b(?:home|away|third|fourth)\s+(?:jersey|shirt|kit)\b.*$/i;
 
-function guessTeamFromName(name?: string): string | null {
+/** Normaliza espaços e remove duplos */
+function cleanSpaces(s: string) {
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+
+/**
+ * Regras:
+ * 1) tira temporada no fim;
+ * 2) se houver "Home/Away/Third/Fourth Jersey|Shirt|Kit" no fim, corta a partir daí;
+ * 3) mantém descrições como "Retro", "Black/White Training Polo Set", etc.
+ */
+function labelFromName(name?: string | null): string | null {
   if (!name) return null;
-  let s = name.replace(YEAR_RE, "").trim();
+  let s = name.trim();
 
-  const lower = s.toLowerCase();
-  let cutIdx = -1;
-  for (const w of STOP_WORDS) {
-    const i = lower.indexOf(` ${w} `);
-    if (i !== -1) cutIdx = cutIdx === -1 ? i : Math.min(cutIdx, i);
-  }
-  if (cutIdx !== -1) s = s.slice(0, cutIdx).trim();
+  // remove season do fim
+  s = s.replace(YEAR_TAIL_RE, "").trim();
 
-  s = s.replace(/\s+\d+.*/, "").trim();
+  // corta variantes "Third Jersey", etc.
+  s = s.replace(VARIANT_KIT_TAIL_RE, "").trim();
 
-  s = s
-    .replace(/^club\s+de\s+futebol\s+/i, "")
-    .replace(/^futebol\s+clube\s+/i, "")
-    .replace(/^sport\s+club\s+/i, "")
-    .replace(/^sporting\s+clube\s+de\s+/i, "")
-    .replace(/\s+football\s+club$/i, "")
-    .replace(/\s+fc$/i, (m) => (/\bbarcelona\b|\bporto\b|\bbenfica\b/i.test(s) ? "" : m))
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  // se depois de cortar sobrar vazio, volta ao original sem ano
+  if (!s) s = name.replace(YEAR_TAIL_RE, "").trim();
 
-  if (!s) return null;
-  const fc = s.match(/^(?:[A-Z]{0,3}\s*)?(?:FC|S?L|SC)\s+(.+)$/i);
-  const out = (fc ? fc[1] : s).trim();
-  return out ? out.toUpperCase() : null;
+  return cleanSpaces(s) || null;
 }
 
 /* ============================ Page ============================ */
@@ -233,11 +221,10 @@ function List({
             const dec = (p.basePrice % 100).toString().padStart(2, "0");
             const compare = getCompareAt(p.basePrice);
 
-            // 👇 Novo: label azul igual ao ResultsClient
-            const teamLabel =
-              (typeof p.team === "string" && p.team.trim()) ||
-              guessTeamFromName(p.name) ||
-              team;
+            // 🔵 Novo: etiqueta azul com descritor
+            const preferredLabel =
+              (typeof p.team === "string" && p.team.trim()) || labelFromName(p.name) || team;
+            const chipText = preferredLabel.toUpperCase();
 
             return (
               <a
@@ -264,7 +251,7 @@ function List({
 
                   <div className="p-5 flex flex-col grow">
                     <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                      {teamLabel}
+                      {chipText}
                     </div>
                     <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
                       {p.name}
