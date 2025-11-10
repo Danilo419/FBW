@@ -31,11 +31,11 @@ const TEAM_MAP: Record<string, string> = {
 
 /* ============================ Promo map ============================ */
 const SALE_MAP: Record<number, number> = {
-  2999: 7000,  // 29,99€ → ~70€
-  3499: 10000, // 34,99€ → ~100€
-  3999: 12000, // 39,99€ → ~120€
-  4499: 15000, // 44,99€ → ~150€
-  4999: 16000, // 49,99€ → ~160€
+  2999: 7000,
+  3499: 10000,
+  3999: 12000,
+  4499: 15000,
+  4999: 16000,
 };
 
 function getCompareAt(basePriceCents: number) {
@@ -97,6 +97,52 @@ function coverUrl(raw?: string | null): string {
   return p.startsWith("/") ? p : `/${p}`;
 }
 
+/* ======= Heurística p/ extrair equipa quando a API não envia ======= */
+const STOP_WORDS = [
+  "home",
+  "away",
+  "second",
+  "third",
+  "fourth",
+  "jersey",
+  "shirt",
+  "kit",
+  "adult",
+  "kids",
+  "youth",
+];
+const YEAR_RE = /\b(19|20)\d{2}\/?(?:\d{2})?\b/gi;
+
+function guessTeamFromName(name?: string): string | null {
+  if (!name) return null;
+  let s = name.replace(YEAR_RE, "").trim();
+
+  const lower = s.toLowerCase();
+  let cutIdx = -1;
+  for (const w of STOP_WORDS) {
+    const i = lower.indexOf(` ${w} `);
+    if (i !== -1) cutIdx = cutIdx === -1 ? i : Math.min(cutIdx, i);
+  }
+  if (cutIdx !== -1) s = s.slice(0, cutIdx).trim();
+
+  s = s.replace(/\s+\d+.*/, "").trim();
+
+  s = s
+    .replace(/^club\s+de\s+futebol\s+/i, "")
+    .replace(/^futebol\s+clube\s+/i, "")
+    .replace(/^sport\s+club\s+/i, "")
+    .replace(/^sporting\s+clube\s+de\s+/i, "")
+    .replace(/\s+football\s+club$/i, "")
+    .replace(/\s+fc$/i, (m) => (/\bbarcelona\b|\bporto\b|\bbenfica\b/i.test(s) ? "" : m))
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!s) return null;
+  const fc = s.match(/^(?:[A-Z]{0,3}\s*)?(?:FC|S?L|SC)\s+(.+)$/i);
+  const out = (fc ? fc[1] : s).trim();
+  return out ? out.toUpperCase() : null;
+}
+
 /* ============================ Page ============================ */
 export default async function TeamProductsPage({ params, searchParams }: PageProps) {
   const { team } = await params;
@@ -106,10 +152,9 @@ export default async function TeamProductsPage({ params, searchParams }: PagePro
   const sp = (await searchParams) ?? {};
   const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  // ✅ Tipagem explícita e sem "as const"
   const where: Prisma.ProductWhereInput = {
     OR: [
-      { team: { equals: teamName } }, // não precisa de mode
+      { team: { equals: teamName } },
       { team: { contains: teamName, mode: "insensitive" } },
       { team: { contains: slug, mode: "insensitive" } },
     ],
@@ -162,6 +207,7 @@ function List({
     name: string;
     imageUrls?: unknown;
     basePrice: number;
+    team?: string | null;
   }[];
   totalPages: number;
   currentPage: number;
@@ -186,6 +232,12 @@ function List({
             const euros = Math.floor(p.basePrice / 100).toString();
             const dec = (p.basePrice % 100).toString().padStart(2, "0");
             const compare = getCompareAt(p.basePrice);
+
+            // 👇 Novo: label azul igual ao ResultsClient
+            const teamLabel =
+              (typeof p.team === "string" && p.team.trim()) ||
+              guessTeamFromName(p.name) ||
+              team;
 
             return (
               <a
@@ -212,7 +264,7 @@ function List({
 
                   <div className="p-5 flex flex-col grow">
                     <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                      {team}
+                      {teamLabel}
                     </div>
                     <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
                       {p.name}
@@ -257,38 +309,97 @@ function List({
           })}
         </div>
 
-        {/* Paginação */}
+        {/* Paginação — estilo pílulas com « » */}
         {totalPages > 1 && (
           <nav
-            className="mt-12 flex justify-center"
+            className="mt-14 flex justify-center"
             role="navigation"
             aria-label="Paginação de produtos"
           >
-            <ul className="flex flex-wrap items-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
-                const isActive = n === currentPage;
-                const href = `/products/team/${teamSlug}?page=${n}`;
-                return (
-                  <li key={n}>
-                    <a
-                      href={href}
-                      aria-current={isActive ? "page" : undefined}
-                      className={[
-                        "min-w-9 px-3 h-9 inline-flex items-center justify-center rounded-lg border text-sm transition",
-                        isActive
-                          ? "border-sky-600 bg-sky-600 text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700",
-                      ].join(" ")}
-                    >
-                      {n}
-                    </a>
-                  </li>
-                );
-              })}
+            <ul className="flex items-center gap-3">
+              <li>
+                <PaginationPill
+                  href={currentPage > 1 ? `/products/team/${teamSlug}?page=1` : undefined}
+                  label="Primeira página"
+                >
+                  &laquo;
+                </PaginationPill>
+              </li>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <li key={n}>
+                  <PaginationPill
+                    href={n === currentPage ? undefined : `/products/team/${teamSlug}?page=${n}`}
+                    active={n === currentPage}
+                    label={`Página ${n}`}
+                  >
+                    {n}
+                  </PaginationPill>
+                </li>
+              ))}
+
+              <li>
+                <PaginationPill
+                  href={
+                    currentPage < totalPages
+                      ? `/products/team/${teamSlug}?page=${totalPages}`
+                      : undefined
+                  }
+                  label="Última página"
+                >
+                  &raquo;
+                </PaginationPill>
+              </li>
             </ul>
           </nav>
         )}
       </div>
     </div>
+  );
+}
+
+/* ============================ Pagination Pill ============================ */
+function PaginationPill({
+  href,
+  active = false,
+  children,
+  label,
+}: {
+  href?: string;
+  active?: boolean;
+  children: React.ReactNode;
+  label: string;
+}) {
+  const base =
+    "h-11 min-w-11 px-4 inline-flex items-center justify-center rounded-2xl border shadow-sm transition";
+  const activeCls = "border-sky-600 bg-sky-600 text-white shadow-md";
+  const idleCls =
+    "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700";
+  const disabledCls = "border-slate-200 bg-white text-slate-300 pointer-events-none";
+
+  if (!href) {
+    return (
+      <span
+        aria-label={label}
+        aria-disabled="true"
+        className={`${base} ${active ? activeCls : disabledCls}`}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  if (active) {
+    return (
+      <span aria-current="page" aria-label={label} className={`${base} ${activeCls}`}>
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <a href={href} aria-label={label} className={`${base} ${idleCls}`}>
+      {children}
+    </a>
   );
 }
