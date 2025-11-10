@@ -1,7 +1,7 @@
 // src/app/search/ResultsClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type UIProduct = {
   id: string | number;
@@ -96,34 +96,37 @@ function guessTeamFromName(name?: string): string | null {
 }
 
 /* ============================ Componente ============================ */
-export default function ResultsClient({ initialQuery }: { initialQuery: string }) {
-  const [q, setQ] = useState(initialQuery);
+/** 
+ * Agora sem barra de pesquisa: 
+ * - se `initialQuery` vier vazio, tenta buscar todos os produtos (API deve suportar q vazio)
+ * - mostra no máximo 12 por página
+ * - paginação no fim: "1, 2, 3, ..."
+ */
+export default function ResultsClient({ initialQuery = "" }: { initialQuery?: string }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setQ(initialQuery);
-  }, [initialQuery]);
+  // paginação
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState(1);
 
+  // sempre que o query inicial mudar (ou no mount), faz fetch
   useEffect(() => {
-    if (!q) {
-      setResults([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=${encodeURIComponent(q)}`, { cache: "no-store" })
+    const qParam = initialQuery ? `?q=${encodeURIComponent(initialQuery)}` : "";
+    fetch(`/api/search${qParam}`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
-        if (!cancelled) setResults(arr);
+        if (!cancelled) {
+          setResults(arr);
+          setPage(1); // reset página ao mudar resultados
+        }
       })
       .catch((e) => {
         if (!cancelled) {
@@ -136,16 +139,37 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
     return () => {
       cancelled = true;
     };
-  }, [q]);
+  }, [initialQuery]);
 
-  if (!q) {
-    return <p className="text-gray-500">Type something in the search box above.</p>;
-  }
+  // calcular páginas
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(results.length / PAGE_SIZE)),
+    [results.length]
+  );
+
+  // garantir que a página atual é válida quando os dados mudam
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  // slice dos produtos da página
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return results.slice(start, end);
+  }, [results, page]);
+
+  // UX: rolar ao topo quando muda de página
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [page]);
 
   if (loading) {
     return (
       <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={i}
             className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
@@ -169,116 +193,169 @@ export default function ResultsClient({ initialQuery }: { initialQuery: string }
   }
 
   return (
-    <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {results.length === 0 && (
-        <p className="text-gray-500 col-span-full">No products found. Try another term.</p>
-      )}
+    <>
+      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {pageItems.length === 0 && (
+          <p className="text-gray-500 col-span-full">Nenhum produto encontrado.</p>
+        )}
 
-      {results.map((p) => {
-        const href = p.slug ? `/products/${p.slug}` : undefined;
-        const cents = typeof p.price === "number" ? toCents(p.price)! : null;
-        const sale = cents != null ? getSale(p.price!) : null;
-        const parts = cents != null ? pricePartsFromCents(cents) : null;
+        {pageItems.map((p) => {
+          const href = p.slug ? `/products/${p.slug}` : undefined;
+          const cents = typeof p.price === "number" ? toCents(p.price)! : null;
+          const sale = cents != null ? getSale(p.price!) : null;
+          const parts = cents != null ? pricePartsFromCents(cents) : null;
 
-        // etiqueta: usa p.team se houver; senão, tenta adivinhar; fallback "Product"
-        const teamLabel =
-          (typeof p.team === "string" && p.team.trim()) ||
-          guessTeamFromName(p.name) ||
-          "Product";
+          // etiqueta: usa p.team se houver; senão, tenta adivinhar; fallback "Product"
+          const teamLabel =
+            (typeof p.team === "string" && p.team.trim()) ||
+            guessTeamFromName(p.name) ||
+            "Product";
 
-        return (
-          <a
-            key={String(p.id)}
-            href={href}
-            className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
-          >
-            {/* Sticker vermelho com % */}
-            {sale && (
-              <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
-                -{sale.pct}%
-              </div>
-            )}
+          return (
+            <a
+              key={String(p.id)}
+              href={href}
+              className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
+            >
+              {/* Sticker vermelho com % */}
+              {sale && (
+                <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+                  -{sale.pct}%
+                </div>
+              )}
 
-            {/* Layout em coluna para fixar footer */}
-            <div className="flex flex-col h-full">
-              {/* Imagem */}
-              <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={p.name}
-                  src={
-                    p.img ||
-                    "data:image/svg+xml;utf8," +
-                      encodeURIComponent(
-                        `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
-                          <rect width='100%' height='100%' fill='#f3f4f6'/>
-                          <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-                            font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
-                        </svg>`
-                      )
-                  }
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-
-              {/* Conteúdo */}
-              <div className="p-5 flex flex-col grow">
-                {/* Etiqueta com o nome do clube */}
-                <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                  {teamLabel}
+              {/* Layout em coluna para fixar footer */}
+              <div className="flex flex-col h-full">
+                {/* Imagem */}
+                <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={p.name}
+                    src={
+                      p.img ||
+                      "data:image/svg+xml;utf8," +
+                        encodeURIComponent(
+                          `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
+                            <rect width='100%' height='100%' fill='#f3f4f6'/>
+                            <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
+                              font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
+                          </svg>`
+                        )
+                    }
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                  />
                 </div>
 
-                <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
-                  {p.name}
-                </div>
+                {/* Conteúdo */}
+                <div className="p-5 flex flex-col grow">
+                  {/* Etiqueta com o nome do clube */}
+                  <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                    {teamLabel}
+                  </div>
 
-                {/* Preços */}
-                <div className="mt-4">
-                  {sale && (
-                    <div className="mb-1 text-[13px] text-slate-500 line-through">
-                      {moneyAfter(sale.compareAtCents)}
+                  <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+                    {p.name}
+                  </div>
+
+                  {/* Preços */}
+                  <div className="mt-4">
+                    {sale && (
+                      <div className="mb-1 text-[13px] text-slate-500 line-through">
+                        {moneyAfter(sale.compareAtCents)}
+                      </div>
+                    )}
+
+                    {parts && (
+                      <div className="flex items-end text-slate-900">
+                        <span className="text-2xl font-semibold tracking-tight leading-none">
+                          {parts.int}
+                        </span>
+                        <span className="text-[13px] font-medium translate-y-[1px]">
+                          ,{parts.dec}
+                        </span>
+                        {/* Espaço ligeiramente maior antes do símbolo */}
+                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                          {parts.sym}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer preso ao fundo com CTA centrada verticalmente */}
+                  <div className="mt-auto">
+                    <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                    <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <span className="transition group-hover:translate-x-0.5">
+                        View product
+                      </span>
+                      <svg
+                        className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                      </svg>
                     </div>
-                  )}
-
-                  {parts && (
-                    <div className="flex items-end text-slate-900">
-                      <span className="text-2xl font-semibold tracking-tight leading-none">
-                        {parts.int}
-                      </span>
-                      <span className="text-[13px] font-medium translate-y-[1px]">
-                        ,{parts.dec}
-                      </span>
-                      {/* Espaço ligeiramente maior antes do símbolo */}
-                      <span className="text-[15px] font-medium translate-y-[1px] ml-1">
-                        {parts.sym}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer preso ao fundo com CTA centrada verticalmente */}
-                <div className="mt-auto">
-                  <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                  <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <span className="transition group-hover:translate-x-0.5">
-                      View product
-                    </span>
-                    <svg
-                      className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
-                    </svg>
                   </div>
                 </div>
               </div>
-            </div>
-          </a>
-        );
-      })}
-    </div>
+            </a>
+          );
+        })}
+      </div>
+
+      {/* Paginação no fim: 1, 2, 3, ... */}
+      {totalPages > 1 && (
+        <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+          {/* Botão anterior */}
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+            aria-label="Página anterior"
+          >
+            «
+          </button>
+
+          {/* Números */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const n = idx + 1;
+              const active = n === page;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPage(n)}
+                  className={[
+                    "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                    active
+                      ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
+                      : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                  ].join(" ")}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Botão seguinte */}
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+            aria-label="Próxima página"
+          >
+            »
+          </button>
+        </nav>
+      )}
+    </>
   );
 }
