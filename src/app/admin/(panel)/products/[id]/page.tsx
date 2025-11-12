@@ -230,15 +230,18 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
               <label className="text-sm font-medium">Images</label>
               <div className="flex items-center gap-2">
                 <span id="blob-images-status" className="text-[11px] text-gray-500"></span>
-                <button
-                  type="button"
-                  id="blob-images-button"
-                  className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
+
+                {/* Botão acessível via label (compatível com Firefox) */}
+                <label
+                  htmlFor="blob-images-input"
+                  className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 cursor-pointer"
                   title="Add images from your computer"
                 >
                   Add from computer
-                </button>
-                <input id="blob-images-input" type="file" accept="image/*" multiple className="hidden" />
+                </label>
+
+                {/* Não usar display:none; usar sr-only para manter o elemento “interativo” */}
+                <input id="blob-images-input" type="file" accept="image/*" multiple className="sr-only" />
               </div>
             </div>
 
@@ -423,7 +426,6 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const btn = document.getElementById('blob-images-button');
   const input = document.getElementById('blob-images-input');
   const status = document.getElementById('blob-images-status');
 
@@ -436,21 +438,21 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
 
   function pushIntoEditor(urls) {
     // 1) API do ImagesEditor (se existir)
-    const api = (window as any).__imagesEditor && (window as any).__imagesEditor[EDITOR_NAME];
+    const api = (window).__imagesEditor && (window).__imagesEditor[EDITOR_NAME];
     if (api && typeof api.append === "function") {
       try { api.append(urls); return; } catch (_) {}
     }
     // 2) Fallback para UI antiga
-    const root = document.querySelector('.images-editor') as HTMLElement | null;
+    const root = document.querySelector('.images-editor');
     if (!root) return;
-    const paste = root.querySelector('input[placeholder*="Paste"]') as HTMLInputElement | null;
+    const paste = root.querySelector('input[placeholder*="Paste"]');
     const addBtn = Array.from(root.querySelectorAll('button'))
-      .find(b => ((b.textContent || '').trim().toLowerCase() === 'add')) as HTMLButtonElement | undefined;
+      .find(b => ((b.textContent || '').trim().toLowerCase() === 'add'));
     if (!paste || !addBtn) return;
     urls.forEach(u => {
-      paste.value = u;
+      (paste as HTMLInputElement).value = u;
       paste.dispatchEvent(new Event('input', { bubbles: true }));
-      addBtn.click();
+      (addBtn as HTMLButtonElement).click();
     });
   }
 
@@ -473,18 +475,16 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
     return url;
   }
 
-  btn?.addEventListener('click', () => input?.click());
-
   input?.addEventListener('change', async () => {
-    const files = Array.from(input.files || []);
+    const files = Array.from((input as HTMLInputElement).files || []);
     if (!files.length) return;
 
     const queue = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
     const rejected = files.filter(f => !queue.includes(f));
     if (rejected.length) alert('Ignored some files (unsupported type or > 8MB).');
 
-    let done = 0, urls = [];
-    status.textContent = 'Uploading 0/' + queue.length + '...';
+    let done = 0, urls: string[] = [];
+    status && (status.textContent = 'Uploading 0/' + queue.length + '...');
 
     for (let i = 0; i < queue.length; i += MAX_AT_ONCE) {
       const chunk = queue.slice(i, i + MAX_AT_ONCE);
@@ -492,14 +492,14 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
       results.forEach(r => {
         if (r.status === 'fulfilled' && r.value) urls.push(r.value);
         done += 1;
-        status.textContent = 'Uploading ' + done + '/' + queue.length + '...';
+        status && (status.textContent = 'Uploading ' + done + '/' + queue.length + '...');
       });
     }
 
     if (urls.length) pushIntoEditor(urls);
 
-    input.value = '';
-    status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
+    (input as HTMLInputElement).value = '';
+    status && (status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.');
   });
 })();`,
           }}
