@@ -183,12 +183,21 @@ export default async function ProductEditPage({
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
-        {/* Esconder UI de URL e botão "Add" (continuam no DOM para uso programático) */}
+        {/* Utilitários sr-only (para esconder sem dar display:none) */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
-section .images-editor input[type="text"] { display:none !important; }
-section .images-editor [placeholder*="Paste an image URL"] { display:none !important; }
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Esconder UI de URL sem bloquear interações programáticas */
+section .images-editor input[type="text"],
+section .images-editor [placeholder*="Paste an image URL"] {
+  position:absolute !important;
+  width:1px !important; height:1px !important;
+  padding:0 !important; margin:-1px !important;
+  overflow:hidden !important; clip:rect(0,0,0,0) !important;
+  white-space:nowrap !important; border:0 !important;
+}
 `,
           }}
         />
@@ -240,7 +249,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
                   Add from computer
                 </label>
 
-                {/* Não usar display:none; usar sr-only para manter o elemento “interativo” */}
+                {/* Não usar display:none; usar sr-only */}
                 <input id="blob-images-input" type="file" accept="image/*" multiple className="sr-only" />
               </div>
             </div>
@@ -255,7 +264,7 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
           </div>
         </form>
 
-        {/* Script: esconder “Add” visivelmente (mas continua clicável via JS) */}
+        {/* Script: esconder “Add” visualmente sem remover interação */}
         <Script id="hide-add-button" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -265,7 +274,10 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   function hide() {
     root.querySelectorAll('button').forEach(b => {
       const t = (b.textContent || '').trim().toLowerCase();
-      if (t === 'add') b.style.display = 'none';
+      if (t === 'add') {
+        b.classList.add('sr-only');
+        b.style.display = ''; // garantir que não fica display:none
+      }
     });
   }
   hide();
@@ -437,23 +449,46 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   const MAX_AT_ONCE = 3;
 
   function pushIntoEditor(urls) {
-    // 1) API do ImagesEditor (se existir)
+    // 1) API oficial (se existir)
     const api = (window).__imagesEditor && (window).__imagesEditor[EDITOR_NAME];
     if (api && typeof api.append === "function") {
       try { api.append(urls); return; } catch (_) {}
     }
-    // 2) Fallback para UI antiga
+
+    // 2) Fallback: input de 'paste URL' + botão 'Add'
     const root = document.querySelector('.images-editor');
-    if (!root) return;
-    const paste = root.querySelector('input[placeholder*="Paste"]');
-    const addBtn = Array.from(root.querySelectorAll('button'))
+    const paste = root && root.querySelector('input[placeholder*="Paste"]');
+    const addBtn = root && Array.from(root.querySelectorAll('button'))
       .find(b => ((b.textContent || '').trim().toLowerCase() === 'add'));
-    if (!paste || !addBtn) return;
-    urls.forEach(u => {
-      (paste as HTMLInputElement).value = u;
-      paste.dispatchEvent(new Event('input', { bubbles: true }));
-      (addBtn as HTMLButtonElement).click();
-    });
+    if (paste && addBtn) {
+      urls.forEach(u => {
+        (paste).value = u;
+        paste.dispatchEvent(new Event('input', { bubbles: true }));
+        (addBtn).click();
+      });
+      return;
+    }
+
+    // 3) Último recurso: atualizar diretamente o campo name="imagesText"
+    const field = document.querySelector('textarea[name="imagesText"], input[name="imagesText"]');
+    if (field) {
+      let current = [];
+      try {
+        const raw = (field).value || '[]';
+        current = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+      } catch (_) {
+        // se não for JSON, tenta separar por quebras de linha
+        current = String((field).value || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
+      }
+      const set = new Set([ ...current, ...urls ]);
+      const asArray = Array.from(set);
+      try {
+        (field).value = JSON.stringify(asArray);
+      } catch (_) {
+        (field).value = asArray.join('\\n');
+      }
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   }
 
   async function uploadOne(file) {
@@ -476,15 +511,15 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
   }
 
   input?.addEventListener('change', async () => {
-    const files = Array.from((input as HTMLInputElement).files || []);
+    const files = Array.from((input).files || []);
     if (!files.length) return;
 
     const queue = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
     const rejected = files.filter(f => !queue.includes(f));
     if (rejected.length) alert('Ignored some files (unsupported type or > 8MB).');
 
-    let done = 0, urls: string[] = [];
-    status && (status.textContent = 'Uploading 0/' + queue.length + '...');
+    let done = 0, urls = [];
+    if (status) status.textContent = 'Uploading 0/' + queue.length + '...';
 
     for (let i = 0; i < queue.length; i += MAX_AT_ONCE) {
       const chunk = queue.slice(i, i + MAX_AT_ONCE);
@@ -492,14 +527,14 @@ section .images-editor [placeholder*="Paste an image URL"] { display:none !impor
       results.forEach(r => {
         if (r.status === 'fulfilled' && r.value) urls.push(r.value);
         done += 1;
-        status && (status.textContent = 'Uploading ' + done + '/' + queue.length + '...');
+        if (status) status.textContent = 'Uploading ' + done + '/' + queue.length + '...';
       });
     }
 
     if (urls.length) pushIntoEditor(urls);
 
-    (input as HTMLInputElement).value = '';
-    status && (status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.');
+    (input).value = '';
+    if (status) status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
   });
 })();`,
           }}
