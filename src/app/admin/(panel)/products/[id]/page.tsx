@@ -174,7 +174,7 @@ export default async function ProductEditPage({
   const SELECTED_JSON = JSON.stringify(selectedInitial);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-product-id={product.id}>
       <header className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-extrabold">Edit product</h1>
         <p className="text-sm text-gray-500">
@@ -264,12 +264,14 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         </form>
 
-        {/* Script: esconder “Add” visualmente sem remover interação */}
-        <Script id="hide-add-button" strategy="afterInteractive"
+        {/* Script: esconder “Add” visualmente sem remover interação (escopado por produto) */}
+        <Script
+          id={`hide-add-button-${product.id}`}
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const root = document.querySelector('.images-editor');
+  const root = document.querySelector('[data-product-id="${product.id}"] .images-editor');
   if (!root) return;
   function hide() {
     root.querySelectorAll('button').forEach(b => {
@@ -324,21 +326,27 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         </form>
 
-        {/* Script: badges (escreve selectedBadges[] no form de badges) */}
-        <Script id="badges-search" strategy="afterInteractive"
+        {/* Script: badges (escreve selectedBadges[] no form de badges) — escopado + id único */}
+        <Script
+          id={`badges-search-${product.id}`}
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
+  const scope = document.querySelector('[data-product-id="${product.id}"]');
+  if (!scope) return;
+
   const BADGES = ${JSON.stringify(
     BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })))
   )};
   const INITIAL = new Set(${JSON.stringify((product as any).badges ?? [])});
-  const q = document.getElementById('badge-query');
-  const results = document.getElementById('badge-results');
-  const hint = document.getElementById('badge-hint');
-  const selWrap = document.getElementById('badge-selected-wrap');
-  const selectedDiv = document.getElementById('badge-selected');
-  const hiddenInputs = document.getElementById('badge-hidden-inputs');
+
+  const q = scope.querySelector('#badge-query');
+  const results = scope.querySelector('#badge-results');
+  const hint = scope.querySelector('#badge-hint');
+  const selWrap = scope.querySelector('#badge-selected-wrap');
+  const selectedDiv = scope.querySelector('#badge-selected');
+  const hiddenInputs = scope.querySelector('#badge-hidden-inputs');
   if (!q || !results || !hint || !selWrap || !selectedDiv || !hiddenInputs) return;
 
   const selected = new Set(INITIAL);
@@ -433,13 +441,17 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* Script: Upload local -> Blob -> inserir no ImagesEditor */}
-        <Script id="blob-upload-auto-add" strategy="afterInteractive"
+        {/* Script: Upload local -> Blob -> inserir no ImagesEditor — escopado + id único */}
+        <Script
+          id={`blob-upload-auto-add-${product.id}`}
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  const input = document.getElementById('blob-images-input');
-  const status = document.getElementById('blob-images-status');
+  const scope = document.querySelector('[data-product-id="${product.id}"]');
+  if (!scope) return;
+  const input = scope.querySelector('#blob-images-input');
+  const status = scope.querySelector('#blob-images-status');
 
   // Tem de corresponder ao prop "name" do <ImagesEditor />
   const EDITOR_NAME = "imagesText";
@@ -449,16 +461,16 @@ section .images-editor [placeholder*="Paste an image URL"] {
   const MAX_AT_ONCE = 3;
 
   function pushIntoEditor(urls) {
-    // 1) API oficial (se existir)
+    // 1) API do ImagesEditor (se existir)
     const api = (window).__imagesEditor && (window).__imagesEditor[EDITOR_NAME];
     if (api && typeof api.append === "function") {
       try { api.append(urls); return; } catch (_) {}
     }
-
-    // 2) Fallback: input de 'paste URL' + botão 'Add'
-    const root = document.querySelector('.images-editor');
-    const paste = root && root.querySelector('input[placeholder*="Paste"]');
-    const addBtn = root && Array.from(root.querySelectorAll('button'))
+    // 2) Fallback para UI antiga (paste + Add)
+    const root = scope.querySelector('.images-editor');
+    if (!root) return;
+    const paste = root.querySelector('input[placeholder*="Paste"]');
+    const addBtn = Array.from(root.querySelectorAll('button'))
       .find(b => ((b.textContent || '').trim().toLowerCase() === 'add'));
     if (paste && addBtn) {
       urls.forEach(u => {
@@ -468,25 +480,20 @@ section .images-editor [placeholder*="Paste an image URL"] {
       });
       return;
     }
-
     // 3) Último recurso: atualizar diretamente o campo name="imagesText"
-    const field = document.querySelector('textarea[name="imagesText"], input[name="imagesText"]');
+    const field = scope.querySelector('textarea[name="imagesText"], input[name="imagesText"]');
     if (field) {
       let current = [];
       try {
         const raw = (field).value || '[]';
         current = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
       } catch (_) {
-        // se não for JSON, tenta separar por quebras de linha
         current = String((field).value || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
       }
       const set = new Set([ ...current, ...urls ]);
       const asArray = Array.from(set);
-      try {
-        (field).value = JSON.stringify(asArray);
-      } catch (_) {
-        (field).value = asArray.join('\\n');
-      }
+      try { (field).value = JSON.stringify(asArray); }
+      catch (_) { (field).value = asArray.join('\\n'); }
       field.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }
@@ -510,8 +517,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
     return url;
   }
 
-  input?.addEventListener('change', async () => {
-    const files = Array.from((input).files || []);
+  input && input.addEventListener('change', async () => {
+    const files = Array.from(input.files || []);
     if (!files.length) return;
 
     const queue = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
@@ -533,7 +540,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
     if (urls.length) pushIntoEditor(urls);
 
-    (input).value = '';
+    input.value = '';
     if (status) status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
   });
 })();`,
