@@ -185,7 +185,7 @@ const TEAM_TO_LEAGUE = (() => {
 })();
 
 async function getActiveLeagues() {
-  // todos os teams que têm pelo menos 1 produto e que existem no nosso mapa
+  // teams que existem na config e têm pelo menos 1 produto
   const teams = await prisma.product.findMany({
     where: {
       team: {

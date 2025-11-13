@@ -8,14 +8,16 @@ import { LEAGUES_CONFIG } from "../page";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type PageProps = {
-  params: {
-    slug: string;
-  };
-};
+// Em Next 15, o tipo gerado para params é Promise<...>
+// Por isso aceitamos Promise e fazemos await.
+type ParamsPromise = Promise<{ slug: string }>;
 
-export default async function LeagueDetailPage({ params }: PageProps) {
-  const slug = params.slug;
+export default async function LeagueDetailPage({
+  params,
+}: {
+  params: ParamsPromise;
+}) {
+  const { slug } = await params;
 
   const league = LEAGUES_CONFIG.find((l) => l.slug === slug);
   if (!league) {
@@ -77,9 +79,9 @@ export default async function LeagueDetailPage({ params }: PageProps) {
             className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
           >
             {/* 
-              Se já tiveres imagens individuais dos clubes, troca o src abaixo
-              por algo tipo `/clubs/${club.clubSlug}.png`.
-              Para já, usamos o mesmo fundo da league como placeholder.
+              Se já tiveres imagens específicas para cada clube, 
+              troca o src por algo tipo `/clubs/${club.clubSlug}.png`.
+              Para já, usamos o fundo da league como placeholder.
             */}
             <div className="relative w-full pt-[135%] bg-gray-50">
               <Image
