@@ -158,12 +158,22 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
         {/* Centered nav */}
         <nav className="hidden lg:flex flex-1 items-center justify-center gap-10 text-[16px] font-medium">
-          <Link href="/products" className="hover:text-blue-700">Products</Link>
-          <Link href="/players" className="hover:text-blue-700">Players</Link>
-          <Link href="/clubs" className="hover:text-blue-700">Clubs</Link>
-          <Link href="/faq" className="hover:text-blue-700">FAQ</Link>
+          <Link href="/nations" className="hover:text-blue-700">
+            Nations
+          </Link>
+          <Link href="/leagues" className="hover:text-blue-700">
+            Leagues
+          </Link>
+          <Link href="/clubs" className="hover:text-blue-700">
+            Clubs
+          </Link>
+          <Link href="/faq" className="hover:text-blue-700">
+            FAQ
+          </Link>
           {isAdmin && (
-            <Link href="/admin" className="hover:text-blue-700">Admin</Link>
+            <Link href="/admin" className="hover:text-blue-700">
+              Admin
+            </Link>
           )}
         </nav>
 
@@ -196,7 +206,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <div className="relative">
               <button
                 ref={userBtnRef}
-                onClick={() => setUserOpen(v => !v)}
+                onClick={() => setUserOpen((v) => !v)}
                 className="group inline-flex items-center gap-2 rounded-full border px-3 py-2 hover:bg-gray-100"
                 aria-haspopup="menu"
                 aria-expanded={userOpen}
@@ -317,7 +327,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
           {status === "authenticated" ? (
             <button
-              onClick={() => setUserOpen(v => !v)}
+              onClick={() => setUserOpen((v) => !v)}
               className="inline-flex items-center justify-center rounded-full border p-1.5 hover:bg-gray-100"
               aria-haspopup="menu"
               aria-expanded={userOpen}
@@ -398,18 +408,35 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         </div>
 
         <nav className="px-2 py-2 text-base">
-          <MobileLink href="/products" onClick={() => setMobileOpen(false)}>Products</MobileLink>
-          <MobileLink href="/players" onClick={() => setMobileOpen(false)}>Players</MobileLink>
-          <MobileLink href="/clubs" onClick={() => setMobileOpen(false)}>Clubs</MobileLink>
-          <MobileLink href="/faq" onClick={() => setMobileOpen(false)}>FAQ</MobileLink>
-          <MobileLink href="/cart" onClick={() => setMobileOpen(false)}>Cart</MobileLink>
-          {isAdmin && <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>Admin</MobileLink>}
+          <MobileLink href="/nations" onClick={() => setMobileOpen(false)}>
+            Nations
+          </MobileLink>
+          <MobileLink href="/leagues" onClick={() => setMobileOpen(false)}>
+            Leagues
+          </MobileLink>
+          <MobileLink href="/clubs" onClick={() => setMobileOpen(false)}>
+            Clubs
+          </MobileLink>
+          <MobileLink href="/faq" onClick={() => setMobileOpen(false)}>
+            FAQ
+          </MobileLink>
+          <MobileLink href="/cart" onClick={() => setMobileOpen(false)}>
+            Cart
+          </MobileLink>
+          {isAdmin && (
+            <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>
+              Admin
+            </MobileLink>
+          )}
         </nav>
 
         <div className="mt-auto p-3 border-t">
           {status === "authenticated" ? (
             <button
-              onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }); }}
+              onClick={() => {
+                setMobileOpen(false);
+                signOut({ callbackUrl: "/" });
+              }}
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
             >
               <LogOut className="h-4 w-4" />
@@ -681,7 +708,9 @@ function SearchBar({
                         {it.clubName || "Product"}
                       </div>
                     </div>
-                    <div className="shrink-0 text-sm font-semibold">{formatPrice(it.price)}</div>
+                    <div className="shrink-0 text-sm font-semibold">
+                      {formatPrice(it.price)}
+                    </div>
                   </button>
                 </li>
               ))}

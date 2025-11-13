@@ -1,177 +1,103 @@
 // src/app/leagues/[slug]/page.tsx
+import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { LEAGUES_CONFIG } from "../page";
 
-export const revalidate = 0;
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-/** -------------------- helpers -------------------- */
-const TITLES: Record<string, string> = {
-  "premier-league": "Premier League",
-  "la-liga": "La Liga",
-  "serie-a": "Serie A",
-  bundesliga: "Bundesliga",
-  "ligue-1": "Ligue 1",
-  eredivisie: "Eredivisie",
-  "primeira-liga": "Primeira Liga (PT)",
-  "scottish-premiership": "Scottish Premiership",
-  brasileirao: "Brasileirão",
+type PageProps = {
+  params: {
+    slug: string;
+  };
 };
 
-function titleFromSlug(slug: string) {
-  return (
-    TITLES[slug] ??
-    slug
-      .split("-")
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-      .join(" ")
-  );
-}
+export default async function LeagueDetailPage({ params }: PageProps) {
+  const slug = params.slug;
 
-function logoPath(league: string, club: string) {
-  return `/assets/clubs/${league}/${club}.png`;
-}
+  const league = LEAGUES_CONFIG.find((l) => l.slug === slug);
+  if (!league) {
+    return notFound();
+  }
 
-function prettyNameFromSlug(slug: string) {
-  const parts = slug.split("-");
-  const UPPER = new Set(["fc", "ac", "sc", "st", "psg", "rb", "vfb", "sv"]);
-  return parts
-    .map((p) => {
-      if (UPPER.has(p)) return p.toUpperCase();
-      if (p.length <= 3 && p !== "usa") return p.toUpperCase();
-      return p.charAt(0).toUpperCase() + p.slice(1);
-    })
-    .join(" ");
-}
+  if (!league.clubs || league.clubs.length === 0) {
+    return notFound();
+  }
 
-/** -------------------- dados (slugs por liga) -------------------- */
-const CLUB_SLUGS: Record<string, string[]> = {
-  "premier-league": [
-    "arsenal","aston-villa","bournemouth","brentford","brighton",
-    "chelsea","crystal-palace","everton","fulham","leeds-united",
-    "burnley","liverpool","manchester-city","manchester-united","newcastle-united",
-    "nottingham-forest","sunderland","tottenham-hotspur","west-ham-united","wolverhampton-wanderers",
-  ],
-  "la-liga": [
-    "real-madrid","barcelona","atletico-madrid","athletic-club","real-sociedad",
-    "villarreal","real-betis","sevilla","valencia","girona",
-    "getafe","celta-vigo","osasuna","rayo-vallecano","alaves",
-    "mallorca","las-palmas","leganes","real-valladolid","espanyol",
-  ],
-  "serie-a": [
-    "inter","ac-milan","juventus","napoli","roma",
-    "lazio","atalanta","fiorentina","bologna","torino",
-    "genoa","monza","udinese","empoli","lecce",
-    "cagliari","hellas-verona","como","venezia","parma",
-  ],
-  bundesliga: [
-    "bayern-munich","borussia-dortmund","rb-leipzig","bayer-leverkusen","vfb-stuttgart",
-    "eintracht-frankfurt","sc-freiburg","union-berlin","wolfsburg","mainz-05",
-    "augsburg","borussia-monchengladbach","bochum","heidenheim","werder-bremen",
-    "hoffenheim","holstein-kiel","st-pauli",
-  ],
-  "ligue-1": [
-    "psg","marseille","lyon","monaco","lille",
-    "nice","rennes","nantes","montpellier","strasbourg",
-    "reims","toulouse","lens","brest","angers",
-    "saint-etienne","auxerre","metz",
-  ],
-  eredivisie: [
-    "ajax","psv","feyenoord","az-alkmaar","fc-twente",
-    "utrecht","heerenveen","nec-nijmegen","sparta-rotterdam","go-ahead-eagles",
-    "pec-zwolle","heracles","fortuna-sittard","rkc-waalwijk","vitesse",
-    "almere-city","excelsior","fc-volendam",
-  ],
-  "primeira-liga": [
-    "benfica","porto","sporting","braga","vitoria-sc",
-    "boavista","rio-ave","famalicao","gil-vicente","estoril",
-    "portimonense","casa-pia","farense","moreirense","arouca",
-    "estoril-praia","santa-clara","estoril-2",
-  ],
-  "scottish-premiership": [
-    "celtic","rangers","aberdeen","hearts","hibernian",
-    "motherwell","st-johnstone","st-mirren","kilmarnock","dundee",
-    "ross-county","dundee-united",
-  ],
-  brasileirao: [
-    "flamengo","palmeiras","corinthians","sao-paulo","santos",
-    "fluminense","botafogo","vasco-da-gama","cruzeiro","atletico-mineiro",
-    "gremio","internacional","bahia","fortaleza","athletico-pr",
-    "cuiaba","goias","red-bull-bragantino","america-mg","coritiba",
-  ],
-};
+  const teamNames = league.clubs.map((c) => c.teamName);
 
-type ClubCard = { slug: string; name: string; logo: string };
+  // teams desta league que têm pelo menos 1 produto
+  const teamsWithProducts = await prisma.product.findMany({
+    where: {
+      team: {
+        in: teamNames,
+      },
+    },
+    select: {
+      team: true,
+    },
+    distinct: ["team"],
+  });
 
-function getClubsForLeague(leagueSlug: string): ClubCard[] {
-  const slugs = CLUB_SLUGS[leagueSlug] ?? [];
-  return slugs.map((s) => ({
-    slug: s,
-    name: prettyNameFromSlug(s),
-    logo: logoPath(leagueSlug, s),
-  }));
-}
+  const activeTeamNames = new Set(teamsWithProducts.map((t) => t.team));
 
-/** -------------------- page -------------------- */
-export default async function LeaguePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const leagueSlug = slug.toLowerCase();
-  const title = titleFromSlug(leagueSlug);
-  const clubs = getClubsForLeague(leagueSlug);
+  const clubsToShow = league.clubs.filter((c) => activeTeamNames.has(c.teamName));
+
+  if (clubsToShow.length === 0) {
+    return notFound();
+  }
 
   return (
-    <div className="container-fw py-10">
-      <header className="mb-6">
-        <h1 className="text-3xl font-extrabold">{title}</h1>
-        <p className="text-sm text-gray-600">
-          Browse clubs and products for the {title}.
-        </p>
-      </header>
-
-      {clubs.length > 0 ? (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {clubs.map((c) => (
-            <Link
-              key={c.slug}
-              href={`/products/team/${encodeURIComponent(c.slug)}`}
-              className="group block rounded-2xl border bg-white overflow-hidden hover:shadow transition"
-            >
-              {/* Área da imagem — ocupa todo o espaço do topo */}
-              <div className="relative aspect-[3/4] w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={c.logo}
-                  alt={c.name}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-
-              {/* Nome por baixo da imagem */}
-              <div className="px-3 py-3 text-center font-semibold truncate">
-                {c.name}
-              </div>
-            </Link>
-          ))}
+    <main className="container-fw py-10">
+      <div className="mb-6 flex items-center gap-4">
+        <div className="relative h-16 w-16 rounded-2xl overflow-hidden border border-gray-100">
+          <Image
+            src={league.image}
+            alt={league.name}
+            fill
+            className="object-cover"
+            sizes="64px"
+          />
         </div>
-      ) : (
-        <div className="rounded-2xl border bg-white p-5">
-          <p className="text-sm text-gray-700">
-            We couldn’t list clubs for this league right now.
+        <div>
+          <h1 className="text-3xl font-bold">{league.name}</h1>
+          <p className="text-sm text-gray-500">
+            Select a club to see all products for that club.
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            You can still browse via the clubs page filtered by this league.
-          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {clubsToShow.map((club) => (
           <Link
-            href={`/clubs?league=${encodeURIComponent(leagueSlug)}`}
-            className="inline-flex mt-4 rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
+            key={club.clubSlug}
+            href={`/clubs/${club.clubSlug}`}
+            className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
           >
-            Open clubs for {title}
+            {/* 
+              Se já tiveres imagens individuais dos clubes, troca o src abaixo
+              por algo tipo `/clubs/${club.clubSlug}.png`.
+              Para já, usamos o mesmo fundo da league como placeholder.
+            */}
+            <div className="relative w-full pt-[135%] bg-gray-50">
+              <Image
+                src={league.image}
+                alt={club.teamName}
+                fill
+                className="object-cover opacity-90"
+                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+              />
+            </div>
+            <div className="px-3 py-3 text-center">
+              <div className="text-sm font-medium group-hover:text-blue-700">
+                {club.teamName}
+              </div>
+            </div>
           </Link>
-        </div>
-      )}
-    </div>
+        ))}
+      </div>
+    </main>
   );
 }
