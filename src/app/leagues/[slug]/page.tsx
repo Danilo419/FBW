@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { LEAGUES_CONFIG, LEAGUES_BY_SLUG } from "@/lib/leaguesConfig";
+import { LEAGUES_CONFIG } from "@/lib/leaguesConfig";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,19 +16,23 @@ export default async function LeagueDetailPage({ params }: any) {
   const league = LEAGUES_CONFIG.find((l) => l.slug === slug) ?? null;
   if (!league) return notFound();
 
+  // nomes das equipas desta liga (têm de coincidir com Product.team)
   const teamNames = league.clubs.map((c) => c.name);
 
+  // equipas desta liga que têm pelo menos 1 produto
   const teamsWithProducts = await prisma.product.findMany({
     where: {
-      team: { in: teamNames },
+      team: {
+        in: teamNames,
+      },
     },
     select: { team: true },
     distinct: ["team"],
   });
 
   const activeTeamNames = new Set(teamsWithProducts.map((t) => t.team));
-
   const clubsToShow = league.clubs.filter((c) => activeTeamNames.has(c.name));
+
   if (clubsToShow.length === 0) return notFound();
 
   return (
@@ -52,28 +56,33 @@ export default async function LeagueDetailPage({ params }: any) {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {clubsToShow.map((club) => (
-          <Link
-            key={club.slug}
-            href={`/clubs/${club.slug}`}
-            className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
-          >
-            <div className="relative w-full pt-[135%] bg-gray-50">
-              <Image
-                src={league.image}
-                alt={club.name}
-                fill
-                className="object-cover opacity-90"
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
-              />
-            </div>
-            <div className="px-3 py-3 text-center">
-              <div className="text-sm font-medium group-hover:text-blue-700">
-                {club.name}
+        {clubsToShow.map((club) => {
+          // caminho da imagem do clube em /public/assets/clubs/<league>/<club>.png
+          const clubImageSrc = `/assets/clubs/${league.slug}/${club.slug}.png`;
+
+          return (
+            <Link
+              key={club.slug}
+              href={`/clubs/${club.slug}`}
+              className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
+            >
+              <div className="relative w-full pt-[135%] bg-gray-50">
+                <Image
+                  src={clubImageSrc}
+                  alt={club.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+                />
               </div>
-            </div>
-          </Link>
-        ))}
+              <div className="px-3 py-3 text-center">
+                <div className="text-sm font-medium group-hover:text-blue-700">
+                  {club.name}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </main>
   );
