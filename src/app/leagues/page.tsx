@@ -15,9 +15,7 @@ async function getActiveLeagues() {
         in: Array.from(TEAM_TO_LEAGUE.keys()),
       },
     },
-    select: {
-      team: true,
-    },
+    select: { team: true },
     distinct: ["team"],
   });
 
@@ -27,8 +25,8 @@ async function getActiveLeagues() {
     if (leagueSlug) activeLeagueSlugs.add(leagueSlug);
   }
 
-  return LEAGUES_CONFIG.filter((lg) => activeLeagueSlugs.has(lg.slug)).sort((a, b) =>
-    a.name.localeCompare(b.name)
+  return LEAGUES_CONFIG.filter((lg) => activeLeagueSlugs.has(lg.slug)).sort(
+    (a, b) => a.name.localeCompare(b.name)
   );
 }
 
