@@ -3,28 +3,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { LEAGUES_CONFIG } from "../page";
+import { LEAGUES_CONFIG } from "@/lib/leaguesConfig";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Em Next 15, o tipo gerado para params é Promise<...>
-// Por isso aceitamos Promise e fazemos await.
-type ParamsPromise = Promise<{ slug: string }>;
-
-export default async function LeagueDetailPage({
-  params,
-}: {
-  params: ParamsPromise;
-}) {
-  const { slug } = await params;
-
-  const league = LEAGUES_CONFIG.find((l) => l.slug === slug);
-  if (!league) {
+// Usamos "any" para ser sempre compatível com o tipo gerado pelo Next 15
+export default async function LeagueDetailPage({ params }: any) {
+  const slug: string | undefined = params?.slug;
+  if (!slug) {
     return notFound();
   }
 
-  if (!league.clubs || league.clubs.length === 0) {
+  const league = LEAGUES_CONFIG.find((l) => l.slug === slug);
+  if (!league || !league.clubs || league.clubs.length === 0) {
     return notFound();
   }
 
@@ -44,7 +36,6 @@ export default async function LeagueDetailPage({
   });
 
   const activeTeamNames = new Set(teamsWithProducts.map((t) => t.team));
-
   const clubsToShow = league.clubs.filter((c) => activeTeamNames.has(c.teamName));
 
   if (clubsToShow.length === 0) {
@@ -78,11 +69,7 @@ export default async function LeagueDetailPage({
             href={`/clubs/${club.clubSlug}`}
             className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
           >
-            {/* 
-              Se já tiveres imagens específicas para cada clube, 
-              troca o src por algo tipo `/clubs/${club.clubSlug}.png`.
-              Para já, usamos o fundo da league como placeholder.
-            */}
+            {/* Se tiveres imagens específicas das equipas, troca o src aqui */}
             <div className="relative w-full pt-[135%] bg-gray-50">
               <Image
                 src={league.image}
