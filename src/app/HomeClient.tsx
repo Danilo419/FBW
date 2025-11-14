@@ -699,6 +699,13 @@ export default function Home() {
           ? data
           : []
 
+        // LOGS para veres no console
+        if (typeof window !== 'undefined') {
+          ;(window as any).__HOME_PRODUCTS__ = list
+          console.log('HOME PRODUCTS (lista completa)', list)
+          console.log('HOME PRODUCTS (primeiro produto)', list[0])
+        }
+
         const shuffled = shuffle(list)
         const selected = shuffled.slice(0, 12) // 12 espaços
         if (!cancelled) setHomeProducts(selected)
@@ -793,10 +800,10 @@ export default function Home() {
         {/* Spaces: Adult / Kids / Retro / Concept Kits */}
         <ImageSpaces />
 
-        {/* Gap between "Highlights" and product grid */}
+        {/* Gap entre "Highlights" e a grelha de produtos */}
         <div className="h-2 sm:h-3" />
 
-        {/* Products block pulled from DB */}
+        {/* Products block puxado da BD */}
         <div className="relative">
           <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
@@ -822,9 +829,7 @@ export default function Home() {
                 {homeProducts.slice(0, 12).map((p: any) => {
                   const href = `/products/${p.slug ?? p.id}`
 
-                  // ============================
-                  // IMAGEM: tenta TODOS os nomes
-                  // ============================
+                  // IMAGEM: tenta uma data de nomes possíveis + arrays
                   const imgSrc =
                     p.mainImage ??
                     p.mainImageUrl ??
@@ -867,7 +872,6 @@ export default function Home() {
                     p.imgURL ??
                     p.url ??
                     p.src ??
-                    // arrays comuns
                     p.gallery?.[0]?.url ??
                     p.gallery?.[0]?.imageUrl ??
                     p.gallery?.[0]?.imageURL ??
