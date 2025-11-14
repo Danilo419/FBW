@@ -654,37 +654,30 @@ function ImageSpaces() {
    Helpers for products
 ====================================================================================== */
 
+// MAPA QUE QUERES USAR (em euros)
+const SALE_MAP_EUR: Record<number, number> = {
+  29.99: 70,
+  34.99: 100,
+  39.99: 120,
+  44.99: 150,
+  49.99: 165,
+  59.99: 200,
+  69.99: 250,
+}
+
+// Versão em cêntimos, gerada a partir do mapa em euros
+const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
+  Object.entries(SALE_MAP_EUR).map(([k, v]) => [
+    Math.round(parseFloat(k) * 100),
+    Math.round(v * 100),
+  ])
+) as Record<number, number>
+
 function formatEurFromCents(cents: number | null | undefined) {
   if (cents == null) return ''
   const value = (cents / 100).toFixed(2) // 69.99
   const withComma = value.replace('.', ',')
   return `${withComma} €`
-}
-
-/**
- * Gera um preço antigo “fake”, mas estável para cada produto,
- * para que todos tenham risco + percentagem.
- */
-function deterministicCompareAtFromKey(
-  key: string | undefined,
-  priceCents: number | null
-): number | null {
-  if (!priceCents || priceCents <= 0) return null
-  const k = key || 'default'
-
-  // hash simples determinístico
-  let hash = 0
-  for (let i = 0; i < k.length; i++) {
-    hash = (hash * 31 + k.charCodeAt(i)) | 0
-  }
-
-  const t = ((hash >>> 0) % 1000) / 1000 // 0–0.999
-  // multiplicador entre 1.9x e 3.5x (descontos ~47%–71%)
-  const multiplier = 1.9 + t * 1.6
-  const compareAt = Math.round(priceCents * multiplier)
-
-  // garante que é pelo menos +10% (só por segurança)
-  return compareAt <= priceCents ? Math.round(priceCents * 1.1) : compareAt
 }
 
 /* ======================================================================================
@@ -930,12 +923,10 @@ export default function Home() {
                       ? Math.round(p.compareAtPrice * 100)
                       : null
 
-                  // 2) Se não existir na BD, gera um preço antigo estável
-                  if (!compareAtCents && priceCents) {
-                    compareAtCents = deterministicCompareAtFromKey(
-                      String(p.id ?? p.slug ?? ''),
-                      priceCents
-                    )
+                  // 2) se não existir, tenta mapear pelo SALE_MAP
+                  if (!compareAtCents && priceCents != null) {
+                    const mapped = SALE_MAP_CENTS[priceCents]
+                    if (mapped) compareAtCents = mapped
                   }
 
                   const hasDiscount =
