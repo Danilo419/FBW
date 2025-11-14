@@ -557,28 +557,6 @@ function HeroImageCycler({
 }
 
 /* ======================================================================================
-   3) MOCK DATA — local images (cards)
-====================================================================================== */
-type Product = {
-  id: string
-  name: string
-  price: number
-  img: string
-  tag?: string
-}
-const products: Product[] = [
-  { id: 'kit-aurora',  name: 'Aurora Kit (concept)',  price: 59.9, img: '/images/products/aurora.jpg',  tag: 'New' },
-  { id: 'street-pro',  name: 'Street Pro (concept)',  price: 54.9, img: '/images/products/street-pro.jpg', tag: 'Best-seller' },
-  { id: 'cosmos',      name: 'Cosmos (concept)',      price: 64.9, img: '/images/products/cosmos.jpg' },
-  { id: 'voltage',     name: 'Voltage (concept)',     price: 49.9, img: '/images/products/voltage.jpg' },
-  { id: 'cobalt',      name: 'Cobalt (concept)',      price: 52.9, img: '/images/products/cobalt.jpg' },
-  { id: 'nebula',      name: 'Nebula (limited)',      price: 67.9, img: '/images/products/nebula.jpg', tag: 'Limited' },
-  { id: 'wave',        name: 'Wave (concept)',        price: 57.5, img: '/images/products/wave.jpg' },
-  { id: 'onyx',        name: 'Onyx (concept)',        price: 62.0, img: '/images/products/onyx.jpg' },
-]
-const eur = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })
-
-/* ======================================================================================
    4) HIGHLIGHT SPACES — image banners
 ====================================================================================== */
 type HighlightSpace = {
@@ -673,6 +651,18 @@ function ImageSpaces() {
 }
 
 /* ======================================================================================
+   Helpers for products
+====================================================================================== */
+
+function formatEurFromCents(cents: number | null | undefined) {
+  if (cents == null) return ''
+  return (cents / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'EUR',
+  })
+}
+
+/* ======================================================================================
    5) PAGE
 ====================================================================================== */
 export default function Home() {
@@ -690,6 +680,41 @@ export default function Home() {
   const sectionShadow = useTransform(shadowSpring, (v) =>
     v > 0.2 ? '0 10px 30px -15px rgba(2,8,23,0.12)' : 'none'
   )
+
+  // ====== Home products from DB (random 12 each load) ======
+  const [homeProducts, setHomeProducts] = useState<any[]>([])
+  const [loadingHomeProducts, setLoadingHomeProducts] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadProducts = async () => {
+      try {
+        const res = await fetch('/api/home-products?limit=40', { cache: 'no-store' })
+        if (!res.ok) throw new Error('Failed to load home products')
+        const data = await res.json()
+        const list = Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data)
+          ? data
+          : []
+
+        const shuffled = shuffle(list)
+        const selected = shuffled.slice(0, 12) // 12 espaços
+        if (!cancelled) setHomeProducts(selected)
+      } catch (err) {
+        console.error(err)
+        if (!cancelled) setHomeProducts([])
+      } finally {
+        if (!cancelled) setLoadingHomeProducts(false)
+      }
+    }
+
+    loadProducts()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -768,61 +793,132 @@ export default function Home() {
         {/* Spaces: Adult / Kids / Retro / Concept Kits */}
         <ImageSpaces />
 
-        {/* Keep a clean gap between "Highlights" and "New & trending" */}
+        {/* Gap between "Highlights" and product grid */}
         <div className="h-2 sm:h-3" />
 
-        {/* Products block */}
+        {/* Products block pulled from DB */}
         <div className="relative">
           <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">New & trending</h3>
-              <span className="text-xs text-gray-500">Hand-picked concepts</span>
+              <h3 className="text-lg font-semibold">Some of our products</h3>
+              <span className="text-xs text-gray-500">
+                Discover a few pieces from the collection
+              </span>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {products.map((p) => (
-                <motion.a
-                  key={p.id}
-                  href={`/products/${p.id}`}
-                  whileHover={{ y: -6 }}
-                  className="group product-hover transition"
-                >
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-3xl">
-                    <img
-                      src={p.img}
-                      alt={p.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      onError={(e) => {
-                        const img = e.currentTarget as HTMLImageElement
-                        if ((img as any)._fallbackApplied) return
-                        ;(img as any)._fallbackApplied = true
-                        img.src = FALLBACK_IMG
-                      }}
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                    {p.tag && (
-                      <span className="absolute left-3 top-3 badge bg-blue-50 text-blue-700 ring-1 ring-blue-200">
-                        {p.tag}
-                      </span>
-                    )}
-                    <motion.div initial={{ opacity: 0, y: 10 }} whileHover={{ opacity: 1, y: 0 }} className="absolute bottom-3 left-3 right-3">
-                      <div className="flex items-center justify-between text-white">
-                        <span className="text-sm">Add to cart</span>
-                        <ArrowRight className="h-4 w-4" />
+            {loadingHomeProducts && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-[320px] rounded-3xl bg-gray-100 animate-pulse"
+                  />
+                ))}
+              </div>
+            )}
+
+            {!loadingHomeProducts && homeProducts.length > 0 && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {homeProducts.slice(0, 12).map((p: any) => {
+                  const href = `/products/${p.slug ?? p.id}`
+                  const imgSrc =
+                    p.thumbnailUrl ??
+                    p.mainImage ??
+                    p.coverImage ??
+                    p.images?.[0]?.url ??
+                    FALLBACK_IMG
+
+                  const priceCents: number | null =
+                    typeof p.priceCents === 'number'
+                      ? p.priceCents
+                      : typeof p.price === 'number'
+                      ? Math.round(p.price * 100)
+                      : null
+
+                  const compareAtCents: number | null =
+                    typeof p.compareAtPriceCents === 'number'
+                      ? p.compareAtPriceCents
+                      : typeof p.compareAtPrice === 'number'
+                      ? Math.round(p.compareAtPrice * 100)
+                      : null
+
+                  const hasDiscount =
+                    priceCents != null &&
+                    compareAtCents != null &&
+                    compareAtCents > priceCents
+
+                  const discountPercent = hasDiscount
+                    ? Math.round(
+                        ((compareAtCents! - priceCents!) / compareAtCents!) * 100
+                      )
+                    : null
+
+                  const team = (p.team ?? p.club ?? p.clubName ?? '') as string
+
+                  return (
+                    <motion.a
+                      key={p.id}
+                      href={href}
+                      whileHover={{ y: -6 }}
+                      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col"
+                    >
+                      <div className="relative aspect-[4/3]">
+                        <img
+                          src={imgSrc}
+                          alt={p.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            const img = e.currentTarget as HTMLImageElement
+                            if ((img as any)._fallbackApplied) return
+                            ;(img as any)._fallbackApplied = true
+                            img.src = FALLBACK_IMG
+                          }}
+                        />
+                        {discountPercent != null && (
+                          <div className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
+                            -{discountPercent}%
+                          </div>
+                        )}
                       </div>
-                    </motion.div>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold tracking-tight">{p.name}</h3>
-                      <span className="text-blue-700 font-semibold">{eur(p.price)}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">Affordable tracked shipping</p>
-                  </div>
-                </motion.a>
-              ))}
-            </div>
+
+                      <div className="flex flex-1 flex-col px-4 py-3">
+                        {team && (
+                          <div className="text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
+                            {team}
+                          </div>
+                        )}
+                        <h3 className="mt-1 text-sm font-semibold leading-snug line-clamp-2">
+                          {p.name}
+                        </h3>
+
+                        <div className="mt-3 flex items-baseline gap-2">
+                          {hasDiscount && (
+                            <span className="text-xs text-gray-400 line-through">
+                              {formatEurFromCents(compareAtCents)}
+                            </span>
+                          )}
+                          <span className="text-base font-semibold text-blue-800">
+                            {formatEurFromCents(priceCents)}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex items-center text-xs text-blue-700">
+                          View product
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </div>
+                      </div>
+                    </motion.a>
+                  )
+                })}
+              </div>
+            )}
+
+            {!loadingHomeProducts && homeProducts.length === 0 && (
+              <p className="text-sm text-gray-500">
+                No products to show here yet. Please check the full catalog.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -859,26 +955,6 @@ export default function Home() {
             ))}
           </div>
         </motion.div>
-      </section>
-
-      {/* =================== REVIEWS =================== */}
-      <section id="reviews" className="container-fw section-gap">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">Community reviews</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="card p-6">
-              <div className="flex items-center gap-2 text-yellow-500 mb-2">
-                {'★★★★★'.split('').map((_, ix) => (
-                  <span key={ix}>★</span>
-                ))}
-              </div>
-              <p className="text-sm text-gray-700">
-                Amazing quality and perfect cut. Worth the wait with economy shipping. Recommend!
-              </p>
-              <div className="mt-4 text-xs text-gray-500">— Customer #{i}</div>
-            </motion.div>
-          ))}
-        </div>
       </section>
 
       {/* =================== CTA =================== */}
