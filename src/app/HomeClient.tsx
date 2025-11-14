@@ -148,7 +148,242 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 
 const heroImages: { src: string; alt: string }[] = [
   { src: '/images/players/Arsenal/Arsenal1.png', alt: 'image' },
-  // ... (resto igual, não mexi)
+  { src: '/images/players/Arsenal/Arsenal2.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal3.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal4.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal5.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal6.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal7.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal8.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal9.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal10.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal11.png', alt: 'image' },
+  { src: '/images/players/Arsenal/Arsenal12.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png', alt: 'image' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona1.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona2.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona3.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona4.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona5.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona6.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona7.png', alt: 'image' },
+  { src: '/images/players/Barcelona/Barcelona8.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea1.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea2.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea3.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea4.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea5.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea6.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea7.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea8.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea9.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea10.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea11.png', alt: 'image' },
+  { src: '/images/players/Chelsea/Chelsea12.png', alt: 'image' },
+  { src: '/images/players/Legends/Legends1.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool1.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool2.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool3.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool4.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool5.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool6.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool7.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool8.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool9.png', alt: 'image' },
+  { src: '/images/players/Liverpool/Liverpool10.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon1.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon2.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon3.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon4.png', alt: 'image' },
+  { src: '/images/players/Lyon/Lyon5.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity1.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity2.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity3.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity4.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity5.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity6.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity7.png', alt: 'image' },
+  { src: '/images/players/ManCity/ManCity8.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited1.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited2.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited3.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited4.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited5.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited6.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited7.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited8.png', alt: 'image' },
+  { src: '/images/players/ManUnited/ManUnited9.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha1.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha2.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha3.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha4.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha5.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha6.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha7.png', alt: 'image' },
+  { src: '/images/players/Marselha/Marselha8.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco1.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco2.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco3.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco4.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco5.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco6.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco7.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco8.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco9.png', alt: 'image' },
+  { src: '/images/players/Monaco/Monaco10.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG1.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG2.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG3.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG4.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG5.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG6.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG7.png', alt: 'image' },
+  { src: '/images/players/PSG/PSG8.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid4.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid5.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid6.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid7.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid8.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid9.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'image' },
+  { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham1.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham2.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham3.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham4.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham5.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham6.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham7.png', alt: 'image' },
+  { src: '/images/players/Tottenham/Tottenham8.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus1.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus2.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus3.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus4.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus5.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus6.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus7.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus8.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus9.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus10.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus11.png', alt: 'image' },
+  { src: '/images/players/Juventus/Juventus12.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan1.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan2.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan3.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan4.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan5.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan6.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan7.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan8.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan9.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan10.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan11.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan12.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan13.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan14.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan15.png', alt: 'image' },
+  { src: '/images/players/Milan/Milan16.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter1.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter2.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter3.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter4.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter5.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter6.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter7.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter8.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter9.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter10.png', alt: 'image' },
+  { src: '/images/players/Inter/Inter11.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma1.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma2.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma3.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma4.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma5.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma6.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma7.png', alt: 'image' },
+  { src: '/images/players/Roma/Roma8.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli1.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli2.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli3.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli4.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli5.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli6.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli7.png', alt: 'image' },
+  { src: '/images/players/Napoli/Napoli8.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern1.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern2.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern3.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern4.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern5.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern6.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern7.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern8.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern9.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern10.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern11.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern12.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern13.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern14.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern15.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern16.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern17.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern18.png', alt: 'image' },
+  { src: '/images/players/Bayern/Bayern19.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund1.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund2.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund3.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund4.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund5.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund6.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund7.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund8.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund9.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund10.png', alt: 'image' },
+  { src: '/images/players/Dortmund/Dortmund11.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen1.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen2.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen3.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen4.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen5.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen6.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen7.png', alt: 'image' },
+  { src: '/images/players/Leverkusen/Leverkusen8.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax1.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax2.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax3.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax4.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax5.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax6.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax7.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax8.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax9.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax10.png', alt: 'image' },
+  { src: '/images/players/Ajax/Ajax11.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV1.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV2.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV3.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV4.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV5.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV6.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV7.png', alt: 'image' },
+  { src: '/images/players/PSV/PSV8.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord1.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord2.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord3.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord4.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord5.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord6.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord7.png', alt: 'image' },
+  { src: '/images/players/Feyenoord/Feyenoord8.png', alt: 'image' },
   { src: '/images/players/Feyenoord/Feyenoord9.png', alt: 'image' },
 ]
 
@@ -587,15 +822,64 @@ export default function Home() {
                 {homeProducts.slice(0, 12).map((p: any) => {
                   const href = `/products/${p.slug ?? p.id}`
 
-                  // 👇 TENTA VÁRIOS CAMPOS COMUNS DE IMAGEM
+                  // ============================
+                  // IMAGEM: tenta TODOS os nomes
+                  // ============================
                   const imgSrc =
                     p.mainImage ??
                     p.mainImageUrl ??
+                    p.mainImageURL ??
                     p.image ??
                     p.imageUrl ??
+                    p.imageURL ??
                     p.coverImage ??
+                    p.coverImageUrl ??
+                    p.coverImageURL ??
+                    p.cardImage ??
+                    p.cardImageUrl ??
+                    p.cardImageURL ??
+                    p.listImage ??
+                    p.listImageUrl ??
+                    p.listImageURL ??
+                    p.gridImage ??
+                    p.gridImageUrl ??
+                    p.gridImageURL ??
+                    p.heroImage ??
+                    p.heroImageUrl ??
+                    p.heroImageURL ??
+                    p.primaryImage ??
+                    p.primaryImageUrl ??
+                    p.primaryImageURL ??
                     p.thumbnail ??
                     p.thumbnailUrl ??
+                    p.thumbnailURL ??
+                    p.thumb ??
+                    p.thumbUrl ??
+                    p.thumbURL ??
+                    p.picture ??
+                    p.pictureUrl ??
+                    p.pictureURL ??
+                    p.photo ??
+                    p.photoUrl ??
+                    p.photoURL ??
+                    p.img ??
+                    p.imgUrl ??
+                    p.imgURL ??
+                    p.url ??
+                    p.src ??
+                    // arrays comuns
+                    p.gallery?.[0]?.url ??
+                    p.gallery?.[0]?.imageUrl ??
+                    p.gallery?.[0]?.imageURL ??
+                    p.images?.[0]?.url ??
+                    p.images?.[0]?.imageUrl ??
+                    p.images?.[0]?.imageURL ??
+                    p.productImages?.[0]?.url ??
+                    p.productImages?.[0]?.imageUrl ??
+                    p.productImages?.[0]?.imageURL ??
+                    p.media?.[0]?.url ??
+                    p.media?.[0]?.imageUrl ??
+                    p.media?.[0]?.imageURL ??
                     FALLBACK_IMG
 
                   const priceCents: number | null =
