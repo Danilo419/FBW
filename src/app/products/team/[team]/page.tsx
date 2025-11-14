@@ -35,7 +35,9 @@ const SALE_MAP: Record<number, number> = {
   3499: 10000,
   3999: 12000,
   4499: 15000,
-  4999: 16000,
+  4999: 17000,
+  5999: 20000,
+  6999: 25000,
 };
 
 function getCompareAt(basePriceCents: number) {

@@ -18,7 +18,9 @@ const SALE_MAP_EUR: Record<number, number> = {
   34.99: 100,
   39.99: 120,
   44.99: 150,
-  49.99: 160,
+  49.99: 170,
+  59.99: 200,
+  69.99: 250,
 };
 
 function toCents(eur?: number | null) {
