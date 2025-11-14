@@ -656,10 +656,9 @@ function ImageSpaces() {
 
 function formatEurFromCents(cents: number | null | undefined) {
   if (cents == null) return ''
-  return (cents / 100).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'EUR',
-  })
+  const value = (cents / 100).toFixed(2) // 69.99
+  const withComma = value.replace('.', ',')
+  return `${withComma} €`
 }
 
 /* ======================================================================================
