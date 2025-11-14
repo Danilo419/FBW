@@ -661,6 +661,32 @@ function formatEurFromCents(cents: number | null | undefined) {
   return `${withComma} €`
 }
 
+/**
+ * Gera um preço antigo “fake”, mas estável para cada produto,
+ * para que todos tenham risco + percentagem.
+ */
+function deterministicCompareAtFromKey(
+  key: string | undefined,
+  priceCents: number | null
+): number | null {
+  if (!priceCents || priceCents <= 0) return null
+  const k = key || 'default'
+
+  // hash simples determinístico
+  let hash = 0
+  for (let i = 0; i < k.length; i++) {
+    hash = (hash * 31 + k.charCodeAt(i)) | 0
+  }
+
+  const t = ((hash >>> 0) % 1000) / 1000 // 0–0.999
+  // multiplicador entre 1.9x e 3.5x (descontos ~47%–71%)
+  const multiplier = 1.9 + t * 1.6
+  const compareAt = Math.round(priceCents * multiplier)
+
+  // garante que é pelo menos +10% (só por segurança)
+  return compareAt <= priceCents ? Math.round(priceCents * 1.1) : compareAt
+}
+
 /* ======================================================================================
    5) PAGE
 ====================================================================================== */
@@ -896,12 +922,21 @@ export default function Home() {
                       ? Math.round(p.price * 100)
                       : null
 
-                  const compareAtCents: number | null =
+                  // 1) tenta usar campos reais de compare-at
+                  let compareAtCents: number | null =
                     typeof p.compareAtPriceCents === 'number'
                       ? p.compareAtPriceCents
                       : typeof p.compareAtPrice === 'number'
                       ? Math.round(p.compareAtPrice * 100)
                       : null
+
+                  // 2) Se não existir na BD, gera um preço antigo estável
+                  if (!compareAtCents && priceCents) {
+                    compareAtCents = deterministicCompareAtFromKey(
+                      String(p.id ?? p.slug ?? ''),
+                      priceCents
+                    )
+                  }
 
                   const hasDiscount =
                     priceCents != null &&
