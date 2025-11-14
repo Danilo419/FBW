@@ -699,7 +699,6 @@ export default function Home() {
           ? data
           : []
 
-        // LOGS para veres no console
         if (typeof window !== 'undefined') {
           ;(window as any).__HOME_PRODUCTS__ = list
           console.log('HOME PRODUCTS (lista completa)', list)
@@ -829,8 +828,10 @@ export default function Home() {
                 {homeProducts.slice(0, 12).map((p: any) => {
                   const href = `/products/${p.slug ?? p.id}`
 
-                  // IMAGEM: tenta uma data de nomes possíveis + arrays
+                  // 👉 Usa imagem principal da BD
                   const imgSrc =
+                    p.imageUrls?.[0] ??
+                    p.imageUrls?.[0]?.url ??
                     p.mainImage ??
                     p.mainImageUrl ??
                     p.mainImageURL ??
@@ -886,8 +887,11 @@ export default function Home() {
                     p.media?.[0]?.imageURL ??
                     FALLBACK_IMG
 
+                  // 👉 Usa basePrice (cents) como principal
                   const priceCents: number | null =
-                    typeof p.priceCents === 'number'
+                    typeof p.basePrice === 'number'
+                      ? p.basePrice
+                      : typeof p.priceCents === 'number'
                       ? p.priceCents
                       : typeof p.price === 'number'
                       ? Math.round(p.price * 100)
