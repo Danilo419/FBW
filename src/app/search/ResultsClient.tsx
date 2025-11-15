@@ -259,25 +259,27 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
 
                   {/* Preços */}
                   <div className="mt-4">
-                    {sale && (
-                      <div className="mb-1 text-[13px] text-slate-500 line-through">
-                        {moneyAfter(sale.compareAtCents)}
-                      </div>
-                    )}
+                    <div className="flex items-end gap-2">
+                      {sale && (
+                        <div className="text-[13px] text-slate-500 line-through">
+                          {moneyAfter(sale.compareAtCents)}
+                        </div>
+                      )}
 
-                    {parts && (
-                      <div className="flex items-end text-slate-900">
-                        <span className="text-2xl font-semibold tracking-tight leading-none">
-                          {parts.int}
-                        </span>
-                        <span className="text-[13px] font-medium translate-y-[1px]">
-                          ,{parts.dec}
-                        </span>
-                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">
-                          {parts.sym}
-                        </span>
-                      </div>
-                    )}
+                      {parts && (
+                        <div className="flex items-end" style={{ color: "#1c40b7" }}>
+                          <span className="text-2xl font-semibold tracking-tight leading-none">
+                            {parts.int}
+                          </span>
+                          <span className="text-[13px] font-medium translate-y-[1px]">
+                            ,{parts.dec}
+                          </span>
+                          <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                            {parts.sym}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Footer */}

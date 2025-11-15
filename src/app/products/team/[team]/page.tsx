@@ -1,4 +1,3 @@
-// src/app/products/team/[team]/page.tsx
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
@@ -259,19 +258,24 @@ function List({
                       {p.name}
                     </div>
 
-                    <div className="mt-4">
+                    {/* 💶 Preço: riscado à esquerda, atual azul à direita (opção A) */}
+                    <div className="mt-4 flex items-baseline gap-2">
                       {compare && (
-                        <div className="mb-1 text-[13px] text-slate-500 line-through">
+                        <div className="text-[13px] text-slate-500 line-through">
                           {moneyAfterEUR(compare.compareAt)}
                         </div>
                       )}
 
-                      <div className="flex items-end text-slate-900">
+                      <div className="flex items-end text-[#1c40b7]">
                         <span className="text-2xl font-semibold tracking-tight leading-none">
                           {euros}
                         </span>
-                        <span className="text-[13px] font-medium translate-y-[1px]">,{dec}</span>
-                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">€</span>
+                        <span className="text-[13px] font-medium translate-y-[1px]">
+                          ,{dec}
+                        </span>
+                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                          €
+                        </span>
                       </div>
                     </div>
 
