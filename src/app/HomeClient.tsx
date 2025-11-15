@@ -668,7 +668,7 @@ const SALE_MAP_EUR: Record<number, number> = {
   44.99: 150,
   49.99: 165,
   59.99: 200,
-  69.99: 250,
+  69.99: 230,
 }
 
 // versão em cêntimos
