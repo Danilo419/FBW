@@ -706,14 +706,16 @@ export default function Home() {
   )
 
   const techSpecs = [
-    'ULTRA-FIT',
+    'ULTRA-SOFT',
     'AERO-MESH',
     'COOL-DRY',
     'PRO STITCH',
     'HYPER PRINT',
+    'ALL-DAY COMFORT',
     'GHOST-SEAM',
     'NANO INK',
     'STREET-EDITION',
+    'EASY-WEAR',
   ]
 
   // ====== Home products from DB (random 12 each load) ======
