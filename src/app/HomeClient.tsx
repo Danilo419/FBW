@@ -705,7 +705,6 @@ export default function Home() {
     v > 0.2 ? '0 10px 30px -15px rgba(2,8,23,0.12)' : 'none'
   )
 
-  // termos da marquee (duplicamos depois para o loop infinito)
   const techSpecs = [
     'ULTRA-FIT',
     'AERO-MESH',
@@ -827,13 +826,13 @@ export default function Home() {
           </motion.div>
         </Spotlight>
 
-        {/* marquee of tech specs – melhorada */}
-        <section className="relative border-y bg-white/80">
+        {/* marquee of tech specs – com fade mais forte nas pontas */}
+        <section className="relative border-y bg-white">
           <div className="container-fw py-3 overflow-hidden">
             <div className="relative">
               {/* fades nas laterais */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white/90 to-transparent z-10" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white/90 to-transparent z-10" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-white to-white/0 z-20" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-white to-white/0 z-20" />
 
               <div className="marquee-track flex gap-6 whitespace-nowrap">
                 {[...techSpecs, ...techSpecs].map((b, i) => (
