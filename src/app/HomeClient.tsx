@@ -854,29 +854,34 @@ export default function Home() {
 
         {/* Products block puxado da BD */}
         <div className="relative">
-          <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 p-4 sm:p-6">
+          <div className="rounded-3xl bg-gradient-to-b from-slate-50 via-white to-slate-50 ring-1 ring-black/5 p-4 sm:p-6">
             {/* HEADER MAIS ATRATIVO / PROFISSIONAL */}
-            <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                   <BadgePercent className="h-3 w-3" />
-                  Featured picks
+                  Curated selection
                 </div>
                 <h3 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight">
                   Some of our products
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
-                  A curated snapshot of jerseys, retro classics and concept kits currently
-                  available in the store.
+                  A rotating mix of authentic kits, retro classics and exclusive concept
+                  jerseys — updated as the collection grows.
                 </p>
               </div>
-              <a
-                href="/products"
-                className="inline-flex items-center gap-2 self-start rounded-full border border-blue-100 bg-white px-4 py-2 text-xs font-medium text-blue-700 shadow-sm hover:border-blue-300 hover:text-blue-800 hover:shadow-md transition"
-              >
-                View full collection
-                <ArrowRight className="h-3 w-3" />
-              </a>
+              <div className="flex flex-col items-start sm:items-end gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-red-600">
+                  Up to -70% vs original prices
+                </span>
+                <a
+                  href="/products"
+                  className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-2 text-xs font-medium text-blue-700 shadow-sm hover:border-blue-300 hover:text-blue-800 hover:shadow-md transition"
+                >
+                  View full collection
+                  <ArrowRight className="h-3 w-3" />
+                </a>
+              </div>
             </div>
 
             {loadingHomeProducts && (
@@ -884,7 +889,7 @@ export default function Home() {
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div
                     key={i}
-                    className="h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
+                    className="h-[360px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
                   />
                 ))}
               </div>
@@ -998,7 +1003,7 @@ export default function Home() {
                       whileHover={{ y: -6 }}
                       className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
                     >
-                      <div className="relative aspect-[4/3] bg-slate-50">
+                      <div className="relative aspect-[3/4] bg-slate-50">
                         <img
                           src={imgSrc}
                           alt={p.name}
@@ -1038,6 +1043,12 @@ export default function Home() {
                             {formatEurFromCents(priceCents)}
                           </span>
                         </div>
+
+                        {hasDiscount && discountPercent != null && (
+                          <div className="mt-1 text-[11px] font-medium text-red-600">
+                            Save {discountPercent}% compared to original
+                          </div>
+                        )}
 
                         <div className="mt-4 flex items-center text-xs text-blue-700">
                           View product
