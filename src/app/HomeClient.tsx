@@ -996,7 +996,8 @@ export default function Home() {
                       whileHover={{ y: -6 }}
                       className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
                     >
-                      <div className="relative aspect-[3/4] bg-slate-50">
+                      {/* 👇 AQUI: altura fixa, só a largura muda com a coluna */}
+                      <div className="relative h-[360px] bg-slate-50">
                         <img
                           src={imgSrc}
                           alt={p.name}
