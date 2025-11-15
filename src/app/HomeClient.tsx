@@ -826,9 +826,9 @@ export default function Home() {
           </motion.div>
         </Spotlight>
 
-        {/* marquee of tech specs – sem “nevoeiro”, scroll contínuo */}
-        <section className="relative border-y bg-white">
-          <div className="container-fw py-3 overflow-hidden">
+        {/* marquee of tech specs – full width, sem nevoeiro */}
+        <section className="relative border-y bg-white overflow-hidden">
+          <div className="w-full py-3">
             <div className="marquee-track flex gap-6 whitespace-nowrap">
               {[...techSpecs, ...techSpecs].map((b, i) => (
                 <div
@@ -872,6 +872,7 @@ export default function Home() {
         <ImageSpaces />
 
         {/* Gap entre "Highlights" e a grelha de produtos */}
+        <div className="h-2 sm:h-3" />
 
         <div className="h-2 sm:h-3" />
 
