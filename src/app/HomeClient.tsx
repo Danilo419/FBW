@@ -826,25 +826,19 @@ export default function Home() {
           </motion.div>
         </Spotlight>
 
-        {/* marquee of tech specs – com fade mais forte nas pontas */}
+        {/* marquee of tech specs – sem “nevoeiro”, scroll contínuo */}
         <section className="relative border-y bg-white">
           <div className="container-fw py-3 overflow-hidden">
-            <div className="relative">
-              {/* fades nas laterais */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-white to-white/0 z-20" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-white to-white/0 z-20" />
-
-              <div className="marquee-track flex gap-6 whitespace-nowrap">
-                {[...techSpecs, ...techSpecs].map((b, i) => (
-                  <div
-                    key={`${b}-${i}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-slate-50/90 px-4 py-1.5 text-[11px] font-semibold tracking-[0.22em] uppercase text-slate-600 ring-1 ring-black/5 shadow-sm"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                    <span>{b}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="marquee-track flex gap-6 whitespace-nowrap">
+              {[...techSpecs, ...techSpecs].map((b, i) => (
+                <div
+                  key={`${b}-${i}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-slate-50/90 px-4 py-1.5 text-[11px] font-semibold tracking-[0.22em] uppercase text-slate-600 ring-1 ring-black/5 shadow-sm"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  <span>{b}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -855,10 +849,10 @@ export default function Home() {
 
             @keyframes marquee-x {
               0% {
-                transform: translateX(-50%);
+                transform: translateX(0%);
               }
               100% {
-                transform: translateX(0%);
+                transform: translateX(-50%);
               }
             }
           `}</style>
