@@ -878,8 +878,8 @@ export default function Home() {
             </div>
 
             {loadingHomeProducts && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {Array.from({ length: 12 }).map((_, i) => (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 9 }).map((_, i) => (
                   <div
                     key={i}
                     className="h-[360px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
@@ -889,8 +889,8 @@ export default function Home() {
             )}
 
             {!loadingHomeProducts && homeProducts.length > 0 && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {homeProducts.slice(0, 12).map((p: any) => {
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {homeProducts.slice(0, 9).map((p: any) => {
                   const href = `/products/${p.slug ?? p.id}`
 
                   // 👉 Usa imagem principal da BD
