@@ -867,20 +867,13 @@ export default function Home() {
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
                   A rotating mix of authentic kits, retro classics and exclusive concept
-                  jerseys — updated as the collection grows.
+                  kits.
                 </p>
               </div>
-              <div className="flex flex-col items-start sm:items-end gap-2">
+              <div className="flex flex-col items-start sm:items-end gap-1">
                 <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-red-600">
                   Up to -70% vs original prices
                 </span>
-                <a
-                  href="/products"
-                  className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-2 text-xs font-medium text-blue-700 shadow-sm hover:border-blue-300 hover:text-blue-800 hover:shadow-md transition"
-                >
-                  View full collection
-                  <ArrowRight className="h-3 w-3" />
-                </a>
               </div>
             </div>
 
@@ -1043,12 +1036,6 @@ export default function Home() {
                             {formatEurFromCents(priceCents)}
                           </span>
                         </div>
-
-                        {hasDiscount && discountPercent != null && (
-                          <div className="mt-1 text-[11px] font-medium text-red-600">
-                            Save {discountPercent}% compared to original
-                          </div>
-                        )}
 
                         <div className="mt-4 flex items-center text-xs text-blue-700">
                           View product
