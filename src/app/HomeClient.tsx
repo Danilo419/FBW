@@ -878,7 +878,7 @@ export default function Home() {
             </div>
 
             {loadingHomeProducts && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div
                     key={i}
@@ -889,7 +889,7 @@ export default function Home() {
             )}
 
             {!loadingHomeProducts && homeProducts.length > 0 && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {homeProducts.slice(0, 12).map((p: any) => {
                   const href = `/products/${p.slug ?? p.id}`
 
@@ -996,7 +996,7 @@ export default function Home() {
                       whileHover={{ y: -6 }}
                       className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
                     >
-                      {/* 👇 AQUI: altura fixa, só a largura muda com a coluna */}
+                      {/* formato atual: altura fixa */}
                       <div className="relative h-[360px] bg-slate-50">
                         <img
                           src={imgSrc}
