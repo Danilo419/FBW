@@ -878,7 +878,7 @@ export default function Home() {
             </div>
 
             {loadingHomeProducts && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div
                     key={i}
@@ -889,7 +889,7 @@ export default function Home() {
             )}
 
             {!loadingHomeProducts && homeProducts.length > 0 && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {homeProducts.slice(0, 12).map((p: any) => {
                   const href = `/products/${p.slug ?? p.id}`
 
@@ -1018,26 +1018,26 @@ export default function Home() {
 
                       <div className="flex flex-1 flex-col px-4 py-3">
                         {team && (
-                          <div className="text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
+                          <div className="text-[12px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
                             {team}
                           </div>
                         )}
-                        <h3 className="mt-1 text-sm font-semibold leading-snug line-clamp-2">
+                        <h3 className="mt-1 text-[15px] sm:text-base font-semibold leading-snug line-clamp-2">
                           {p.name}
                         </h3>
 
                         <div className="mt-3 flex items-baseline gap-2">
                           {hasDiscount && (
-                            <span className="text-xs text-gray-400 line-through">
+                            <span className="text-sm text-gray-400 line-through">
                               {formatEurFromCents(compareAtCents)}
                             </span>
                           )}
-                          <span className="text-base font-semibold text-blue-800">
+                          <span className="text-lg font-semibold text-blue-800">
                             {formatEurFromCents(priceCents)}
                           </span>
                         </div>
 
-                        <div className="mt-4 flex items-center text-xs text-blue-700">
+                        <div className="mt-4 flex items-center text-sm text-blue-700">
                           View product
                           <ArrowRight className="ml-1 h-3 w-3" />
                         </div>
