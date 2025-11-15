@@ -110,7 +110,13 @@ function MagneticButton({
 }
 
 /** 3D tilt card with glow */
-function TiltCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function TiltCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   const [t, setT] = useState({ rx: 0, ry: 0 })
   const [glow, setGlow] = useState({ x: 50, y: 50 })
 
@@ -654,7 +660,7 @@ function ImageSpaces() {
    Helpers for products
 ====================================================================================== */
 
-// MAPA QUE QUERES USAR (em euros)
+// Mapa de preços antigos para cada preço atual (em euros)
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
   34.99: 100,
@@ -665,7 +671,7 @@ const SALE_MAP_EUR: Record<number, number> = {
   69.99: 250,
 }
 
-// Versão em cêntimos, gerada a partir do mapa em euros
+// versão em cêntimos
 const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
   Object.entries(SALE_MAP_EUR).map(([k, v]) => [
     Math.round(parseFloat(k) * 100),
@@ -675,11 +681,10 @@ const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
 
 function formatEurFromCents(cents: number | null | undefined) {
   if (cents == null) return ''
-  const value = (cents / 100).toFixed(2) // 69.99
+  const value = (cents / 100).toFixed(2)
   const withComma = value.replace('.', ',')
   return `${withComma} €`
 }
-
 /* ======================================================================================
    5) PAGE
 ====================================================================================== */
@@ -744,11 +749,20 @@ export default function Home() {
     <div className="min-h-screen">
       {/* =================== HERO =================== */}
       <section className="relative overflow-hidden">
-        <motion.div style={{ y: y2 }} className="pointer-events-none absolute -top-40 right-[-10%] h-96 w-96 rounded-full blur-3xl opacity-30 bg-blue-300" />
-        <motion.div style={{ y: y1 }} className="pointer-events-none absolute -top-20 left-[-10%] h-[28rem] w-[28rem] rounded-full blur-3xl opacity-30 bg-cyan-300" />
+        <motion.div
+          style={{ y: y2 }}
+          className="pointer-events-none absolute -top-40 right-[-10%] h-96 w-96 rounded-full blur-3xl opacity-30 bg-blue-300"
+        />
+        <motion.div
+          style={{ y: y1 }}
+          className="pointer-events-none absolute -top-20 left-[-10%] h-[28rem] w-[28rem] rounded-full blur-3xl opacity-30 bg-cyan-300"
+        />
 
         <Spotlight>
-          <motion.div style={{ opacity: opacityHero }} className="container-fw py-20 sm:py-28">
+          <motion.div
+            style={{ opacity: opacityHero }}
+            className="container-fw py-20 sm:py-28"
+          >
             <div className="grid items-center gap-12 lg:grid-cols-2">
               {/* left copy */}
               <div>
@@ -756,7 +770,9 @@ export default function Home() {
                   Authentic &amp; Concept Football Jerseys
                 </h1>
                 <p className="mt-4 text-gray-600 max-w-prose">
-                  We sell existing club and national-team jerseys, as well as original concept jerseys, made to order with reliable worldwide tracked shipping.
+                  We sell existing club and national-team jerseys, as well as original
+                  concept jerseys, made to order with reliable worldwide tracked
+                  shipping.
                 </p>
                 <div className="mt-6 flex items-center gap-3">
                   <MagneticButton href="/products">
@@ -772,7 +788,10 @@ export default function Home() {
                     { Icon: Shield, t: 'Secure checkout' },
                     { Icon: Globe2, t: 'English Support' },
                   ].map(({ Icon, t }) => (
-                    <div key={t} className="flex items-center gap-2 rounded-xl border glass px-3 py-2">
+                    <div
+                      key={t}
+                      className="flex items-center gap-2 rounded-xl border glass px-3 py-2"
+                    >
                       <Icon className="h-4 w-4 text-blue-600" />
                       <span>{t}</span>
                     </div>
@@ -799,8 +818,19 @@ export default function Home() {
         <div className="relative border-y bg-white">
           <div className="container-fw py-4 overflow-hidden">
             <div className="flex gap-12 animate-marquee whitespace-nowrap opacity-60">
-              {['ULTRA-FIT','AERO-MESH','COOL-DRY','PRO STITCH','HYPER PRINT','GHOST-SEAM','NANO INK','STREET-EDITION'].map((b) => (
-                <span key={b} className="text-xs tracking-widest">{b}</span>
+              {[
+                'ULTRA-FIT',
+                'AERO-MESH',
+                'COOL-DRY',
+                'PRO STITCH',
+                'HYPER PRINT',
+                'GHOST-SEAM',
+                'NANO INK',
+                'STREET-EDITION',
+              ].map((b) => (
+                <span key={b} className="text-xs tracking-widest">
+                  {b}
+                </span>
               ))}
             </div>
           </div>
@@ -811,7 +841,9 @@ export default function Home() {
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end justify-between mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Highlights</h2>
-          <a href="/products" className="text-sm text-blue-700 hover:underline">See all →</a>
+          <a href="/products" className="text-sm text-blue-700 hover:underline">
+            See all →
+          </a>
         </div>
 
         {/* Spaces: Adult / Kids / Retro / Concept Kits */}
@@ -823,11 +855,28 @@ export default function Home() {
         {/* Products block puxado da BD */}
         <div className="relative">
           <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 p-4 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Some of our products</h3>
-              <span className="text-xs text-gray-500">
-                Discover a few pieces from the collection
-              </span>
+            {/* HEADER MAIS ATRATIVO / PROFISSIONAL */}
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                  <BadgePercent className="h-3 w-3" />
+                  Featured picks
+                </div>
+                <h3 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight">
+                  Some of our products
+                </h3>
+                <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
+                  A curated snapshot of jerseys, retro classics and concept kits currently
+                  available in the store.
+                </p>
+              </div>
+              <a
+                href="/products"
+                className="inline-flex items-center gap-2 self-start rounded-full border border-blue-100 bg-white px-4 py-2 text-xs font-medium text-blue-700 shadow-sm hover:border-blue-300 hover:text-blue-800 hover:shadow-md transition"
+              >
+                View full collection
+                <ArrowRight className="h-3 w-3" />
+              </a>
             </div>
 
             {loadingHomeProducts && (
@@ -835,7 +884,7 @@ export default function Home() {
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div
                     key={i}
-                    className="h-[320px] rounded-3xl bg-gray-100 animate-pulse"
+                    className="h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
                   />
                 ))}
               </div>
@@ -947,9 +996,9 @@ export default function Home() {
                       key={p.id}
                       href={href}
                       whileHover={{ y: -6 }}
-                      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col"
+                      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
                     >
-                      <div className="relative aspect-[4/3]">
+                      <div className="relative aspect-[4/3] bg-slate-50">
                         <img
                           src={imgSrc}
                           alt={p.name}
@@ -1012,7 +1061,10 @@ export default function Home() {
 
       {/* =================== HOW IT WORKS =================== */}
       <section id="how" className="bg-white/70 border-y">
-        <motion.div style={{ boxShadow: sectionShadow as any }} className="container-fw section-gap">
+        <motion.div
+          style={{ boxShadow: sectionShadow as any }}
+          className="container-fw section-gap"
+        >
           <div className="grid lg:grid-cols-4 gap-6">
             {[
               {
@@ -1020,9 +1072,21 @@ export default function Home() {
                 t: 'Choose an authentic jersey',
                 s: 'Select an existing club or national-team shirt.',
               },
-              { icon: <MousePointer2 className="h-5 w-5 text-blue-600" />, t: 'Pick a design', s: 'Explore concepts and choose your favorite.' },
-              { icon: <Send className="h-5 w-5 text-blue-600" />, t: 'Made-to-order', s: 'Produced on demand with wonderful quality.' },
-              { icon: <Truck className="h-5 w-5 text-blue-600" />, t: 'Global shipping', s: 'Worldwide delivery in 5–7 business days, with tracking on every order.' },
+              {
+                icon: <MousePointer2 className="h-5 w-5 text-blue-600" />,
+                t: 'Pick a design',
+                s: 'Explore concepts and choose your favorite.',
+              },
+              {
+                icon: <Send className="h-5 w-5 text-blue-600" />,
+                t: 'Made-to-order',
+                s: 'Produced on demand with wonderful quality.',
+              },
+              {
+                icon: <Truck className="h-5 w-5 text-blue-600" />,
+                t: 'Global shipping',
+                s: 'Worldwide delivery in 5–7 business days, with tracking on every order.',
+              },
             ].map((f, i) => (
               <motion.div
                 key={i}
@@ -1051,12 +1115,22 @@ export default function Home() {
             <div>
               <h3 className="text-2xl font-bold">Choose your next jersey with confidence</h3>
               <p className="mt-2 text-gray-600">
-                Discover authentic club and national-team kits alongside our original concept designs, then pick your next favorite.
+                Discover authentic club and national-team kits alongside our original
+                concept designs, then pick your next favorite.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600"/> Name & number personalization</li>
-                <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-blue-600"/> Secure payments via Stripe</li>
-                <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-amber-600"/> Economy shipping with tracking</li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" /> Name & number
+                  personalization
+                </li>
+                <li className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-blue-600" /> Secure payments via
+                  Stripe
+                </li>
+                <li className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-amber-600" /> Economy shipping with
+                  tracking
+                </li>
               </ul>
             </div>
             <div className="flex md:justify-end items-center gap-3">
@@ -1064,7 +1138,8 @@ export default function Home() {
                 Get started <Zap className="h-4 w-4" />
               </MagneticButton>
               <a href="#faq" className="btn-outline">
-                See frequently <br />asked questions
+                See frequently <br />
+                asked questions
               </a>
             </div>
           </div>
@@ -1075,7 +1150,11 @@ export default function Home() {
       <section className="bg-white/70 border-y">
         <div className="container-fw section-gap grid md:grid-cols-4 gap-6">
           {[
-            { Icon: ShieldCheck, title: '14-day guarantee', desc: 'Size/fit exchange within 14 days (policy applies).' },
+            {
+              Icon: ShieldCheck,
+              title: '14-day guarantee',
+              desc: 'Size/fit exchange within 14 days (policy applies).',
+            },
             {
               Icon: CreditCard,
               title: 'Secure checkout',
@@ -1106,23 +1185,39 @@ export default function Home() {
 
       {/* =================== FAQ =================== */}
       <section id="faq" className="container-fw pb-24 pt-16">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">Frequently asked questions</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
+          Frequently asked questions
+        </h2>
         <div className="grid md:grid-cols-2 gap-4">
           {[
-            { q: 'How long does shipping take?', a: 'It takes 5–7 business days, with tracking code on every order.' },
+            {
+              q: 'How long does shipping take?',
+              a: 'It takes 5–7 business days, with tracking code on every order.',
+            },
             { q: 'Can I personalize name and number?', a: 'Yes!' },
             {
               q: 'Which payment methods are accepted?',
               a: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way.',
             },
-            { q: 'How can I track my order?', a: 'Once your order has been shipped, you will receive an email with your tracking code and a link to track it online. You can track your order at any time through 17track.net or on your national postal website. All orders include worldwide tracked shipping.' },
-            { q: 'Which countries do you ship to?', a: 'We ship worldwide. Delivery times vary by destination.' },
-            { q: 'How do I pick the size?', a: 'We will provide a detailed size chart and measurement tips in the Size Guide page.' },
+            {
+              q: 'How can I track my order?',
+              a: 'Once your order has been shipped, you will receive an email with your tracking code and a link to track it online. You can track your order at any time through 17track.net or on your national postal website. All orders include worldwide tracked shipping.',
+            },
+            {
+              q: 'Which countries do you ship to?',
+              a: 'We ship worldwide. Delivery times vary by destination.',
+            },
+            {
+              q: 'How do I pick the size?',
+              a: 'We will provide a detailed size chart and measurement tips in the Size Guide page.',
+            },
           ].map((f, i) => (
             <details key={i} className="group card px-5 py-4 open:shadow-md">
               <summary className="flex cursor-pointer items-center justify-between font-medium">
                 {f.q}
-                <span className="text-blue-600 group-open:rotate-45 transition">+</span>
+                <span className="text-blue-600 group-open:rotate-45 transition">
+                  +
+                </span>
               </summary>
               <p className="mt-2 text-sm text-gray-600">{f.a}</p>
             </details>
@@ -1136,9 +1231,14 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-6 items-center p-8">
             <div>
               <h3 className="text-2xl font-bold">Get launches & news</h3>
-              <p className="mt-2 text-gray-600">Occasional discounts, pre-sales and special drops.</p>
+              <p className="mt-2 text-gray-600">
+                Occasional discounts, pre-sales and special drops.
+              </p>
             </div>
-            <form className="flex w-full gap-3" onSubmit={(e)=>e.preventDefault()}>
+            <form
+              className="flex w-full gap-3"
+              onSubmit={(e) => e.preventDefault()}
+            >
               <input
                 type="email"
                 required
