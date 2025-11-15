@@ -685,6 +685,7 @@ function formatEurFromCents(cents: number | null | undefined) {
   const withComma = value.replace('.', ',')
   return `${withComma} €`
 }
+
 /* ======================================================================================
    5) PAGE
 ====================================================================================== */
@@ -703,6 +704,18 @@ export default function Home() {
   const sectionShadow = useTransform(shadowSpring, (v) =>
     v > 0.2 ? '0 10px 30px -15px rgba(2,8,23,0.12)' : 'none'
   )
+
+  // termos da marquee (duplicamos depois para o loop infinito)
+  const techSpecs = [
+    'ULTRA-FIT',
+    'AERO-MESH',
+    'COOL-DRY',
+    'PRO STITCH',
+    'HYPER PRINT',
+    'GHOST-SEAM',
+    'NANO INK',
+    'STREET-EDITION',
+  ]
 
   // ====== Home products from DB (random 12 each load) ======
   const [homeProducts, setHomeProducts] = useState<any[]>([])
@@ -729,7 +742,7 @@ export default function Home() {
         }
 
         const shuffled = shuffle(list)
-        const selected = shuffled.slice(0, 12) // 12 espaços
+        const selected = shuffled.slice(0, 12)
         if (!cancelled) setHomeProducts(selected)
       } catch (err) {
         console.error(err)
@@ -814,27 +827,43 @@ export default function Home() {
           </motion.div>
         </Spotlight>
 
-        {/* marquee of tech specs */}
-        <div className="relative border-y bg-white">
-          <div className="container-fw py-4 overflow-hidden">
-            <div className="flex gap-12 animate-marquee whitespace-nowrap opacity-60">
-              {[
-                'ULTRA-FIT',
-                'AERO-MESH',
-                'COOL-DRY',
-                'PRO STITCH',
-                'HYPER PRINT',
-                'GHOST-SEAM',
-                'NANO INK',
-                'STREET-EDITION',
-              ].map((b) => (
-                <span key={b} className="text-xs tracking-widest">
-                  {b}
-                </span>
-              ))}
+        {/* marquee of tech specs – melhorada */}
+        <section className="relative border-y bg-white/80">
+          <div className="container-fw py-3 overflow-hidden">
+            <div className="relative">
+              {/* fades nas laterais */}
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white/90 to-transparent z-10" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white/90 to-transparent z-10" />
+
+              <div className="marquee-track flex gap-6 whitespace-nowrap">
+                {[...techSpecs, ...techSpecs].map((b, i) => (
+                  <div
+                    key={`${b}-${i}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-50/90 px-4 py-1.5 text-[11px] font-semibold tracking-[0.22em] uppercase text-slate-600 ring-1 ring-black/5 shadow-sm"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+
+          <style jsx>{`
+            .marquee-track {
+              animation: marquee-x 26s linear infinite;
+            }
+
+            @keyframes marquee-x {
+              0% {
+                transform: translateX(-50%);
+              }
+              100% {
+                transform: translateX(0%);
+              }
+            }
+          `}</style>
+        </section>
       </section>
 
       {/* =================== HIGHLIGHTS =================== */}
@@ -850,6 +879,7 @@ export default function Home() {
         <ImageSpaces />
 
         {/* Gap entre "Highlights" e a grelha de produtos */}
+
         <div className="h-2 sm:h-3" />
 
         {/* Products block puxado da BD */}
