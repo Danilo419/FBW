@@ -2,7 +2,6 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
@@ -137,7 +136,9 @@ export default function NewProductPage() {
 
   /* ===================== Badges ===================== */
   function toggleBadge(value: string) {
-    setSelectedBadges((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+    setSelectedBadges((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
   }
 
   // Lista achatada para pesquisa
@@ -156,19 +157,13 @@ export default function NewProductPage() {
     ).slice(0, 50);
   }, [badgeQuery, ALL_BADGES]);
 
-  /* ===================== Images ===================== */
-  const uniqueName = (file: File) => {
-    const safe = file.name.replace(/\s+/g, "_");
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto ? (crypto as any).randomUUID() : String(Date.now());
-    return `${id}_${safe}`;
-  };
-
+  /* ===================== Images (Cloudinary via /api/upload) ===================== */
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
 
     const errors: string[] = [];
+
     for (const file of Array.from(files)) {
       if (!ALLOWED.has(file.type)) {
         errors.push(`${file.name}: unsupported type`);
@@ -180,11 +175,26 @@ export default function NewProductPage() {
       }
 
       try {
-        const name = uniqueName(file);
-        const { url } = await upload(name, file, {
-          access: "public",
-          handleUploadUrl: "/api/blob/upload",
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         });
+
+        const data = await res.json();
+        if (!res.ok) {
+          errors.push(`${file.name}: ${data?.error ?? "upload failed"}`);
+          continue;
+        }
+
+        const url = data.url as string;
+        if (!url) {
+          errors.push(`${file.name}: missing URL from upload response`);
+          continue;
+        }
+
         setImageUrls((prev) => (prev.includes(url) ? prev : [...prev, url]));
       } catch (e: any) {
         errors.push(`${file.name}: ${e?.message ?? "upload failed"}`);
@@ -370,7 +380,9 @@ export default function NewProductPage() {
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">Name</label>
+              <label htmlFor="name" className="text-sm font-medium">
+                Name
+              </label>
               <input
                 id="name"
                 name="name"
@@ -381,7 +393,9 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="team" className="text-sm font-medium">Team</label>
+              <label htmlFor="team" className="text-sm font-medium">
+                Team
+              </label>
               <input
                 id="team"
                 name="team"
@@ -392,7 +406,9 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="season" className="text-sm font-medium">Season (optional)</label>
+              <label htmlFor="season" className="text-sm font-medium">
+                Season (optional)
+              </label>
               <input
                 id="season"
                 name="season"
@@ -402,7 +418,9 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="price" className="text-sm font-medium">Base Price (EUR)</label>
+              <label htmlFor="price" className="text-sm font-medium">
+                Base Price (EUR)
+              </label>
               <input
                 id="price"
                 name="price"
@@ -417,7 +435,9 @@ export default function NewProductPage() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">Description (optional)</label>
+            <label htmlFor="description" className="text-sm font-medium">
+              Description (optional)
+            </label>
             <textarea
               id="description"
               name="description"
@@ -438,7 +458,7 @@ export default function NewProductPage() {
               className="block w-full rounded-xl border px-3 py-2 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-900"
             />
             <p className="text-xs text-gray-500">
-              Files are uploaded directly to storage. The first image is used as the main image. Drag to reorder.
+              Files are uploaded to cloud storage. The first image is used as the main image. Drag to reorder.
             </p>
 
             {imageUrls.length > 0 && (
@@ -462,7 +482,7 @@ export default function NewProductPage() {
                       unoptimized
                       width={400}
                       height={400}
-                      className="aspect-[3/4] w-full object-contain bg-white"
+                      className="aspect-[3/4] w-full object-contain bg.white"
                     />
 
                     {/* controls */}
@@ -479,7 +499,9 @@ export default function NewProductPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => move(i, Math.min(imageUrls.length - 1, i + 1))}
+                          onClick={() =>
+                            move(i, Math.min(imageUrls.length - 1, i + 1))
+                          }
                           className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
                           aria-label="Move right"
                           title="Move right"
@@ -490,7 +512,7 @@ export default function NewProductPage() {
                       <button
                         type="button"
                         onClick={() => removeAt(i)}
-                        className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white text-red-600"
+                        className="rounded-md bg-white/90 px-2 text-xs border hover:bg.white text-red-600"
                         aria-label="Remove image"
                         title="Remove image"
                       >
@@ -527,7 +549,8 @@ export default function NewProductPage() {
                 <p className="text-xs text-gray-600 mt-1">
                   Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
                   This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
-                  <code>customization</code> option group with <strong>no values</strong>, and the product page will not render that block.
+                  <code>customization</code> option group with <strong>no values</strong>, and the product page will
+                  not render that block.
                 </p>
               </div>
             </div>
@@ -537,7 +560,8 @@ export default function NewProductPage() {
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
-              Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if they are hidden by the filter.
+              Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if they are hidden by
+              the filter.
             </p>
 
             <input
@@ -602,7 +626,9 @@ export default function NewProductPage() {
 
           {/* Size group selection */}
           <div className="space-y-3">
-            <label htmlFor="sizeGroup" className="text-sm font-medium">Sizes</label>
+            <label htmlFor="sizeGroup" className="text-sm font-medium">
+              Sizes
+            </label>
             <select
               id="sizeGroup"
               value={sizeGroup}

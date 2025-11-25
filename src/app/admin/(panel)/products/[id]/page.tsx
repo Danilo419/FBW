@@ -209,27 +209,55 @@ section .images-editor [placeholder*="Paste an image URL"] {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="col-span-2">
               <label className="text-xs font-medium text-gray-600">Name</label>
-              <input name="name" defaultValue={product.name} className="mt-1 w-full rounded-xl border px-3 py-2" required />
+              <input
+                name="name"
+                defaultValue={product.name}
+                className="mt-1 w-full rounded-xl border px-3 py-2"
+                required
+              />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600">Team</label>
-              <input name="team" defaultValue={product.team ?? ""} className="mt-1 w-full rounded-xl border px-3 py-2" required />
+              <input
+                name="team"
+                defaultValue={product.team ?? ""}
+                className="mt-1 w-full rounded-xl border px-3 py-2"
+                required
+              />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600">Season</label>
-              <input name="season" defaultValue={product.season ?? ""} className="mt-1 w-full rounded-xl border px-3 py-2" placeholder="e.g. 25/26" />
+              <input
+                name="season"
+                defaultValue={product.season ?? ""}
+                className="mt-1 w-full rounded-xl border px-3 py-2"
+                placeholder="e.g. 25/26"
+              />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600">Base price (EUR)</label>
-              <input name="price" type="number" step="0.01" min="0" defaultValue={centsToInput(product.basePrice)} className="mt-1 w-full rounded-xl border px-3 py-2" required />
+              <input
+                name="price"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={centsToInput(product.basePrice)}
+                className="mt-1 w-full rounded-xl border px-3 py-2"
+                required
+              />
             </div>
 
             <div className="col-span-2">
               <label className="text-xs font-medium text-gray-600">Description</label>
-              <textarea name="description" defaultValue={product.description ?? ""} className="mt-1 w-full rounded-xl border px-3 py-2 min-h-[120px]" placeholder="Product description..." />
+              <textarea
+                name="description"
+                defaultValue={product.description ?? ""}
+                className="mt-1 w-full rounded-xl border px-3 py-2 min-h-[120px]"
+                placeholder="Product description..."
+              />
             </div>
           </div>
 
@@ -254,11 +282,18 @@ section .images-editor [placeholder*="Paste an image URL"] {
               </div>
             </div>
 
-            <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
+            <ImagesEditor
+              name="imagesText"
+              initialImages={(product as any).imageUrls ?? []}
+              alt={product.name}
+            />
           </div>
 
           <div>
-            <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+            <button
+              type="submit"
+              className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+            >
               Save product
             </button>
           </div>
@@ -294,7 +329,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
           <label className="text-sm font-medium">Badges (optional)</label>
           <p className="text-xs text-gray-500">
-            Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if hidden by the filter.
+            Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if
+            hidden by the filter.
           </p>
 
           <input
@@ -309,7 +345,10 @@ section .images-editor [placeholder*="Paste an image URL"] {
             Start typing to see available badges.
           </div>
 
-          <div id="badge-results" className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden" />
+          <div
+            id="badge-results"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden"
+          />
 
           <div id="badge-selected-wrap" className="space-y-2 hidden">
             <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
@@ -320,7 +359,10 @@ section .images-editor [placeholder*="Paste an image URL"] {
           <div id="badge-hidden-inputs" className="hidden" />
 
           <div className="pt-2">
-            <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+            <button
+              type="submit"
+              className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+            >
               Save badges
             </button>
           </div>
@@ -336,10 +378,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
   const scope = document.querySelector('[data-product-id="${product.id}"]');
   if (!scope) return;
 
-  const BADGES = ${JSON.stringify(
-    BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })))
-  )};
-  const INITIAL = new Set(${JSON.stringify((product as any).badges ?? [])});
+  const BADGES = ${BADGES_JSON};
+  const INITIAL = new Set(${SELECTED_JSON});
 
   const q = scope.querySelector('#badge-query');
   const results = scope.querySelector('#badge-results');
@@ -441,9 +481,9 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* Script: Upload local -> Blob -> inserir no ImagesEditor — escopado + id único */}
+        {/* Script: Upload local -> Cloudinary (/api/upload) -> inserir no ImagesEditor */}
         <Script
-          id={`blob-upload-auto-add-${product.id}`}
+          id={`cloudinary-upload-auto-add-${product.id}`}
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -458,15 +498,19 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
   const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/avif","image/gif"]);
   const MAX_BYTES = 8 * 1024 * 1024;
-  const MAX_AT_ONCE = 3;
+
+  function setStatus(text) {
+    if (status) status.textContent = text || '';
+  }
 
   function pushIntoEditor(urls) {
     // 1) API do ImagesEditor (se existir)
-    const api = (window).__imagesEditor && (window).__imagesEditor[EDITOR_NAME];
-    if (api && typeof api.append === "function") {
-      try { api.append(urls); return; } catch (_) {}
+    const apiRoot = (window).__imagesEditor && (window).__imagesEditor[EDITOR_NAME];
+    if (apiRoot && typeof apiRoot.append === "function") {
+      try { apiRoot.append(urls); return; } catch (_) {}
     }
-    // 2) Fallback para UI antiga (paste + Add)
+
+    // 2) Fallback: antiga UI "Paste URL + Add"
     const root = scope.querySelector('.images-editor');
     if (!root) return;
     const paste = root.querySelector('input[placeholder*="Paste"]');
@@ -474,26 +518,27 @@ section .images-editor [placeholder*="Paste an image URL"] {
       .find(b => ((b.textContent || '').trim().toLowerCase() === 'add'));
     if (paste && addBtn) {
       urls.forEach(u => {
-        (paste).value = u;
+        paste.value = u;
         paste.dispatchEvent(new Event('input', { bubbles: true }));
-        (addBtn).click();
+        addBtn.click();
       });
       return;
     }
+
     // 3) Último recurso: atualizar diretamente o campo name="imagesText"
     const field = scope.querySelector('textarea[name="imagesText"], input[name="imagesText"]');
     if (field) {
       let current = [];
       try {
-        const raw = (field).value || '[]';
+        const raw = field.value || '[]';
         current = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
       } catch (_) {
-        current = String((field).value || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
+        current = String(field.value || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
       }
       const set = new Set([ ...current, ...urls ]);
       const asArray = Array.from(set);
-      try { (field).value = JSON.stringify(asArray); }
-      catch (_) { (field).value = asArray.join('\\n'); }
+      try { field.value = JSON.stringify(asArray); }
+      catch (_) { field.value = asArray.join('\\n'); }
       field.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }
@@ -502,46 +547,61 @@ section .images-editor [placeholder*="Paste an image URL"] {
     if (!ALLOWED.has(file.type)) throw new Error('Unsupported type');
     if (file.size > MAX_BYTES) throw new Error('File too large');
 
-    const { upload } = await import("https://esm.sh/@vercel/blob@0.23.3/client");
-    const safe = file.name.replace(/\\s+/g, "_");
-    const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
-      ? crypto.randomUUID()
-      : String(Date.now());
-    const name = id + "_" + safe;
+    const formData = new FormData();
+    formData.append("file", file);
 
-    const { url } = await upload(name, file, {
-      access: "public",
-      handleUploadUrl: "/api/blob/upload",
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
     });
 
-    return url;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || !data.url) {
+      throw new Error(data && data.error ? data.error : "Upload failed");
+    }
+
+    return data.url;
   }
 
   input && input.addEventListener('change', async () => {
     const files = Array.from(input.files || []);
     if (!files.length) return;
 
-    const queue = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
-    const rejected = files.filter(f => !queue.includes(f));
-    if (rejected.length) alert('Ignored some files (unsupported type or > 8MB).');
+    const valid = files.filter(f => ALLOWED.has(f.type) && f.size <= MAX_BYTES);
+    const rejected = files.filter(f => !valid.includes(f));
 
-    let done = 0, urls = [];
-    if (status) status.textContent = 'Uploading 0/' + queue.length + '...';
-
-    for (let i = 0; i < queue.length; i += MAX_AT_ONCE) {
-      const chunk = queue.slice(i, i + MAX_AT_ONCE);
-      const results = await Promise.allSettled(chunk.map(uploadOne));
-      results.forEach(r => {
-        if (r.status === 'fulfilled' && r.value) urls.push(r.value);
-        done += 1;
-        if (status) status.textContent = 'Uploading ' + done + '/' + queue.length + '...';
-      });
+    if (rejected.length) {
+      alert('Ignored some files (unsupported type or > 8MB).');
     }
 
-    if (urls.length) pushIntoEditor(urls);
+    if (!valid.length) {
+      input.value = '';
+      return;
+    }
+
+    let done = 0;
+    const urls = [];
+    setStatus('Uploading 0/' + valid.length + '...');
+
+    for (const file of valid) {
+      try {
+        const url = await uploadOne(file);
+        urls.push(url);
+      } catch (err) {
+        console.error(err);
+        alert(file.name + ': ' + (err && err.message ? err.message : 'upload failed'));
+      } finally {
+        done += 1;
+        setStatus('Uploading ' + done + '/' + valid.length + '...');
+      }
+    }
+
+    if (urls.length) {
+      pushIntoEditor(urls);
+    }
 
     input.value = '';
-    if (status) status.textContent = 'Uploaded ' + urls.length + '/' + queue.length + '.';
+    setStatus('Uploaded ' + urls.length + '/' + valid.length + '.');
   });
 })();`,
           }}
@@ -604,7 +664,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Sizes shown are fixed to S–4XL. Entries marked as <strong>ghost</strong> don’t exist in the database yet; create them (via seed/Studio) to enable the toggle.
+          Sizes shown are fixed to S–4XL. Entries marked as <strong>ghost</strong> don’t exist in the
+          database yet; create them (via seed/Studio) to enable the toggle.
         </p>
       </section>
     </div>
