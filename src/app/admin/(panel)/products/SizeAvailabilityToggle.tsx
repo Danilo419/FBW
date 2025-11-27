@@ -6,7 +6,7 @@ import { setSizeUnavailable } from "@/app/admin/(panel)/products/actions";
 
 type Props = {
   sizeId: string;
-  /** Se começar indisponível, passa true */
+  /** If the size starts as unavailable, pass true */
   initialUnavailable?: boolean;
 };
 
@@ -14,7 +14,7 @@ export default function SizeAvailabilityToggle({
   sizeId,
   initialUnavailable = false,
 }: Props) {
-  // estado otimista
+  // optimistic state
   const [unavailable, setUnavailable] = React.useState<boolean>(initialUnavailable);
   const [isPending, startTransition] = React.useTransition();
 
@@ -24,17 +24,18 @@ export default function SizeAvailabilityToggle({
 
   function onToggle(e: React.ChangeEvent<HTMLInputElement>) {
     const next = e.target.checked; // checked === Unavailable
-    // otimista
+
+    // optimistic update
     setUnavailable(next);
 
     startTransition(async () => {
       try {
         await persist(next);
       } catch (err) {
-        // rollback se falhar
+        // rollback on failure
         console.error(err);
         setUnavailable(!next);
-        alert("Falha ao atualizar a disponibilidade do tamanho.");
+        alert("Failed to update size availability.");
       }
     });
   }
@@ -42,7 +43,7 @@ export default function SizeAvailabilityToggle({
   return (
     <label
       className="inline-flex items-center gap-2 text-xs cursor-pointer select-none"
-      title={unavailable ? "Marcar como disponível" : "Marcar como indisponível"}
+      title={unavailable ? "Mark as available" : "Mark as unavailable"}
     >
       <input
         type="checkbox"
@@ -51,7 +52,7 @@ export default function SizeAvailabilityToggle({
         onChange={onToggle}
         disabled={isPending}
         aria-checked={unavailable}
-        aria-label={unavailable ? "Indisponível" : "Disponível"}
+        aria-label={unavailable ? "Unavailable" : "Available"}
       />
       <span
         className={

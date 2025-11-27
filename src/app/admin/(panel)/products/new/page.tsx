@@ -4,7 +4,7 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
 
-const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const ADULT_SIZES = ["S", "M", "L", "XL", "2XL"];
 const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
 
 /** ---- Badge catalog (values/labels in EN) ---- */
@@ -531,7 +531,7 @@ export default function NewProductPage() {
             {uploading && <p className="text-xs text-blue-600">Uploading images…</p>}
           </div>
 
-          {/* === NOVO: Personalization (entre Images e Badges) === */}
+          {/* === Personalization (entre Images e Badges) === */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Personalization</label>
             <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
