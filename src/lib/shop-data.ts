@@ -37,7 +37,7 @@ export const leagueClubs: Record<LeagueKey, string[]> = {
     "arsenal","aston-villa","bournemouth","brentford","brighton",
     "chelsea","crystal-palace","everton","fulham","leeds-united",
     "burnley","liverpool","manchester-city","manchester-united","newcastle-united",
-    "nottingham-forest","sunderland","tottenham-hotspur","west-ham-united","wolverhampton-wanderers",
+    "nottingham-forest","sunderland","tottenham","west-ham-united","wolverhampton-wanderers",
   ],
   "la-liga": [
     "real-madrid","barcelona","atletico-madrid","athletic-club","real-sociedad",
@@ -114,7 +114,7 @@ export const clubSlugToTeamName: Record<string, string> = {
   "arsenal":"Arsenal","aston-villa":"Aston Villa","bournemouth":"AFC Bournemouth","brentford":"Brentford","brighton":"Brighton & Hove Albion",
   "chelsea":"Chelsea","crystal-palace":"Crystal Palace","everton":"Everton","fulham":"Fulham","leeds-united":"Leeds United",
   "burnley":"Burnley","liverpool":"Liverpool","manchester-city":"Manchester City","manchester-united":"Manchester United","newcastle-united":"Newcastle United",
-  "nottingham-forest":"Nottingham Forest","sunderland":"Sunderland","tottenham-hotspur":"Tottenham Hotspur","west-ham-united":"West Ham United","wolverhampton-wanderers":"Wolverhampton Wanderers",
+  "nottingham-forest":"Nottingham Forest","sunderland":"Sunderland","tottenham":"Tottenham","west-ham-united":"West Ham United","wolverhampton-wanderers":"Wolverhampton Wanderers",
 
   // Scottish Premiership
   "celtic":"Celtic FC","rangers":"Rangers FC","aberdeen":"Aberdeen FC","hearts":"Heart of Midlothian","hibernian":"Hibernian FC",
