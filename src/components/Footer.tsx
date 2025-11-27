@@ -156,10 +156,9 @@ export default function Footer() {
 
           {/* Shop */}
           <FooterCol title="Shop">
-            <FooterLink href="/products">Products</FooterLink>
-            <FooterLink href="/players">Players</FooterLink>
+            <FooterLink href="/nations">Nations</FooterLink>
+            <FooterLink href="/leagues">Leagues</FooterLink>         
             <FooterLink href="/clubs">Clubs</FooterLink>
-            <FooterLink href="/leagues">Leagues</FooterLink>
             <FooterLink href="/faq">FAQ</FooterLink>
           </FooterCol>
 

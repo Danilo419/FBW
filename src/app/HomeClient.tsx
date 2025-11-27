@@ -581,7 +581,7 @@ const highlightSpaces: HighlightSpace[] = [
     href: '/products?group=adult',
     img: '/images/spaces/adult.png',
     alt: 'Adult Collection',
-    subtitle: 'Sizes S–4XL',
+    subtitle: 'Sizes S–2XL',
   },
   {
     key: 'kids',
