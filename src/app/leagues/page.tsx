@@ -30,19 +30,17 @@ export default async function LeaguesPage() {
 
   return (
     <main className="min-h-screen bg-white relative">
-
       {/* Fundo suave */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
         <div className="absolute top-1/4 -left-48 w-96 h-96 bg-sky-200/30 rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-emerald-200/30 rounded-full blur-[120px]" />
       </div>
 
-      {/* CONTAINER COM ESPAÇO PARA O HEADER FIXO */}
-      <div className="container-fw pt-28 pb-14 relative z-10">
-
+      {/* CONTAINER COM ESPAÇO AJUSTADO AO HEADER */}
+      <div className="container-fw pt-20 pb-14 relative z-10">
         {/* HEADER DO TÍTULO */}
-        <div className="text-center mb-10 space-y-4">
-          <h1 className="text-6xl md:text-7xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 text-transparent bg-clip-text">
+        <div className="text-center mb-8 space-y-3">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 text-transparent bg-clip-text">
             Leagues
           </h1>
 
@@ -55,14 +53,14 @@ export default async function LeaguesPage() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 max-w-[1800px] mx-auto px-4">
           {leaguesToShow.map((league) => (
             <Link key={league.slug} href={`/leagues/${league.slug}`} className="group block">
-              
-              <div className="
-                rounded-[2rem] bg-white border border-gray-200 
-                overflow-hidden shadow-sm 
-                transition-transform duration-300
-                hover:scale-[1.01] hover:shadow-md
-              ">
-                
+              <div
+                className="
+                  rounded-[2rem] bg-white border border-gray-200 
+                  overflow-hidden shadow-sm 
+                  transition-transform duration-300
+                  hover:scale-[1.01] hover:shadow-md
+                "
+              >
                 {/* IMAGE */}
                 <div className="relative w-full pt-[130%] overflow-hidden rounded-t-[2rem]">
                   <Image
@@ -86,7 +84,6 @@ export default async function LeaguesPage() {
                   </div>
                 </div>
               </div>
-
             </Link>
           ))}
         </div>
