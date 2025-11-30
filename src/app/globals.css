@@ -138,28 +138,351 @@ body.scrolled .hero-fade::after{
 }
 
 @layer utilities {
+  /* ============================================
+     ENTRADA E FADE ANIMATIONS
+     ============================================ */
+  
+  /* Fade In Up - Suave e elegante */
   @keyframes fadeInUpCustom {
-    from {
+    0% {
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(40px) scale(0.95);
+    }
+    60% {
+      opacity: 0.8;
+      transform: translateY(-5px) scale(1.01);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  .animate-fadeInUp {
+    animation: fadeInUpCustom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Fade In com Rotation */
+  @keyframes fadeInRotate {
+    0% {
+      opacity: 0;
+      transform: translateY(30px) rotate(-3deg) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg) scale(1);
+    }
+  }
+
+  .animate-fadeInRotate {
+    animation: fadeInRotate 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  /* Fade In com Blur */
+  @keyframes fadeInBlur {
+    0% {
+      opacity: 0;
+      filter: blur(10px);
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      filter: blur(0);
+      transform: scale(1);
+    }
+  }
+
+  .animate-fadeInBlur {
+    animation: fadeInBlur 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* ============================================
+     GRADIENTES ANIMADOS
+     ============================================ */
+  
+  /* Gradient Flow - Mais suave e natural */
+  @keyframes gradientX {
+    0%, 100% { 
+      background-position: 0% 50%;
+      background-size: 200% 200%;
+    }
+    50% { 
+      background-position: 100% 50%;
+      background-size: 250% 250%;
+    }
+  }
+  
+  .animate-gradient-x {
+    background-size: 200% 200%;
+    animation: gradientX 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  /* Gradient Pulse - Pulsar com cores */
+  @keyframes gradientPulse {
+    0%, 100% {
+      background-position: 0% 50%;
+      filter: brightness(1);
+    }
+    50% {
+      background-position: 100% 50%;
+      filter: brightness(1.2);
+    }
+  }
+
+  .animate-gradient-pulse {
+    background-size: 200% auto;
+    animation: gradientPulse 5s ease-in-out infinite;
+  }
+
+  /* Gradient Shift - Diagonal animado */
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    100% {
+      background-position: 0% 0%;
+    }
+  }
+
+  .animate-gradient-shift {
+    background-size: 300% 300%;
+    animation: gradientShift 6s ease infinite;
+  }
+
+  /* ============================================
+     HOVER E INTERAÇÃO
+     ============================================ */
+
+  /* Float - Levitar suavemente */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-12px) rotate(1deg);
+    }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Glow Pulse - Brilho pulsante */
+  @keyframes glowPulse {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.6), 0 0 60px rgba(59, 130, 246, 0.3);
+    }
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+
+  /* Shimmer - Efeito de brilho passando */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    background-size: 200% auto;
+    animation: shimmer 2.5s linear infinite;
+  }
+
+  /* ============================================
+     ROTAÇÃO E ESCALA
+     ============================================ */
+
+  /* Spin Slow - Rotação lenta e suave */
+  @keyframes spinSlow {
+    from {
+      transform: rotate(0deg);
     }
     to {
-      opacity: 1;
-      transform: translateY(0);
+      transform: rotate(360deg);
     }
   }
 
-  .animate-fadeInUp {
-    animation: fadeInUpCustom 0.6s ease-out forwards;
+  .animate-spin-slow {
+    animation: spinSlow 8s linear infinite;
   }
 
-  @keyframes gradientX {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+  /* Scale Pulse - Pulsar escala */
+  @keyframes scalePulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
   }
 
-  .animate-gradient-x {
-    background-size: 200% auto;
-    animation: gradientX 3s ease infinite;
+  .animate-scale-pulse {
+    animation: scalePulse 2s ease-in-out infinite;
   }
+
+  /* Wiggle - Balanço sutil */
+  @keyframes wiggle {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(1deg);
+    }
+    75% {
+      transform: rotate(-1deg);
+    }
+  }
+
+  .animate-wiggle {
+    animation: wiggle 2.5s ease-in-out infinite;
+  }
+
+  /* ============================================
+     EFEITOS DE TEXTO
+     ============================================ */
+
+  /* Text Glow - Texto com brilho */
+  @keyframes textGlow {
+    0%, 100% {
+      text-shadow: 0 0 10px rgba(59, 130, 246, 0.5),
+                   0 0 20px rgba(59, 130, 246, 0.3);
+    }
+    50% {
+      text-shadow: 0 0 20px rgba(59, 130, 246, 0.8),
+                   0 0 40px rgba(59, 130, 246, 0.5),
+                   0 0 60px rgba(59, 130, 246, 0.3);
+    }
+  }
+
+  .animate-text-glow {
+    animation: textGlow 3s ease-in-out infinite;
+  }
+
+  /* Text Wave - Texto ondulante */
+  @keyframes textWave {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  .animate-text-wave {
+    animation: textWave 1.5s ease-in-out infinite;
+  }
+
+  /* ============================================
+     PARTÍCULAS E AMBIENTE
+     ============================================ */
+
+  /* Particle Float - Partículas flutuantes */
+  @keyframes particleFloat {
+    0% {
+      transform: translate(0, 0) scale(0);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(20px, -100px) scale(1);
+      opacity: 0;
+    }
+  }
+
+  .animate-particle-float {
+    animation: particleFloat 3s ease-out infinite;
+  }
+
+  /* Bounce In - Entrada com bounce */
+  @keyframes bounceIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.3) translateY(-100px);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    70% {
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-bounce-in {
+    animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  }
+
+  /* ============================================
+     BACKGROUNDS ANIMADOS
+     ============================================ */
+
+  /* Aurora - Efeito de aurora boreal */
+  @keyframes aurora {
+    0%, 100% {
+      opacity: 0.3;
+      transform: translateX(-50%) translateY(-50%) rotate(0deg);
+    }
+    50% {
+      opacity: 0.6;
+      transform: translateX(-50%) translateY(-50%) rotate(180deg);
+    }
+  }
+
+  .animate-aurora {
+    animation: aurora 20s ease-in-out infinite;
+  }
+
+  /* Breathing - Respiração suave */
+  @keyframes breathing {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.4;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.6;
+    }
+  }
+
+  .animate-breathing {
+    animation: breathing 4s ease-in-out infinite;
+  }
+
+  /* ============================================
+     DELAYS PARA SEQUÊNCIAS
+     ============================================ */
+  
+  .animation-delay-100 { animation-delay: 0.1s; }
+  .animation-delay-200 { animation-delay: 0.2s; }
+  .animation-delay-300 { animation-delay: 0.3s; }
+  .animation-delay-400 { animation-delay: 0.4s; }
+  .animation-delay-500 { animation-delay: 0.5s; }
+  .animation-delay-700 { animation-delay: 0.7s; }
+  .animation-delay-1000 { animation-delay: 1s; }
 }
