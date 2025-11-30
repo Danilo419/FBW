@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getActiveLeagues() {
-  // teams que existem na config e têm pelo menos 1 produto
   const teams = await prisma.product.findMany({
     where: {
       team: {
@@ -34,35 +33,49 @@ export default async function LeaguesPage() {
   const leaguesToShow = await getActiveLeagues();
 
   return (
-    <main className="container-fw py-10">
-      <h1 className="text-3xl font-bold mb-6">Leagues</h1>
+    <main className="container-fw py-14">
+      <div className="text-center mb-10">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-700 to-blue-400 text-transparent bg-clip-text drop-shadow-sm">
+          Leagues
+        </h1>
+        <p className="text-gray-600 mt-2 text-sm md:text-base">
+          Explore official leagues — clubs, badges, and authentic collections.
+        </p>
+      </div>
 
       {leaguesToShow.length === 0 && (
-        <p className="text-gray-600">
+        <p className="text-gray-600 text-center">
           No leagues available yet. Add products to clubs to see them here.
         </p>
       )}
 
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {leaguesToShow.map((league) => (
           <Link
             key={league.slug}
             href={`/leagues/${league.slug}`}
-            className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
+            className="group block rounded-3xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-blue-600 hover:-translate-y-1"
           >
-            <div className="relative w-full pt-[135%]">
+            <div className="relative w-full pt-[130%] overflow-hidden">
               <Image
                 src={league.image}
                 alt={league.name}
                 fill
-                className="object-cover"
+                className="object-cover transform transition-transform duration-500 group-hover:scale-105"
                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
               />
+
+              {/* gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/25 opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
             </div>
-            <div className="px-3 py-3 text-center">
-              <div className="text-sm font-medium group-hover:text-blue-700">
+
+            <div className="px-4 py-4 text-center">
+              <div className="text-base font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-200">
                 {league.name}
               </div>
+
+              {/* linha elegante */}
+              <div className="h-[2px] w-10 bg-blue-600 mx-auto mt-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
             </div>
           </Link>
         ))}
