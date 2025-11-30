@@ -36,11 +36,22 @@ export default async function LeaguesPage() {
         <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-emerald-200/30 rounded-full blur-[120px]" />
       </div>
 
-      {/* CONTAINER COM ESPAÇO AJUSTADO AO HEADER */}
-      <div className="container-fw pt-20 pb-14 relative z-10">
+      {/* CONTAINER AJUSTADO AO HEADER FIXO */}
+      <div className="container-fw pt-16 pb-14 relative z-10">
         {/* HEADER DO TÍTULO */}
         <div className="text-center mb-8 space-y-3">
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 text-transparent bg-clip-text">
+          <h1
+            className="
+              inline-block
+              text-5xl md:text-6xl 
+              font-black 
+              tracking-tight 
+              leading-[1.15]
+              py-1
+              bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 
+              text-transparent bg-clip-text
+            "
+          >
             Leagues
           </h1>
 
