@@ -5,17 +5,25 @@ export const revalidate = 0;
 import ResultsClient from "./ResultsClient";
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: { q?: string | string[] };
 };
 
-export default async function SearchPage({ searchParams }: PageProps) {
-  const { q } = (await searchParams) ?? {};
-  const query = (q ?? "").toString().trim();
+export default function SearchPage({ searchParams }: PageProps) {
+  const rawQ = searchParams?.q;
+
+  const query =
+    typeof rawQ === "string"
+      ? rawQ.trim()
+      : Array.isArray(rawQ)
+      ? (rawQ[0] ?? "").trim()
+      : "";
 
   return (
-    <div className="container-fw py-6 md:py-10">
-      {/* Sem barra de pesquisa. Apenas os resultados + paginação */}
-      <ResultsClient initialQuery={query} />
+    <div className="min-h-screen bg-white">
+      <div className="container-fw pt-4 pb-8 md:pt-6 md:pb-12">
+        {/* Sem barra de pesquisa. Apenas os resultados + paginação */}
+        <ResultsClient initialQuery={query} />
+      </div>
     </div>
   );
 }

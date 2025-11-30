@@ -52,7 +52,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="relative border-t bg-white/70">
+    <footer className="relative border-t bg-white">
       {/* Top CTA / Newsletter */}
       <div className="container-fw py-10 grid gap-8 md:grid-cols-[1.2fr_1fr]">
         <div className="flex items-center gap-4 rounded-2xl border p-5 glass">
@@ -70,7 +70,7 @@ export default function Footer() {
               New drops, discounts and featured products. No spam — unsubscribe
               anytime.
             </p>
-            <div className="mt-2 flex gap-3 text-xs text-gray-500">
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
               <Badge
                 icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}
               >
@@ -157,7 +157,7 @@ export default function Footer() {
           {/* Shop */}
           <FooterCol title="Shop">
             <FooterLink href="/nations">Nations</FooterLink>
-            <FooterLink href="/leagues">Leagues</FooterLink>         
+            <FooterLink href="/leagues">Leagues</FooterLink>
             <FooterLink href="/clubs">Clubs</FooterLink>
             <FooterLink href="/faq">FAQ</FooterLink>
           </FooterCol>
@@ -264,7 +264,6 @@ function FooterCol({
   return (
     <div>
       <div className="font-semibold mb-3">{title}</div>
-      {/* Removemos bullets e margens de lista para evitar o “•” e desalinhamentos */}
       <ul className="space-y-2 text-sm list-none p-0 m-0">{children}</ul>
     </div>
   );

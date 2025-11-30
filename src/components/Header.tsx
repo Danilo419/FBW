@@ -24,7 +24,6 @@ import {
  * e.g. <Header cartCount={cart.totalQty} />
  */
 export default function Header({ cartCount = 0 }: { cartCount?: number }) {
-  // ✅ pegar também no 'update' do NextAuth para forçar refresh da sessão
   const { data: session, status, update } = useSession();
   const isAdmin = (session?.user as any)?.isAdmin === true;
 
@@ -38,13 +37,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     lastYRef.current = window.scrollY || 0;
 
     const onScroll = () => {
       const run = () => {
         const y = window.scrollY || 0;
         const goingDown = y > lastYRef.current;
-        // do not hide when menus/search are open
         const lockHeader = mobileOpen || userOpen || showSearchMobile;
 
         if (!lockHeader) {
@@ -93,16 +92,12 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   }, [userOpen]);
 
   /* ==========================================================
-     🔁 Mantém a sessão fresca para refletir a nova imagem
-     - foco/visibilidade
-     - broadcast via localStorage ('profile:updated')
-     - custom Event ('profile:updated')
-     ========================================================== */
+     Mantém a sessão fresca para refletir a nova imagem
+  ========================================================== */
   useEffect(() => {
     if (!update) return;
 
     const refresh = () => {
-      // só tenta quando autenticado; evita spam
       if (status === "authenticated") update();
     };
 
@@ -121,7 +116,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
     window.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
-    // permite: window.dispatchEvent(new Event('profile:updated'))
     window.addEventListener("profile:updated", onCustom as any);
 
     return () => {
@@ -137,7 +131,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
   return (
     <header
-      className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/70 backdrop-blur transform transition-transform duration-300 ${
+      className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/80 backdrop-blur transform transition-transform duration-300 ${
         hidden ? "-translate-y-full" : "translate-y-0"
       }`}
     >
@@ -177,7 +171,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           )}
         </nav>
 
-        {/* Right: Search pushed to the right + Cart + User */}
+        {/* Right: Search + Cart + User */}
         <div className="ml-auto flex items-center gap-3">
           {/* Search (desktop) */}
           <SearchBar className="hidden lg:block" />
@@ -212,7 +206,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 aria-expanded={userOpen}
                 aria-controls="user-menu"
               >
-                {/* 👇 key baseada no URL para forçar re-render quando a imagem muda */}
                 <Avatar key={avatarSrc || "__"} src={avatarSrc} name={displayName} size={40} />
                 <ChevronDown
                   className={`h-5 w-5 transition-transform ${userOpen ? "rotate-180" : ""}`}
@@ -239,10 +232,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                       Admin panel
                     </MenuItem>
                   )}
-                  <MenuItem
-                    href="/account/signup"
-                    icon={<ArrowLeftRight className="h-4 w-4" />}
-                  >
+                  <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
                     Change account
                   </MenuItem>
                   <div className="my-1 h-px bg-gray-100" />
@@ -333,7 +323,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               aria-expanded={userOpen}
               aria-controls="user-menu-mobile"
             >
-              {/* 👇 key força re-render no mobile também */}
               <Avatar key={avatarSrc || "__m"} src={avatarSrc} name={displayName} size={36} />
             </button>
           ) : (
@@ -358,7 +347,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       {/* User dropdown (mobile) */}
       {userOpen && (
         <div id="user-menu-mobile" role="menu" className="md:hidden container-fw">
-          <div className="mx-auto mt-2 w/full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
+          <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
             <div className="px-3 py-2">
               <div className="text-xs text-gray-500">Signed in as</div>
               <div className="truncate text-sm font-medium">{displayName}</div>
@@ -371,10 +360,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 Admin panel
               </MenuItem>
             )}
-            <MenuItem
-              href="/account/signup"
-              icon={<ArrowLeftRight className="h-4 w-4" />}
-            >
+            <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
               Change account
             </MenuItem>
             <div className="my-1 h-px bg-gray-100" />
@@ -622,7 +608,7 @@ function SearchBar({
         action="/search"
         method="GET"
         onSubmit={onSubmit}
-        className={`group relative`}
+        className="group relative"
       >
         <div className="p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
           <div className="relative rounded-full bg-white/80 backdrop-blur ring-1 ring-black/5 hover:ring-gray-300 focus-within:ring-blue-500 transition">
@@ -639,7 +625,7 @@ function SearchBar({
               onFocus={() => term.trim().length >= 2 && setOpen(true)}
               onKeyDown={onKeyDown}
               placeholder="Search products…"
-              className="w-72 lg:w-80 xl:w-96 group-focus-within:w-[28rem] transition-[width] duration-300 rounded-full bg-transparent pl-9 pr-24 py-2 text-sm outline-none"
+              className="w-full sm:w-72 lg:w-80 xl:w-96 sm:group-focus-within:w-[28rem] transition-[width] duration-300 rounded-full bg-transparent pl-9 pr-24 py-2 text-sm outline-none"
               aria-label="Search products"
               aria-expanded={open}
               aria-controls="search-popover"
@@ -797,7 +783,7 @@ function Avatar({ src, name, size = 40 }: { src?: string; name?: string; size?: 
 
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return (
+    return
       <img
         src={src}
         alt={name || "Avatar"}
@@ -805,8 +791,7 @@ function Avatar({ src, name, size = 40 }: { src?: string; name?: string; size?: 
         height={size}
         className="rounded-full object-cover"
         style={{ width: size, height: size }}
-      />
-    );
+      />;
   }
 
   return (

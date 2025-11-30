@@ -39,8 +39,8 @@ type ProductUI = {
   team?: string | null;
   description?: string | null;
   basePrice: number; // cents
-  images: string[];  // mapeado de imageUrls
-  sizes: SizeUI[];   // apenas os que existem na BD
+  images: string[]; // mapeado de imageUrls
+  sizes: SizeUI[]; // apenas os que existem na BD
   optionGroups: OptionGroupUI[];
   /** ✅ novo: array de badges guardados diretamente no produto */
   badges?: string[];
@@ -171,7 +171,9 @@ export default async function ProductPage({
 
   // Se não existir grupo 'badges' com valores, limpamos entradas "badge" do grupo 'customization'
   // (o ProductConfigurator já cria um grupo virtual com base em product.badges)
-  const hasBadgesGroup = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
+  const hasBadgesGroup = optionGroups.some(
+    (g) => g.key === "badges" && (g.values?.length ?? 0) > 0
+  );
   if (!hasBadgesGroup) {
     optionGroups = optionGroups.map((g) => {
       if (g.key !== "customization") return g;
@@ -203,9 +205,11 @@ export default async function ProductPage({
   };
 
   return (
-    <div className="container-fw py-10 grid gap-10">
-      <ProductConfigurator product={uiProduct} />
-      <ProductReviews productId={uiProduct.id} />
+    <div className="container-fw py-8 sm:py-10">
+      <div className="grid gap-10">
+        <ProductConfigurator product={uiProduct} />
+        <ProductReviews productId={uiProduct.id} />
+      </div>
     </div>
   );
 }

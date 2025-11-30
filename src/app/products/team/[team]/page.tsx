@@ -1,5 +1,7 @@
+// src/app/products/team/[team]/page.tsx
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 
 /* ============================ Config ============================ */
@@ -211,9 +213,7 @@ function List({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      <div className="mx-auto max-w-[1360px] px-6 sm:px-10 py-12">
-        {/* (Título removido como pedido) */}
-
+      <div className="container-fw py-8 sm:py-10">
         {/* Grid de produtos */}
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
@@ -222,9 +222,10 @@ function List({
             const dec = (p.basePrice % 100).toString().padStart(2, "0");
             const compare = getCompareAt(p.basePrice);
 
-            // 🔵 Novo: etiqueta azul com descritor
             const preferredLabel =
-              (typeof p.team === "string" && p.team.trim()) || labelFromName(p.name) || team;
+              (typeof p.team === "string" && p.team.trim()) ||
+              labelFromName(p.name) ||
+              team;
             const chipText = preferredLabel.toUpperCase();
 
             return (
@@ -258,7 +259,7 @@ function List({
                       {p.name}
                     </div>
 
-                    {/* 💶 Preço: riscado à esquerda, atual azul à direita (opção A) */}
+                    {/* Preço */}
                     <div className="mt-4 flex items-baseline gap-2">
                       {compare && (
                         <div className="text-[13px] text-slate-500 line-through">
@@ -302,7 +303,7 @@ function List({
           })}
         </div>
 
-        {/* Paginação — estilo pílulas com « » */}
+        {/* Paginação */}
         {totalPages > 1 && (
           <nav
             className="mt-14 flex justify-center"
@@ -322,7 +323,11 @@ function List({
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                 <li key={n}>
                   <PaginationPill
-                    href={n === currentPage ? undefined : `/products/team/${teamSlug}?page=${n}`}
+                    href={
+                      n === currentPage
+                        ? undefined
+                        : `/products/team/${teamSlug}?page=${n}`
+                    }
                     active={n === currentPage}
                     label={`Página ${n}`}
                   >
@@ -360,7 +365,7 @@ function PaginationPill({
 }: {
   href?: string;
   active?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
   label: string;
 }) {
   const base =

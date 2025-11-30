@@ -150,7 +150,7 @@ export default function ContactClient() {
   }
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto px-4 md:px-0">
+    <div className="relative w-full max-w-6xl mx-auto px-4 md:px-6 lg:px-0 py-6 md:py-8 lg:py-10">
       {/* Decorative glows */}
       <div
         aria-hidden
@@ -162,27 +162,29 @@ export default function ContactClient() {
       />
 
       {/* Hero */}
-      <div className="relative mb-7 overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 p-5 sm:p-7 shadow-sm">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
-            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            We’re here to help
-          </span>
-        </div>
-        <h1 className="mt-3 bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent md:text-3xl">
-          Contact FootballWorld Support
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
-          We answer most messages within <b>24–48h</b>. Include your order number for the
-          fastest help.
-        </p>
+      <div className="relative mb-9 md:mb-11 overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-6 sm:px-7 sm:py-7 lg:px-9 lg:py-8 shadow-sm">
+        <div className="max-w-3xl">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
+              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+              We’re here to help
+            </span>
+          </div>
+          <h1 className="mt-4 bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-[1.9rem] md:text-[2.2rem] lg:text-[2.4rem] font-extrabold leading-tight tracking-tight text-transparent">
+            Contact FootballWorld Support
+          </h1>
+          <p className="mt-2 text-sm md:text-[15px] text-gray-600 leading-relaxed">
+            We answer most messages within <b>24–48h</b>. Include your order number for the
+            fastest help.
+          </p>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs">
-          <Badge icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}>
-            Secure & private
-          </Badge>
-          <Badge icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}>24–48h reply</Badge>
-          <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>Global shipping</Badge>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs">
+            <Badge icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}>
+              Secure & private
+            </Badge>
+            <Badge icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}>24–48h reply</Badge>
+            <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>Global shipping</Badge>
+          </div>
         </div>
       </div>
 
@@ -190,7 +192,7 @@ export default function ContactClient() {
       {ok && (
         <div
           role="status"
-          className={`mb-6 rounded-xl border p-3 text-sm shadow-sm ${
+          className={`mb-6 rounded-xl border px-4 py-3 text-sm shadow-sm ${
             ok === "ok"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
               : "border-rose-200 bg-rose-50 text-rose-800"
@@ -208,13 +210,18 @@ export default function ContactClient() {
       )}
 
       {/* Grid: form + sidebar */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)] items-start">
         {/* Form */}
-        <div className="rounded-2xl border bg-white/90 backdrop-blur p-4 sm:p-5 shadow-sm">
-          <form onSubmit={onSubmit} noValidate className="grid gap-4">
+        <div className="rounded-2xl border bg-white/95 backdrop-blur px-4 py-5 sm:px-5 sm:py-6 md:px-6 md:py-7 shadow-sm">
+          <form onSubmit={onSubmit} noValidate className="grid gap-5">
             <div className="flex flex-wrap items-center gap-2">
               {chips.map((c) => (
-                <PresetChip key={c.label} icon={c.icon} label={c.label} onClick={() => usePreset(c.label)} />
+                <PresetChip
+                  key={c.label}
+                  icon={c.icon}
+                  label={c.label}
+                  onClick={() => usePreset(c.label)}
+                />
               ))}
             </div>
 
@@ -262,12 +269,16 @@ export default function ContactClient() {
               name="subject"
               autoComplete="off"
               required
-              hint={<span className="text-[11px] text-gray-500">{form.subject.length}/{SUBJECT_MAX}</span>}
+              hint={
+                <span className="text-[11px] text-gray-500">
+                  {form.subject.length}/{SUBJECT_MAX}
+                </span>
+              }
             />
 
             {/* Message */}
-            <div className="group rounded-xl border bg-white/90 p-0 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-              <label className="flex items-center gap-2 border-b px-4 py-2 text-[12px] text-gray-600">
+            <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
                 <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">
                   <MessageSquareText className="h-4 w-4" />
                 </span>
@@ -280,7 +291,7 @@ export default function ContactClient() {
               </label>
               <textarea
                 ref={textRef}
-                className="w-full resize-none rounded-xl rounded-t-none border-0 px-4 py-3 outline-none text-[15px]"
+                className="w-full resize-none rounded-xl rounded-t-none border-0 px-4 py-3.5 outline-none text-[15px]"
                 placeholder="Write your message here…"
                 value={form.message}
                 maxLength={MESSAGE_MAX}
@@ -289,7 +300,7 @@ export default function ContactClient() {
                 required
               />
               {/* progress bar */}
-              <div className="px-4 pb-3">
+              <div className="px-4 pb-3.5">
                 <div className="h-1 w-full rounded-full bg-gray-100">
                   <div
                     className="h-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-[width]"
@@ -304,7 +315,7 @@ export default function ContactClient() {
               <button
                 type="submit"
                 disabled={pending}
-                className="group inline-flex items-center gap-2 rounded-full px-5 py-3 text-[15px] font-medium text-white shadow-md transition
+                className="group inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-[15px] font-medium text-white shadow-md transition
                            bg-gradient-to-r from-blue-600 to-cyan-500 hover:brightness-110 disabled:opacity-60"
                 aria-busy={pending}
               >
@@ -324,28 +335,30 @@ export default function ContactClient() {
               <button
                 type="button"
                 onClick={openMailApp}
-                className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-[15px] hover:bg-gray-50"
+                className="inline-flex items-center gap-2 rounded-full border px-5 py-3.5 text-[15px] hover:bg-gray-50"
               >
                 <Mail className="h-4 w-4" />
                 Open email app
               </button>
 
-              <p className="text-xs text-gray-500">You’ll also receive a copy of your message.</p>
+              <p className="text-xs text-gray-500">
+                You’ll also receive a copy of your message.
+              </p>
             </div>
           </form>
 
           {/* “What happens next?” */}
-          <div className="mt-5 relative overflow-hidden rounded-2xl border shadow-sm">
+          <div className="mt-6 relative overflow-hidden rounded-2xl border shadow-sm">
             <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
             <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-teal-50" />
-            <div className="relative p-5">
+            <div className="relative px-5 py-5 sm:px-6 sm:py-6">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-blue-600" />
                 <h3 className="font-semibold">What happens next?</h3>
               </div>
 
               <div className="relative mt-4">
-                <div className="hidden sm:block absolute left-14 right-14 top-6 h-0.5 bg-gradient-to-r from-blue-200 via-cyan-200 to-emerald-200" />
+                <div className="hidden sm:block absolute left-14 right-14 top-7 h-0.5 bg-gradient-to-r from-blue-200 via-cyan-200 to-emerald-200" />
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Step
                     num={1}
@@ -375,8 +388,8 @@ export default function ContactClient() {
         </div>
 
         {/* Sidebar */}
-        <aside className="space-y-4">
-          <div className="rounded-2xl border bg-white/90 p-4 sm:p-5 shadow-sm">
+        <aside className="space-y-4 lg:space-y-5">
+          <div className="rounded-2xl border bg-white/95 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-green-600" />
               <h3 className="font-semibold">Quick help</h3>
@@ -385,7 +398,7 @@ export default function ContactClient() {
               <li>
                 <Link
                   href="/shipping-tracking"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-gray-50 w-full"
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50 w-full"
                 >
                   <Truck className="h-4 w-4 text-blue-600" />
                   Shipping & Tracking
@@ -394,7 +407,7 @@ export default function ContactClient() {
               <li>
                 <Link
                   href="/returns"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-gray-50 w-full"
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50 w-full"
                 >
                   <RotateCcw className="h-4 w-4 text-amber-600" />
                   Returns & Exchanges
@@ -403,7 +416,7 @@ export default function ContactClient() {
               <li>
                 <Link
                   href="/faq"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-gray-50 w-full"
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50 w-full"
                 >
                   <HelpCircle className="h-4 w-4 text-purple-600" />
                   FAQ
@@ -421,12 +434,12 @@ export default function ContactClient() {
             </div>
           </div>
 
-          <div className="rounded-2xl border bg-gradient-to-br from-white to-sky-50 p-4 sm:p-5 shadow-sm">
+          <div className="rounded-2xl border bg-gradient-to-br from-white to-sky-50 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
             <h3 className="font-semibold">Prefer email?</h3>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-gray-600 leading-relaxed">
               You can email us directly — we’ll reply from our support inbox.
             </p>
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <code className="rounded-xl border bg-white px-3 py-2 text-sm">
                 myfootballworldshop@gmail.com
               </code>
@@ -441,7 +454,7 @@ export default function ContactClient() {
           </div>
 
           {/* Useful links */}
-          <div className="rounded-2xl border bg-white/90 p-4 sm:p-5 shadow-sm">
+          <div className="rounded-2xl border bg-white/95 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-600" />
               <h3 className="font-semibold">Useful links</h3>
@@ -450,7 +463,7 @@ export default function ContactClient() {
             <div className="mt-3 grid gap-2">
               <Link
                 href="/privacy-policy"
-                className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-emerald-50/40 p-3 hover:from-emerald-50 hover:to-white transition"
+                className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-emerald-50/40 p-3.5 hover:from-emerald-50 hover:to-white transition"
               >
                 <div className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-lg border bg-emerald-50 text-emerald-600">
@@ -466,7 +479,7 @@ export default function ContactClient() {
 
               <Link
                 href="/size-guide"
-                className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-indigo-50/40 p-3 hover:from-indigo-50 hover:to-white transition"
+                className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-indigo-50/40 p-3.5 hover:from-indigo-50 hover:to-white transition"
               >
                 <div className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-lg border bg-indigo-50 text-indigo-600">
@@ -529,12 +542,12 @@ function InfoStat({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border px-3 py-2">
-      <div className="flex items-center gap-1.5">
+    <div className="rounded-xl border px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
         {icon}
         {label}
       </div>
-      <div className="mt-1 font-medium text-gray-900">{children}</div>
+      <div className="mt-1 font-medium text-gray-900 text-sm">{children}</div>
     </div>
   );
 }
@@ -553,17 +566,19 @@ function Step({
   color?: string;
 }) {
   return (
-    <div className="relative rounded-xl border bg-white/70 p-4 hover:shadow-md transition">
+    <div className="relative rounded-xl border bg-white/75 p-4 sm:p-4.5 hover:shadow-md transition flex flex-col h-full">
       <div className="flex items-start gap-3">
-        <span className={`relative grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br ${color} text-white shadow-sm`}>
+        <span
+          className={`relative grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br ${color} text-white shadow-sm`}
+        >
           {icon}
           <span className="absolute -top-1 -right-1 grid h-5 w-5 place-items-center rounded-full border bg-white text-[11px] font-bold text-blue-600">
             {num}
           </span>
         </span>
         <div>
-          <div className="font-semibold leading-tight">{title}</div>
-          <p className="text-xs text-gray-600">{text}</p>
+          <div className="font-semibold leading-tight mb-0.5">{title}</div>
+          <p className="text-xs text-gray-600 leading-relaxed">{text}</p>
         </div>
       </div>
     </div>
@@ -594,8 +609,8 @@ function Field({
   autoComplete?: string;
 }) {
   return (
-    <div className="group rounded-xl border bg-white/90 p-0 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-      <label className="flex items-center gap-2 border-b px-4 py-2 text-[12px] text-gray-600">
+    <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+      <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
         <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">{icon}</span>
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
@@ -609,7 +624,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         name={name}
         autoComplete={autoComplete}
-        className="w-full rounded-xl rounded-t-none border-0 px-4 py-3 outline-none text-[15px]"
+        className="w-full rounded-xl rounded-t-none border-0 px-4 py-3.5 outline-none text-[15px]"
       />
     </div>
   );

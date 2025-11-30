@@ -14,9 +14,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen bg-white text-neutral-900 antialiased">
         <SessionProviderClient>
-          {/* Qualquer componente com usePathname/useSearchParams deve estar dentro de <Suspense> */}
           <Suspense fallback={null}>
             <Tracker />
           </Suspense>
