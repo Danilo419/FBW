@@ -162,7 +162,7 @@ export default function ContactClient() {
   }
 
   return (
-    <div className="container-fw mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-10 relative">
+    <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-10">
       {/* Decorative glows */}
       <div
         aria-hidden
