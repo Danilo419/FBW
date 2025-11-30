@@ -4,12 +4,13 @@ export const revalidate = 0;
 
 import ResultsClient from "./ResultsClient";
 
-type PageProps = {
-  searchParams?: { q?: string | string[] };
-};
-
-export default function SearchPage({ searchParams }: PageProps) {
-  const rawQ = searchParams?.q;
+export default function SearchPage({ searchParams }: any) {
+  // Suporta tanto objeto simples como algo tipo URLSearchParams
+  const rawQ =
+    searchParams?.q ??
+    (typeof searchParams?.get === "function"
+      ? searchParams.get("q")
+      : undefined);
 
   const query =
     typeof rawQ === "string"
