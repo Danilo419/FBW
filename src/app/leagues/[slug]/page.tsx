@@ -32,7 +32,7 @@ export default async function LeagueDetailPage({ params }: any) {
   return (
     <main className="min-h-screen bg-white py-8 md:py-10">
       <div className="container-fw mx-auto px-4 md:px-6 lg:px-8">
-        {/* Top bar / breadcrumb */}
+        {/* Top bar */}
         <div className="mb-4 flex items-center gap-3">
           <Link
             href="/leagues"
@@ -43,7 +43,7 @@ export default async function LeagueDetailPage({ params }: any) {
           </Link>
         </div>
 
-        {/* Hero / header */}
+        {/* Header */}
         <section className="mb-8 md:mb-10 flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white px-4 py-5 md:px-6 md:py-6 shadow-sm">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
@@ -71,15 +71,13 @@ export default async function LeagueDetailPage({ params }: any) {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 md:gap-4">
-              <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs md:text-sm text-slate-800">
-                <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                  Active clubs
-                </span>
-                <span className="mt-1 text-lg md:text-xl font-semibold">
-                  {clubsToShow.length}
-                </span>
-              </div>
+            <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs md:text-sm text-slate-800">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                Active clubs
+              </span>
+              <span className="mt-1 text-lg md:text-xl font-semibold">
+                {clubsToShow.length}
+              </span>
             </div>
           </div>
         </section>
@@ -100,7 +98,7 @@ export default async function LeagueDetailPage({ params }: any) {
                 <Link
                   key={club.slug}
                   href={`/products/team/${club.slug}`}
-                  className="group relative block overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md transition-transform transition-shadow duration-200 hover:-translate-y-1.5 hover:shadow-xl"
+                  className="group relative block overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md transition-transform duration-200 hover:-translate-y-1.5 hover:shadow-xl"
                 >
                   <div className="relative w-full pt-[135%] bg-slate-50">
                     <Image
@@ -114,13 +112,19 @@ export default async function LeagueDetailPage({ params }: any) {
                   </div>
 
                   <div className="relative px-4 pb-4 pt-3 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Club
-                    </p>
                     <div className="mt-1 text-sm md:text-base font-semibold text-slate-900 group-hover:text-emerald-600">
                       {club.name}
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-500">
+
+                    {/* Só aparece no hover */}
+                    <p
+                      className="
+                        mt-1 text-[11px] text-slate-500 
+                        opacity-0 translate-y-1 
+                        transition-all duration-200 
+                        group-hover:opacity-100 group-hover:translate-y-0
+                      "
+                    >
                       View all products →
                     </p>
                   </div>
