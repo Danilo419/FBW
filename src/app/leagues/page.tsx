@@ -29,35 +29,35 @@ export default async function LeaguesPage() {
   const leaguesToShow = await getActiveLeagues();
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] animate-pulse" />
+    <main className="min-h-screen bg-white relative overflow-hidden">
+      {/* Animated background (agora super suave porque fundo é branco) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-sky-300/20 rounded-full blur-[120px] animate-pulse" />
         <div
-          className="absolute bottom-1/4 -right-48 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] animate-pulse"
+          className="absolute bottom-1/4 -right-48 w-96 h-96 bg-emerald-300/20 rounded-full blur-[120px] animate-pulse"
           style={{ animationDelay: "1s" }}
         />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-500/5 rounded-full blur-[140px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-200/20 rounded-full blur-[140px]" />
       </div>
 
       <div className="container-fw py-24 relative z-10">
         {/* HEADER */}
         <div className="text-center mb-20 space-y-6">
           <div className="relative inline-block">
-            <h1 className="text-7xl md:text-8xl font-black tracking-tighter bg-gradient-to-r from-blue-400 via-sky-300 to-emerald-400 text-transparent bg-clip-text animate-gradient-x">
+            <h1 className="text-7xl md:text-8xl font-black tracking-tighter bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 text-transparent bg-clip-text animate-gradient-x">
               Leagues
             </h1>
-            <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/20 via-sky-400/20 to-emerald-400/20 blur-3xl -z-10" />
+            <div className="absolute -inset-2 bg-gradient-to-r from-blue-300/20 via-sky-300/20 to-emerald-300/20 blur-3xl -z-10" />
           </div>
 
-          <p className="text-gray-400 text-xl font-light tracking-wide max-w-2xl mx-auto">
-            Explore the world's most prestigious football leagues
+          <p className="text-gray-600 text-xl font-light tracking-wide max-w-2xl mx-auto">
+            Explore the world&apos;s most prestigious football leagues
           </p>
 
           <div className="flex items-center justify-center gap-4 pt-4">
-            <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-sky-500/50 to-transparent" />
+            <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" />
             <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-sky-500/50 to-transparent" />
+            <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" />
           </div>
         </div>
 
@@ -71,13 +71,12 @@ export default async function LeaguesPage() {
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Glow */}
-              <div className="absolute -inset-6 rounded-[3rem] bg-gradient-to-br from-blue-500/30 via-sky-400/20 to-emerald-400/30 opacity-0 group-hover:opacity-100 blur-[50px] transition-all duration-700 -z-10" />
+              <div className="absolute -inset-6 rounded-[3rem] bg-gradient-to-br from-blue-300/30 via-sky-300/20 to-emerald-300/30 opacity-0 group-hover:opacity-100 blur-[50px] transition-all duration-700 -z-10" />
 
               {/* CARD */}
-              <div className="relative rounded-[2.5rem] bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-2xl border border-white/10 shadow-[0_20px_80px_-15px_rgba(0,0,0,0.7)] overflow-hidden transform-gpu transition-all duration-700 group-hover:scale-[1.02] group-hover:shadow-[0_30px_90px_-10px_rgba(0,0,0,0.85)] group-hover:border-sky-400/30">
-                
+              <div className="relative rounded-[2.5rem] bg-gradient-to-br from-white to-gray-50 backdrop-blur-xl border border-gray-200 overflow-hidden transform-gpu transition-all duration-700 group-hover:scale-[1.02] group-hover:border-sky-300">
                 {/* Shine */}
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12" />
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12" />
 
                 {/* IMAGE */}
                 <div className="relative w-full pt-[130%] overflow-hidden rounded-t-[2.5rem]">
@@ -85,34 +84,31 @@ export default async function LeaguesPage() {
                     src={league.image}
                     alt={league.name}
                     fill
-                    className="object-cover transform-gpu transition-all duration-[1200ms] ease-out group-hover:scale-[1.15] group-hover:rotate-1"
+                    className="object-cover transform-gpu transition-all duration-[1200ms] ease-out group-hover:scale-[1.12]"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/50 to-black/90" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+                  {/* Removi todas as sombras escuras */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/30" />
                 </div>
 
                 {/* CONTENT */}
                 <div className="relative px-7 py-7 space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="text-2xl font-bold text-white tracking-tight drop-shadow-lg group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-sky-300 group-hover:to-blue-300 group-hover:bg-clip-text transition-all duration-500">
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-bold text-gray-900 tracking-tight group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-sky-500 group-hover:to-blue-500 group-hover:bg-clip-text transition-all duration-500">
                       {league.name}
                     </h3>
 
-                    <div className="flex items-center gap-2">
-                      <div className="h-[2px] w-8 bg-gradient-to-r from-sky-400/60 to-transparent rounded-full" />
-                      <p className="text-xs text-sky-400/90 tracking-[0.3em] uppercase font-semibold">
-                        View Clubs
-                      </p>
-                    </div>
+                    {/* pequena barra */}
+                    <div className="h-[2px] w-10 bg-gradient-to-r from-sky-400/70 to-transparent rounded-full" />
                   </div>
 
-                  <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-300/60 to-transparent" />
 
-                  <div className="flex items-center justify-center gap-3 text-sm font-bold text-sky-400/80 group-hover:text-sky-300 transition-colors duration-300">
-                    <span className="inline-block h-[2px] w-8 bg-gradient-to-r from-transparent to-sky-400/70 rounded-full group-hover:w-12 transition-all duration-300" />
-                    <span className="tracking-[0.2em]">EXPLORE</span>
-                    <span className="inline-block h-[2px] w-8 bg-gradient-to-l from-transparent to-sky-400/70 rounded-full group-hover:w-12 transition-all duration-300" />
+                  {/* CTA PRINCIPAL: VIEW CLUBS */}
+                  <div className="flex items-center justify-center gap-3 text-sm font-bold text-sky-500 group-hover:text-sky-600 transition-colors duration-300">
+                    <span className="inline-block h-[2px] w-8 bg-gradient-to-r from-transparent to-sky-400 rounded-full group-hover:w-12 transition-all duration-300" />
+                    <span className="tracking-[0.2em]">VIEW CLUBS</span>
+                    <span className="inline-block h-[2px] w-8 bg-gradient-to-l from-transparent to-sky-400 rounded-full group-hover:w-12 transition-all duration-300" />
                   </div>
                 </div>
               </div>
@@ -122,7 +118,7 @@ export default async function LeaguesPage() {
 
         {/* EMPTY */}
         {leaguesToShow.length === 0 && (
-          <div className="text-center py-20 space-y-4 text-gray-400 text-lg">
+          <div className="text-center py-20 space-y-4 text-gray-500 text-lg">
             <div className="text-6xl">⚽</div>
             No leagues available at the moment
           </div>
