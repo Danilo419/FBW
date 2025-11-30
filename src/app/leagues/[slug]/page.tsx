@@ -8,7 +8,6 @@ import { LEAGUES_CONFIG } from "@/lib/leaguesConfig";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// usamos any para evitar conflitos com o tipo gerado pelo Next 15
 export default async function LeagueDetailPage({ params }: any) {
   const slug: string | undefined = params?.slug;
   if (!slug) return notFound();
@@ -16,16 +15,10 @@ export default async function LeagueDetailPage({ params }: any) {
   const league = LEAGUES_CONFIG.find((l) => l.slug === slug) ?? null;
   if (!league) return notFound();
 
-  // nomes das equipas desta liga (têm de coincidir com Product.team)
   const teamNames = league.clubs.map((c) => c.name);
 
-  // equipas desta liga que têm pelo menos 1 produto
   const teamsWithProducts = await prisma.product.findMany({
-    where: {
-      team: {
-        in: teamNames,
-      },
-    },
+    where: { team: { in: teamNames } },
     select: { team: true },
     distinct: ["team"],
   });
@@ -57,13 +50,12 @@ export default async function LeagueDetailPage({ params }: any) {
 
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {clubsToShow.map((club) => {
-          // caminho da imagem do clube em /public/assets/clubs/<league>/<club>.png
           const clubImageSrc = `/assets/clubs/${league.slug}/${club.slug}.png`;
 
           return (
             <Link
               key={club.slug}
-              href={`/clubs/${club.slug}`}
+              href={`/products/team/${club.slug}`}
               className="group block rounded-3xl bg-white shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100"
             >
               <div className="relative w-full pt-[135%] bg-gray-50">
