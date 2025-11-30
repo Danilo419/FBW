@@ -39,7 +39,7 @@ const TEXTAREA_MAX_H = 520;
 export default function ContactClient() {
   const searchParams = useSearchParams();
 
-  // Prefill from query params (?subject=&email=&order=&name=)
+  // Valores iniciais vindos dos query params
   const initial = useMemo(
     () => ({
       name: searchParams.get("name") || "",
@@ -51,7 +51,7 @@ export default function ContactClient() {
   );
 
   const [pending, setPending] = useState(false);
-  const [ok, setOk] = useState<null | "ok" | "err">(null);
+  const [status, setStatus] = useState<null | "ok" | "err">(null);
   const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
     name: initial.name,
@@ -61,7 +61,7 @@ export default function ContactClient() {
     order: initial.order,
   });
 
-  // Keep prefilled values in sync if URL changes
+  // manter valores pré-preenchidos sincronizados
   useEffect(() => {
     setForm((s) => ({
       ...s,
@@ -72,7 +72,7 @@ export default function ContactClient() {
     }));
   }, [initial.name, initial.email, initial.subject, initial.order]);
 
-  // Preset chips (all with an icon)
+  // chips de assunto rápido
   const chips: { label: string; icon: ReactNode }[] = [
     { label: "Tracking help", icon: <Truck className="h-3.5 w-3.5" /> },
     { label: "Start a return", icon: <RotateCcw className="h-3.5 w-3.5" /> },
@@ -82,7 +82,7 @@ export default function ContactClient() {
     { label: "Product question", icon: <HelpCircle className="h-3.5 w-3.5" /> },
   ];
 
-  // Autosize textarea
+  // auto-resize da textarea
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const el = textRef.current;
@@ -91,12 +91,12 @@ export default function ContactClient() {
     el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_H) + "px";
   }, [form.message]);
 
-  // Auto-clear toast
+  // limpar toast
   useEffect(() => {
-    if (!ok) return;
-    const t = setTimeout(() => setOk(null), 3000);
+    if (!status) return;
+    const t = setTimeout(() => setStatus(null), 3000);
     return () => clearTimeout(t);
-  }, [ok]);
+  }, [status]);
 
   const msgPct = Math.min(
     100,
@@ -108,7 +108,7 @@ export default function ContactClient() {
     if (pending) return;
 
     setPending(true);
-    setOk(null);
+    setStatus(null);
 
     try {
       const res = await fetch("/api/contact", {
@@ -116,13 +116,15 @@ export default function ContactClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
+
       if (!res.ok) throw new Error("No endpoint");
-      setOk("ok");
+
+      setStatus("ok");
       setForm({ name: "", email: "", subject: "", message: "", order: "" });
     } catch {
-      // Fallback to mailto if API is not available
+      // fallback para mailto
       openMailApp();
-      setOk("ok");
+      setStatus("ok");
     } finally {
       setPending(false);
     }
@@ -147,8 +149,8 @@ export default function ContactClient() {
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   }
 
-  function usePreset(v: string) {
-    setForm((s) => ({ ...s, subject: v.slice(0, SUBJECT_MAX) }));
+  function usePreset(subject: string) {
+    setForm((s) => ({ ...s, subject: subject.slice(0, SUBJECT_MAX) }));
   }
 
   async function copyEmail() {
@@ -162,232 +164,237 @@ export default function ContactClient() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-10">
-      {/* Decorative glows */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 right-0 h-56 w-56 rounded-full blur-3xl bg-cyan-200/40"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-24 -left-8 h-64 w-64 rounded-full blur-3xl bg-blue-200/30"
-      />
+    <section className="relative min-h-screen bg-slate-50/60">
+      <div className="mx-auto flex max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8 lg:pt-10">
+        {/* HERO */}
+        <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-6 shadow-sm sm:px-7 sm:py-7 lg:px-9 lg:py-8">
+          {/* glows só dentro do hero */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-200/60 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-blue-200/50 blur-3xl"
+          />
 
-      {/* Hero */}
-      <div className="relative mb-8 overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-6 sm:px-7 sm:py-7 lg:px-9 lg:py-8 shadow-sm">
-        <div className="max-w-3xl">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-              We’re here to help
-            </span>
-          </div>
-          <h1 className="mt-4 bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-[1.9rem] md:text-[2.2rem] lg:text-[2.4rem] font-extrabold leading-tight tracking-tight text-transparent">
-            Contact FootballWorld Support
-          </h1>
-          <p className="mt-2 text-sm md:text-[15px] text-gray-600 leading-relaxed">
-            We answer most messages within <b>24–48h</b>. Include your order
-            number for the fastest help.
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <Badge icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}>
-              Secure & private
-            </Badge>
-            <Badge icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}>
-              24–48h reply
-            </Badge>
-            <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>
-              Global shipping
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      {/* Toast */}
-      {ok && (
-        <div
-          role="status"
-          className={`mb-6 rounded-xl border px-4 py-3 text-sm shadow-sm ${
-            ok === "ok"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-rose-200 bg-rose-50 text-rose-800"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {ok === "ok" ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <XCircle className="h-4 w-4" />
-            )}
-            <span>
-              {ok === "ok"
-                ? "Thanks! Your message was sent — we’ll reply by email."
-                : "Something went wrong. Please try again or email us directly."}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Grid: form + sidebar */}
-      <div className="grid gap-7 lg:grid-cols-2 items-start">
-        {/* Form */}
-        <div className="rounded-2xl border bg-white/95 backdrop-blur px-4 py-5 sm:px-5 sm:py-6 md:px-6 md:py-7 shadow-sm">
-          <form onSubmit={onSubmit} noValidate className="grid gap-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {chips.map((c) => (
-                <PresetChip
-                  key={c.label}
-                  icon={c.icon}
-                  label={c.label}
-                  onClick={() => usePreset(c.label)}
-                />
-              ))}
+          <div className="relative max-w-3xl">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1">
+                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                We’re here to help
+              </span>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <h1 className="mt-4 bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-[1.9rem] font-extrabold leading-tight tracking-tight text-transparent md:text-[2.2rem] lg:text-[2.4rem]">
+              Contact FootballWorld Support
+            </h1>
+
+            <p className="mt-2 text-sm leading-relaxed text-gray-600 md:text-[15px]">
+              We answer most messages within <b>24–48h</b>. Include your order
+              number for the fastest help.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              <Badge icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}>
+                Secure & private
+              </Badge>
+              <Badge icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}>
+                24–48h reply
+              </Badge>
+              <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>
+                Global shipping
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* TOAST */}
+        {status && (
+          <div
+            role="status"
+            className={`mt-5 rounded-xl border px-4 py-3 text-sm shadow-sm ${
+              status === "ok"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-rose-200 bg-rose-50 text-rose-800"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {status === "ok" ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <span>
+                {status === "ok"
+                  ? "Thanks! Your message was sent — we’ll reply by email."
+                  : "Something went wrong. Please try again or email us directly."}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* LAYOUT PRINCIPAL */}
+        <div className="mt-7 flex flex-col items-start gap-6 lg:mt-8 lg:flex-row lg:gap-8">
+          {/* COLUNA ESQUERDA - FORM */}
+          <div className="w-full flex-1 rounded-2xl border bg-white/95 px-4 py-5 shadow-sm backdrop-blur sm:px-5 sm:py-6 md:px-6 md:py-7">
+            <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+              {/* chips */}
+              <div className="flex flex-wrap items-center gap-2">
+                {chips.map((chip) => (
+                  <PresetChip
+                    key={chip.label}
+                    icon={chip.icon}
+                    label={chip.label}
+                    onClick={() => usePreset(chip.label)}
+                  />
+                ))}
+              </div>
+
+              {/* nome + email */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  icon={<User className="h-4 w-4" />}
+                  label="Your name"
+                  placeholder="e.g. John Doe"
+                  value={form.name}
+                  onChange={(v) => setForm((s) => ({ ...s, name: v }))}
+                  name="name"
+                  autoComplete="name"
+                  required
+                />
+                <Field
+                  type="email"
+                  icon={<AtSign className="h-4 w-4" />}
+                  label="Email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={(v) => setForm((s) => ({ ...s, email: v }))}
+                  name="email"
+                  autoComplete="email"
+                  required
+                  hint={
+                    <span className="text-[11px] text-gray-500">
+                      We never share it
+                    </span>
+                  }
+                />
+              </div>
+
+              {/* order */}
               <Field
-                icon={<User className="h-4 w-4" />}
-                label="Your name"
-                placeholder="e.g. John Doe"
-                value={form.name}
-                onChange={(v) => setForm((s) => ({ ...s, name: v }))}
-                name="name"
-                autoComplete="name"
-                required
+                icon={<Hash className="h-4 w-4" />}
+                label="Order number (optional)"
+                placeholder="e.g. #FW12345"
+                value={form.order}
+                onChange={(v) => setForm((s) => ({ ...s, order: v }))}
+                name="order"
+                autoComplete="off"
               />
+
+              {/* subject */}
               <Field
-                type="email"
-                icon={<AtSign className="h-4 w-4" />}
-                label="Email"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={(v) => setForm((s) => ({ ...s, email: v }))}
-                name="email"
-                autoComplete="email"
+                icon={<Type className="h-4 w-4" />}
+                label="Subject"
+                placeholder="How can we help?"
+                value={form.subject}
+                onChange={(v) =>
+                  setForm((s) => ({
+                    ...s,
+                    subject: v.slice(0, SUBJECT_MAX),
+                  }))
+                }
+                name="subject"
+                autoComplete="off"
                 required
                 hint={
                   <span className="text-[11px] text-gray-500">
-                    We never share it
+                    {form.subject.length}/{SUBJECT_MAX}
                   </span>
                 }
               />
-            </div>
 
-            <Field
-              icon={<Hash className="h-4 w-4" />}
-              label="Order number (optional)"
-              placeholder="e.g. #FW12345"
-              value={form.order}
-              onChange={(v) => setForm((s) => ({ ...s, order: v }))}
-              name="order"
-              autoComplete="off"
-            />
-
-            <Field
-              icon={<Type className="h-4 w-4" />}
-              label="Subject"
-              placeholder="How can we help?"
-              value={form.subject}
-              onChange={(v) =>
-                setForm((s) => ({ ...s, subject: v.slice(0, SUBJECT_MAX) }))
-              }
-              name="subject"
-              autoComplete="off"
-              required
-              hint={
-                <span className="text-[11px] text-gray-500">
-                  {form.subject.length}/{SUBJECT_MAX}
-                </span>
-              }
-            />
-
-            {/* Message */}
-            <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-              <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
-                <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">
-                  <MessageSquareText className="h-4 w-4" />
-                </span>
-                Message
-                <span className="ml-auto text-gray-400">
-                  <span className="text-[11px]">
-                    {form.message.length}/{MESSAGE_MAX}
+              {/* mensagem */}
+              <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
+                <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
+                  <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">
+                    <MessageSquareText className="h-4 w-4" />
                   </span>
-                </span>
-              </label>
-              <textarea
-                ref={textRef}
-                className="w-full resize-none rounded-xl rounded-t-none border-0 px-4 py-3.5 outline-none text-[15px]"
-                placeholder="Write your message here…"
-                value={form.message}
-                maxLength={MESSAGE_MAX}
-                onChange={(e) =>
-                  setForm((s) => ({ ...s, message: e.target.value }))
-                }
-                name="message"
-                required
-              />
-              {/* progress bar */}
-              <div className="px-4 pb-3.5">
-                <div className="h-1 w-full rounded-full bg-gray-100">
-                  <div
-                    className="h-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-[width]"
-                    style={{ width: `${msgPct}%` }}
-                  />
+                  Message
+                  <span className="ml-auto text-gray-400">
+                    <span className="text-[11px]">
+                      {form.message.length}/{MESSAGE_MAX}
+                    </span>
+                  </span>
+                </label>
+                <textarea
+                  ref={textRef}
+                  className="w-full resize-none rounded-xl rounded-t-none border-0 px-4 py-3.5 text-[15px] outline-none"
+                  placeholder="Write your message here…"
+                  value={form.message}
+                  maxLength={MESSAGE_MAX}
+                  onChange={(e) =>
+                    setForm((s) => ({ ...s, message: e.target.value }))
+                  }
+                  name="message"
+                  required
+                />
+                <div className="px-4 pb-3.5">
+                  <div className="h-1 w-full rounded-full bg-gray-100">
+                    <div
+                      className="h-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-[width]"
+                      style={{ width: `${msgPct}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <button
-                type="submit"
-                disabled={pending}
-                className="group inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-[15px] font-medium text-white shadow-md transition
-                           bg-gradient-to-r from-blue-600 to-cyan-500 hover:brightness-110 disabled:opacity-60"
-                aria-busy={pending}
-              >
-                {pending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Sending…
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    Send message
-                  </>
-                )}
-              </button>
+              {/* ações */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  aria-busy={pending}
+                  className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3.5 text-[15px] font-medium text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                      Send message
+                    </>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                onClick={openMailApp}
-                className="inline-flex items-center gap-2 rounded-full border px-5 py-3.5 text-[15px] hover:bg-gray-50"
-              >
-                <Mail className="h-4 w-4" />
-                Open email app
-              </button>
+                <button
+                  type="button"
+                  onClick={openMailApp}
+                  className="inline-flex items-center gap-2 rounded-full border px-5 py-3.5 text-[15px] hover:bg-gray-50"
+                >
+                  <Mail className="h-4 w-4" />
+                  Open email app
+                </button>
 
-              <p className="text-xs text-gray-500">
-                You’ll also receive a copy of your message.
-              </p>
-            </div>
-          </form>
+                <p className="text-xs text-gray-500">
+                  You’ll also receive a copy of your message.
+                </p>
+              </div>
+            </form>
 
-          {/* “What happens next?” */}
-          <div className="mt-6 relative overflow-hidden rounded-2xl border shadow-sm">
-            <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-teal-50" />
-            <div className="relative px-5 py-5 sm:px-6 sm:py-6">
+            {/* what happens next */}
+            <div className="mt-6 rounded-2xl border bg-gradient-to-br from-sky-50 via-white to-teal-50 p-5 shadow-sm sm:p-6">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-blue-600" />
                 <h3 className="font-semibold">What happens next?</h3>
               </div>
 
-              <div className="relative mt-4">
-                <div className="hidden sm:block absolute left-14 right-14 top-7 h-0.5 bg-gradient-to-r from-blue-200 via-cyan-200 to-emerald-200" />
-                <div className="grid gap-3 sm:grid-cols-3">
+              <div className="mt-4">
+                <div className="hidden h-0.5 bg-gradient-to-r from-blue-200 via-cyan-200 to-emerald-200 sm:block" />
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <Step
                     num={1}
                     icon={<Mail className="h-5 w-5" />}
@@ -413,125 +420,135 @@ export default function ContactClient() {
               </div>
             </div>
           </div>
+
+          {/* COLUNA DIREITA - SIDEBAR */}
+          <aside className="w-full max-w-xl shrink-0 space-y-4 lg:max-w-sm lg:space-y-5">
+            {/* quick help */}
+            <div className="rounded-2xl border bg-white/95 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold">Quick help</h3>
+              </div>
+
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/shipping-tracking"
+                    className="inline-flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50"
+                  >
+                    <Truck className="h-4 w-4 text-blue-600" />
+                    Shipping & Tracking
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/returns"
+                    className="inline-flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50"
+                  >
+                    <RotateCcw className="h-4 w-4 text-amber-600" />
+                    Returns & Exchanges
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/faq"
+                    className="inline-flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50"
+                  >
+                    <HelpCircle className="h-4 w-4 text-purple-600" />
+                    FAQ
+                  </Link>
+                </li>
+              </ul>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                <InfoStat icon={<Clock className="h-3.5 w-3.5" />} label="Avg reply">
+                  24–48h
+                </InfoStat>
+                <InfoStat icon={<Mail className="h-3.5 w-3.5" />} label="Hours">
+                  Mon–Fri
+                </InfoStat>
+              </div>
+            </div>
+
+            {/* prefer email */}
+            <div className="rounded-2xl border bg-gradient-to-br from-white to-sky-50 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+              <h3 className="font-semibold">Prefer email?</h3>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                You can email us directly — we’ll reply from our support inbox.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="rounded-xl border bg-white px-3 py-2 text-sm">
+                  myfootballworldshop@gmail.com
+                </code>
+                <button
+                  type="button"
+                  onClick={copyEmail}
+                  className="rounded-full border px-3 py-2 text-sm hover:bg-white"
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+
+            {/* useful links */}
+            <div className="rounded-2xl border bg-white/95 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                <h3 className="font-semibold">Useful links</h3>
+              </div>
+
+              <div className="mt-3 grid gap-2">
+                <Link
+                  href="/privacy-policy"
+                  className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-emerald-50/40 p-3.5 transition hover:from-emerald-50 hover:to-white"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-9 w-9 place-items-center rounded-lg border bg-emerald-50 text-emerald-600">
+                      <ShieldCheck className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <div className="font-medium leading-tight">
+                        Privacy Policy
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        How we protect your data
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5" />
+                </Link>
+
+                <Link
+                  href="/size-guide"
+                  className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-indigo-50/40 p-3.5 transition hover:from-indigo-50 hover:to-white"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-9 w-9 place-items-center rounded-lg border bg-indigo-50 text-indigo-600">
+                      <Ruler className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <div className="font-medium leading-tight">Size Guide</div>
+                      <p className="text-xs text-gray-500">
+                        Find your perfect fit
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+            </div>
+          </aside>
         </div>
-
-        {/* Sidebar */}
-        <aside className="space-y-4 lg:space-y-5">
-          <div className="rounded-2xl border bg-white/95 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-green-600" />
-              <h3 className="font-semibold">Quick help</h3>
-            </div>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/shipping-tracking"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50 w-full"
-                >
-                  <Truck className="h-4 w-4 text-blue-600" />
-                  Shipping & Tracking
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/returns"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50 w-full"
-                >
-                  <RotateCcw className="h-4 w-4 text-amber-600" />
-                  Returns & Exchanges
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/faq"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-gray-50 w-full"
-                >
-                  <HelpCircle className="h-4 w-4 text-purple-600" />
-                  FAQ
-                </Link>
-              </li>
-            </ul>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-              <InfoStat icon={<Clock className="h-3.5 w-3.5" />} label="Avg reply">
-                24–48h
-              </InfoStat>
-              <InfoStat icon={<Mail className="h-3.5 w-3.5" />} label="Hours">
-                Mon–Fri
-              </InfoStat>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-gradient-to-br from-white to-sky-50 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
-            <h3 className="font-semibold">Prefer email?</h3>
-            <p className="mt-1 text-sm text-gray-600 leading-relaxed">
-              You can email us directly — we’ll reply from our support inbox.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <code className="rounded-xl border bg-white px-3 py-2 text-sm">
-                myfootballworldshop@gmail.com
-              </code>
-              <button
-                type="button"
-                onClick={copyEmail}
-                className="rounded-full border px-3 py-2 text-sm hover:bg-white"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-          </div>
-
-          {/* Useful links */}
-          <div className="rounded-2xl border bg-white/95 px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              <h3 className="font-semibold">Useful links</h3>
-            </div>
-
-            <div className="mt-3 grid gap-2">
-              <Link
-                href="/privacy-policy"
-                className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-emerald-50/40 p-3.5 hover:from-emerald-50 hover:to-white transition"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-lg border bg-emerald-50 text-emerald-600">
-                    <ShieldCheck className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <div className="font-medium leading-tight">Privacy Policy</div>
-                    <p className="text-xs text-gray-500">How we protect your data</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5" />
-              </Link>
-
-              <Link
-                href="/size-guide"
-                className="group flex items-center justify-between rounded-xl border bg-gradient-to-r from-white to-indigo-50/40 p-3.5 hover:from-indigo-50 hover:to-white transition"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-lg border bg-indigo-50 text-indigo-600">
-                    <Ruler className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <div className="font-medium leading-tight">Size Guide</div>
-                    <p className="text-xs text-gray-500">Find your perfect fit</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5" />
-              </Link>
-            </div>
-          </div>
-        </aside>
       </div>
-    </div>
+    </section>
   );
 }
 
-/* — UI bits — */
+/* --------- UI helpers --------- */
+
 function Badge({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
+    <span className="inline-flex items-center gap-1 rounded-full border bg-white/85 px-2.5 py-1">
       {icon}
       {children}
     </span>
@@ -551,11 +568,11 @@ function PresetChip({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs hover:bg-gray-50"
+      className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-gray-800 hover:bg-gray-50"
       aria-label={`Use subject: ${label}`}
     >
       <span className="text-gray-600">{icon}</span>
-      <span className="font-medium text-gray-800">{label}</span>
+      <span className="font-medium">{label}</span>
     </button>
   );
 }
@@ -575,7 +592,7 @@ function InfoStat({
         {icon}
         {label}
       </div>
-      <div className="mt-1 font-medium text-gray-900 text-sm">{children}</div>
+      <div className="mt-1 text-sm font-medium text-gray-900">{children}</div>
     </div>
   );
 }
@@ -585,28 +602,30 @@ function Step({
   icon,
   title,
   text,
-  color = "from-blue-600 to-cyan-500",
+  color,
 }: {
   num: number;
   icon: ReactNode;
   title: string;
   text: string;
-  color?: string;
+  color: string;
 }) {
   return (
-    <div className="relative rounded-xl border bg-white/75 p-4 sm:p-4.5 hover:shadow-md transition flex flex-col h-full">
+    <div className="flex h-full flex-col rounded-xl border bg-white/80 p-4 text-xs shadow-sm hover:shadow-md">
       <div className="flex items-start gap-3">
         <span
-          className={`relative grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br ${color} text-white shadow-sm`}
+          className={`relative grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br ${color} text-white shadow-sm`}
         >
           {icon}
-          <span className="absolute -top-1 -right-1 grid h-5 w-5 place-items-center rounded-full border bg-white text-[11px] font-bold text-blue-600">
+          <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border bg-white text-[11px] font-bold text-blue-600">
             {num}
           </span>
         </span>
         <div>
-          <div className="font-semibold leading-tight mb-0.5">{title}</div>
-          <p className="text-xs text-gray-600 leading-relaxed">{text}</p>
+          <div className="mb-0.5 text-sm font-semibold leading-tight">
+            {title}
+          </div>
+          <p className="leading-relaxed text-gray-600">{text}</p>
         </div>
       </div>
     </div>
@@ -637,7 +656,7 @@ function Field({
   autoComplete?: string;
 }) {
   return (
-    <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+    <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
       <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
         <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">{icon}</span>
         {label}
@@ -652,7 +671,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         name={name}
         autoComplete={autoComplete}
-        className="w-full rounded-xl rounded-t-none border-0 px-4 py-3.5 outline-none text-[15px]"
+        className="w-full rounded-xl rounded-t-none border-0 px-4 py-3.5 text-[15px] outline-none"
       />
     </div>
   );
