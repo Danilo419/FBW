@@ -2,7 +2,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type FormEvent,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Send,
@@ -66,7 +73,7 @@ export default function ContactClient() {
   }, [initial.name, initial.email, initial.subject, initial.order]);
 
   // Preset chips (all with an icon)
-  const chips: { label: string; icon: React.ReactNode }[] = [
+  const chips: { label: string; icon: ReactNode }[] = [
     { label: "Tracking help", icon: <Truck className="h-3.5 w-3.5" /> },
     { label: "Start a return", icon: <RotateCcw className="h-3.5 w-3.5" /> },
     { label: "Order status / tracking", icon: <Truck className="h-3.5 w-3.5" /> },
@@ -91,9 +98,12 @@ export default function ContactClient() {
     return () => clearTimeout(t);
   }, [ok]);
 
-  const msgPct = Math.min(100, Math.round((form.message.length / MESSAGE_MAX) * 100));
+  const msgPct = Math.min(
+    100,
+    Math.round((form.message.length / MESSAGE_MAX) * 100)
+  );
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (pending) return;
 
@@ -146,23 +156,25 @@ export default function ContactClient() {
       await navigator.clipboard.writeText("myfootballworldshop@gmail.com");
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto px-4 md:px-6 lg:px-0 py-6 md:py-8 lg:py-10">
+    <div className="container-fw mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-10 relative">
       {/* Decorative glows */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 right-0 h-56 w-56 rounded-full blur-3xl bg-cyan-200/50"
+        className="pointer-events-none absolute -top-24 right-0 h-56 w-56 rounded-full blur-3xl bg-cyan-200/40"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-24 -left-8 h-64 w-64 rounded-full blur-3xl bg-blue-200/40"
+        className="pointer-events-none absolute -bottom-24 -left-8 h-64 w-64 rounded-full blur-3xl bg-blue-200/30"
       />
 
       {/* Hero */}
-      <div className="relative mb-9 md:mb-11 overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-6 sm:px-7 sm:py-7 lg:px-9 lg:py-8 shadow-sm">
+      <div className="relative mb-8 overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-6 sm:px-7 sm:py-7 lg:px-9 lg:py-8 shadow-sm">
         <div className="max-w-3xl">
           <div className="flex items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
@@ -174,16 +186,20 @@ export default function ContactClient() {
             Contact FootballWorld Support
           </h1>
           <p className="mt-2 text-sm md:text-[15px] text-gray-600 leading-relaxed">
-            We answer most messages within <b>24–48h</b>. Include your order number for the
-            fastest help.
+            We answer most messages within <b>24–48h</b>. Include your order
+            number for the fastest help.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             <Badge icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}>
               Secure & private
             </Badge>
-            <Badge icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}>24–48h reply</Badge>
-            <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>Global shipping</Badge>
+            <Badge icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}>
+              24–48h reply
+            </Badge>
+            <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>
+              Global shipping
+            </Badge>
           </div>
         </div>
       </div>
@@ -199,7 +215,11 @@ export default function ContactClient() {
           }`}
         >
           <div className="flex items-center gap-2">
-            {ok === "ok" ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+            {ok === "ok" ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
             <span>
               {ok === "ok"
                 ? "Thanks! Your message was sent — we’ll reply by email."
@@ -210,7 +230,7 @@ export default function ContactClient() {
       )}
 
       {/* Grid: form + sidebar */}
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)] items-start">
+      <div className="grid gap-7 lg:grid-cols-2 items-start">
         {/* Form */}
         <div className="rounded-2xl border bg-white/95 backdrop-blur px-4 py-5 sm:px-5 sm:py-6 md:px-6 md:py-7 shadow-sm">
           <form onSubmit={onSubmit} noValidate className="grid gap-5">
@@ -246,7 +266,11 @@ export default function ContactClient() {
                 name="email"
                 autoComplete="email"
                 required
-                hint={<span className="text-[11px] text-gray-500">We never share it</span>}
+                hint={
+                  <span className="text-[11px] text-gray-500">
+                    We never share it
+                  </span>
+                }
               />
             </div>
 
@@ -265,7 +289,9 @@ export default function ContactClient() {
               label="Subject"
               placeholder="How can we help?"
               value={form.subject}
-              onChange={(v) => setForm((s) => ({ ...s, subject: v.slice(0, SUBJECT_MAX) }))}
+              onChange={(v) =>
+                setForm((s) => ({ ...s, subject: v.slice(0, SUBJECT_MAX) }))
+              }
               name="subject"
               autoComplete="off"
               required
@@ -295,7 +321,9 @@ export default function ContactClient() {
                 placeholder="Write your message here…"
                 value={form.message}
                 maxLength={MESSAGE_MAX}
-                onChange={(e) => setForm((s) => ({ ...s, message: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, message: e.target.value }))
+                }
                 name="message"
                 required
               />
@@ -501,7 +529,7 @@ export default function ContactClient() {
 }
 
 /* — UI bits — */
-function Badge({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Badge({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
       {icon}
@@ -515,7 +543,7 @@ function PresetChip({
   label,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   onClick: () => void;
 }) {
@@ -537,9 +565,9 @@ function InfoStat({
   label,
   children,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="rounded-xl border px-3 py-2.5">
@@ -560,7 +588,7 @@ function Step({
   color = "from-blue-600 to-cyan-500",
 }: {
   num: number;
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   text: string;
   color?: string;
@@ -598,13 +626,13 @@ function Field({
   autoComplete,
 }: {
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   required?: boolean;
   placeholder?: string;
-  hint?: React.ReactNode;
+  hint?: ReactNode;
   name?: string;
   autoComplete?: string;
 }) {
