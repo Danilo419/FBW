@@ -803,6 +803,10 @@ function isLongSleeve(p: HomeProduct): boolean {
   return hasTerm(p, 'LONG SLEEVE')
 }
 
+function isRetro(p: HomeProduct): boolean {
+  return hasTerm(p, 'RETRO')
+}
+
 /* ---------- Product Card (usado no marquee) ---------- */
 
 function ProductCard({ product }: { product: HomeProduct }) {
@@ -874,7 +878,6 @@ function ProductCard({ product }: { product: HomeProduct }) {
 
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
-  // Duplica a lista para um loop mais contínuo
   const track = [...products, ...products]
 
   return (
@@ -976,13 +979,14 @@ export default function Home() {
   const categories = useMemo(() => {
     if (!homeProducts.length) return null
 
-    const base = shuffle(homeProducts) // random global para depois filtrar
+    const base = shuffle(homeProducts)
 
     const filterJerseys = (p: HomeProduct) => {
       const n = normalizeName(p)
       if (!n) return false
-      if (n.includes('PLAYER VERSION')) return false
-      if (n.includes('LONG SLEEVE')) return false
+      if (isPlayerVersion(p)) return false
+      if (isLongSleeve(p)) return false
+      if (isRetro(p)) return false
       if (n.includes('SET')) return false
       if (n.includes('SHORTS')) return false
       if (n.includes('TRACKSUIT')) return false
@@ -994,39 +998,70 @@ export default function Home() {
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
+      // temporada atual, mas sem Player Version e sem Retro
       currentSeason: mk(
-        (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) // temporada atual sem Player Version
+        (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
+      // Jerseys normais (curta) sem Long Sleeve, sem Player Version, sem Retro
       jerseys: mk(filterJerseys),
+      // Long Sleeve normais, sem Player Version, sem Retro
       longSleeve: mk(
-        (p) => hasTerm(p, 'LONG SLEEVE') && !isPlayerVersion(p)
+        (p) =>
+          isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
       ),
+      // Player Version (curta), sem Retro
       playerVersion: mk(
-        (p) => isPlayerVersion(p) && !isLongSleeve(p)
+        (p) =>
+          isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
       ),
+      // Player Version Long Sleeve, sem Retro
       playerVersionLongSleeve: mk(
-        (p) => isPlayerVersion(p) && isLongSleeve(p)
+        (p) =>
+          isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
+      // Retro Jerseys (curta), apenas Retro, sem Long Sleeve, sem Player Version
       retro: mk(
-        (p) => hasTerm(p, 'RETRO') && !isPlayerVersion(p)
+        (p) =>
+          isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
       ),
+      // Retro Long Sleeve Jerseys, apenas Retro + Long Sleeve, sem Player Version
+      retroLongSleeve: mk(
+        (p) =>
+          isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
+      ),
+      // Concept Kits apenas, sem Retro, sem Player Version
       conceptKits: mk(
-        (p) => hasTerm(p, 'CONCEPT KIT') && !isPlayerVersion(p)
+        (p) =>
+          hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
+      // Pre-Match apenas, sem Retro, sem Player Version
       preMatch: mk(
-        (p) => hasTerm(p, 'PRE-MATCH') && !isPlayerVersion(p)
+        (p) =>
+          hasTerm(p, 'PRE-MATCH') && !isRetro(p) && !isPlayerVersion(p)
       ),
+      // Training Sleeveless Sets apenas, sem Retro, sem Player Version
       trainingSleeveless: mk(
-        (p) => hasTerm(p, 'TRAINING SLEEVELESS SET') && !isPlayerVersion(p)
+        (p) =>
+          hasTerm(p, 'TRAINING SLEEVELESS SET') &&
+          !isRetro(p) &&
+          !isPlayerVersion(p)
       ),
+      // Training Tracksuit apenas, sem Retro, sem Player Version
       trainingTracksuit: mk(
-        (p) => hasTerm(p, 'TRAINING TRACKSUIT') && !isPlayerVersion(p)
+        (p) =>
+          hasTerm(p, 'TRAINING TRACKSUIT') &&
+          !isRetro(p) &&
+          !isPlayerVersion(p)
       ),
+      // Kids Kits apenas, sem Retro, sem Player Version
       kidsKits: mk(
-        (p) => hasTerm(p, 'KIDS KIT') && !isPlayerVersion(p)
+        (p) =>
+          hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
+      // Crop Tops apenas, sem Retro, sem Player Version
       cropTops: mk(
-        (p) => hasTerm(p, 'CROP TOP') && !isPlayerVersion(p)
+        (p) =>
+          hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
       ),
     }
   }, [homeProducts])
@@ -1065,6 +1100,11 @@ export default function Home() {
       key: 'retro',
       title: 'Retro Jerseys',
       subtitle: 'Throwback legends from classic seasons',
+    },
+    {
+      key: 'retroLongSleeve',
+      title: 'Retro Long Sleeve Jerseys',
+      subtitle: 'Retro designs with long sleeves',
     },
     {
       key: 'conceptKits',
