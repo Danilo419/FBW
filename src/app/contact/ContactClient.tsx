@@ -39,7 +39,6 @@ const TEXTAREA_MAX_H = 520;
 export default function ContactClient() {
   const searchParams = useSearchParams();
 
-  // Prefill (?name=&email=&subject=&order=)
   const initial = useMemo(
     () => ({
       name: searchParams.get("name") || "",
@@ -61,7 +60,6 @@ export default function ContactClient() {
     order: initial.order,
   });
 
-  // keep URL prefill in sync
   useEffect(() => {
     setForm((s) => ({
       ...s,
@@ -81,7 +79,6 @@ export default function ContactClient() {
     { label: "Product question", icon: <HelpCircle className="h-3.5 w-3.5" /> },
   ];
 
-  // autosize textarea
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const el = textRef.current;
@@ -90,7 +87,6 @@ export default function ContactClient() {
     el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_H) + "px";
   }, [form.message]);
 
-  // clear toast
   useEffect(() => {
     if (!status) return;
     const t = setTimeout(() => setStatus(null), 3000);
@@ -156,16 +152,14 @@ export default function ContactClient() {
       await navigator.clipboard.writeText("myfootballworldshop@gmail.com");
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   return (
     <div className="bg-white">
-      <div className="mx-auto flex max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8 lg:pt-10">
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8 lg:pt-10">
         {/* HERO */}
-        <div className="mb-6 rounded-3xl border bg-sky-50/70 px-5 py-6 shadow-sm sm:mb-8 sm:px-7 sm:py-7 lg:px-9 lg:py-8">
+        <div className="mb-6 rounded-3xl border bg-sky-50/80 px-5 py-6 shadow-sm sm:mb-8 sm:px-7 sm:py-7 lg:px-9 lg:py-8">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-xs">
               <span className="inline-flex items-center gap-1 rounded-full border bg-white px-2.5 py-1">
@@ -223,7 +217,7 @@ export default function ContactClient() {
         )}
 
         {/* LAYOUT PRINCIPAL */}
-        <div className="grid gap-7 lg:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)]">
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
           {/* FORM */}
           <div className="rounded-2xl border bg-white px-4 py-5 shadow-sm sm:px-5 sm:py-6 md:px-6 md:py-7">
             <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
