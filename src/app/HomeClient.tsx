@@ -1133,10 +1133,10 @@ export default function Home() {
         </motion.div>
       </section>
 
-      <br></br>
-      <br></br>
-      <br></br>
-     
+      <br />
+      <br />
+      <br />
+
       {/* =================== CTA =================== */}
       <section className="container-fw pb-20">
         <TiltCard>
@@ -1257,7 +1257,7 @@ export default function Home() {
       {/* =================== NEWSLETTER =================== */}
       <section className="container-fw pb-24">
         <TiltCard>
-          <div className="grid md:grid-cols-2 gap-6 items-center p-8">
+          <div className="grid md:grid-cols-2 gap-6 items-center p-6 sm:p-8">
             <div>
               <h3 className="text-2xl font-bold">Get launches & news</h3>
               <p className="mt-2 text-gray-600">
@@ -1265,16 +1265,18 @@ export default function Home() {
               </p>
             </div>
             <form
-              className="flex w-full gap-3"
+              className="flex w-full flex-col gap-3 sm:flex-row"
               onSubmit={(e) => e.preventDefault()}
             >
               <input
                 type="email"
                 required
                 placeholder="Your email"
-                className="flex-1 rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button className="btn-primary">Subscribe</button>
+              <button className="btn-primary w-full sm:w-auto whitespace-nowrap">
+                Subscribe
+              </button>
             </form>
           </div>
         </TiltCard>
