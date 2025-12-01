@@ -822,9 +822,9 @@ function ProductCard({ product }: { product: HomeProduct }) {
     <motion.a
       href={href}
       whileHover={{ y: -6 }}
-      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[23%] max-w-[23%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px]"
+      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[50%] max-w-[50%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px]"
     >
-      <div className="relative h-[180px] sm:h-[260px] md:h-[320px] bg-slate-50">
+      <div className="relative h-[200px] sm:h-[260px] md:h-[320px] bg-slate-50">
         <img
           src={imgSrc}
           alt={product.name}
@@ -998,67 +998,54 @@ export default function Home() {
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
-      // temporada atual, mas sem Player Version e sem Retro
       currentSeason: mk(
         (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
-      // Jerseys normais (curta) sem Long Sleeve, sem Player Version, sem Retro
       jerseys: mk(filterJerseys),
-      // Long Sleeve normais, sem Player Version, sem Retro
       longSleeve: mk(
         (p) =>
           isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
       ),
-      // Player Version (curta), sem Retro
       playerVersion: mk(
         (p) =>
           isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
       ),
-      // Player Version Long Sleeve, sem Retro
       playerVersionLongSleeve: mk(
         (p) =>
           isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
-      // Retro Jerseys (curta), apenas Retro, sem Long Sleeve, sem Player Version
       retro: mk(
         (p) =>
           isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
       ),
-      // Retro Long Sleeve Jerseys, apenas Retro + Long Sleeve, sem Player Version
       retroLongSleeve: mk(
         (p) =>
           isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
       ),
-      // Concept Kits apenas, sem Retro, sem Player Version
       conceptKits: mk(
         (p) =>
           hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
-      // Pre-Match apenas, sem Retro, sem Player Version
       preMatch: mk(
         (p) =>
           hasTerm(p, 'PRE-MATCH') && !isRetro(p) && !isPlayerVersion(p)
       ),
-      // Training Sleeveless Sets apenas, sem Retro, sem Player Version
       trainingSleeveless: mk(
         (p) =>
           hasTerm(p, 'TRAINING SLEEVELESS SET') &&
           !isRetro(p) &&
           !isPlayerVersion(p)
       ),
-      // Training Tracksuit apenas, sem Retro, sem Player Version
       trainingTracksuit: mk(
         (p) =>
           hasTerm(p, 'TRAINING TRACKSUIT') &&
           !isRetro(p) &&
           !isPlayerVersion(p)
       ),
-      // Kids Kits apenas, sem Retro, sem Player Version
       kidsKits: mk(
         (p) =>
           hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
-      // Crop Tops apenas, sem Retro, sem Player Version
       cropTops: mk(
         (p) =>
           hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
@@ -1292,7 +1279,7 @@ export default function Home() {
                           {Array.from({ length: 8 }).map((__, i) => (
                             <div
                               key={i}
-                              className="min-w-[23%] max-w-[23%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px] h-[180px] sm:h-[260px] md:h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
+                              className="min-w-[50%] max-w-[50%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px] h-[200px] sm:h-[260px] md:h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
                             />
                           ))}
                         </div>
