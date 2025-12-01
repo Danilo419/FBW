@@ -39,7 +39,7 @@ const TEXTAREA_MAX_H = 520;
 export default function ContactClient() {
   const searchParams = useSearchParams();
 
-  // Valores iniciais vindos dos query params
+  // Prefill (?name=&email=&subject=&order=)
   const initial = useMemo(
     () => ({
       name: searchParams.get("name") || "",
@@ -61,7 +61,7 @@ export default function ContactClient() {
     order: initial.order,
   });
 
-  // manter valores pré-preenchidos sincronizados
+  // keep URL prefill in sync
   useEffect(() => {
     setForm((s) => ({
       ...s,
@@ -72,7 +72,6 @@ export default function ContactClient() {
     }));
   }, [initial.name, initial.email, initial.subject, initial.order]);
 
-  // chips de assunto rápido
   const chips: { label: string; icon: ReactNode }[] = [
     { label: "Tracking help", icon: <Truck className="h-3.5 w-3.5" /> },
     { label: "Start a return", icon: <RotateCcw className="h-3.5 w-3.5" /> },
@@ -82,7 +81,7 @@ export default function ContactClient() {
     { label: "Product question", icon: <HelpCircle className="h-3.5 w-3.5" /> },
   ];
 
-  // auto-resize da textarea
+  // autosize textarea
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const el = textRef.current;
@@ -91,7 +90,7 @@ export default function ContactClient() {
     el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_H) + "px";
   }, [form.message]);
 
-  // limpar toast
+  // clear toast
   useEffect(() => {
     if (!status) return;
     const t = setTimeout(() => setStatus(null), 3000);
@@ -122,7 +121,6 @@ export default function ContactClient() {
       setStatus("ok");
       setForm({ name: "", email: "", subject: "", message: "", order: "" });
     } catch {
-      // fallback para mailto
       openMailApp();
       setStatus("ok");
     } finally {
@@ -149,8 +147,8 @@ export default function ContactClient() {
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   }
 
-  function usePreset(subject: string) {
-    setForm((s) => ({ ...s, subject: subject.slice(0, SUBJECT_MAX) }));
+  function usePreset(label: string) {
+    setForm((s) => ({ ...s, subject: label.slice(0, SUBJECT_MAX) }));
   }
 
   async function copyEmail() {
@@ -164,23 +162,13 @@ export default function ContactClient() {
   }
 
   return (
-    <section className="relative min-h-screen bg-slate-50/60">
+    <div className="bg-white">
       <div className="mx-auto flex max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8 lg:pt-10">
         {/* HERO */}
-        <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-6 shadow-sm sm:px-7 sm:py-7 lg:px-9 lg:py-8">
-          {/* glows só dentro do hero */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-200/60 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-blue-200/50 blur-3xl"
-          />
-
-          <div className="relative max-w-3xl">
+        <div className="mb-6 rounded-3xl border bg-sky-50/70 px-5 py-6 shadow-sm sm:mb-8 sm:px-7 sm:py-7 lg:px-9 lg:py-8">
+          <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-xs">
-              <span className="inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border bg-white px-2.5 py-1">
                 <Sparkles className="h-3.5 w-3.5 text-blue-600" />
                 We’re here to help
               </span>
@@ -213,7 +201,7 @@ export default function ContactClient() {
         {status && (
           <div
             role="status"
-            className={`mt-5 rounded-xl border px-4 py-3 text-sm shadow-sm ${
+            className={`mb-6 rounded-xl border px-4 py-3 text-sm shadow-sm ${
               status === "ok"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : "border-rose-200 bg-rose-50 text-rose-800"
@@ -235,9 +223,9 @@ export default function ContactClient() {
         )}
 
         {/* LAYOUT PRINCIPAL */}
-        <div className="mt-7 flex flex-col items-start gap-6 lg:mt-8 lg:flex-row lg:gap-8">
-          {/* COLUNA ESQUERDA - FORM */}
-          <div className="w-full flex-1 rounded-2xl border bg-white/95 px-4 py-5 shadow-sm backdrop-blur sm:px-5 sm:py-6 md:px-6 md:py-7">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)]">
+          {/* FORM */}
+          <div className="rounded-2xl border bg-white px-4 py-5 shadow-sm sm:px-5 sm:py-6 md:px-6 md:py-7">
             <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
               {/* chips */}
               <div className="flex flex-wrap items-center gap-2">
@@ -314,8 +302,8 @@ export default function ContactClient() {
                 }
               />
 
-              {/* mensagem */}
-              <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
+              {/* message */}
+              <div className="group rounded-xl border bg-white shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
                 <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
                   <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">
                     <MessageSquareText className="h-4 w-4" />
@@ -349,7 +337,7 @@ export default function ContactClient() {
                 </div>
               </div>
 
-              {/* ações */}
+              {/* actions */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   type="submit"
@@ -385,46 +373,42 @@ export default function ContactClient() {
               </div>
             </form>
 
-            {/* what happens next */}
-            <div className="mt-6 rounded-2xl border bg-gradient-to-br from-sky-50 via-white to-teal-50 p-5 shadow-sm sm:p-6">
+            {/* What happens next */}
+            <div className="mt-6 rounded-2xl border bg-sky-50/60 p-5 shadow-sm sm:p-6">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-blue-600" />
                 <h3 className="font-semibold">What happens next?</h3>
               </div>
-
-              <div className="mt-4">
-                <div className="hidden h-0.5 bg-gradient-to-r from-blue-200 via-cyan-200 to-emerald-200 sm:block" />
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  <Step
-                    num={1}
-                    icon={<Mail className="h-5 w-5" />}
-                    title="Copy by email"
-                    text="We’ll send a confirmation of your message to your inbox."
-                    color="from-blue-600 to-cyan-500"
-                  />
-                  <Step
-                    num={2}
-                    icon={<Clock className="h-5 w-5" />}
-                    title="24–48h reply"
-                    text="Our team answers on business days as quickly as possible."
-                    color="from-amber-600 to-orange-500"
-                  />
-                  <Step
-                    num={3}
-                    icon={<RotateCcw className="h-5 w-5" />}
-                    title="Photos help"
-                    text="For defects or exchanges, send clear photos when we reply."
-                    color="from-emerald-600 to-green-500"
-                  />
-                </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <Step
+                  num={1}
+                  icon={<Mail className="h-5 w-5" />}
+                  title="Copy by email"
+                  text="We’ll send a confirmation of your message to your inbox."
+                  color="from-blue-600 to-cyan-500"
+                />
+                <Step
+                  num={2}
+                  icon={<Clock className="h-5 w-5" />}
+                  title="24–48h reply"
+                  text="Our team answers on business days as quickly as possible."
+                  color="from-amber-600 to-orange-500"
+                />
+                <Step
+                  num={3}
+                  icon={<RotateCcw className="h-5 w-5" />}
+                  title="Photos help"
+                  text="For defects or exchanges, send clear photos when we reply."
+                  color="from-emerald-600 to-green-500"
+                />
               </div>
             </div>
           </div>
 
-          {/* COLUNA DIREITA - SIDEBAR */}
-          <aside className="w-full max-w-xl shrink-0 space-y-4 lg:max-w-sm lg:space-y-5">
-            {/* quick help */}
-            <div className="rounded-2xl border bg-white/95 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+          {/* SIDEBAR */}
+          <aside className="space-y-4 lg:space-y-5">
+            {/* Quick help */}
+            <div className="rounded-2xl border bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
                 <h3 className="font-semibold">Quick help</h3>
@@ -470,8 +454,8 @@ export default function ContactClient() {
               </div>
             </div>
 
-            {/* prefer email */}
-            <div className="rounded-2xl border bg-gradient-to-br from-white to-sky-50 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+            {/* Prefer email */}
+            <div className="rounded-2xl border bg-sky-50/40 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
               <h3 className="font-semibold">Prefer email?</h3>
               <p className="mt-1 text-sm leading-relaxed text-gray-600">
                 You can email us directly — we’ll reply from our support inbox.
@@ -490,8 +474,8 @@ export default function ContactClient() {
               </div>
             </div>
 
-            {/* useful links */}
-            <div className="rounded-2xl border bg-white/95 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+            {/* Useful links */}
+            <div className="rounded-2xl border bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-blue-600" />
                 <h3 className="font-semibold">Useful links</h3>
@@ -540,7 +524,7 @@ export default function ContactClient() {
           </aside>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -548,7 +532,7 @@ export default function ContactClient() {
 
 function Badge({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border bg-white/85 px-2.5 py-1">
+    <span className="inline-flex items-center gap-1 rounded-full border bg-white px-2.5 py-1">
       {icon}
       {children}
     </span>
@@ -611,7 +595,7 @@ function Step({
   color: string;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-xl border bg-white/80 p-4 text-xs shadow-sm hover:shadow-md">
+    <div className="flex h-full flex-col rounded-xl border bg-white p-4 text-xs shadow-sm hover:shadow-md">
       <div className="flex items-start gap-3">
         <span
           className={`relative grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br ${color} text-white shadow-sm`}
@@ -656,7 +640,7 @@ function Field({
   autoComplete?: string;
 }) {
   return (
-    <div className="group rounded-xl border bg-white/95 shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
+    <div className="group rounded-xl border bg-white shadow-sm transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
       <label className="flex items-center gap-2 border-b px-4 py-2.5 text-[12px] text-gray-600">
         <span className="rounded-md bg-blue-50 p-1.5 text-blue-600">{icon}</span>
         {label}
