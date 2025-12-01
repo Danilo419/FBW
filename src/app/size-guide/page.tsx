@@ -47,22 +47,22 @@ const ADULT: AdultTable = {
   },
 };
 
-// ===== Kids data em cm =====
+// ===== Kids data in cm =====
 type KidsRow = {
-  size: string;              // código fabricante (não mostrado)
-  length: number;            // cm
-  bust: number;              // cm
-  height: [number, number];  // cm
-  age: string;               // "2–3", "3–4", ...
-  shortsLength: number;      // cm
+  size: string; // manufacturer code (not shown)
+  length: number; // cm
+  bust: number; // cm
+  height: [number, number]; // cm
+  age: string; // "2–3", "3–4", ...
+  shortsLength: number; // cm
 };
 
 const KIDS_ROWS: KidsRow[] = [
-  { size: "#16", length: 43, bust: 32, height: [95, 105],  age: "2–3",   shortsLength: 32 },
-  { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4",   shortsLength: 34 },
-  { size: "#20", length: 50, bust: 36, height: [115, 125], age: "4–5",   shortsLength: 36 },
-  { size: "#22", length: 53, bust: 38, height: [125, 135], age: "6–7",   shortsLength: 38 },
-  { size: "#24", length: 56, bust: 40, height: [135, 145], age: "8–9",   shortsLength: 39 },
+  { size: "#16", length: 43, bust: 32, height: [95, 105], age: "2–3", shortsLength: 32 },
+  { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4", shortsLength: 34 },
+  { size: "#20", length: 50, bust: 36, height: [115, 125], age: "4–5", shortsLength: 36 },
+  { size: "#22", length: 53, bust: 38, height: [125, 135], age: "6–7", shortsLength: 38 },
+  { size: "#24", length: 56, bust: 40, height: [135, 145], age: "8–9", shortsLength: 39 },
   { size: "#26", length: 58, bust: 42, height: [145, 155], age: "10–11", shortsLength: 40 },
   { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
 ];
@@ -71,6 +71,7 @@ const KIDS_ROWS: KidsRow[] = [
 function toInches(v: number) {
   return +(v / 2.54).toFixed(1);
 }
+
 function renderRange(value: Range | undefined, unit: Unit) {
   if (value === undefined) return "–";
   if (Array.isArray(value)) {
@@ -83,7 +84,9 @@ function renderRange(value: Range | undefined, unit: Unit) {
 function SectionHeader({ title }: { title: string }) {
   return (
     <header className="mb-3">
-      <h2 className="text-lg md:text-xl font-semibold">{title}</h2>
+      <h2 className="text-base sm:text-lg md:text-xl font-semibold tracking-tight">
+        {title}
+      </h2>
     </header>
   );
 }
@@ -92,56 +95,75 @@ function SectionHeader({ title }: { title: string }) {
 function AdultTableView({ data, unit }: { data: AdultTable; unit: Unit }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
-        Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
+      <div className="px-3 sm:px-4 md:px-6 py-2 bg-gray-50 border-b text-xs sm:text-sm">
+        Units:{" "}
+        <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
-      <div className="overflow-x-visible">
-        <table className="w-full text-sm table-fixed border-collapse">
-          <colgroup>
-            <col className="w-40" />
-            {data.sizes.map((_, i) => <col key={i} />)}
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300">
-                Measurement
-              </th>
-              {data.sizes.map((s) => (
-                <th
-                  key={s}
-                  className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50"
-                >
-                  {s}
-                </th>
+      {/* horizontal scroll on small screens */}
+      <div className="-mx-4 sm:mx-0 overflow-x-auto">
+        <div className="min-w-[620px] sm:min-w-0 px-4 sm:px-0">
+          <table className="w-full text-xs sm:text-sm border-collapse">
+            <colgroup>
+              <col className="w-32 sm:w-40" />
+              {data.sizes.map((_, i) => (
+                <col key={i} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
-              <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-300 text-center">
-                  {key}
-                </td>
+            </colgroup>
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="text-center px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-medium border border-gray-300">
+                  Measurement
+                </th>
                 {data.sizes.map((s) => (
-                  <td
+                  <th
                     key={s}
-                    className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center"
+                    className="text-center px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
                   >
-                    {renderRange(data.rows[key][s], unit)}
-                  </td>
+                    {s}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map(
+                (key, i) => (
+                  <tr
+                    key={key}
+                    className={i % 2 ? "bg-white" : "bg-gray-50/40"}
+                  >
+                    <td className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                      {key}
+                    </td>
+                    {data.sizes.map((s) => (
+                      <td
+                        key={s}
+                        className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                      >
+                        {renderRange(data.rows[key][s], unit)}
+                      </td>
+                    ))}
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
-// ===== Kids table: idades no topo =====
-type KidsRowKey = "Jersey length" | "Chest (bust)" | "Height" | "Shorts length";
-type KidsTableShape = { sizes: string[]; rows: Record<KidsRowKey, Partial<Record<string, Range>>> };
+// ===== Kids table: ages on top =====
+type KidsRowKey =
+  | "Jersey length"
+  | "Chest (bust)"
+  | "Height"
+  | "Shorts length";
+
+type KidsTableShape = {
+  sizes: string[];
+  rows: Record<KidsRowKey, Partial<Record<string, Range>>>;
+};
 
 function makeKidsTable(): KidsTableShape {
   const sizes = KIDS_ROWS.map((r) => `${r.age} yrs`);
@@ -155,9 +177,9 @@ function makeKidsTable(): KidsTableShape {
   KIDS_ROWS.forEach((r) => {
     const key = `${r.age} yrs`;
     rows["Jersey length"][key] = r.length; // cm
-    rows["Chest (bust)"][key] = r.bust;    // cm
+    rows["Chest (bust)"][key] = r.bust; // cm
     rows["Height"][key] = [r.height[0], r.height[1]]; // range cm
-    rows["Shorts length"][key] = r.shortsLength;      // cm
+    rows["Shorts length"][key] = r.shortsLength; // cm
   });
 
   return { sizes, rows };
@@ -167,50 +189,64 @@ function KidsTableView({ unit }: { unit: Unit }) {
   const data = useMemo(() => makeKidsTable(), []);
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b text-sm">
-        Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
+      <div className="px-3 sm:px-4 md:px-6 py-2 bg-gray-50 border-b text-xs sm:text-sm">
+        Units:{" "}
+        <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
       </div>
-      <div className="overflow-x-visible">
-        <table className="w-full text-sm table-fixed border-collapse">
-          <colgroup>
-            <col className="w-40" />
-            {data.sizes.map((_, i) => <col key={i} />)}
-          </colgroup>
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300">
-                Measurement
-              </th>
-              {data.sizes.map((s) => (
-                <th
-                  key={s}
-                  className="text-center px-4 sm:px-6 py-3 font-medium border border-gray-300 bg-gray-50"
-                >
-                  {s}
-                </th>
+      {/* horizontal scroll on small screens */}
+      <div className="-mx-4 sm:mx-0 overflow-x-auto">
+        <div className="min-w-[680px] sm:min-w-0 px-4 sm:px-0">
+          <table className="w-full text-xs sm:text-sm border-collapse">
+            <colgroup>
+              <col className="w-32 sm:w-40" />
+              {data.sizes.map((_, i) => (
+                <col key={i} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(["Jersey length", "Chest (bust)", "Height", "Shorts length"] as KidsRowKey[]).map(
-              (rowKey, idx) => (
-                <tr key={rowKey} className={idx % 2 ? "bg-white" : "bg-gray-50/40"}>
-                  <td className="px-4 sm:px-6 py-3 font-semibold border border-gray-300 text-center">
+            </colgroup>
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-center px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-medium border border-gray-300">
+                  Measurement
+                </th>
+                {data.sizes.map((s) => (
+                  <th
+                    key={s}
+                    className="text-center px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                  >
+                    {s}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(
+                [
+                  "Jersey length",
+                  "Chest (bust)",
+                  "Height",
+                  "Shorts length",
+                ] as KidsRowKey[]
+              ).map((rowKey, idx) => (
+                <tr
+                  key={rowKey}
+                  className={idx % 2 ? "bg-white" : "bg-gray-50/40"}
+                >
+                  <td className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
                     {rowKey}
                   </td>
                   {data.sizes.map((s) => (
                     <td
                       key={s}
-                      className="px-4 sm:px-6 py-3 whitespace-nowrap border border-gray-300 text-center"
+                      className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
                     >
                       {renderRange(data.rows[rowKey][s], unit)}
                     </td>
                   ))}
                 </tr>
-              ),
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -222,43 +258,55 @@ export default function SizeGuidePage() {
   const adultData = useMemo(() => (tab === "adult" ? ADULT : null), [tab]);
 
   return (
-    <main className="container-fw max-w-6xl mx-auto px-4 sm:px-6 py-8 md:py-12">
-      <nav className="mb-4 text-sm text-gray-500">
-        <Link href="/" className="hover:text-blue-700">
+    <main className="container-fw max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12">
+      <nav className="mb-4 text-xs sm:text-sm text-gray-500">
+        <Link
+          href="/"
+          className="hover:text-blue-700 transition-colors"
+        >
           Home
         </Link>
-        <span className="mx-2">/</span>
+        <span className="mx-1 sm:mx-2">/</span>
         <span className="text-gray-700 font-medium">Size Guide</span>
       </nav>
 
-      <header className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Size Guide</h1>
-        <p className="mt-2 text-gray-600">
-          Choose between <b>Adult</b> and <b>Kids</b>. Each section shows tables in <b>cm</b> and{" "}
-          <b>inches</b>.
+      <header className="mb-5 sm:mb-6 md:mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+          Size Guide
+        </h1>
+        <p className="mt-2 text-sm sm:text-base text-gray-600 max-w-2xl">
+          Choose between <b>Adult</b> and <b>Kids</b>. Each section shows
+          detailed charts in <b>cm</b> and <b>inches</b> so you can pick
+          the perfect fit.
         </p>
       </header>
 
-      <div className="mb-5 inline-flex rounded-xl border p-1 bg-white shadow-sm">
-        <button
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-            tab === "adult" ? "bg-blue-600 text-white" : "hover:bg-gray-50"
-          }`}
-          onClick={() => setTab("adult")}
-        >
-          Adult
-        </button>
-        <button
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-            tab === "kids" ? "bg-blue-600 text-white" : "hover:bg-gray-50"
-          }`}
-          onClick={() => setTab("kids")}
-        >
-          Kids
-        </button>
+      <div className="mb-6 flex flex-wrap gap-2">
+        <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
+          <button
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition ${
+              tab === "adult"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-700 hover:bg-gray-50"
+            }`}
+            onClick={() => setTab("adult")}
+          >
+            Adult
+          </button>
+          <button
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition ${
+              tab === "kids"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-700 hover:bg-gray-50"
+            }`}
+            onClick={() => setTab("kids")}
+          >
+            Kids
+          </button>
+        </div>
       </div>
 
-      <section className="space-y-6">
+      <section className="space-y-6 md:space-y-8">
         {tab === "adult" && adultData && (
           <>
             <SectionHeader title="Adult size chart (cm)" />

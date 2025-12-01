@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";   // render at runtime
 export default function ContactPage() {
   return (
     <main className="container-fw py-16 max-w-2xl">
-      <h1 className="text-3xl font-extrabold mb-6">Contact</h1>
 
       <Suspense
         fallback={
