@@ -822,9 +822,9 @@ function ProductCard({ product }: { product: HomeProduct }) {
     <motion.a
       href={href}
       whileHover={{ y: -6 }}
-      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[240px] max-w-[240px] sm:min-w-[260px] sm:max-w-[260px]"
+      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[23%] max-w-[23%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px]"
     >
-      <div className="relative h-[320px] bg-slate-50">
+      <div className="relative h-[180px] sm:h-[260px] md:h-[320px] bg-slate-50">
         <img
           src={imgSrc}
           alt={product.name}
@@ -838,34 +838,34 @@ function ProductCard({ product }: { product: HomeProduct }) {
           }}
         />
         {discountPercent != null && (
-          <div className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
+          <div className="absolute left-2 top-2 sm:left-3 sm:top-3 rounded-full bg-red-600 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-white shadow">
             -{discountPercent}%
           </div>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col px-4 py-3">
+      <div className="flex flex-1 flex-col px-2 py-2 sm:px-4 sm:py-3">
         {team && (
-          <div className="text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
+          <div className="text-[9px] sm:text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
             {team}
           </div>
         )}
-        <h3 className="mt-1 text-[14px] sm:text-[15px] font-semibold leading-snug line-clamp-2">
+        <h3 className="mt-0.5 sm:mt-1 text-[11px] sm:text-[15px] font-semibold leading-snug line-clamp-2">
           {product.name}
         </h3>
 
-        <div className="mt-3 flex items-baseline gap-2">
+        <div className="mt-2 sm:mt-3 flex items-baseline gap-1 sm:gap-2">
           {hasDiscount && (
-            <span className="text-xs text-gray-400 line-through">
+            <span className="text-[10px] sm:text-xs text-gray-400 line-through">
               {formatEurFromCents(compareAtCents)}
             </span>
           )}
-          <span className="text-lg font-semibold text-blue-800">
+          <span className="text-sm sm:text-lg font-semibold text-blue-800">
             {formatEurFromCents(priceCents)}
           </span>
         </div>
 
-        <div className="mt-4 flex items-center text-xs sm:text-sm text-blue-700">
+        <div className="mt-2 sm:mt-4 flex items-center text-[11px] sm:text-sm text-blue-700">
           View product
           <ArrowRight className="ml-1 h-3 w-3" />
         </div>
@@ -883,7 +883,7 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
   return (
     <div className="relative -mx-4 sm:mx-0 overflow-hidden">
       <div className="py-3">
-        <div className="product-marquee-track flex gap-4">
+        <div className="product-marquee-track flex gap-2 sm:gap-4">
           {track.map((p, i) => (
             <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
           ))}
@@ -1288,11 +1288,11 @@ export default function Home() {
                     <div className="h-3 w-64 rounded-full bg-slate-100/80" />
                     <div className="relative -mx-4 sm:mx-0 overflow-hidden">
                       <div className="py-3">
-                        <div className="flex gap-4">
-                          {Array.from({ length: 5 }).map((__, i) => (
+                        <div className="flex gap-2 sm:gap-4">
+                          {Array.from({ length: 8 }).map((__, i) => (
                             <div
                               key={i}
-                              className="min-w-[240px] max-w-[240px] sm:min-w-[260px] sm:max-w-[260px] h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
+                              className="min-w-[23%] max-w-[23%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px] h-[180px] sm:h-[260px] md:h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
                             />
                           ))}
                         </div>
