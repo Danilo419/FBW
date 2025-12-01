@@ -1,7 +1,13 @@
 // src/app/HomeClient.tsx
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   motion,
   useMotionValue,
@@ -504,7 +510,7 @@ function HeroImageCycler({
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval, firstHold])
+  }, [interval, firstHold, firstIndex, secondIndex])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
@@ -686,6 +692,219 @@ function formatEurFromCents(cents: number | null | undefined) {
   return `${withComma} €`
 }
 
+type HomeProduct = any
+
+function getProductImage(p: HomeProduct): string {
+  return (
+    p.imageUrls?.[0] ??
+    p.imageUrls?.[0]?.url ??
+    p.mainImage ??
+    p.mainImageUrl ??
+    p.mainImageURL ??
+    p.image ??
+    p.imageUrl ??
+    p.imageURL ??
+    p.coverImage ??
+    p.coverImageUrl ??
+    p.coverImageURL ??
+    p.cardImage ??
+    p.cardImageUrl ??
+    p.cardImageURL ??
+    p.listImage ??
+    p.listImageUrl ??
+    p.listImageURL ??
+    p.gridImage ??
+    p.gridImageUrl ??
+    p.gridImageURL ??
+    p.heroImage ??
+    p.heroImageUrl ??
+    p.heroImageURL ??
+    p.primaryImage ??
+    p.primaryImageUrl ??
+    p.primaryImageURL ??
+    p.thumbnail ??
+    p.thumbnailUrl ??
+    p.thumbnailURL ??
+    p.thumb ??
+    p.thumbUrl ??
+    p.thumbURL ??
+    p.picture ??
+    p.pictureUrl ??
+    p.pictureURL ??
+    p.photo ??
+    p.photoUrl ??
+    p.photoURL ??
+    p.img ??
+    p.imgUrl ??
+    p.imgURL ??
+    p.url ??
+    p.src ??
+    p.gallery?.[0]?.url ??
+    p.gallery?.[0]?.imageUrl ??
+    p.gallery?.[0]?.imageURL ??
+    p.images?.[0]?.url ??
+    p.images?.[0]?.imageUrl ??
+    p.images?.[0]?.imageURL ??
+    p.productImages?.[0]?.url ??
+    p.productImages?.[0]?.imageUrl ??
+    p.productImages?.[0]?.imageURL ??
+    p.media?.[0]?.url ??
+    p.media?.[0]?.imageUrl ??
+    p.media?.[0]?.imageURL ??
+    FALLBACK_IMG
+  )
+}
+
+function getProductPricing(p: HomeProduct) {
+  const priceCents: number | null =
+    typeof p.basePrice === 'number'
+      ? p.basePrice
+      : typeof p.priceCents === 'number'
+      ? p.priceCents
+      : typeof p.price === 'number'
+      ? Math.round(p.price * 100)
+      : null
+
+  let compareAtCents: number | null =
+    typeof p.compareAtPriceCents === 'number'
+      ? p.compareAtPriceCents
+      : typeof p.compareAtPrice === 'number'
+      ? Math.round(p.compareAtPrice * 100)
+      : null
+
+  if (!compareAtCents && priceCents != null) {
+    const mapped = SALE_MAP_CENTS[priceCents]
+    if (mapped) compareAtCents = mapped
+  }
+
+  const hasDiscount =
+    priceCents != null && compareAtCents != null && compareAtCents > priceCents
+
+  const discountPercent = hasDiscount
+    ? Math.round(((compareAtCents! - priceCents!) / compareAtCents!) * 100)
+    : null
+
+  return { priceCents, compareAtCents, hasDiscount, discountPercent }
+}
+
+function normalizeName(p: HomeProduct): string {
+  return ((p.name ?? '') as string).toUpperCase()
+}
+
+function hasTerm(p: HomeProduct, term: string): boolean {
+  return normalizeName(p).includes(term.toUpperCase())
+}
+
+function isPlayerVersion(p: HomeProduct): boolean {
+  return hasTerm(p, 'PLAYER VERSION')
+}
+
+function isLongSleeve(p: HomeProduct): boolean {
+  return hasTerm(p, 'LONG SLEEVE')
+}
+
+/* ---------- Product Card (usado no marquee) ---------- */
+
+function ProductCard({ product }: { product: HomeProduct }) {
+  const href = `/products/${product.slug ?? product.id}`
+
+  const imgSrc = getProductImage(product)
+  const { priceCents, compareAtCents, hasDiscount, discountPercent } =
+    getProductPricing(product)
+
+  const team = (product.team ?? product.club ?? product.clubName ?? '') as string
+
+  return (
+    <motion.a
+      href={href}
+      whileHover={{ y: -6 }}
+      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[240px] max-w-[240px] sm:min-w-[260px] sm:max-w-[260px]"
+    >
+      <div className="relative h-[320px] bg-slate-50">
+        <img
+          src={imgSrc}
+          alt={product.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement
+            if ((img as any)._fallbackApplied) return
+            ;(img as any)._fallbackApplied = true
+            img.src = FALLBACK_IMG
+          }}
+        />
+        {discountPercent != null && (
+          <div className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
+            -{discountPercent}%
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col px-4 py-3">
+        {team && (
+          <div className="text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
+            {team}
+          </div>
+        )}
+        <h3 className="mt-1 text-[14px] sm:text-[15px] font-semibold leading-snug line-clamp-2">
+          {product.name}
+        </h3>
+
+        <div className="mt-3 flex items-baseline gap-2">
+          {hasDiscount && (
+            <span className="text-xs text-gray-400 line-through">
+              {formatEurFromCents(compareAtCents)}
+            </span>
+          )}
+          <span className="text-lg font-semibold text-blue-800">
+            {formatEurFromCents(priceCents)}
+          </span>
+        </div>
+
+        <div className="mt-4 flex items-center text-xs sm:text-sm text-blue-700">
+          View product
+          <ArrowRight className="ml-1 h-3 w-3" />
+        </div>
+      </div>
+    </motion.a>
+  )
+}
+
+/* ---------- Marquee de produtos (movimento para a esquerda) ---------- */
+
+function ProductMarquee({ products }: { products: HomeProduct[] }) {
+  if (!products.length) return null
+  // Duplica a lista para um loop mais contínuo
+  const track = [...products, ...products]
+
+  return (
+    <div className="relative -mx-4 sm:mx-0 overflow-hidden">
+      <div className="py-3">
+        <div className="product-marquee-track flex gap-4">
+          {track.map((p, i) => (
+            <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
+          ))}
+        </div>
+      </div>
+
+      <style jsx>{`
+        .product-marquee-track {
+          animation: marquee-products 36s linear infinite;
+        }
+
+        @keyframes marquee-products {
+          0% {
+            transform: translateX(0%);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 /* ======================================================================================
    5) PAGE
 ====================================================================================== */
@@ -718,8 +937,8 @@ export default function Home() {
     'EASY-WEAR',
   ]
 
-  // ====== Home products from DB (random 12 each load) ======
-  const [homeProducts, setHomeProducts] = useState<any[]>([])
+  // ====== Home products from DB ======
+  const [homeProducts, setHomeProducts] = useState<HomeProduct[]>([])
   const [loadingHomeProducts, setLoadingHomeProducts] = useState(true)
 
   useEffect(() => {
@@ -727,7 +946,9 @@ export default function Home() {
 
     const loadProducts = async () => {
       try {
-        const res = await fetch('/api/home-products?limit=40', { cache: 'no-store' })
+        const res = await fetch('/api/home-products?limit=120', {
+          cache: 'no-store',
+        })
         if (!res.ok) throw new Error('Failed to load home products')
         const data = await res.json()
         const list = Array.isArray(data?.products)
@@ -736,15 +957,7 @@ export default function Home() {
           ? data
           : []
 
-        if (typeof window !== 'undefined') {
-          ;(window as any).__HOME_PRODUCTS__ = list
-          console.log('HOME PRODUCTS (lista completa)', list)
-          console.log('HOME PRODUCTS (primeiro produto)', list[0])
-        }
-
-        const shuffled = shuffle(list)
-        const selected = shuffled.slice(0, 12)
-        if (!cancelled) setHomeProducts(selected)
+        if (!cancelled) setHomeProducts(list)
       } catch (err) {
         console.error(err)
         if (!cancelled) setHomeProducts([])
@@ -758,6 +971,132 @@ export default function Home() {
       cancelled = true
     }
   }, [])
+
+  // ====== Categorias com ordem aleatória ======
+  const categories = useMemo(() => {
+    if (!homeProducts.length) return null
+
+    const base = shuffle(homeProducts) // random global para depois filtrar
+
+    const filterJerseys = (p: HomeProduct) => {
+      const n = normalizeName(p)
+      if (!n) return false
+      if (n.includes('PLAYER VERSION')) return false
+      if (n.includes('LONG SLEEVE')) return false
+      if (n.includes('SET')) return false
+      if (n.includes('SHORTS')) return false
+      if (n.includes('TRACKSUIT')) return false
+      if (n.includes('CROP TOP')) return false
+      if (n.includes('KIT')) return false
+      return true
+    }
+
+    const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
+
+    return {
+      currentSeason: mk(
+        (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) // temporada atual sem Player Version
+      ),
+      jerseys: mk(filterJerseys),
+      longSleeve: mk(
+        (p) => hasTerm(p, 'LONG SLEEVE') && !isPlayerVersion(p)
+      ),
+      playerVersion: mk(
+        (p) => isPlayerVersion(p) && !isLongSleeve(p)
+      ),
+      playerVersionLongSleeve: mk(
+        (p) => isPlayerVersion(p) && isLongSleeve(p)
+      ),
+      retro: mk(
+        (p) => hasTerm(p, 'RETRO') && !isPlayerVersion(p)
+      ),
+      conceptKits: mk(
+        (p) => hasTerm(p, 'CONCEPT KIT') && !isPlayerVersion(p)
+      ),
+      preMatch: mk(
+        (p) => hasTerm(p, 'PRE-MATCH') && !isPlayerVersion(p)
+      ),
+      trainingSleeveless: mk(
+        (p) => hasTerm(p, 'TRAINING SLEEVELESS SET') && !isPlayerVersion(p)
+      ),
+      trainingTracksuit: mk(
+        (p) => hasTerm(p, 'TRAINING TRACKSUIT') && !isPlayerVersion(p)
+      ),
+      kidsKits: mk(
+        (p) => hasTerm(p, 'KIDS KIT') && !isPlayerVersion(p)
+      ),
+      cropTops: mk(
+        (p) => hasTerm(p, 'CROP TOP') && !isPlayerVersion(p)
+      ),
+    }
+  }, [homeProducts])
+
+  const CATEGORY_UI: {
+    key: keyof NonNullable<typeof categories>
+    title: string
+    subtitle?: string
+  }[] = [
+    {
+      key: 'currentSeason',
+      title: 'Current season 25/26',
+      subtitle: 'Latest club & national-team drops (non-player version)',
+    },
+    {
+      key: 'jerseys',
+      title: 'Jerseys',
+      subtitle: 'Standard short-sleeve jerseys (non-player version)',
+    },
+    {
+      key: 'longSleeve',
+      title: 'Long Sleeve Jerseys',
+      subtitle: 'Non-player long-sleeve jerseys',
+    },
+    {
+      key: 'playerVersion',
+      title: 'Player Version Jerseys',
+      subtitle: 'On-pitch fit, short sleeve',
+    },
+    {
+      key: 'playerVersionLongSleeve',
+      title: 'Player Version Long Sleeve Jerseys',
+      subtitle: 'On-pitch fit, long sleeve',
+    },
+    {
+      key: 'retro',
+      title: 'Retro Jerseys',
+      subtitle: 'Throwback legends from classic seasons',
+    },
+    {
+      key: 'conceptKits',
+      title: 'Concept Kits',
+      subtitle: 'Original concept designs',
+    },
+    {
+      key: 'preMatch',
+      title: 'Pre-Match Jerseys',
+      subtitle: 'Warm-up and pre-game tops',
+    },
+    {
+      key: 'trainingSleeveless',
+      title: 'Training Sleeveless Sets',
+      subtitle: 'Tank + shorts training sets',
+    },
+    {
+      key: 'trainingTracksuit',
+      title: 'Training Tracksuits',
+      subtitle: 'Full training sets (top & pants)',
+    },
+    {
+      key: 'kidsKits',
+      title: 'Kids Kits',
+      subtitle: 'Full sets for kids',
+    },
+    {
+      key: 'cropTops',
+      title: 'Crop Tops',
+      subtitle: 'Stylish cropped tops',
+    },
+  ]
 
   return (
     <div className="min-h-screen">
@@ -873,12 +1212,10 @@ export default function Home() {
         {/* Spaces: Adult / Kids / Retro / Concept Kits */}
         <ImageSpaces />
 
-        {/* Gap entre "Highlights" e a grelha de produtos */}
+        {/* Gap entre "Highlights" e os carrosséis de produtos */}
         <div className="h-2 sm:h-3" />
 
-        <div className="h-2 sm:h-3" />
-
-        {/* Products block puxado da BD */}
+        {/* Products block puxado da BD, agora em categorias com marquee */}
         <div className="relative">
           <div className="rounded-3xl bg-gradient-to-b from-slate-50 via-white to-slate-50 ring-1 ring-black/5 p-4 sm:p-6">
             {/* HEADER MAIS ATRATIVO / PROFISSIONAL */}
@@ -892,8 +1229,8 @@ export default function Home() {
                   Some of our products
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
-                  A rotating mix of authentic kits, retro classics and exclusive concept
-                  kits.
+                  Horizontally-scrolling selections for each product type. Everything
+                  appears in a fully random order on every page load.
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
@@ -904,178 +1241,63 @@ export default function Home() {
             </div>
 
             {loadingHomeProducts && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-[360px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
-                  />
+              <div className="space-y-6">
+                {Array.from({ length: 3 }).map((_, row) => (
+                  <div key={row} className="space-y-2">
+                    <div className="h-4 w-40 rounded-full bg-slate-200/70" />
+                    <div className="h-3 w-64 rounded-full bg-slate-100/80" />
+                    <div className="relative -mx-4 sm:mx-0 overflow-hidden">
+                      <div className="py-3">
+                        <div className="flex gap-4">
+                          {Array.from({ length: 5 }).map((__, i) => (
+                            <div
+                              key={i}
+                              className="min-w-[240px] max-w-[240px] sm:min-w-[260px] sm:max-w-[260px] h-[320px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
 
-            {!loadingHomeProducts && homeProducts.length > 0 && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {homeProducts.slice(0, 9).map((p: any) => {
-                  const href = `/products/${p.slug ?? p.id}`
-
-                  // 👉 Usa imagem principal da BD
-                  const imgSrc =
-                    p.imageUrls?.[0] ??
-                    p.imageUrls?.[0]?.url ??
-                    p.mainImage ??
-                    p.mainImageUrl ??
-                    p.mainImageURL ??
-                    p.image ??
-                    p.imageUrl ??
-                    p.imageURL ??
-                    p.coverImage ??
-                    p.coverImageUrl ??
-                    p.coverImageURL ??
-                    p.cardImage ??
-                    p.cardImageUrl ??
-                    p.cardImageURL ??
-                    p.listImage ??
-                    p.listImageUrl ??
-                    p.listImageURL ??
-                    p.gridImage ??
-                    p.gridImageUrl ??
-                    p.gridImageURL ??
-                    p.heroImage ??
-                    p.heroImageUrl ??
-                    p.heroImageURL ??
-                    p.primaryImage ??
-                    p.primaryImageUrl ??
-                    p.primaryImageURL ??
-                    p.thumbnail ??
-                    p.thumbnailUrl ??
-                    p.thumbnailURL ??
-                    p.thumb ??
-                    p.thumbUrl ??
-                    p.thumbURL ??
-                    p.picture ??
-                    p.pictureUrl ??
-                    p.pictureURL ??
-                    p.photo ??
-                    p.photoUrl ??
-                    p.photoURL ??
-                    p.img ??
-                    p.imgUrl ??
-                    p.imgURL ??
-                    p.url ??
-                    p.src ??
-                    p.gallery?.[0]?.url ??
-                    p.gallery?.[0]?.imageUrl ??
-                    p.gallery?.[0]?.imageURL ??
-                    p.images?.[0]?.url ??
-                    p.images?.[0]?.imageUrl ??
-                    p.images?.[0]?.imageURL ??
-                    p.productImages?.[0]?.url ??
-                    p.productImages?.[0]?.imageUrl ??
-                    p.productImages?.[0]?.imageURL ??
-                    p.media?.[0]?.url ??
-                    p.media?.[0]?.imageUrl ??
-                    p.media?.[0]?.imageURL ??
-                    FALLBACK_IMG
-
-                  // 👉 Usa basePrice (cents) como principal
-                  const priceCents: number | null =
-                    typeof p.basePrice === 'number'
-                      ? p.basePrice
-                      : typeof p.priceCents === 'number'
-                      ? p.priceCents
-                      : typeof p.price === 'number'
-                      ? Math.round(p.price * 100)
-                      : null
-
-                  // 1) tenta usar campos reais de compare-at
-                  let compareAtCents: number | null =
-                    typeof p.compareAtPriceCents === 'number'
-                      ? p.compareAtPriceCents
-                      : typeof p.compareAtPrice === 'number'
-                      ? Math.round(p.compareAtPrice * 100)
-                      : null
-
-                  // 2) se não existir, tenta mapear pelo SALE_MAP
-                  if (!compareAtCents && priceCents != null) {
-                    const mapped = SALE_MAP_CENTS[priceCents]
-                    if (mapped) compareAtCents = mapped
-                  }
-
-                  const hasDiscount =
-                    priceCents != null &&
-                    compareAtCents != null &&
-                    compareAtCents > priceCents
-
-                  const discountPercent = hasDiscount
-                    ? Math.round(
-                        ((compareAtCents! - priceCents!) / compareAtCents!) * 100
-                      )
-                    : null
-
-                  const team = (p.team ?? p.club ?? p.clubName ?? '') as string
+            {!loadingHomeProducts && categories && (
+              <div className="space-y-10">
+                {CATEGORY_UI.map(({ key, title, subtitle }) => {
+                  const list = categories[key]
+                  if (!list || !list.length) return null
 
                   return (
-                    <motion.a
-                      key={p.id}
-                      href={href}
-                      whileHover={{ y: -6 }}
-                      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
-                    >
-                      {/* formato atual: altura fixa */}
-                      <div className="relative h-[360px] bg-slate-50">
-                        <img
-                          src={imgSrc}
-                          alt={p.name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          onError={(e) => {
-                            const img = e.currentTarget as HTMLImageElement
-                            if ((img as any)._fallbackApplied) return
-                            ;(img as any)._fallbackApplied = true
-                            img.src = FALLBACK_IMG
-                          }}
-                        />
-                        {discountPercent != null && (
-                          <div className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
-                            -{discountPercent}%
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-1 flex-col px-4 py-3">
-                        {team && (
-                          <div className="text-[12px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
-                            {team}
-                          </div>
-                        )}
-                        <h3 className="mt-1 text-[15px] sm:text-base font-semibold leading-snug line-clamp-2">
-                          {p.name}
-                        </h3>
-
-                        <div className="mt-3 flex items-baseline gap-2">
-                          {hasDiscount && (
-                            <span className="text-sm text-gray-400 line-through">
-                              {formatEurFromCents(compareAtCents)}
-                            </span>
+                    <div key={key} className="space-y-3">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div>
+                          <h4 className="text-lg sm:text-xl font-semibold tracking-tight">
+                            {title}
+                          </h4>
+                          {subtitle && (
+                            <p className="text-xs sm:text-sm text-gray-500">
+                              {subtitle}
+                            </p>
                           )}
-                          <span className="text-lg font-semibold text-blue-800">
-                            {formatEurFromCents(priceCents)}
-                          </span>
                         </div>
-
-                        <div className="mt-4 flex items-center text-sm text-blue-700">
-                          View product
-                          <ArrowRight className="ml-1 h-3 w-3" />
-                        </div>
+                        <a
+                          href="/products"
+                          className="text-xs sm:text-sm text-blue-700 hover:underline"
+                        >
+                          View all →
+                        </a>
                       </div>
-                    </motion.a>
+
+                      <ProductMarquee products={list} />
+                    </div>
                   )
                 })}
               </div>
             )}
 
-            {!loadingHomeProducts && homeProducts.length === 0 && (
+            {!loadingHomeProducts && (!categories || homeProducts.length === 0) && (
               <p className="text-sm text-gray-500">
                 No products to show here yet. Please check the full catalog.
               </p>
