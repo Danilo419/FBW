@@ -156,8 +156,9 @@ export default function ContactClient() {
   }
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8 lg:pt-10">
+    <div className="w-screen bg-white">
+      {/* wrapper que recentra o conteúdo e limita a largura real */}
+      <div className="mx-auto flex min-h-screen max-w-[1120px] flex-col px-4 pb-12 pt-8 sm:px-6 lg:px-8 lg:pt-10">
         {/* HERO */}
         <div className="mb-6 rounded-3xl border bg-sky-50/80 px-5 py-6 shadow-sm sm:mb-8 sm:px-7 sm:py-7 lg:px-9 lg:py-8">
           <div className="max-w-3xl">
@@ -216,8 +217,8 @@ export default function ContactClient() {
           </div>
         )}
 
-        {/* LAYOUT PRINCIPAL */}
-        <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+        {/* LAYOUT PRINCIPAL: 1 coluna no mobile, 2 colunas lado a lado em desktop */}
+        <div className="grid gap-8 lg:grid-cols-[2fr,1.2fr] lg:items-start">
           {/* FORM */}
           <div className="rounded-2xl border bg-white px-4 py-5 shadow-sm sm:px-5 sm:py-6 md:px-6 md:py-7">
             <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
@@ -373,7 +374,7 @@ export default function ContactClient() {
                 <Sparkles className="h-4 w-4 text-blue-600" />
                 <h3 className="font-semibold">What happens next?</h3>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <Step
                   num={1}
                   icon={<Mail className="h-5 w-5" />}
