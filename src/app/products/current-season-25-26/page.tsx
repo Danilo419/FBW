@@ -149,6 +149,32 @@ function isRetro(p: HomeProduct): boolean {
   return hasTerm(p, "RETRO");
 }
 
+/**
+ * Regras para "Current season 25/26":
+ * - Produto tem de mencionar a época 25/26 em algum formato comum
+ * - Não pode ser Player Version
+ * - Não pode ser Retro
+ */
+function isCurrentSeason25_26(p: HomeProduct): boolean {
+  const name = normalizeName(p);
+
+  // Se tiveres um campo season/tags, podes aproveitar também:
+  const seasonField = ((p.season ?? "") as string).toUpperCase();
+  const tagsField = Array.isArray(p.tags)
+    ? (p.tags as string[]).join(" ").toUpperCase()
+    : "";
+
+  const text = [name, seasonField, tagsField].join(" ");
+
+  const matchesSeason =
+    text.includes("25/26") ||
+    text.includes("2025/26") ||
+    text.includes("25-26") ||
+    text.includes("2025-26");
+
+  return matchesSeason && !isPlayerVersion(p) && !isRetro(p);
+}
+
 /* ============================================================
    Card de produto (grid, não marquee)
 ============================================================ */
@@ -217,14 +243,25 @@ function ProductCard({ product }: { product: HomeProduct }) {
 
 /* ============================================================
    Fetch + filtro "Current season 25/26"
-   (mesma lógica da Home: hasTerm('25/26') && !player && !retro)
 ============================================================ */
 
 async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL ? "https://" + process.env.NEXT_PUBLIC_VERCEL_URL : ""}/api/home-products?limit=240`, {
+    // tenta URL absoluto se NEXT_PUBLIC_VERCEL_URL estiver definido,
+    // senão usa /api relativo
+    const base =
+      process.env.NEXT_PUBLIC_VERCEL_URL &&
+      !process.env.NEXT_PUBLIC_VERCEL_URL.startsWith("http")
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : process.env.NEXT_PUBLIC_VERCEL_URL || "";
+
+    const url = `${base}/api/home-products?limit=240`;
+
+    const res = await fetch(url, {
       cache: "no-store",
-    }).catch(() => fetch("/api/home-products?limit=240", { cache: "no-store" }) as any);
+    }).catch(() =>
+      fetch("/api/home-products?limit=240", { cache: "no-store" }) as any
+    );
 
     if (!res || !("ok" in res) || !res.ok) {
       console.error("Failed to load products for current season");
@@ -238,14 +275,10 @@ async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
       ? data
       : [];
 
-    // mesma regra da Home:
-    // currentSeason: hasTerm('25/26') && !isPlayerVersion(p) && !isRetro(p)
-    const filtered = list.filter(
-      (p: HomeProduct) =>
-        hasTerm(p, "25/26") && !isPlayerVersion(p) && !isRetro(p)
-    );
+    // aplica regra "current season 25/26"
+    const filtered = list.filter(isCurrentSeason25_26);
 
-    // ordena por equipa + nome para ficar mais "loja"
+    // ordena por equipa + nome
     filtered.sort((a: HomeProduct, b: HomeProduct) => {
       const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
       const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
