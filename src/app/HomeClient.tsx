@@ -15,6 +15,7 @@ import {
   useSpring,
   useTransform,
   useVelocity,
+  useAnimationFrame,
 } from 'framer-motion'
 import {
   ArrowRight,
@@ -40,7 +41,6 @@ import {
 
 const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
 
-/** Spotlight that follows the cursor */
 function Spotlight({
   className = '',
   children,
@@ -66,7 +66,6 @@ function Spotlight({
   )
 }
 
-/** Magnetic button (leans towards the cursor) */
 function MagneticButton({
   children,
   className = '',
@@ -115,7 +114,6 @@ function MagneticButton({
   )
 }
 
-/** 3D tilt card with glow */
 function TiltCard({
   children,
   className = '',
@@ -155,7 +153,7 @@ function TiltCard({
 }
 
 /* ======================================================================================
-   2) HERO IMAGE CYCLER — black placeholder while loading, no blur
+   2) HERO IMAGE CYCLER
 ====================================================================================== */
 
 const heroImages: { src: string; alt: string }[] = [
@@ -408,10 +406,6 @@ function shuffle<T>(arr: T[]) {
   return a
 }
 
-/**
- * Black placeholder until first image is preloaded,
- * then cross-fade (no blur). The first image holds `firstHold` ms.
- */
 function HeroImageCycler({
   interval = 4200,
   firstHold = 10000,
@@ -569,8 +563,9 @@ function HeroImageCycler({
 }
 
 /* ======================================================================================
-   4) HIGHLIGHT SPACES — image banners
+   4) HIGHLIGHT SPACES
 ====================================================================================== */
+
 type HighlightSpace = {
   key: 'adult' | 'kids' | 'retro' | 'concept'
   label: string
@@ -666,7 +661,6 @@ function ImageSpaces() {
    Helpers for products
 ====================================================================================== */
 
-// Mapa de preços antigos para cada preço atual (em euros)
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
   34.99: 100,
@@ -677,7 +671,6 @@ const SALE_MAP_EUR: Record<number, number> = {
   69.99: 230,
 }
 
-// versão em cêntimos
 const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
   Object.entries(SALE_MAP_EUR).map(([k, v]) => [
     Math.round(parseFloat(k) * 100),
@@ -807,7 +800,7 @@ function isRetro(p: HomeProduct): boolean {
   return hasTerm(p, 'RETRO')
 }
 
-/* ---------- Product Card (usado no marquee) ---------- */
+/* ---------- Product Card ---------- */
 
 function ProductCard({ product }: { product: HomeProduct }) {
   const href = `/products/${product.slug ?? product.id}`
@@ -874,36 +867,65 @@ function ProductCard({ product }: { product: HomeProduct }) {
   )
 }
 
-/* ---------- Marquee de produtos (movimento para a esquerda) ---------- */
+/* ---------- Marquee com animação infinita suave ---------- */
 
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
-  const track = [...products, ...products]
+
+  const duplicated = useMemo(
+    () => [...products, ...products],
+    [products]
+  )
+
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const baseWidthRef = useRef<number>(0)
+  const x = useMotionValue(0)
+  const lastXRef = useRef(0)
+
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+
+    const measure = () => {
+      const full = el.scrollWidth
+      baseWidthRef.current = full / 2 // largura de um ciclo
+    }
+
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [duplicated])
+
+  useAnimationFrame((_, delta) => {
+    const base = baseWidthRef.current
+    if (!base) return
+
+    const speedPxPerSec = 60 // velocidade
+    const move = (speedPxPerSec * delta) / 1000
+
+    let next = lastXRef.current - move
+    if (next <= -base) {
+      next += base
+    }
+
+    x.set(next)
+    lastXRef.current = next
+  })
 
   return (
     <div className="relative -mx-4 sm:mx-0 overflow-hidden">
       <div className="py-3">
-        <div className="product-marquee-track flex gap-2 sm:gap-4">
-          {track.map((p, i) => (
+        <motion.div
+          ref={trackRef}
+          style={{ x }}
+          className="flex gap-2 sm:gap-4"
+        >
+          {duplicated.map((p, i) => (
             <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
           ))}
-        </div>
+        </motion.div>
       </div>
-
-      <style jsx>{`
-        .product-marquee-track {
-          animation: marquee-products 36s linear infinite;
-        }
-
-        @keyframes marquee-products {
-          0% {
-            transform: translateX(0%);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-      `}</style>
     </div>
   )
 }
@@ -911,6 +933,7 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
 /* ======================================================================================
    5) PAGE
 ====================================================================================== */
+
 export default function Home() {
   const { scrollY } = useScroll()
   const START = 420
@@ -940,7 +963,6 @@ export default function Home() {
     'EASY-WEAR',
   ]
 
-  // ====== Home products from DB ======
   const [homeProducts, setHomeProducts] = useState<HomeProduct[]>([])
   const [loadingHomeProducts, setLoadingHomeProducts] = useState(true)
 
@@ -975,7 +997,6 @@ export default function Home() {
     }
   }, [])
 
-  // ====== Categorias com ordem aleatória ======
   const categories = useMemo(() => {
     if (!homeProducts.length) return null
 
@@ -1003,32 +1024,26 @@ export default function Home() {
       ),
       jerseys: mk(filterJerseys),
       longSleeve: mk(
-        (p) =>
-          isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
+        (p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
       ),
       playerVersion: mk(
-        (p) =>
-          isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
+        (p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
       ),
       playerVersionLongSleeve: mk(
-        (p) =>
-          isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
+        (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
       retro: mk(
-        (p) =>
-          isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
+        (p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
       ),
       retroLongSleeve: mk(
-        (p) =>
-          isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
+        (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
       ),
       conceptKits: mk(
         (p) =>
           hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
       preMatch: mk(
-        (p) =>
-          hasTerm(p, 'PRE-MATCH') && !isRetro(p) && !isPlayerVersion(p)
+        (p) => hasTerm(p, 'PRE-MATCH') && !isRetro(p) && !isPlayerVersion(p)
       ),
       trainingSleeveless: mk(
         (p) =>
@@ -1043,12 +1058,10 @@ export default function Home() {
           !isPlayerVersion(p)
       ),
       kidsKits: mk(
-        (p) =>
-          hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
+        (p) => hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
       cropTops: mk(
-        (p) =>
-          hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
+        (p) => hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
       ),
     }
   }, [homeProducts])
@@ -1127,7 +1140,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* =================== HERO =================== */}
+      {/* HERO */}
       <section className="relative overflow-hidden">
         <motion.div
           style={{ y: y2 }}
@@ -1144,7 +1157,6 @@ export default function Home() {
             className="container-fw py-20 sm:py-28"
           >
             <div className="grid items-center gap-12 lg:grid-cols-2">
-              {/* left copy */}
               <div>
                 <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
                   Authentic &amp; Concept Football Jerseys
@@ -1160,7 +1172,6 @@ export default function Home() {
                   </MagneticButton>
                 </div>
 
-                {/* trust badges */}
                 <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                   {[
                     { Icon: Truck, t: 'Worldwide shipping' },
@@ -1179,7 +1190,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* right mockup */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1194,7 +1204,7 @@ export default function Home() {
           </motion.div>
         </Spotlight>
 
-        {/* marquee of tech specs – full width, sem nevoeiro */}
+        {/* tech marquee */}
         <section className="relative border-y bg-white overflow-hidden">
           <div className="w-full py-3">
             <div className="marquee-track flex gap-6 whitespace-nowrap">
@@ -1227,7 +1237,7 @@ export default function Home() {
         </section>
       </section>
 
-      {/* =================== HIGHLIGHTS =================== */}
+      {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end justify-between mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Highlights</h2>
@@ -1236,16 +1246,12 @@ export default function Home() {
           </a>
         </div>
 
-        {/* Spaces: Adult / Kids / Retro / Concept Kits */}
         <ImageSpaces />
 
-        {/* Gap entre "Highlights" e os carrosséis de produtos */}
         <div className="h-2 sm:h-3" />
 
-        {/* Products block puxado da BD, agora em categorias com marquee */}
         <div className="relative">
           <div className="rounded-3xl bg-gradient-to-b from-slate-50 via-white to-slate-50 ring-1 ring-black/5 p-4 sm:p-6">
-            {/* HEADER MAIS ATRATIVO / PROFISSIONAL */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -1333,7 +1339,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* =================== HOW IT WORKS =================== */}
+      {/* HOW IT WORKS */}
       <section id="how" className="bg-white/70 border-y">
         <motion.div
           style={{ boxShadow: sectionShadow as any }}
@@ -1386,7 +1392,7 @@ export default function Home() {
       <br />
       <br />
 
-      {/* =================== CTA =================== */}
+      {/* CTA */}
       <section className="container-fw pb-20">
         <TiltCard>
           <div className="grid md:grid-cols-2 gap-6 items-center p-8">
@@ -1424,7 +1430,7 @@ export default function Home() {
         </TiltCard>
       </section>
 
-      {/* =================== EXTRA: GUARANTEES =================== */}
+      {/* GUARANTEES */}
       <section className="bg-white/70 border-y">
         <div className="container-fw section-gap grid md:grid-cols-4 gap-6">
           {[
@@ -1461,7 +1467,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* =================== FAQ =================== */}
+      {/* FAQ */}
       <section id="faq" className="container-fw pb-24 pt-16">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
           Frequently asked questions
@@ -1503,7 +1509,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* =================== NEWSLETTER =================== */}
+      {/* NEWSLETTER */}
       <section className="container-fw pb-24">
         <TiltCard>
           <div className="grid md:grid-cols-2 gap-6 items-center p-6 sm:p-8">
