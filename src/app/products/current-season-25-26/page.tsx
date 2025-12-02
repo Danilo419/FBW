@@ -152,13 +152,12 @@ function isRetro(p: HomeProduct): boolean {
 /**
  * Regras para "Current season 25/26":
  * - Produto tem de mencionar a época 25/26 em algum formato comum
- * - Não pode ser Player Version
- * - Não pode ser Retro
+ * - NÃO pode ser Player Version
+ * - Retro PODE entrar
  */
 function isCurrentSeason25_26(p: HomeProduct): boolean {
   const name = normalizeName(p);
 
-  // Se tiveres um campo season/tags, podes aproveitar também:
   const seasonField = ((p.season ?? "") as string).toUpperCase();
   const tagsField = Array.isArray(p.tags)
     ? (p.tags as string[]).join(" ").toUpperCase()
@@ -172,7 +171,8 @@ function isCurrentSeason25_26(p: HomeProduct): boolean {
     text.includes("25-26") ||
     text.includes("2025-26");
 
-  return matchesSeason && !isPlayerVersion(p) && !isRetro(p);
+  // só exclui Player Version, permite Retro
+  return matchesSeason && !isPlayerVersion(p);
 }
 
 /* ============================================================
@@ -275,7 +275,7 @@ async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
       ? data
       : [];
 
-    // aplica regra "current season 25/26"
+    // aplica regra "current season 25/26, sem Player Version"
     const filtered = list.filter(isCurrentSeason25_26);
 
     // ordena por equipa + nome
@@ -315,8 +315,9 @@ export default async function CurrentSeasonPage() {
             Current season 25/26
           </h1>
           <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600">
-            All standard (non-player, non-retro) jerseys and sets for the{" "}
-            <strong>2025/26 season</strong>, across clubs and national teams.
+            All standard jerseys and sets for the{" "}
+            <strong>2025/26 season</strong>, across clubs and national teams,
+            including retro designs but excluding Player Version items.
           </p>
 
           <div className="mt-3 text-xs sm:text-sm text-gray-500">
