@@ -1070,71 +1070,85 @@ export default function Home() {
     key: keyof NonNullable<typeof categories>
     title: string
     subtitle?: string
+    href: string
   }[] = [
     {
       key: 'currentSeason',
       title: 'Current season 25/26',
       subtitle: 'Latest club & national-team drops (non-player version)',
+      href: '/products?view=current-season-25-26',
     },
     {
       key: 'jerseys',
       title: 'Jerseys',
       subtitle: 'Standard short-sleeve jerseys (non-player version)',
+      href: '/products?view=jerseys',
     },
     {
       key: 'longSleeve',
       title: 'Long Sleeve Jerseys',
       subtitle: 'Non-player long-sleeve jerseys',
+      href: '/products?view=long-sleeve',
     },
     {
       key: 'playerVersion',
       title: 'Player Version Jerseys',
       subtitle: 'On-pitch fit, short sleeve',
+      href: '/products?view=player-version',
     },
     {
       key: 'playerVersionLongSleeve',
       title: 'Player Version Long Sleeve Jerseys',
       subtitle: 'On-pitch fit, long sleeve',
+      href: '/products?view=player-version-long-sleeve',
     },
     {
       key: 'retro',
       title: 'Retro Jerseys',
       subtitle: 'Throwback legends from classic seasons',
+      href: '/products?view=retro',
     },
     {
       key: 'retroLongSleeve',
       title: 'Retro Long Sleeve Jerseys',
       subtitle: 'Retro designs with long sleeves',
+      href: '/products?view=retro-long-sleeve',
     },
     {
       key: 'conceptKits',
       title: 'Concept Kits',
       subtitle: 'Original concept designs',
+      href: '/products?view=concept-kits',
     },
     {
       key: 'preMatch',
       title: 'Pre-Match Jerseys',
       subtitle: 'Warm-up and pre-game tops',
+      href: '/products?view=pre-match',
     },
     {
       key: 'trainingSleeveless',
       title: 'Training Sleeveless Sets',
       subtitle: 'Tank + shorts training sets',
+      href: '/products?view=training-sleeveless',
     },
     {
       key: 'trainingTracksuit',
       title: 'Training Tracksuits',
       subtitle: 'Full training sets (top & pants)',
+      href: '/products?view=training-tracksuit',
     },
     {
       key: 'kidsKits',
       title: 'Kids Kits',
       subtitle: 'Full sets for kids',
+      href: '/products?view=kids-kits',
     },
     {
       key: 'cropTops',
       title: 'Crop Tops',
       subtitle: 'Stylish cropped tops',
+      href: '/products?view=crop-tops',
     },
   ]
 
@@ -1298,7 +1312,7 @@ export default function Home() {
 
             {!loadingHomeProducts && categories && (
               <div className="space-y-10">
-                {CATEGORY_UI.map(({ key, title, subtitle }) => {
+                {CATEGORY_UI.map(({ key, title, subtitle, href }) => {
                   const list = categories[key]
                   if (!list || !list.length) return null
 
@@ -1316,7 +1330,7 @@ export default function Home() {
                           )}
                         </div>
                         <a
-                          href="/products"
+                          href={href}
                           className="text-xs sm:text-sm text-blue-700 hover:underline"
                         >
                           View all →
