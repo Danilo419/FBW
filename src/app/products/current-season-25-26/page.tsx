@@ -1,4 +1,3 @@
-// src/app/products/current-season-25-26/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -130,7 +129,7 @@ function getProductPricing(p: HomeProduct) {
 }
 
 /* ============================================================
-   Filtro: "25/26" no nome, sem "PLAYER VERSION"
+   Filtro: name contém "25/26" e NÃO contém "PLAYER VERSION"
 ============================================================ */
 
 function matchesCurrentSeasonNoPlayerVersion(p: HomeProduct): boolean {
@@ -140,7 +139,15 @@ function matchesCurrentSeasonNoPlayerVersion(p: HomeProduct): boolean {
   const has25_26 = name.includes("25/26");
   const isPlayerVersion = name.includes("PLAYER VERSION");
 
-  return has25_26 && !isPlayerVersion;
+  const ok = has25_26 && !isPlayerVersion;
+
+  // LOGA cada produto verificado
+  console.log(
+    "[CURRENT-SEASON-25-26] CHECK",
+    `"${rawName}" => has25_26=${has25_26}, isPlayerVersion=${isPlayerVersion}, ok=${ok}`
+  );
+
+  return ok;
 }
 
 /* ============================================================
@@ -210,18 +217,14 @@ function ProductCard({ product }: { product: HomeProduct }) {
 }
 
 /* ============================================================
-   Fetch + filtro "25/26" no nome, sem "PLAYER VERSION"
+   Fetch + filtro (com logs)
 ============================================================ */
 
 async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
   try {
-    // tenta URL absoluto com NEXT_PUBLIC_VERCEL_URL (produção),
-    // senão faz fetch relativo (dev / fallback)
     const baseEnv = process.env.NEXT_PUBLIC_VERCEL_URL || "";
     const base =
-      baseEnv && !baseEnv.startsWith("http")
-        ? `https://${baseEnv}`
-        : baseEnv;
+      baseEnv && !baseEnv.startsWith("http") ? `https://${baseEnv}` : baseEnv;
 
     const primaryUrl = `${base}/api/home-products?limit=500`;
 
@@ -232,7 +235,9 @@ async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
     );
 
     if (!res || !("ok" in res) || !res.ok) {
-      console.error("Failed to load products for current season");
+      console.error(
+        "[CURRENT-SEASON-25-26] Failed to load products for current season"
+      );
       return [];
     }
 
@@ -253,9 +258,24 @@ async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
       list = [];
     }
 
+    console.log("[CURRENT-SEASON-25-26] TOTAL FROM API:", list.length);
+    console.log(
+      "[CURRENT-SEASON-25-26] SAMPLE NAMES:",
+      list.slice(0, 10).map((p: any) => p.name)
+    );
+
     const filtered = list.filter(matchesCurrentSeasonNoPlayerVersion);
 
-    // ordena por equipa + nome para ficar mais "loja"
+    console.log(
+      "[CURRENT-SEASON-25-26] MATCHING 25/26 (non Player Version):",
+      filtered.length
+    );
+    console.log(
+      "[CURRENT-SEASON-25-26] MATCHED NAMES:",
+      filtered.map((p: any) => p.name)
+    );
+
+    // ordena por equipa + nome
     filtered.sort((a: HomeProduct, b: HomeProduct) => {
       const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
       const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
@@ -268,7 +288,7 @@ async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
 
     return filtered;
   } catch (err) {
-    console.error("Error loading 25/26 products", err);
+    console.error("[CURRENT-SEASON-25-26] Error loading 25/26 products", err);
     return [];
   }
 }
