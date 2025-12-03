@@ -146,21 +146,18 @@ function isLongSleeve(p: HomeProduct): boolean {
 }
 
 /**
- * AGORA:
- * - SÓ produtos com "Jersey" no nome
- * - SEM "Long Sleeve"
- * - SEM "Player Version"
+ * EXATAMENTE O QUE PEDISTE:
+ * - name contém "Jersey"
+ * - NÃO contém "Long Sleeve"
+ * - NÃO contém "Player Version"
  */
 function filterJerseys(p: HomeProduct): boolean {
   const n = normalizeName(p);
   if (!n) return false;
 
-  // tem de ter "JERSEY"
   if (!n.includes("JERSEY")) return false;
-
-  // não pode ter estes
-  if (isPlayerVersion(p)) return false;
-  if (isLongSleeve(p)) return false;
+  if (n.includes("LONG SLEEVE")) return false;
+  if (n.includes("PLAYER VERSION")) return false;
 
   return true;
 }
@@ -234,19 +231,22 @@ function ProductCard({ product }: { product: HomeProduct }) {
 
 /* ============================================================
    Fetch + filtro "Jerseys"
+   → AGORA USA /api/search?q=Jersey (mesma origem que o current-season)
 ============================================================ */
 
 async function getJerseysProducts(): Promise<HomeProduct[]> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
       ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
       : "";
 
     const res =
-      (await fetch(`${baseUrl}/api/home-products?limit=360`, {
+      (await fetch(`${baseUrl}/api/search?q=Jersey`, {
         cache: "no-store",
       }).catch(() => null)) ??
-      (await fetch(`/api/home-products?limit=360`, {
+      (await fetch(`/api/search?q=Jersey`, {
         cache: "no-store",
       }).catch(() => null));
 
@@ -264,7 +264,7 @@ async function getJerseysProducts(): Promise<HomeProduct[]> {
 
     const filtered = list.filter(filterJerseys);
 
-    // ordenar por equipa + nome
+    // ordenar por equipa + nome para ficar mais "loja"
     filtered.sort((a: HomeProduct, b: HomeProduct) => {
       const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
       const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
@@ -287,7 +287,7 @@ async function getJerseysProducts(): Promise<HomeProduct[]> {
 ============================================================ */
 
 type JerseysPageProps = {
-  // Next 15: searchParams é Promise<any>
+  // Next 15: searchParams é Promise<any> em PageProps
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
@@ -345,7 +345,7 @@ export default async function JerseysPage({ searchParams }: JerseysPageProps) {
           </div>
         </header>
 
-        {/* Grid de produtos */}
+        {/* Grid de produtos (máx 4 por linha) */}
         {pageItems.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
             {pageItems.map((p: HomeProduct, i: number) => (
@@ -411,7 +411,7 @@ export default async function JerseysPage({ searchParams }: JerseysPageProps) {
           </nav>
         )}
 
-        {/* Link de fallback */}
+        {/* Link de fallback para catálogo completo */}
         <div className="mt-10 text-center">
           <Link
             href="/products"
