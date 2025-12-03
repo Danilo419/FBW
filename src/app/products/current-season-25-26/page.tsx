@@ -137,14 +137,6 @@ function hasTerm(p: HomeProduct, term: string): boolean {
   return normalizeName(p).includes(term.toUpperCase())
 }
 
-function isPlayerVersion(p: HomeProduct): boolean {
-  return hasTerm(p, 'PLAYER VERSION')
-}
-
-function isRetro(p: HomeProduct): boolean {
-  return hasTerm(p, 'RETRO')
-}
-
 /* ============================================================
    Card de produto (grid)
 ============================================================ */
@@ -211,8 +203,8 @@ function ProductCard({ product }: { product: HomeProduct }) {
 }
 
 /* ============================================================
-   PAGE (client, mesma lógica de filtro que HomeClient,
-   + paginação 12 por página, máx 4 por linha)
+   PAGE (client) – filtro APENAS por "25/26" no nome
+   + paginação 12 por página, máx 4 por linha
 ============================================================ */
 
 const PAGE_SIZE = 12
@@ -227,7 +219,7 @@ export default function CurrentSeasonPage() {
 
     const load = async () => {
       try {
-        const res = await fetch('/api/home-products?limit=240', {
+        const res = await fetch('/api/home-products?limit=999', {
           cache: 'no-store',
         })
         if (!res.ok) throw new Error('Failed to load products')
@@ -253,19 +245,14 @@ export default function CurrentSeasonPage() {
     }
   }, [])
 
-  // MESMO FILTRO DO HomeClient:
-  // currentSeason: hasTerm('25/26') && !isPlayerVersion(p) && !isRetro(p)
+  // AGORA: única regra → name contém "25/26"
   const filteredProducts = useMemo(
-    () =>
-      allProducts.filter(
-        (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
-      ),
+    () => allProducts.filter((p) => hasTerm(p, '25/26')),
     [allProducts]
   )
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
 
-  // garantir que não ficamos numa página fora de range quando muda o nº de produtos
   useEffect(() => {
     setCurrentPage(1)
   }, [filteredProducts.length])
@@ -278,7 +265,6 @@ export default function CurrentSeasonPage() {
   const handlePageChange = (p: number) => {
     if (p < 1 || p > totalPages) return
     setCurrentPage(p)
-    // sobe a página para o topo para não ficar perdido a meio
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -295,8 +281,9 @@ export default function CurrentSeasonPage() {
             Current season 25/26
           </h1>
           <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600">
-            All standard (non-player, non-retro) products whose name contains{' '}
-            <strong>&quot;25/26&quot;</strong>.
+            All products whose name contains{' '}
+            <strong>&quot;25/26&quot;</strong>, without excluding Player
+            Version or Retro.
           </p>
 
           <div className="mt-3 text-xs sm:text-sm text-gray-500">
@@ -315,7 +302,7 @@ export default function CurrentSeasonPage() {
                 products (page {page} of {totalPages}).
               </>
             ) : (
-              'No 25/26 products (non player version, non retro) found.'
+              'No products with "25/26" in the name were found.'
             )}
           </div>
         </header>
@@ -332,8 +319,7 @@ export default function CurrentSeasonPage() {
         {/* Mensagem quando não há produtos */}
         {!loading && filteredProducts.length === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 sm:px-6 sm:py-8 text-sm text-gray-600">
-            We couldn&apos;t find any products with &quot;25/26&quot; in the name
-            (excluding Player Version and Retro).{' '}
+            We couldn&apos;t find any products with &quot;25/26&quot; in the name.{' '}
             <Link href="/products" className="text-blue-700 underline">
               Browse all products
             </Link>{' '}
