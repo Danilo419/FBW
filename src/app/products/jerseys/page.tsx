@@ -5,7 +5,7 @@ export const revalidate = 0;
 import Link from "next/link";
 
 /* ============================================================
-   Tipagens / Helpers (iguais aos da Home)
+   Tipagens / Helpers básicos
 ============================================================ */
 
 type HomeProduct = any;
@@ -149,7 +149,10 @@ function isRetro(p: HomeProduct): boolean {
   return hasTerm(p, "RETRO");
 }
 
-/** 🔵 EXACTO MESMO FILTRO “jerseys” DA HOME 🔵 */
+/**
+ * MESMA FUNÇÃO QUE NA HOME para "jerseys"
+ * (standard, manga curta, não player, não retro, sem sets/shorts/etc)
+ */
 function filterJerseys(p: HomeProduct): boolean {
   const n = normalizeName(p);
   if (!n) return false;
@@ -165,7 +168,7 @@ function filterJerseys(p: HomeProduct): boolean {
 }
 
 /* ============================================================
-   Card de produto (4 por linha)
+   Card de produto (grid)
 ============================================================ */
 
 function ProductCard({ product }: { product: HomeProduct }) {
@@ -232,25 +235,25 @@ function ProductCard({ product }: { product: HomeProduct }) {
 }
 
 /* ============================================================
-   Fetch + filtro “Jerseys” (igual à Home)
+   Fetch + filtro "Jerseys" (igual Home)
 ============================================================ */
 
-async function getJerseyProducts(): Promise<HomeProduct[]> {
+async function getJerseysProducts(): Promise<HomeProduct[]> {
   try {
-    const base =
-      process.env.NEXT_PUBLIC_VERCEL_URL
-        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-        : "";
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : "";
 
-    const res = await fetch(
-      `${base}/api/home-products?limit=240`,
-      { cache: "no-store" }
-    ).catch(() =>
-      fetch("/api/home-products?limit=240", { cache: "no-store" }) as any
-    );
+    const res =
+      (await fetch(`${baseUrl}/api/home-products?limit=360`, {
+        cache: "no-store",
+      }).catch(() => null)) ??
+      (await fetch(`/api/home-products?limit=360`, {
+        cache: "no-store",
+      }).catch(() => null));
 
     if (!res || !("ok" in res) || !res.ok) {
-      console.error("Failed to load products for jerseys");
+      console.error("Failed to load products for jerseys page");
       return [];
     }
 
@@ -263,7 +266,7 @@ async function getJerseyProducts(): Promise<HomeProduct[]> {
 
     const filtered = list.filter(filterJerseys);
 
-    // ordena por equipa + nome
+    // ordenar por equipa + nome para ficar mais "loja"
     filtered.sort((a: HomeProduct, b: HomeProduct) => {
       const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
       const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
@@ -282,32 +285,33 @@ async function getJerseyProducts(): Promise<HomeProduct[]> {
 }
 
 /* ============================================================
-   PAGE (12 por página, 4 por linha)
+   PAGE (4 colunas máx, 12 por página)
 ============================================================ */
-
-const PAGE_SIZE = 12;
 
 type JerseysPageProps = {
   searchParams?: { [key: string]: string | string[] | undefined };
 };
 
 export default async function JerseysPage({ searchParams }: JerseysPageProps) {
-  const products = await getJerseyProducts();
+  const products = await getJerseysProducts();
 
+  const PAGE_SIZE = 12;
+
+  // page vem de ?page=2, etc
   const pageParam = searchParams?.page;
-  const pageNumRaw =
-    typeof pageParam === "string" ? pageParam : Array.isArray(pageParam) ? pageParam[0] : "1";
-  const page = Math.max(1, parseInt(pageNumRaw || "1", 10) || 1);
+  const pageNumberStr = Array.isArray(pageParam) ? pageParam[0] : pageParam;
+  let page = parseInt(pageNumberStr ?? "1", 10);
+  if (!Number.isFinite(page) || page < 1) page = 1;
 
   const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
+  if (page > totalPages) page = totalPages;
 
-  const start = (safePage - 1) * PAGE_SIZE;
+  const start = (page - 1) * PAGE_SIZE;
   const end = start + PAGE_SIZE;
   const pageItems = products.slice(start, end);
 
-  const buildPageHref = (p: number) =>
-    p === 1 ? "/products/jerseys" : `/products/jerseys?page=${p}`;
+  const buildHref = (n: number) =>
+    n === 1 ? "/products/jerseys" : `/products/jerseys?page=${n}`;
 
   return (
     <main className="min-h-screen bg-white">
@@ -321,87 +325,93 @@ export default async function JerseysPage({ searchParams }: JerseysPageProps) {
             Jerseys
           </h1>
           <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600">
-            Standard short-sleeve jerseys (non-player version).
+            Standard short-sleeve jerseys (non-player version). No sets, shorts or
+            tracksuits here — just the main shirts.
           </p>
 
           <div className="mt-3 text-xs sm:text-sm text-gray-500">
             {products.length > 0 ? (
               <>
                 Showing{" "}
-                <span className="font-semibold">{pageItems.length}</span> of{" "}
-                <span className="font-semibold">{products.length}</span> jerseys (page{" "}
-                {safePage} of {totalPages}).
+                <span className="font-semibold">
+                  {pageItems.length}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold">
+                  {products.length}
+                </span>{" "}
+                jerseys — page {page} of {totalPages}.
               </>
             ) : (
-              "No standard short-sleeve jerseys are available yet."
+              "No jerseys are available yet."
             )}
           </div>
         </header>
 
-        {/* Grid 4 por linha */}
-        {products.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-              {pageItems.map((p: HomeProduct, i: number) => (
-                <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
-              ))}
-            </div>
-
-            {/* Paginação: « 1 2 3 » */}
-            {products.length > PAGE_SIZE && (
-              <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-                <Link
-                  href={buildPageHref(Math.max(1, safePage - 1))}
-                  aria-label="Previous page"
-                  className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-sky-200 hover:shadow-sm transition ${
-                    safePage === 1 ? "pointer-events-none opacity-40" : ""
-                  }`}
-                >
-                  «
-                </Link>
-
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {Array.from({ length: totalPages }).map((_, idx) => {
-                    const n = idx + 1;
-                    const active = n === safePage;
-                    return (
-                      <Link
-                        key={n}
-                        href={buildPageHref(n)}
-                        aria-current={active ? "page" : undefined}
-                        className={[
-                          "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition text-center",
-                          active
-                            ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                            : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
-                        ].join(" ")}
-                      >
-                        {n}
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                <Link
-                  href={buildPageHref(Math.min(totalPages, safePage + 1))}
-                  aria-label="Next page"
-                  className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-sky-200 hover:shadow-sm transition ${
-                    safePage === totalPages ? "pointer-events-none opacity-40" : ""
-                  }`}
-                >
-                  »
-                </Link>
-              </nav>
-            )}
-          </>
+        {/* Grid de produtos (máx 4 por linha) */}
+        {pageItems.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
+            {pageItems.map((p: HomeProduct, i: number) => (
+              <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
+            ))}
+          </div>
         ) : (
           <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 sm:px-6 sm:py-8 text-sm text-gray-600">
-            We don&apos;t have any standard short-sleeve jerseys live yet.{" "}
+            We don&apos;t have jerseys live yet.{" "}
             <Link href="/products" className="text-blue-700 underline">
               Browse all products
             </Link>{" "}
             to see the rest of the catalog.
           </div>
+        )}
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+            {/* Previous */}
+            <Link
+              href={buildHref(Math.max(1, page - 1))}
+              aria-disabled={page === 1}
+              className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-blue-500 hover:shadow-sm text-sm ${
+                page === 1 ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
+              «
+            </Link>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {Array.from({ length: totalPages }).map((_, idx) => {
+                const n = idx + 1;
+                const active = n === page;
+                return (
+                  <Link
+                    key={n}
+                    href={buildHref(n)}
+                    aria-current={active ? "page" : undefined}
+                    className={[
+                      "min-w-[40px] px-3 py-2 rounded-xl ring-1 text-sm text-center",
+                      active
+                        ? "bg-blue-700 text-white ring-blue-700 shadow-sm"
+                        : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-blue-500 hover:shadow-sm",
+                    ].join(" ")}
+                  >
+                    {n}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Next */}
+            <Link
+              href={buildHref(Math.min(totalPages, page + 1))}
+              aria-disabled={page === totalPages}
+              className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-blue-500 hover:shadow-sm text-sm ${
+                page === totalPages ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
+              »
+            </Link>
+          </nav>
         )}
 
         {/* Link de fallback para catálogo completo */}
