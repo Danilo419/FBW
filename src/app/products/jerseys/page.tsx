@@ -160,7 +160,7 @@ function filterJerseys(p: HomeProduct): boolean {
   if (isLongSleeve(p)) return false;
   if (isRetro(p)) return false;
   if (n.includes("SET")) return false;
-  if (n.includes("shorts".toUpperCase())) return false;
+  if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
   if (n.includes("CROP TOP")) return false;
   if (n.includes("KIT")) return false;
@@ -321,18 +321,14 @@ export default async function JerseysPage({ searchParams }: JerseysPageProps) {
       <section className="container-fw pt-10 pb-16 md:pt-12 md:pb-20">
         {/* Header */}
         <header className="mb-8 md:mb-10">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-            Product category
-          </p>
-          <h1 className="mt-2 text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
             Jerseys
           </h1>
-          <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600">
-            Standard short-sleeve jerseys (non-player version). No sets, shorts or
-            tracksuits here — just the main shirts.
+          <p className="mt-2 max-w-2xl text-sm sm:text-base text-gray-600">
+            Standard short-sleeve jerseys (non-player version)
           </p>
 
-          <div className="mt-3 text-xs sm:text-sm text-gray-500">
+          <div className="mt-4 text-xs sm:text-sm text-gray-500">
             {products.length > 0 ? (
               <>
                 Showing{" "}
