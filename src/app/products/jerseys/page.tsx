@@ -145,25 +145,23 @@ function isLongSleeve(p: HomeProduct): boolean {
   return hasTerm(p, "LONG SLEEVE");
 }
 
-function isRetro(p: HomeProduct): boolean {
-  return hasTerm(p, "RETRO");
-}
-
 /**
- * MESMA FUNÇÃO QUE NA HOME para "jerseys"
- * (standard, manga curta, não player, não retro, sem sets/shorts/etc)
+ * AGORA:
+ * - SÓ produtos com "Jersey" no nome
+ * - SEM "Long Sleeve"
+ * - SEM "Player Version"
  */
 function filterJerseys(p: HomeProduct): boolean {
   const n = normalizeName(p);
   if (!n) return false;
+
+  // tem de ter "JERSEY"
+  if (!n.includes("JERSEY")) return false;
+
+  // não pode ter estes
   if (isPlayerVersion(p)) return false;
   if (isLongSleeve(p)) return false;
-  if (isRetro(p)) return false;
-  if (n.includes("SET")) return false;
-  if (n.includes("SHORTS")) return false;
-  if (n.includes("TRACKSUIT")) return false;
-  if (n.includes("CROP TOP")) return false;
-  if (n.includes("KIT")) return false;
+
   return true;
 }
 
@@ -235,7 +233,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
 }
 
 /* ============================================================
-   Fetch + filtro "Jerseys" (igual Home)
+   Fetch + filtro "Jerseys"
 ============================================================ */
 
 async function getJerseysProducts(): Promise<HomeProduct[]> {
@@ -266,7 +264,7 @@ async function getJerseysProducts(): Promise<HomeProduct[]> {
 
     const filtered = list.filter(filterJerseys);
 
-    // ordenar por equipa + nome para ficar mais "loja"
+    // ordenar por equipa + nome
     filtered.sort((a: HomeProduct, b: HomeProduct) => {
       const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
       const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
@@ -289,7 +287,7 @@ async function getJerseysProducts(): Promise<HomeProduct[]> {
 ============================================================ */
 
 type JerseysPageProps = {
-  // Em Next 15, searchParams é Promise<any> em PageProps
+  // Next 15: searchParams é Promise<any>
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
@@ -347,7 +345,7 @@ export default async function JerseysPage({ searchParams }: JerseysPageProps) {
           </div>
         </header>
 
-        {/* Grid de produtos (máx 4 por linha) */}
+        {/* Grid de produtos */}
         {pageItems.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
             {pageItems.map((p: HomeProduct, i: number) => (
@@ -413,7 +411,7 @@ export default async function JerseysPage({ searchParams }: JerseysPageProps) {
           </nav>
         )}
 
-        {/* Link de fallback para catálogo completo */}
+        {/* Link de fallback */}
         <div className="mt-10 text-center">
           <Link
             href="/products"
