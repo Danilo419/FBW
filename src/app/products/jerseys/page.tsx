@@ -1,46 +1,28 @@
 // src/app/products/jerseys/page.tsx
-'use client'
+"use client";
 
-import React, { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowRight, Loader2, Search } from 'lucide-react'
+import React, { useEffect, useMemo, useState } from "react";
+import { Loader2, Search } from "lucide-react";
 
-const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
-
-type HomeProduct = any
+const FALLBACK_IMG =
+  "/images/players/RealMadrid/RealMadrid12.png";
 
 /* =========================================================================
-   HELPERS
+   TIPOS
 ===========================================================================*/
 
-function normalizeName(p: HomeProduct): string {
-  return ((p.name ?? '') as string).toUpperCase()
-}
+type UIProduct = {
+  id: string | number;
+  name: string;
+  slug?: string;
+  img?: string;
+  price?: number; // EUR (ex.: 34.99)
+  team?: string | null;
+};
 
-function hasTerm(p: HomeProduct, term: string): boolean {
-  return normalizeName(p).includes(term.toUpperCase())
-}
-
-function isPlayerVersion(p: HomeProduct): boolean {
-  return hasTerm(p, 'PLAYER VERSION')
-}
-
-function isLongSleeve(p: HomeProduct): boolean {
-  return hasTerm(p, 'LONG SLEEVE')
-}
-
-function isRetro(p: HomeProduct): boolean {
-  return hasTerm(p, 'RETRO')
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = arr.slice()
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
+/* =========================================================================
+   PREÇOS / PROMOS (copiado do search)
+===========================================================================*/
 
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
@@ -50,311 +32,338 @@ const SALE_MAP_EUR: Record<number, number> = {
   49.99: 165,
   59.99: 200,
   69.99: 230,
+};
+
+function toCents(eur?: number | null) {
+  if (typeof eur !== "number" || Number.isNaN(eur)) return null;
+  return Math.round(eur * 100);
 }
 
-const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
-  Object.entries(SALE_MAP_EUR).map(([k, v]) => [
-    Math.round(parseFloat(k) * 100),
-    Math.round(v * 100),
-  ])
-) as Record<number, number>
-
-function formatEurFromCents(cents: number | null | undefined) {
-  if (cents == null) return ''
-  const value = (cents / 100).toFixed(2)
-  const withComma = value.replace('.', ',')
-  return `${withComma} €`
+function getSale(priceEur?: number | null) {
+  if (typeof priceEur !== "number") return null;
+  const key = Number(priceEur.toFixed(2));
+  const oldEur = SALE_MAP_EUR[key as keyof typeof SALE_MAP_EUR];
+  if (!oldEur) return null;
+  const now = toCents(priceEur)!;
+  const old = toCents(oldEur)!;
+  const pct = Math.round((1 - now / old) * 100);
+  return { compareAtCents: old, pct };
 }
 
-function getProductImage(p: HomeProduct): string {
-  return (
-    p.imageUrls?.[0] ??
-    p.imageUrls?.[0]?.url ??
-    p.mainImage ??
-    p.mainImageUrl ??
-    p.mainImageURL ??
-    p.image ??
-    p.imageUrl ??
-    p.imageURL ??
-    p.coverImage ??
-    p.coverImageUrl ??
-    p.coverImageURL ??
-    p.cardImage ??
-    p.cardImageUrl ??
-    p.cardImageURL ??
-    p.listImage ??
-    p.listImageUrl ??
-    p.listImageURL ??
-    p.gridImage ??
-    p.gridImageUrl ??
-    p.gridImageURL ??
-    p.heroImage ??
-    p.heroImageUrl ??
-    p.heroImageURL ??
-    p.primaryImage ??
-    p.primaryImageUrl ??
-    p.primaryImageURL ??
-    p.thumbnail ??
-    p.thumbnailUrl ??
-    p.thumbnailURL ??
-    p.thumb ??
-    p.thumbUrl ??
-    p.thumbURL ??
-    p.picture ??
-    p.pictureUrl ??
-    p.pictureURL ??
-    p.photo ??
-    p.photoUrl ??
-    p.photoURL ??
-    p.img ??
-    p.imgUrl ??
-    p.imgURL ??
-    p.url ??
-    p.src ??
-    p.gallery?.[0]?.url ??
-    p.gallery?.[0]?.imageUrl ??
-    p.gallery?.[0]?.imageURL ??
-    p.images?.[0]?.url ??
-    p.images?.[0]?.imageUrl ??
-    p.images?.[0]?.imageURL ??
-    p.productImages?.[0]?.url ??
-    p.productImages?.[0]?.imageUrl ??
-    p.productImages?.[0]?.imageURL ??
-    p.media?.[0]?.url ??
-    p.media?.[0]?.imageUrl ??
-    p.media?.[0]?.imageURL ??
-    FALLBACK_IMG
-  )
+/** Formata número com 2 casas e símbolo do euro depois (ex.: "150,00 €") */
+function moneyAfter(cents: number) {
+  const n = (cents / 100).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${n} €`;
 }
 
-function getProductPricing(p: HomeProduct) {
-  const priceCents: number | null =
-    typeof p.basePrice === 'number'
-      ? p.basePrice
-      : typeof p.priceCents === 'number'
-      ? p.priceCents
-      : typeof p.price === 'number'
-      ? Math.round(p.price * 100)
-      : null
-
-  let compareAtCents: number | null =
-    typeof p.compareAtPriceCents === 'number'
-      ? p.compareAtPriceCents
-      : typeof p.compareAtPrice === 'number'
-      ? Math.round(p.compareAtPrice * 100)
-      : null
-
-  if (!compareAtCents && priceCents != null) {
-    const mapped = SALE_MAP_CENTS[priceCents]
-    if (mapped) compareAtCents = mapped
-  }
-
-  const hasDiscount =
-    priceCents != null && compareAtCents != null && compareAtCents > priceCents
-
-  const discountPercent = hasDiscount
-    ? Math.round(((compareAtCents! - priceCents!) / compareAtCents!) * 100)
-    : null
-
-  return { priceCents, compareAtCents, hasDiscount, discountPercent }
-}
-
-// mesmo filtro que usas na Home para "jerseys"
-function isStandardShortSleeveJersey(p: HomeProduct): boolean {
-  const n = normalizeName(p)
-  if (!n) return false
-  if (isPlayerVersion(p)) return false
-  if (isLongSleeve(p)) return false
-  if (isRetro(p)) return false
-  if (n.includes('SET')) return false
-  if (n.includes('SHORTS')) return false
-  if (n.includes('TRACKSUIT')) return false
-  if (n.includes('CROP TOP')) return false
-  if (n.includes('KIT')) return false
-  return true
+/** Divide o preço em partes para estilização (euros / cêntimos, símbolo vai depois) */
+function pricePartsFromCents(cents: number) {
+  const euros = Math.floor(cents / 100).toString();
+  const dec = (cents % 100).toString().padStart(2, "0");
+  return { int: euros, dec, sym: "€" };
 }
 
 /* =========================================================================
-   PRODUCT CARD
+   CLUB / TEAM LABEL (copiado do search)
 ===========================================================================*/
 
-function ProductCard({ product }: { product: HomeProduct }) {
-  const href = `/products/${product.slug ?? product.id}`
-  const imgSrc = getProductImage(product)
-  const { priceCents, compareAtCents, hasDiscount, discountPercent } =
-    getProductPricing(product)
-  const team = (product.team ?? product.club ?? product.clubName ?? '') as string
+const CLUB_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
+  [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
+  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\bsevilla\b/i, "Sevilla FC"],
+  [/\breal\s*sociedad\b/i, "Real Sociedad"],
+  [/\bvillarreal\b/i, "Villarreal"],
+  [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
+  [/\bfc\s*porto|porto\b/i, "FC Porto"],
+  [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
+  [/\bsc\s*braga|braga\b/i, "SC Braga"],
+  [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
+];
 
-  return (
-    <motion.a
-      href={href}
-      whileHover={{ y: -6 }}
-      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
-    >
-      <div className="relative h-64 sm:h-72 md:h-80 bg-slate-50">
-        <img
-          src={imgSrc}
-          alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement
-            if ((img as any)._fallbackApplied) return
-            ;(img as any)._fallbackApplied = true
-            img.src = FALLBACK_IMG
-          }}
-        />
-        {discountPercent != null && (
-          <div className="absolute left-2 top-2 sm:left-3 sm:top-3 rounded-full bg-red-600 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-white shadow">
-            -{discountPercent}%
-          </div>
-        )}
-      </div>
+function normalizeStr(s?: string | null) {
+  return (s ?? "").replace(/\s{2,}/g, " ").trim();
+}
 
-      <div className="flex flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4">
-        {team && (
-          <div className="text-[10px] sm:text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
-            {team}
-          </div>
-        )}
-        <h3 className="mt-1 text-[12px] sm:text-[15px] font-semibold leading-snug line-clamp-2">
-          {product.name}
-        </h3>
+function clubFromString(input?: string | null): string | null {
+  const s = normalizeStr(input);
+  if (!s) return null;
 
-        <div className="mt-2 sm:mt-3 flex items-baseline gap-1 sm:gap-2">
-          {hasDiscount && (
-            <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-              {formatEurFromCents(compareAtCents)}
-            </span>
-          )}
-          <span className="text-sm sm:text-lg font-semibold text-blue-800">
-            {formatEurFromCents(priceCents)}
-          </span>
-        </div>
+  for (const [re, club] of CLUB_PATTERNS) {
+    if (re.test(s)) return club;
+  }
+  return null;
+}
 
-        <div className="mt-2 sm:mt-4 flex items-center text-[11px] sm:text-sm text-blue-700">
-          View product
-          <ArrowRight className="ml-1 h-3 w-3" />
-        </div>
-      </div>
-    </motion.a>
-  )
+/** Obtém só o nome do clube (capitalização normal; chip usa uppercase no CSS) */
+function getClubLabel(p: UIProduct): string {
+  const byTeam = clubFromString(p.team);
+  if (byTeam) return byTeam;
+
+  const byName = clubFromString(p.name);
+  if (byName) return byName;
+
+  return "Club";
 }
 
 /* =========================================================================
-   PAGE (CLIENT)
+   FILTRO: Standard short-sleeve, non-player, não retro, etc.
+===========================================================================*/
+
+function normName(p: UIProduct) {
+  return (p.name ?? "").toUpperCase();
+}
+
+function isStandardShortSleeveJersey(p: UIProduct): boolean {
+  const n = normName(p);
+  if (!n) return false;
+
+  // mesma lógica que usaste na Home
+  if (n.includes("PLAYER VERSION")) return false;
+  if (n.includes("LONG SLEEVE")) return false;
+  if (n.includes("RETRO")) return false;
+  if (n.includes("SET")) return false;
+  if (n.includes("SHORTS")) return false;
+  if (n.includes("TRACKSUIT")) return false;
+  if (n.includes("CROP TOP")) return false;
+  if (n.includes("KIDS KIT")) return false;
+  if (n.includes("BABY")) return false;
+  if (n.includes("INFANT")) return false;
+  if (n.includes("KIT")) return false;
+
+  // aqui assumimos que TUDO o que sobra é jersey standard, short-sleeve, non-player
+  return true;
+}
+
+/* =========================================================================
+   CARD
+===========================================================================*/
+
+function ProductCard({ p }: { p: UIProduct }) {
+  const href = p.slug ? `/products/${p.slug}` : undefined;
+  const cents = typeof p.price === "number" ? toCents(p.price)! : null;
+  const sale = cents != null ? getSale(p.price!) : null;
+  const parts = cents != null ? pricePartsFromCents(cents) : null;
+  const teamLabel = getClubLabel(p);
+
+  return (
+    <a
+      key={String(p.id)}
+      href={href}
+      className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
+    >
+      {/* Sticker vermelho com % */}
+      {sale && (
+        <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+          -{sale.pct}%
+        </div>
+      )}
+
+      {/* Card */}
+      <div className="flex flex-col h-full">
+        {/* Imagem */}
+        <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={p.name}
+            src={p.img || FALLBACK_IMG}
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if ((img as any)._fallbackApplied) return;
+              (img as any)._fallbackApplied = true;
+              img.src = FALLBACK_IMG;
+            }}
+            className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+
+        {/* Conteúdo */}
+        <div className="p-5 flex flex-col grow">
+          {/* Chip azul — só o clube */}
+          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+            {teamLabel}
+          </div>
+
+          <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+            {p.name}
+          </div>
+
+          {/* Preços */}
+          <div className="mt-4">
+            <div className="flex items-end gap-2">
+              {sale && (
+                <div className="text-[13px] text-slate-500 line-through">
+                  {moneyAfter(sale.compareAtCents)}
+                </div>
+              )}
+
+              {parts && (
+                <div className="flex items-end" style={{ color: "#1c40b7" }}>
+                  <span className="text-2xl font-semibold tracking-tight leading-none">
+                    {parts.int}
+                  </span>
+                  <span className="text-[13px] font-medium translate-y-[1px]">
+                    ,{parts.dec}
+                  </span>
+                  <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                    {parts.sym}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-auto">
+            <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span className="transition group-hover:translate-x-0.5">
+                View product
+              </span>
+              <svg
+                className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+/* =========================================================================
+   PAGE
+   - Busca via /api/search (tal como ResultsClient)
+   - Depois filtra para standard jerseys
+   - Mantém contagem estável: "X jerseys found"
 ===========================================================================*/
 
 export default function JerseysPage() {
-  const [allProducts, setAllProducts] = useState<HomeProduct[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<'random' | 'team' | 'price-asc' | 'price-desc'>(
-    'team'
-  )
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<UIProduct[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // paginação
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState(1);
+
+  // pesquisa local (filtra por nome / equipa no front)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
+    "team"
+  );
+
+  // fetch — TAL COMO ResultsClient, mas sem query (apanha tudo da search API)
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetch(`/api/search`, { cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        const json = await r.json();
+        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+        if (!cancelled) {
+          setResults(arr);
+          setPage(1);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setResults([]);
+          setError(e?.message || "Search error");
+        }
+      })
+      .finally(() => !cancelled && setLoading(false));
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // aplica filtro "standard jersey" + filtro de texto + sort
+  const jerseysFiltered = useMemo(() => {
+    // 1) apenas jerseys standard
+    let base = results.filter(isStandardShortSleeveJersey);
+
+    // 2) filtro por texto (nome / equipa)
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      base = base.filter((p) => {
+        const name = (p.name ?? "").toUpperCase();
+        const team = (p.team ?? "").toUpperCase();
+        return name.includes(q) || team.includes(q);
+      });
+    }
+
+    // 3) ordenação
+    if (sort === "random") {
+      const copy = base.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    if (sort === "price-asc" || sort === "price-desc") {
+      const copy = base.slice();
+      copy.sort((a, b) => {
+        const pa = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const pb = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        return sort === "price-asc" ? pa - pb : pb - pa;
+      });
+      return copy;
+    }
+
+    // default: ordenar por team + name
+    const copy = base.slice();
+    copy.sort((a, b) => {
+      const ta = (getClubLabel(a) || "").toUpperCase();
+      const tb = (getClubLabel(b) || "").toUpperCase();
+      if (ta === tb) {
+        return (a.name ?? "").localeCompare(b.name ?? "");
+      }
+      return ta.localeCompare(tb);
+    });
+    return copy;
+  }, [results, searchTerm, sort]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
+    [jerseysFiltered.length]
+  );
 
   useEffect(() => {
-    let cancelled = false
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
-    const loadProducts = async () => {
-      try {
-        const res = await fetch('/api/home-products?limit=300', {
-          cache: 'no-store',
-        })
-        if (!res.ok) throw new Error('Failed to load jerseys')
-        const data = await res.json()
-        const list = Array.isArray(data?.products)
-          ? data.products
-          : Array.isArray(data)
-          ? data
-          : []
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return jerseysFiltered.slice(start, end);
+  }, [jerseysFiltered, page]);
 
-        if (!cancelled) setAllProducts(list)
-      } catch (err) {
-        console.error(err)
-        if (!cancelled) setAllProducts([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-
-    loadProducts()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const jerseys = useMemo(() => {
-    const base = allProducts.filter(isStandardShortSleeveJersey)
-
-    // filtro por pesquisa (nome ou equipa)
-    const filtered = base.filter((p) => {
-      if (!search.trim()) return true
-      const term = search.trim().toUpperCase()
-      const name = (p.name ?? '').toString().toUpperCase()
-      const team = (
-        p.team ??
-        p.club ??
-        p.clubName ??
-        ''
-      )
-        .toString()
-        .toUpperCase()
-      return name.includes(term) || team.includes(term)
-    })
-
-    // ordenação
-    if (sort === 'random') {
-      return shuffle(filtered)
-    }
-
-    const withPrice = filtered.map((p) => ({
-      p,
-      pricing: getProductPricing(p),
-    }))
-
-    if (sort === 'price-asc' || sort === 'price-desc') {
-      return withPrice
-        .slice()
-        .sort((a, b) => {
-          const pa = a.pricing.priceCents ?? Number.MAX_SAFE_INTEGER
-          const pb = b.pricing.priceCents ?? Number.MAX_SAFE_INTEGER
-          return sort === 'price-asc' ? pa - pb : pb - pa
-        })
-        .map((x) => x.p)
-    }
-
-    // default: ordenar por equipa + nome
-    return filtered.slice().sort((a, b) => {
-      const teamA = (
-        a.team ??
-        a.club ??
-        a.clubName ??
-        ''
-      )
-        .toString()
-        .toUpperCase()
-      const teamB = (
-        b.team ??
-        b.club ??
-        b.clubName ??
-        ''
-      )
-        .toString()
-        .toUpperCase()
-
-      if (teamA === teamB) {
-        const nameA = normalizeName(a)
-        const nameB = normalizeName(b)
-        return nameA.localeCompare(nameB)
-      }
-      return teamA.localeCompare(teamB)
-    })
-  }, [allProducts, search, sort])
+  }, [page]);
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER / HERO SIMPLES */}
+      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-10 sm:py-14">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -386,14 +395,14 @@ export default function JerseysPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        {/* Barra de filtros */}
+        {/* Filtros + info */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading jerseys…</span>
             ) : (
-              <span>{jerseys.length} jerseys found</span>
+              <span>{jerseysFiltered.length} jerseys found</span>
             )}
           </div>
 
@@ -402,8 +411,11 @@ export default function JerseysPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search by team or jersey name"
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -413,7 +425,10 @@ export default function JerseysPage() {
               <span className="text-gray-500">Sort by:</span>
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value as any)}
+                onChange={(e) => {
+                  setSort(e.target.value as any);
+                  setPage(1);
+                }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="team">Team & name</option>
@@ -425,42 +440,97 @@ export default function JerseysPage() {
           </div>
         </div>
 
-        {/* Skeleton enquanto carrega */}
+        {/* LOADING */}
         {loading && (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="h-72 sm:h-80 rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
-              />
+                className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+              >
+                <div className="aspect-[4/5] bg-slate-100" />
+                <div className="p-5">
+                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
+                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
+                  <div className="h-3 w-20 bg-slate-200 rounded" />
+                  <div className="mt-6 h-px bg-slate-200/70" />
+                  <div className="h-12" />
+                </div>
+              </div>
             ))}
           </div>
         )}
 
-        {/* Grid de produtos */}
-        {!loading && jerseys.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {jerseys.map((p: HomeProduct) => (
-              <ProductCard key={p.id ?? p.slug ?? p.name} product={p} />
-            ))}
-          </div>
+        {/* ERRO */}
+        {!loading && error && (
+          <p className="text-red-600">{error}</p>
         )}
 
-        {/* Estado vazio */}
-        {!loading && jerseys.length === 0 && (
-          <div className="mt-10 flex flex-col items-center text-center text-gray-500">
-            <Loader2 className="mb-3 h-8 w-8 animate-spin" />
-            <p className="text-sm">
-              Não encontrámos jerseys com estes filtros.
-              <br />
-              Tenta limpar a pesquisa ou verificar o catálogo completo.
-            </p>
-            <a href="/products" className="mt-4 btn-primary text-sm">
-              Go to all products
-            </a>
-          </div>
+        {/* GRID */}
+        {!loading && !error && (
+          <>
+            <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {pageItems.length === 0 && (
+                <p className="text-gray-500 col-span-full">
+                  Nenhum jersey encontrado.
+                </p>
+              )}
+
+              {pageItems.map((p) => (
+                <ProductCard key={String(p.id)} p={p} />
+              ))}
+            </div>
+
+            {/* PAGINAÇÃO */}
+            {pageItems.length > 0 && totalPages > 1 && (
+              <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  aria-label="Página anterior"
+                >
+                  «
+                </button>
+
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    const n = idx + 1;
+                    const active = n === page;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setPage(n)}
+                        className={[
+                          "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                          active
+                            ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
+                            : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                        ].join(" ")}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  aria-label="Próxima página"
+                >
+                  »
+                </button>
+              </nav>
+            )}
+          </>
         )}
       </section>
     </div>
-  )
+  );
 }
