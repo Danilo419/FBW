@@ -1,16 +1,44 @@
-// src/app/products/jerseys/page.tsx
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// src/app/products/jerseys/JerseysClient.tsx
+'use client'
 
-import Link from "next/link";
+import React, { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowRight, Loader2, Search } from 'lucide-react'
 
-/* ============================================================
-   Tipagens / Helpers básicos
-============================================================ */
+const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
 
-type HomeProduct = any;
+type HomeProduct = any
 
-const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
+// ---------- Helpers partilhados com a Home ----------
+
+function normalizeName(p: HomeProduct): string {
+  return ((p.name ?? '') as string).toUpperCase()
+}
+
+function hasTerm(p: HomeProduct, term: string): boolean {
+  return normalizeName(p).includes(term.toUpperCase())
+}
+
+function isPlayerVersion(p: HomeProduct): boolean {
+  return hasTerm(p, 'PLAYER VERSION')
+}
+
+function isLongSleeve(p: HomeProduct): boolean {
+  return hasTerm(p, 'LONG SLEEVE')
+}
+
+function isRetro(p: HomeProduct): boolean {
+  return hasTerm(p, 'RETRO')
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
@@ -20,20 +48,20 @@ const SALE_MAP_EUR: Record<number, number> = {
   49.99: 165,
   59.99: 200,
   69.99: 230,
-};
+}
 
 const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
   Object.entries(SALE_MAP_EUR).map(([k, v]) => [
     Math.round(parseFloat(k) * 100),
     Math.round(v * 100),
   ])
-) as Record<number, number>;
+) as Record<number, number>
 
 function formatEurFromCents(cents: number | null | undefined) {
-  if (cents == null) return "";
-  const value = (cents / 100).toFixed(2);
-  const withComma = value.replace(".", ",");
-  return `${withComma} €`;
+  if (cents == null) return ''
+  const value = (cents / 100).toFixed(2)
+  const withComma = value.replace('.', ',')
+  return `${withComma} €`
 }
 
 function getProductImage(p: HomeProduct): string {
@@ -94,103 +122,82 @@ function getProductImage(p: HomeProduct): string {
     p.media?.[0]?.imageUrl ??
     p.media?.[0]?.imageURL ??
     FALLBACK_IMG
-  );
+  )
 }
 
 function getProductPricing(p: HomeProduct) {
   const priceCents: number | null =
-    typeof p.basePrice === "number"
+    typeof p.basePrice === 'number'
       ? p.basePrice
-      : typeof p.priceCents === "number"
+      : typeof p.priceCents === 'number'
       ? p.priceCents
-      : typeof p.price === "number"
+      : typeof p.price === 'number'
       ? Math.round(p.price * 100)
-      : null;
+      : null
 
   let compareAtCents: number | null =
-    typeof p.compareAtPriceCents === "number"
+    typeof p.compareAtPriceCents === 'number'
       ? p.compareAtPriceCents
-      : typeof p.compareAtPrice === "number"
+      : typeof p.compareAtPrice === 'number'
       ? Math.round(p.compareAtPrice * 100)
-      : null;
+      : null
 
   if (!compareAtCents && priceCents != null) {
-    const mapped = SALE_MAP_CENTS[priceCents];
-    if (mapped) compareAtCents = mapped;
+    const mapped = SALE_MAP_CENTS[priceCents]
+    if (mapped) compareAtCents = mapped
   }
 
   const hasDiscount =
-    priceCents != null && compareAtCents != null && compareAtCents > priceCents;
+    priceCents != null && compareAtCents != null && compareAtCents > priceCents
 
   const discountPercent = hasDiscount
     ? Math.round(((compareAtCents! - priceCents!) / compareAtCents!) * 100)
-    : null;
+    : null
 
-  return { priceCents, compareAtCents, hasDiscount, discountPercent };
+  return { priceCents, compareAtCents, hasDiscount, discountPercent }
 }
 
-function normalizeName(p: HomeProduct): string {
-  return ((p.name ?? "") as string).toUpperCase();
+// mesmo filtro que usas na Home para "jerseys"
+function isStandardShortSleeveJersey(p: HomeProduct): boolean {
+  const n = normalizeName(p)
+  if (!n) return false
+  if (isPlayerVersion(p)) return false
+  if (isLongSleeve(p)) return false
+  if (isRetro(p)) return false
+  if (n.includes('SET')) return false
+  if (n.includes('SHORTS')) return false
+  if (n.includes('TRACKSUIT')) return false
+  if (n.includes('CROP TOP')) return false
+  if (n.includes('KIT')) return false
+  return true
 }
 
-function hasTerm(p: HomeProduct, term: string): boolean {
-  return normalizeName(p).includes(term.toUpperCase());
-}
-
-function isPlayerVersion(p: HomeProduct): boolean {
-  return hasTerm(p, "PLAYER VERSION");
-}
-
-function isLongSleeve(p: HomeProduct): boolean {
-  return hasTerm(p, "LONG SLEEVE");
-}
-
-/**
- * EXATAMENTE O QUE PEDISTE:
- * - name contém "Jersey"
- * - NÃO contém "Long Sleeve"
- * - NÃO contém "Player Version"
- */
-function filterJerseys(p: HomeProduct): boolean {
-  const n = normalizeName(p);
-  if (!n) return false;
-
-  if (!n.includes("JERSEY")) return false;
-  if (n.includes("LONG SLEEVE")) return false;
-  if (n.includes("PLAYER VERSION")) return false;
-
-  return true;
-}
-
-/* ============================================================
-   Card de produto (grid)
-============================================================ */
+// ---------- Card ----------
 
 function ProductCard({ product }: { product: HomeProduct }) {
-  const href = `/products/${product.slug ?? product.id}`;
-  const imgSrc = getProductImage(product);
+  const href = `/products/${product.slug ?? product.id}`
+  const imgSrc = getProductImage(product)
   const { priceCents, compareAtCents, hasDiscount, discountPercent } =
-    getProductPricing(product);
-
-  const team = (product.team ?? product.club ?? product.clubName ?? "") as string;
+    getProductPricing(product)
+  const team = (product.team ?? product.club ?? product.clubName ?? '') as string
 
   return (
-    <Link
+    <motion.a
       href={href}
+      whileHover={{ y: -6 }}
       className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg"
     >
-      <div className="relative h-[220px] sm:h-[260px] md:h-[300px] bg-slate-50">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div className="relative h-64 sm:h-72 md:h-80 bg-slate-50">
         <img
           src={imgSrc}
           alt={product.name}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            if ((img as any)._fallbackApplied) return;
-            (img as any)._fallbackApplied = true;
-            img.src = FALLBACK_IMG;
+            const img = e.currentTarget as HTMLImageElement
+            if ((img as any)._fallbackApplied) return
+            ;(img as any)._fallbackApplied = true
+            img.src = FALLBACK_IMG
           }}
         />
         {discountPercent != null && (
@@ -210,7 +217,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
           {product.name}
         </h3>
 
-        <div className="mt-2 flex items-baseline gap-1 sm:gap-2">
+        <div className="mt-2 sm:mt-3 flex items-baseline gap-1 sm:gap-2">
           {hasDiscount && (
             <span className="text-[11px] sm:text-xs text-gray-400 line-through">
               {formatEurFromCents(compareAtCents)}
@@ -221,206 +228,200 @@ function ProductCard({ product }: { product: HomeProduct }) {
           </span>
         </div>
 
-        <div className="mt-3 text-[11px] sm:text-sm text-blue-700">
-          View product →
+        <div className="mt-2 sm:mt-4 flex items-center text-[11px] sm:text-sm text-blue-700">
+          View product
+          <ArrowRight className="ml-1 h-3 w-3" />
         </div>
       </div>
-    </Link>
-  );
+    </motion.a>
+  )
 }
 
-/* ============================================================
-   Fetch + filtro "Jerseys"
-   → AGORA USA /api/search?q=Jersey (mesma origem que o current-season)
-============================================================ */
+// ---------- Página client ----------
 
-async function getJerseysProducts(): Promise<HomeProduct[]> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "";
+export default function JerseysClient() {
+  const [allProducts, setAllProducts] = useState<HomeProduct[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<'random' | 'team' | 'price-asc' | 'price-desc'>(
+    'team'
+  )
 
-    const res =
-      (await fetch(`${baseUrl}/api/search?q=Jersey`, {
-        cache: "no-store",
-      }).catch(() => null)) ??
-      (await fetch(`/api/search?q=Jersey`, {
-        cache: "no-store",
-      }).catch(() => null));
+  useEffect(() => {
+    let cancelled = false
 
-    if (!res || !("ok" in res) || !res.ok) {
-      console.error("Failed to load products for jerseys page");
-      return [];
+    const loadProducts = async () => {
+      try {
+        const res = await fetch('/api/home-products?limit=300', {
+          cache: 'no-store',
+        })
+        if (!res.ok) throw new Error('Failed to load jerseys')
+        const data = await res.json()
+        const list = Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data)
+          ? data
+          : []
+
+        if (!cancelled) setAllProducts(list)
+      } catch (err) {
+        console.error(err)
+        if (!cancelled) setAllProducts([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
 
-    const data = await res.json();
-    const list = Array.isArray(data?.products)
-      ? data.products
-      : Array.isArray(data)
-      ? data
-      : [];
+    loadProducts()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-    const filtered = list.filter(filterJerseys);
+  const jerseys = useMemo(() => {
+    const base = allProducts.filter(isStandardShortSleeveJersey)
 
-    // ordenar por equipa + nome para ficar mais "loja"
-    filtered.sort((a: HomeProduct, b: HomeProduct) => {
-      const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
-      const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
-      const tn = ta.localeCompare(tb);
-      if (tn !== 0) return tn;
-      const na = (a.name ?? "") as string;
-      const nb = (b.name ?? "") as string;
-      return na.localeCompare(nb);
-    });
+    // filtro por pesquisa (nome ou equipa)
+    const filtered = base.filter((p) => {
+      if (!search.trim()) return true
+      const term = search.trim().toUpperCase()
+      const name = (p.name ?? '').toString().toUpperCase()
+      const team = (
+        p.team ??
+        p.club ??
+        p.clubName ??
+        ''
+      )
+        .toString()
+        .toUpperCase()
+      return name.includes(term) || team.includes(term)
+    })
 
-    return filtered;
-  } catch (err) {
-    console.error(err);
-    return [];
-  }
-}
+    // ordenação
+    if (sort === 'random') {
+      return shuffle(filtered)
+    }
 
-/* ============================================================
-   PAGE (4 colunas máx, 12 por página)
-============================================================ */
+    const withPrice = filtered.map((p) => ({
+      p,
+      pricing: getProductPricing(p),
+    }))
 
-type JerseysPageProps = {
-  // Next 15: searchParams é Promise<any> em PageProps
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
-};
+    if (sort === 'price-asc' || sort === 'price-desc') {
+      return withPrice
+        .slice()
+        .sort((a, b) => {
+          const pa = a.pricing.priceCents ?? Number.MAX_SAFE_INTEGER
+          const pb = b.pricing.priceCents ?? Number.MAX_SAFE_INTEGER
+          return sort === 'price-asc' ? pa - pb : pb - pa
+        })
+        .map((x) => x.p)
+    }
 
-export default async function JerseysPage({ searchParams }: JerseysPageProps) {
-  const resolvedSearchParams = (await searchParams) ?? {};
+    // default: ordenar por equipa + nome
+    return filtered.slice().sort((a, b) => {
+      const teamA = (
+        a.team ??
+        a.club ??
+        a.clubName ??
+        ''
+      )
+        .toString()
+        .toUpperCase()
+      const teamB = (
+        b.team ??
+        b.club ??
+        b.clubName ??
+        ''
+      )
+        .toString()
+        .toUpperCase()
 
-  const products = await getJerseysProducts();
-
-  const PAGE_SIZE = 12;
-
-  // page vem de ?page=2, etc
-  const pageParam = resolvedSearchParams.page;
-  const pageNumberStr = Array.isArray(pageParam) ? pageParam[0] : pageParam;
-  let page = parseInt(pageNumberStr ?? "1", 10);
-  if (!Number.isFinite(page) || page < 1) page = 1;
-
-  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
-  if (page > totalPages) page = totalPages;
-
-  const start = (page - 1) * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-  const pageItems = products.slice(start, end);
-
-  const buildHref = (n: number) =>
-    n === 1 ? "/products/jerseys" : `/products/jerseys?page=${n}`;
+      if (teamA === teamB) {
+        const nameA = normalizeName(a)
+        const nameB = normalizeName(b)
+        return nameA.localeCompare(nameB)
+      }
+      return teamA.localeCompare(teamB)
+    })
+  }, [allProducts, search, sort])
 
   return (
-    <main className="min-h-screen bg-white">
-      <section className="container-fw pt-10 pb-16 md:pt-12 md:pb-20">
-        {/* Header */}
-        <header className="mb-8 md:mb-10">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-            Jerseys
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm sm:text-base text-gray-600">
-            Standard short-sleeve jerseys (non-player version)
-          </p>
-
-          <div className="mt-4 text-xs sm:text-sm text-gray-500">
-            {products.length > 0 ? (
-              <>
-                Showing{" "}
-                <span className="font-semibold">
-                  {pageItems.length}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold">
-                  {products.length}
-                </span>{" "}
-                jerseys — page {page} of {totalPages}.
-              </>
-            ) : (
-              "No jerseys are available yet."
-            )}
-          </div>
-        </header>
-
-        {/* Grid de produtos (máx 4 por linha) */}
-        {pageItems.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-            {pageItems.map((p: HomeProduct, i: number) => (
-              <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 sm:px-6 sm:py-8 text-sm text-gray-600">
-            We don&apos;t have jerseys live yet.{" "}
-            <Link href="/products" className="text-blue-700 underline">
-              Browse all products
-            </Link>{" "}
-            to see the rest of the catalog.
-          </div>
-        )}
-
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-            {/* Previous */}
-            <Link
-              href={buildHref(Math.max(1, page - 1))}
-              aria-disabled={page === 1}
-              className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-blue-500 hover:shadow-sm text-sm ${
-                page === 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              «
-            </Link>
-
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {Array.from({ length: totalPages }).map((_, idx) => {
-                const n = idx + 1;
-                const active = n === page;
-                return (
-                  <Link
-                    key={n}
-                    href={buildHref(n)}
-                    aria-current={active ? "page" : undefined}
-                    className={[
-                      "min-w-[40px] px-3 py-2 rounded-xl ring-1 text-sm text-center",
-                      active
-                        ? "bg-blue-700 text-white ring-blue-700 shadow-sm"
-                        : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-blue-500 hover:shadow-sm",
-                    ].join(" ")}
-                  >
-                    {n}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Next */}
-            <Link
-              href={buildHref(Math.min(totalPages, page + 1))}
-              aria-disabled={page === totalPages}
-              className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-blue-500 hover:shadow-sm text-sm ${
-                page === totalPages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              »
-            </Link>
-          </nav>
-        )}
-
-        {/* Link de fallback para catálogo completo */}
-        <div className="mt-10 text-center">
-          <Link
-            href="/products"
-            className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:border-blue-500 hover:text-blue-700"
-          >
-            ← Back to all products
-          </Link>
+    <section className="container-fw section-gap">
+      {/* Barra de filtros */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          {loading ? (
+            <span>Loading jerseys…</span>
+          ) : (
+            <span>{jerseys.length} jerseys found</span>
+          )}
         </div>
-      </section>
-    </main>
-  );
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by team or jersey name"
+              className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
+            <span className="text-gray-500">Sort by:</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as any)}
+              className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="team">Team & name</option>
+              <option value="price-asc">Price (low → high)</option>
+              <option value="price-desc">Price (high → low)</option>
+              <option value="random">Random</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Skeleton enquanto carrega */}
+      {loading && (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-72 sm:h-80 rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Grid de produtos */}
+      {!loading && jerseys.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {jerseys.map((p: HomeProduct) => (
+            <ProductCard key={p.id ?? p.slug ?? p.name} product={p} />
+          ))}
+        </div>
+      )}
+
+      {/* Estado vazio */}
+      {!loading && jerseys.length === 0 && (
+        <div className="mt-10 flex flex-col items-center text-center text-gray-500">
+          <Loader2 className="mb-3 h-8 w-8 animate-spin" />
+          <p className="text-sm">
+            Não encontrámos jerseys com estes filtros.
+            <br />
+            Tenta limpar a pesquisa ou verificar o catálogo completo.
+          </p>
+          <a href="/products" className="mt-4 btn-primary text-sm">
+            Go to all products
+          </a>
+        </div>
+      )}
+    </section>
+  )
 }
