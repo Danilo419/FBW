@@ -211,12 +211,16 @@ function ProductCard({ product }: { product: HomeProduct }) {
 }
 
 /* ============================================================
-   PAGE (client, mesma lógica de filtro que HomeClient)
+   PAGE (client, mesma lógica de filtro que HomeClient,
+   + paginação 12 por página, máx 4 por linha)
 ============================================================ */
+
+const PAGE_SIZE = 12
 
 export default function CurrentSeasonPage() {
   const [allProducts, setAllProducts] = useState<HomeProduct[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     let cancelled = false
@@ -251,13 +255,34 @@ export default function CurrentSeasonPage() {
 
   // MESMO FILTRO DO HomeClient:
   // currentSeason: hasTerm('25/26') && !isPlayerVersion(p) && !isRetro(p)
-  const products = useMemo(
+  const filteredProducts = useMemo(
     () =>
       allProducts.filter(
         (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
     [allProducts]
   )
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+
+  // garantir que não ficamos numa página fora de range quando muda o nº de produtos
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filteredProducts.length])
+
+  const page = Math.min(currentPage, totalPages)
+  const start = (page - 1) * PAGE_SIZE
+  const end = start + PAGE_SIZE
+  const pageProducts = filteredProducts.slice(start, end)
+
+  const handlePageChange = (p: number) => {
+    if (p < 1 || p > totalPages) return
+    setCurrentPage(p)
+    // sobe a página para o topo para não ficar perdido a meio
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -277,10 +302,17 @@ export default function CurrentSeasonPage() {
           <div className="mt-3 text-xs sm:text-sm text-gray-500">
             {loading ? (
               'Loading products...'
-            ) : products.length > 0 ? (
+            ) : filteredProducts.length > 0 ? (
               <>
-                Showing <span className="font-semibold">{products.length}</span>{' '}
-                products.
+                Showing{' '}
+                <span className="font-semibold">
+                  {pageProducts.length}
+                </span>{' '}
+                of{' '}
+                <span className="font-semibold">
+                  {filteredProducts.length}
+                </span>{' '}
+                products (page {page} of {totalPages}).
               </>
             ) : (
               'No 25/26 products (non player version, non retro) found.'
@@ -288,15 +320,17 @@ export default function CurrentSeasonPage() {
           </div>
         </header>
 
-        {!loading && products.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-            {products.map((p: HomeProduct, i: number) => (
+        {/* GRID – máx 4 por linha */}
+        {!loading && pageProducts.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
+            {pageProducts.map((p: HomeProduct, i: number) => (
               <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
             ))}
           </div>
         )}
 
-        {!loading && products.length === 0 && (
+        {/* Mensagem quando não há produtos */}
+        {!loading && filteredProducts.length === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 sm:px-6 sm:py-8 text-sm text-gray-600">
             We couldn&apos;t find any products with &quot;25/26&quot; in the name
             (excluding Player Version and Retro).{' '}
@@ -307,10 +341,51 @@ export default function CurrentSeasonPage() {
           </div>
         )}
 
+        {/* Loading simples */}
         {loading && (
           <div className="mt-6 text-sm text-gray-500">Loading products…</div>
         )}
 
+        {/* PAGINAÇÃO – 1,2,3,... */}
+        {!loading && filteredProducts.length > PAGE_SIZE && (
+          <div className="mt-8 flex justify-center gap-1 sm:gap-2">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-full border text-xs sm:text-sm disabled:opacity-40 disabled:cursor-default hover:border-blue-500 hover:text-blue-700"
+            >
+              ‹ Prev
+            </button>
+
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const pNum = idx + 1
+              const isActive = pNum === page
+              return (
+                <button
+                  key={pNum}
+                  onClick={() => handlePageChange(pNum)}
+                  className={`px-3 py-1.5 rounded-full border text-xs sm:text-sm ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-700'
+                  }`}
+                >
+                  {pNum}
+                </button>
+              )
+            })}
+
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-full border text-xs sm:text-sm disabled:opacity-40 disabled:cursor-default hover:border-blue-500 hover:text-blue-700"
+            >
+              Next ›
+            </button>
+          </div>
+        )}
+
+        {/* Link de fallback para catálogo completo */}
         <div className="mt-10 text-center">
           <Link
             href="/products"
