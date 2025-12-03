@@ -1,15 +1,19 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// src/app/products/current-season-25-26/page.tsx
+'use client'
 
-import Link from "next/link";
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+import React, { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 
 /* ============================================================
-   Tipagens / Helpers básicos
+   Tipagens / Helpers básicos (iguais ao HomeClient)
 ============================================================ */
 
-type HomeProduct = any;
+type HomeProduct = any
 
-const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
+const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
 
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
@@ -19,20 +23,20 @@ const SALE_MAP_EUR: Record<number, number> = {
   49.99: 165,
   59.99: 200,
   69.99: 230,
-};
+}
 
 const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
   Object.entries(SALE_MAP_EUR).map(([k, v]) => [
     Math.round(parseFloat(k) * 100),
     Math.round(v * 100),
   ])
-) as Record<number, number>;
+) as Record<number, number>
 
 function formatEurFromCents(cents: number | null | undefined) {
-  if (cents == null) return "";
-  const value = (cents / 100).toFixed(2);
-  const withComma = value.replace(".", ",");
-  return `${withComma} €`;
+  if (cents == null) return ''
+  const value = (cents / 100).toFixed(2)
+  const withComma = value.replace('.', ',')
+  return `${withComma} €`
 }
 
 function getProductImage(p: HomeProduct): string {
@@ -93,61 +97,55 @@ function getProductImage(p: HomeProduct): string {
     p.media?.[0]?.imageUrl ??
     p.media?.[0]?.imageURL ??
     FALLBACK_IMG
-  );
+  )
 }
 
 function getProductPricing(p: HomeProduct) {
   const priceCents: number | null =
-    typeof p.basePrice === "number"
+    typeof p.basePrice === 'number'
       ? p.basePrice
-      : typeof p.priceCents === "number"
+      : typeof p.priceCents === 'number'
       ? p.priceCents
-      : typeof p.price === "number"
+      : typeof p.price === 'number'
       ? Math.round(p.price * 100)
-      : null;
+      : null
 
   let compareAtCents: number | null =
-    typeof p.compareAtPriceCents === "number"
+    typeof p.compareAtPriceCents === 'number'
       ? p.compareAtPriceCents
-      : typeof p.compareAtPrice === "number"
+      : typeof p.compareAtPrice === 'number'
       ? Math.round(p.compareAtPrice * 100)
-      : null;
+      : null
 
   if (!compareAtCents && priceCents != null) {
-    const mapped = SALE_MAP_CENTS[priceCents];
-    if (mapped) compareAtCents = mapped;
+    const mapped = SALE_MAP_CENTS[priceCents]
+    if (mapped) compareAtCents = mapped
   }
 
   const hasDiscount =
-    priceCents != null && compareAtCents != null && compareAtCents > priceCents;
+    priceCents != null && compareAtCents != null && compareAtCents > priceCents
 
   const discountPercent = hasDiscount
     ? Math.round(((compareAtCents! - priceCents!) / compareAtCents!) * 100)
-    : null;
+    : null
 
-  return { priceCents, compareAtCents, hasDiscount, discountPercent };
+  return { priceCents, compareAtCents, hasDiscount, discountPercent }
 }
 
-/* ============================================================
-   Filtro: name contém "25/26" e NÃO contém "PLAYER VERSION"
-============================================================ */
+function normalizeName(p: HomeProduct): string {
+  return ((p.name ?? '') as string).toUpperCase()
+}
 
-function matchesCurrentSeasonNoPlayerVersion(p: HomeProduct): boolean {
-  const rawName = (p.name ?? "").toString();
-  const name = rawName.toUpperCase();
+function hasTerm(p: HomeProduct, term: string): boolean {
+  return normalizeName(p).includes(term.toUpperCase())
+}
 
-  const has25_26 = name.includes("25/26");
-  const isPlayerVersion = name.includes("PLAYER VERSION");
+function isPlayerVersion(p: HomeProduct): boolean {
+  return hasTerm(p, 'PLAYER VERSION')
+}
 
-  const ok = has25_26 && !isPlayerVersion;
-
-  // LOGA cada produto verificado
-  console.log(
-    "[CURRENT-SEASON-25-26] CHECK",
-    `"${rawName}" => has25_26=${has25_26}, isPlayerVersion=${isPlayerVersion}, ok=${ok}`
-  );
-
-  return ok;
+function isRetro(p: HomeProduct): boolean {
+  return hasTerm(p, 'RETRO')
 }
 
 /* ============================================================
@@ -155,12 +153,11 @@ function matchesCurrentSeasonNoPlayerVersion(p: HomeProduct): boolean {
 ============================================================ */
 
 function ProductCard({ product }: { product: HomeProduct }) {
-  const href = `/products/${product.slug ?? product.id}`;
-  const imgSrc = getProductImage(product);
+  const href = `/products/${product.slug ?? product.id}`
+  const imgSrc = getProductImage(product)
   const { priceCents, compareAtCents, hasDiscount, discountPercent } =
-    getProductPricing(product);
-
-  const team = (product.team ?? product.club ?? product.clubName ?? "") as string;
+    getProductPricing(product)
+  const team = (product.team ?? product.club ?? product.clubName ?? '') as string
 
   return (
     <Link
@@ -174,10 +171,10 @@ function ProductCard({ product }: { product: HomeProduct }) {
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            if ((img as any)._fallbackApplied) return;
-            (img as any)._fallbackApplied = true;
-            img.src = FALLBACK_IMG;
+            const img = e.currentTarget as HTMLImageElement
+            if ((img as any)._fallbackApplied) return
+            ;(img as any)._fallbackApplied = true
+            img.src = FALLBACK_IMG
           }}
         />
         {discountPercent != null && (
@@ -213,97 +210,61 @@ function ProductCard({ product }: { product: HomeProduct }) {
         </div>
       </div>
     </Link>
-  );
+  )
 }
 
 /* ============================================================
-   Fetch + filtro (com logs)
+   PAGE (client, mesma lógica de filtro que HomeClient)
 ============================================================ */
 
-async function getCurrentSeasonProducts(): Promise<HomeProduct[]> {
-  try {
-    const baseEnv = process.env.NEXT_PUBLIC_VERCEL_URL || "";
-    const base =
-      baseEnv && !baseEnv.startsWith("http") ? `https://${baseEnv}` : baseEnv;
+export default function CurrentSeasonPage() {
+  const [allProducts, setAllProducts] = useState<HomeProduct[]>([])
+  const [loading, setLoading] = useState(true)
 
-    const primaryUrl = `${base}/api/home-products?limit=500`;
+  useEffect(() => {
+    let cancelled = false
 
-    const res = await fetch(primaryUrl, {
-      cache: "no-store",
-    }).catch(() =>
-      fetch("/api/home-products?limit=500", { cache: "no-store" }) as any
-    );
+    const load = async () => {
+      try {
+        const res = await fetch('/api/home-products?limit=240', {
+          cache: 'no-store',
+        })
+        if (!res.ok) throw new Error('Failed to load products')
+        const data = await res.json()
+        const list = Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data)
+          ? data
+          : Object.values(data ?? {})
 
-    if (!res || !("ok" in res) || !res.ok) {
-      console.error(
-        "[CURRENT-SEASON-25-26] Failed to load products for current season"
-      );
-      return [];
+        if (!cancelled) setAllProducts(list)
+      } catch (e) {
+        console.error(e)
+        if (!cancelled) setAllProducts([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
 
-    const data = await res.json();
-
-    // aceita:
-    // - { products: [...] }
-    // - [ ... ]
-    // - { "0": {...}, "1": {...} }
-    let raw: any = (data as any)?.products ?? data;
-    let list: HomeProduct[] = [];
-
-    if (Array.isArray(raw)) {
-      list = raw;
-    } else if (raw && typeof raw === "object") {
-      list = Object.values(raw);
-    } else {
-      list = [];
+    load()
+    return () => {
+      cancelled = true
     }
+  }, [])
 
-    console.log("[CURRENT-SEASON-25-26] TOTAL FROM API:", list.length);
-    console.log(
-      "[CURRENT-SEASON-25-26] SAMPLE NAMES:",
-      list.slice(0, 10).map((p: any) => p.name)
-    );
-
-    const filtered = list.filter(matchesCurrentSeasonNoPlayerVersion);
-
-    console.log(
-      "[CURRENT-SEASON-25-26] MATCHING 25/26 (non Player Version):",
-      filtered.length
-    );
-    console.log(
-      "[CURRENT-SEASON-25-26] MATCHED NAMES:",
-      filtered.map((p: any) => p.name)
-    );
-
-    // ordena por equipa + nome
-    filtered.sort((a: HomeProduct, b: HomeProduct) => {
-      const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
-      const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
-      const tn = ta.localeCompare(tb);
-      if (tn !== 0) return tn;
-      const na = (a.name ?? "") as string;
-      const nb = (b.name ?? "") as string;
-      return na.localeCompare(nb);
-    });
-
-    return filtered;
-  } catch (err) {
-    console.error("[CURRENT-SEASON-25-26] Error loading 25/26 products", err);
-    return [];
-  }
-}
-
-/* ============================================================
-   PAGE
-============================================================ */
-
-export default async function CurrentSeasonPage() {
-  const products = await getCurrentSeasonProducts();
+  // MESMO FILTRO DO HomeClient:
+  // currentSeason: hasTerm('25/26') && !isPlayerVersion(p) && !isRetro(p)
+  const products = useMemo(
+    () =>
+      allProducts.filter(
+        (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
+      ),
+    [allProducts]
+  )
 
   return (
     <main className="min-h-screen bg-white">
       <section className="container-fw pt-10 pb-16 md:pt-12 md:pb-20">
-        {/* Header */}
         <header className="mb-8 md:mb-10">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
             Product category
@@ -312,42 +273,47 @@ export default async function CurrentSeasonPage() {
             Current season 25/26
           </h1>
           <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600">
-            All products whose name contains <strong>&quot;25/26&quot;</strong>,
-            excluding any item that contains{" "}
-            <strong>&quot;Player Version&quot;</strong> in the name.
+            All standard (non-player, non-retro) products whose name contains{' '}
+            <strong>&quot;25/26&quot;</strong>.
           </p>
 
           <div className="mt-3 text-xs sm:text-sm text-gray-500">
-            {products.length > 0 ? (
+            {loading ? (
+              'Loading products...'
+            ) : products.length > 0 ? (
               <>
-                Showing <span className="font-semibold">{products.length}</span>{" "}
+                Showing <span className="font-semibold">{products.length}</span>{' '}
                 products.
               </>
             ) : (
-              "No products matching 25/26 (non Player Version) were found."
+              'No 25/26 products (non player version, non retro) found.'
             )}
           </div>
         </header>
 
-        {/* Grid de produtos */}
-        {products.length > 0 ? (
+        {!loading && products.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
             {products.map((p: HomeProduct, i: number) => (
               <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
             ))}
           </div>
-        ) : (
+        )}
+
+        {!loading && products.length === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 sm:px-6 sm:py-8 text-sm text-gray-600">
-            We couldn&apos;t find any products with &quot;25/26&quot; in the
-            name (excluding Player Version).{" "}
+            We couldn&apos;t find any products with &quot;25/26&quot; in the name
+            (excluding Player Version and Retro).{' '}
             <Link href="/products" className="text-blue-700 underline">
               Browse all products
-            </Link>{" "}
+            </Link>{' '}
             to see the rest of the catalog.
           </div>
         )}
 
-        {/* Link de fallback para catálogo completo */}
+        {loading && (
+          <div className="mt-6 text-sm text-gray-500">Loading products…</div>
+        )}
+
         <div className="mt-10 text-center">
           <Link
             href="/products"
@@ -358,5 +324,5 @@ export default async function CurrentSeasonPage() {
         </div>
       </section>
     </main>
-  );
+  )
 }
