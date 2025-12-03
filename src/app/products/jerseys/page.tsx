@@ -59,7 +59,7 @@ function moneyAfter(cents: number) {
   return `${n} €`;
 }
 
-/** Divide o preço em partes para estilização (euros / cêntimos, símbolo vai depois) */
+/** Divide o preço em partes (euros / cêntimos, símbolo vai depois) */
 function pricePartsFromCents(cents: number) {
   const euros = Math.floor(cents / 100).toString();
   const dec = (cents % 100).toString().padStart(2, "0");
@@ -99,7 +99,7 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
-/** Obtém só o nome do clube (capitalização normal; chip usa uppercase no CSS) */
+/** Só o nome do clube (o chip depois mete uppercase via CSS) */
 function getClubLabel(p: UIProduct): string {
   const byTeam = clubFromString(p.team);
   if (byTeam) return byTeam;
@@ -122,7 +122,7 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // mesma lógica que usaste na Home
+  // mesma lógica da Home
   if (n.includes("PLAYER VERSION")) return false;
   if (n.includes("LONG SLEEVE")) return false;
   if (n.includes("RETRO")) return false;
@@ -135,7 +135,6 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
   if (n.includes("INFANT")) return false;
   if (n.includes("KIT")) return false;
 
-  // aqui assumimos que TUDO o que sobra é jersey standard, short-sleeve, non-player
   return true;
 }
 
@@ -156,16 +155,13 @@ function ProductCard({ p }: { p: UIProduct }) {
       href={href}
       className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
     >
-      {/* Sticker vermelho com % */}
       {sale && (
         <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
           -{sale.pct}%
         </div>
       )}
 
-      {/* Card */}
       <div className="flex flex-col h-full">
-        {/* Imagem */}
         <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -182,9 +178,7 @@ function ProductCard({ p }: { p: UIProduct }) {
           />
         </div>
 
-        {/* Conteúdo */}
         <div className="p-5 flex flex-col grow">
-          {/* Chip azul — só o clube */}
           <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
             {teamLabel}
           </div>
@@ -193,7 +187,6 @@ function ProductCard({ p }: { p: UIProduct }) {
             {p.name}
           </div>
 
-          {/* Preços */}
           <div className="mt-4">
             <div className="flex items-end gap-2">
               {sale && (
@@ -218,7 +211,6 @@ function ProductCard({ p }: { p: UIProduct }) {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="mt-auto">
             <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -243,9 +235,6 @@ function ProductCard({ p }: { p: UIProduct }) {
 
 /* =========================================================================
    PAGE
-   - Busca via /api/search (tal como ResultsClient)
-   - Depois filtra para standard jerseys
-   - Mantém contagem estável: "X jerseys found"
 ===========================================================================*/
 
 export default function JerseysPage() {
@@ -253,23 +242,22 @@ export default function JerseysPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // paginação
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
 
-  // pesquisa local (filtra por nome / equipa no front)
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
     "team"
   );
 
-  // fetch — TAL COMO ResultsClient, mas sem query (apanha tudo da search API)
+  // 🔴 AQUI ESTAVA O PROBLEMA: /api/search sem q
+  // Agora: /api/search?q=jersey (ou outro termo que no teu backend devolva *todas* as jerseys)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search`, { cache: "no-store" })
+    fetch(`/api/search?q=jersey`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
@@ -292,12 +280,9 @@ export default function JerseysPage() {
     };
   }, []);
 
-  // aplica filtro "standard jersey" + filtro de texto + sort
   const jerseysFiltered = useMemo(() => {
-    // 1) apenas jerseys standard
     let base = results.filter(isStandardShortSleeveJersey);
 
-    // 2) filtro por texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -307,7 +292,6 @@ export default function JerseysPage() {
       });
     }
 
-    // 3) ordenação
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -327,7 +311,6 @@ export default function JerseysPage() {
       return copy;
     }
 
-    // default: ordenar por team + name
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = (getClubLabel(a) || "").toUpperCase();
@@ -395,7 +378,6 @@ export default function JerseysPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        {/* Filtros + info */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -440,7 +422,6 @@ export default function JerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -461,12 +442,10 @@ export default function JerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && (
           <p className="text-red-600">{error}</p>
         )}
 
-        {/* GRID */}
         {!loading && !error && (
           <>
             <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -481,7 +460,6 @@ export default function JerseysPage() {
               ))}
             </div>
 
-            {/* PAGINAÇÃO */}
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
                 <button
