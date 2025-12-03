@@ -160,7 +160,7 @@ function filterJerseys(p: HomeProduct): boolean {
   if (isLongSleeve(p)) return false;
   if (isRetro(p)) return false;
   if (n.includes("SET")) return false;
-  if (n.includes("SHORTS")) return false;
+  if (n.includes("shorts".toUpperCase())) return false;
   if (n.includes("TRACKSUIT")) return false;
   if (n.includes("CROP TOP")) return false;
   if (n.includes("KIT")) return false;
@@ -289,16 +289,19 @@ async function getJerseysProducts(): Promise<HomeProduct[]> {
 ============================================================ */
 
 type JerseysPageProps = {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  // Em Next 15, searchParams é Promise<any> em PageProps
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function JerseysPage({ searchParams }: JerseysPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+
   const products = await getJerseysProducts();
 
   const PAGE_SIZE = 12;
 
   // page vem de ?page=2, etc
-  const pageParam = searchParams?.page;
+  const pageParam = resolvedSearchParams.page;
   const pageNumberStr = Array.isArray(pageParam) ? pageParam[0] : pageParam;
   let page = parseInt(pageNumberStr ?? "1", 10);
   if (!Number.isFinite(page) || page < 1) page = 1;
