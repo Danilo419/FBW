@@ -1,7 +1,7 @@
 // src/app/products/jerseys/page.tsx
-"use client";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 /* ============================================================
@@ -149,7 +149,7 @@ function isRetro(p: HomeProduct): boolean {
   return hasTerm(p, "RETRO");
 }
 
-/** ✨ MESMO FILTRO "jerseys" DA HOME ✨ */
+/** 🔵 EXACTO MESMO FILTRO “jerseys” DA HOME 🔵 */
 function filterJerseys(p: HomeProduct): boolean {
   const n = normalizeName(p);
   if (!n) return false;
@@ -232,58 +232,38 @@ function ProductCard({ product }: { product: HomeProduct }) {
 }
 
 /* ============================================================
-   Página "Jerseys" com paginação (12 por página, 4 por linha)
+   Fetch + filtro “Jerseys” (igual à Home)
 ============================================================ */
 
-const PAGE_SIZE = 12;
+async function getJerseyProducts(): Promise<HomeProduct[]> {
+  try {
+    const base =
+      process.env.NEXT_PUBLIC_VERCEL_URL
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : "";
 
-export default function JerseysPage() {
-  const [allProducts, setAllProducts] = useState<HomeProduct[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+    const res = await fetch(
+      `${base}/api/home-products?limit=240`,
+      { cache: "no-store" }
+    ).catch(() =>
+      fetch("/api/home-products?limit=240", { cache: "no-store" }) as any
+    );
 
-  // 🔍 Buscar TODOS os produtos via /api/search (mesmo endpoint do search)
-  // e depois aplicar o MESMO filterJerseys da Home
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
+    if (!res || !("ok" in res) || !res.ok) {
+      console.error("Failed to load products for jerseys");
+      return [];
+    }
 
-    fetch("/api/search", { cache: "no-store" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
-        const data = await res.json();
-        const list = Array.isArray(data?.products)
-          ? data.products
-          : Array.isArray(data)
-          ? data
-          : [];
+    const data = await res.json();
+    const list = Array.isArray(data?.products)
+      ? data.products
+      : Array.isArray(data)
+      ? data
+      : [];
 
-        if (!cancelled) {
-          setAllProducts(list);
-          setPage(1);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setError(e?.message || "Error loading products");
-          setAllProducts([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const filtered = list.filter(filterJerseys);
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // aplica o MESMO filtro jerseys da Home, e ordena por equipa + nome
-  const jerseys = useMemo(() => {
-    const filtered = allProducts.filter(filterJerseys);
-
+    // ordena por equipa + nome
     filtered.sort((a: HomeProduct, b: HomeProduct) => {
       const ta = (a.team ?? a.club ?? a.clubName ?? "") as string;
       const tb = (b.team ?? b.club ?? b.clubName ?? "") as string;
@@ -295,28 +275,39 @@ export default function JerseysPage() {
     });
 
     return filtered;
-  }, [allProducts]);
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+}
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(jerseys.length / PAGE_SIZE)),
-    [jerseys.length]
-  );
+/* ============================================================
+   PAGE (12 por página, 4 por linha)
+============================================================ */
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+const PAGE_SIZE = 12;
 
-  const pageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return jerseys.slice(start, end);
-  }, [jerseys, page]);
+type JerseysPageProps = {
+  searchParams?: { [key: string]: string | string[] | undefined };
+};
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [page]);
+export default async function JerseysPage({ searchParams }: JerseysPageProps) {
+  const products = await getJerseyProducts();
+
+  const pageParam = searchParams?.page;
+  const pageNumRaw =
+    typeof pageParam === "string" ? pageParam : Array.isArray(pageParam) ? pageParam[0] : "1";
+  const page = Math.max(1, parseInt(pageNumRaw || "1", 10) || 1);
+
+  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+
+  const start = (safePage - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const pageItems = products.slice(start, end);
+
+  const buildPageHref = (p: number) =>
+    p === 1 ? "/products/jerseys" : `/products/jerseys?page=${p}`;
 
   return (
     <main className="min-h-screen bg-white">
@@ -334,103 +325,83 @@ export default function JerseysPage() {
           </p>
 
           <div className="mt-3 text-xs sm:text-sm text-gray-500">
-            {loading ? (
-              "Loading products..."
-            ) : error ? (
-              <>Error loading products: {error}</>
-            ) : jerseys.length > 0 ? (
+            {products.length > 0 ? (
               <>
-                Showing <span className="font-semibold">{pageItems.length}</span> of{" "}
-                <span className="font-semibold">{jerseys.length}</span> jerseys (page{" "}
-                {page} of {totalPages}).
+                Showing{" "}
+                <span className="font-semibold">{pageItems.length}</span> of{" "}
+                <span className="font-semibold">{products.length}</span> jerseys (page{" "}
+                {safePage} of {totalPages}).
               </>
             ) : (
-              "No standard short-sleeve jerseys found yet."
+              "No standard short-sleeve jerseys are available yet."
             )}
           </div>
         </header>
 
-        {/* GRID – máx 4 por linha, 12 por página */}
-        {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
-              >
-                <div className="h-[220px] sm:h-[260px] md:h-[300px] bg-slate-100" />
-                <div className="p-4">
-                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-3" />
-                  <div className="h-3 w-20 bg-slate-200 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && !error && (
+        {/* Grid 4 por linha */}
+        {products.length > 0 ? (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-              {pageItems.length === 0 && (
-                <p className="text-gray-500 col-span-full">
-                  No standard short-sleeve jerseys found.
-                </p>
-              )}
-
               {pageItems.map((p: HomeProduct, i: number) => (
                 <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
               ))}
             </div>
 
             {/* Paginação: « 1 2 3 » */}
-            {jerseys.length > PAGE_SIZE && (
+            {products.length > PAGE_SIZE && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                <Link
+                  href={buildPageHref(Math.max(1, safePage - 1))}
                   aria-label="Previous page"
+                  className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-sky-200 hover:shadow-sm transition ${
+                    safePage === 1 ? "pointer-events-none opacity-40" : ""
+                  }`}
                 >
                   «
-                </button>
+                </Link>
 
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   {Array.from({ length: totalPages }).map((_, idx) => {
                     const n = idx + 1;
-                    const active = n === page;
+                    const active = n === safePage;
                     return (
-                      <button
+                      <Link
                         key={n}
-                        type="button"
-                        onClick={() => setPage(n)}
+                        href={buildPageHref(n)}
+                        aria-current={active ? "page" : undefined}
                         className={[
-                          "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                          "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition text-center",
                           active
                             ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
                             : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
                         ].join(" ")}
-                        aria-current={active ? "page" : undefined}
                       >
                         {n}
-                      </button>
+                      </Link>
                     );
                   })}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                <Link
+                  href={buildPageHref(Math.min(totalPages, safePage + 1))}
                   aria-label="Next page"
+                  className={`px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 hover:ring-sky-200 hover:shadow-sm transition ${
+                    safePage === totalPages ? "pointer-events-none opacity-40" : ""
+                  }`}
                 >
                   »
-                </button>
+                </Link>
               </nav>
             )}
           </>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 sm:px-6 sm:py-8 text-sm text-gray-600">
+            We don&apos;t have any standard short-sleeve jerseys live yet.{" "}
+            <Link href="/products" className="text-blue-700 underline">
+              Browse all products
+            </Link>{" "}
+            to see the rest of the catalog.
+          </div>
         )}
 
         {/* Link de fallback para catálogo completo */}
