@@ -1,4 +1,4 @@
-// src/app/products/jerseys/JerseysClient.tsx
+// src/app/products/jerseys/page.tsx
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -9,7 +9,9 @@ const FALLBACK_IMG = '/images/players/RealMadrid/RealMadrid12.png'
 
 type HomeProduct = any
 
-// ---------- Helpers partilhados com a Home ----------
+/* =========================================================================
+   HELPERS
+===========================================================================*/
 
 function normalizeName(p: HomeProduct): string {
   return ((p.name ?? '') as string).toUpperCase()
@@ -172,7 +174,9 @@ function isStandardShortSleeveJersey(p: HomeProduct): boolean {
   return true
 }
 
-// ---------- Card ----------
+/* =========================================================================
+   PRODUCT CARD
+===========================================================================*/
 
 function ProductCard({ product }: { product: HomeProduct }) {
   const href = `/products/${product.slug ?? product.id}`
@@ -237,9 +241,11 @@ function ProductCard({ product }: { product: HomeProduct }) {
   )
 }
 
-// ---------- Página client ----------
+/* =========================================================================
+   PAGE (CLIENT)
+===========================================================================*/
 
-export default function JerseysClient() {
+export default function JerseysPage() {
   const [allProducts, setAllProducts] = useState<HomeProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -347,81 +353,114 @@ export default function JerseysClient() {
   }, [allProducts, search, sort])
 
   return (
-    <section className="container-fw section-gap">
-      {/* Barra de filtros */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          {loading ? (
-            <span>Loading jerseys…</span>
-          ) : (
-            <span>{jerseys.length} jerseys found</span>
-          )}
-        </div>
+    <div className="min-h-screen bg-white">
+      {/* HEADER / HERO SIMPLES */}
+      <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
+        <div className="container-fw py-10 sm:py-14">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                Jerseys
+              </p>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
+                Standard short-sleeve jerseys
+              </h1>
+              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
+                Non-player version jerseys (standard fit), short-sleeve only.
+                Exclui player version, long sleeve, retro, sets, shorts, tracksuits,
+                crop tops e kids kits.
+              </p>
+            </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div className="relative w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by team or jersey name"
-              className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs sm:text-sm">
-            <span className="text-gray-500">Sort by:</span>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as any)}
-              className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="team">Team & name</option>
-              <option value="price-asc">Price (low → high)</option>
-              <option value="price-desc">Price (high → low)</option>
-              <option value="random">Random</option>
-            </select>
+            <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
+              <a href="/#products" className="btn-outline text-sm">
+                ← Back to highlights
+              </a>
+              <a href="/products" className="btn-primary text-sm">
+                View full catalog
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Skeleton enquanto carrega */}
-      {loading && (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-72 sm:h-80 rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
-            />
-          ))}
-        </div>
-      )}
+      {/* CONTEÚDO */}
+      <section className="container-fw section-gap">
+        {/* Barra de filtros */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            {loading ? (
+              <span>Loading jerseys…</span>
+            ) : (
+              <span>{jerseys.length} jerseys found</span>
+            )}
+          </div>
 
-      {/* Grid de produtos */}
-      {!loading && jerseys.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {jerseys.map((p: HomeProduct) => (
-            <ProductCard key={p.id ?? p.slug ?? p.name} product={p} />
-          ))}
-        </div>
-      )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by team or jersey name"
+                className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-      {/* Estado vazio */}
-      {!loading && jerseys.length === 0 && (
-        <div className="mt-10 flex flex-col items-center text-center text-gray-500">
-          <Loader2 className="mb-3 h-8 w-8 animate-spin" />
-          <p className="text-sm">
-            Não encontrámos jerseys com estes filtros.
-            <br />
-            Tenta limpar a pesquisa ou verificar o catálogo completo.
-          </p>
-          <a href="/products" className="mt-4 btn-primary text-sm">
-            Go to all products
-          </a>
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
+              <span className="text-gray-500">Sort by:</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="team">Team & name</option>
+                <option value="price-asc">Price (low → high)</option>
+                <option value="price-desc">Price (high → low)</option>
+                <option value="random">Random</option>
+              </select>
+            </div>
+          </div>
         </div>
-      )}
-    </section>
+
+        {/* Skeleton enquanto carrega */}
+        {loading && (
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-72 sm:h-80 rounded-3xl bg-gradient-to-br from-slate-100 via-slate-50 to-white animate-pulse"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Grid de produtos */}
+        {!loading && jerseys.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {jerseys.map((p: HomeProduct) => (
+              <ProductCard key={p.id ?? p.slug ?? p.name} product={p} />
+            ))}
+          </div>
+        )}
+
+        {/* Estado vazio */}
+        {!loading && jerseys.length === 0 && (
+          <div className="mt-10 flex flex-col items-center text-center text-gray-500">
+            <Loader2 className="mb-3 h-8 w-8 animate-spin" />
+            <p className="text-sm">
+              Não encontrámos jerseys com estes filtros.
+              <br />
+              Tenta limpar a pesquisa ou verificar o catálogo completo.
+            </p>
+            <a href="/products" className="mt-4 btn-primary text-sm">
+              Go to all products
+            </a>
+          </div>
+        )}
+      </section>
+    </div>
   )
 }
