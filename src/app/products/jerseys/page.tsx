@@ -231,7 +231,7 @@ function ProductCard({ p }: { p: UIProduct }) {
 
 /* ============================================================
    Helper de paginação com "..."
-   Ex.: 1 2 3 ... 8
+   Ex.: « 1 2 3 ... 8 »
 ============================================================ */
 
 function buildPaginationRange(
@@ -401,9 +401,8 @@ export default function JerseysPage() {
                 Standard short-sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Standard short-sleeve jerseys (non-player version). Esta
-                listagem inclui também modelos retro que sejam camisolas de
-                manga curta.
+                Standard short-sleeve jerseys (non-player version). Esta listagem
+                inclui também modelos retro que sejam camisolas de manga curta.
               </p>
             </div>
 
@@ -507,6 +506,18 @@ export default function JerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+                {/* seta anterior */}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  aria-label="Página anterior"
+                >
+                  «
+                </button>
+
+                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -539,6 +550,17 @@ export default function JerseysPage() {
                     </button>
                   );
                 })}
+
+                {/* seta seguinte */}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  aria-label="Próxima página"
+                >
+                  »
+                </button>
               </nav>
             )}
           </>
