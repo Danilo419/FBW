@@ -1,21 +1,25 @@
 // src/app/products/current-season-25-26/page.tsx
-'use client'
+"use client";
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Search } from "lucide-react";
 
 /* ============================ Tipagem (igual ao search) ============================ */
 
 type UIProduct = {
-  id: string | number
-  name: string
-  slug?: string
-  img?: string
-  price?: number // EUR (ex.: 34.99)
-  team?: string | null
-}
+  id: string | number;
+  name: string;
+  slug?: string;
+  img?: string;
+  price?: number; // EUR (ex.: 34.99)
+  team?: string | null;
+};
+
+const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
 
 /* ============================ Promo map (EUR) ============================ */
+
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
   34.99: 100,
@@ -24,22 +28,22 @@ const SALE_MAP_EUR: Record<number, number> = {
   49.99: 165,
   59.99: 200,
   69.99: 230,
-}
+};
 
 function toCents(eur?: number | null) {
-  if (typeof eur !== 'number' || Number.isNaN(eur)) return null
-  return Math.round(eur * 100)
+  if (typeof eur !== "number" || Number.isNaN(eur)) return null;
+  return Math.round(eur * 100);
 }
 
 function getSale(priceEur?: number | null) {
-  if (typeof priceEur !== 'number') return null
-  const key = Number(priceEur.toFixed(2))
-  const oldEur = SALE_MAP_EUR[key as keyof typeof SALE_MAP_EUR]
-  if (!oldEur) return null
-  const now = toCents(priceEur)!
-  const old = toCents(oldEur)!
-  const pct = Math.round((1 - now / old) * 100)
-  return { compareAtCents: old, pct }
+  if (typeof priceEur !== "number") return null;
+  const key = Number(priceEur.toFixed(2));
+  const oldEur = SALE_MAP_EUR[key as keyof typeof SALE_MAP_EUR];
+  if (!oldEur) return null;
+  const now = toCents(priceEur)!;
+  const old = toCents(oldEur)!;
+  const pct = Math.round((1 - now / old) * 100);
+  return { compareAtCents: old, pct };
 }
 
 /** "150,00 €" */
@@ -47,66 +51,98 @@ function moneyAfter(cents: number) {
   const n = (cents / 100).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-  return `${n} €`
+  });
+  return `${n} €`;
 }
 
 /** Euros / cêntimos / símbolo */
 function pricePartsFromCents(cents: number) {
-  const euros = Math.floor(cents / 100).toString()
-  const dec = (cents % 100).toString().padStart(2, '0')
-  return { int: euros, dec, sym: '€' }
+  const euros = Math.floor(cents / 100).toString();
+  const dec = (cents % 100).toString().padStart(2, "0");
+  return { int: euros, dec, sym: "€" };
 }
 
 /* ========= Extração do NOME DO CLUBE (mesmo código do search) ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, 'Real Madrid'],
-  [/\b(fc\s*)?barcelona|barça\b/i, 'FC Barcelona'],
-  [/\batl[eé]tico\s*(de\s*)?madrid\b/i, 'Atlético de Madrid'],
-  [/\b(real\s*)?betis\b/i, 'Real Betis'],
-  [/\bsevilla\b/i, 'Sevilla FC'],
-  [/\breal\s*sociedad\b/i, 'Real Sociedad'],
-  [/\bvillarreal\b/i, 'Villarreal'],
-  [/\bsl?\s*benfica|benfica\b/i, 'SL Benfica'],
-  [/\bfc\s*porto|porto\b/i, 'FC Porto'],
-  [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, 'Sporting CP'],
-  [/\bsc\s*braga|braga\b/i, 'SC Braga'],
-  [/\bv[itó|ito]ria\s*(sc)?\b/i, 'Vitória SC'],
-]
+  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
+  [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
+  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\bsevilla\b/i, "Sevilla FC"],
+  [/\breal\s*sociedad\b/i, "Real Sociedad"],
+  [/\bvillarreal\b/i, "Villarreal"],
+  [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
+  [/\bfc\s*porto|porto\b/i, "FC Porto"],
+  [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
+  [/\bsc\s*braga|braga\b/i, "SC Braga"],
+  [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
+];
 
 function normalizeStr(s?: string | null) {
-  return (s ?? '').replace(/\s{2,}/g, ' ').trim()
+  return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
 function clubFromString(input?: string | null): string | null {
-  const s = normalizeStr(input)
-  if (!s) return null
+  const s = normalizeStr(input);
+  if (!s) return null;
   for (const [re, club] of CLUB_PATTERNS) {
-    if (re.test(s)) return club
+    if (re.test(s)) return club;
   }
-  return null
+  return null;
 }
 
 /** Obtém SEMPRE só o nome do clube (capitalização normal) */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team)
-  if (byTeam) return byTeam
+  const byTeam = clubFromString(p.team);
+  if (byTeam) return byTeam;
 
-  const byName = clubFromString(p.name)
-  if (byName) return byName
+  const byName = clubFromString(p.name);
+  if (byName) return byName;
 
-  return 'Club'
+  return "Club";
 }
 
-/* ============================ Card de produto (igual ao da search) ============================ */
+/* ============================ Helpers de filtro ============================ */
+
+function normName(p: UIProduct) {
+  return (p.name ?? "").toUpperCase();
+}
+
+function hasTerm(p: UIProduct, term: string) {
+  return normName(p).includes(term.toUpperCase());
+}
+
+function isPlayerVersion(p: UIProduct) {
+  return hasTerm(p, "PLAYER VERSION");
+}
+
+function isRetro(p: UIProduct) {
+  return hasTerm(p, "RETRO");
+}
+
+/** Mesma lógica que o "currentSeason" da Home:
+ *  - nome contém "25/26"
+ *  - NÃO é player version
+ *  - NÃO é retro
+ */
+function isCurrentSeasonProduct(p: UIProduct): boolean {
+  const n = normName(p);
+  if (!n) return false;
+  if (!n.includes("25/26")) return false;
+  if (isPlayerVersion(p)) return false;
+  if (isRetro(p)) return false;
+  return true;
+}
+
+/* ============================ Card de produto (igual ao da Jerseys avançada) ============================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : '#'
-  const cents = typeof p.price === 'number' ? toCents(p.price)! : null
-  const sale = cents != null ? getSale(p.price!) : null
-  const parts = cents != null ? pricePartsFromCents(cents) : null
-  const teamLabel = getClubLabel(p)
+  const href = p.slug ? `/products/${p.slug}` : "#";
+  const cents = typeof p.price === "number" ? toCents(p.price)! : null;
+  const sale = cents != null ? getSale(p.price!) : null;
+  const parts = cents != null ? pricePartsFromCents(cents) : null;
+  const teamLabel = getClubLabel(p);
 
   return (
     <a
@@ -125,18 +161,14 @@ function ProductCard({ p }: { p: UIProduct }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt={p.name}
-            src={
-              p.img ||
-              'data:image/svg+xml;utf8,' +
-                encodeURIComponent(
-                  `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
-                     <rect width='100%' height='100%' fill='#f3f4f6'/>
-                     <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-                       font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
-                   </svg>`
-                )
-            }
+            src={p.img || FALLBACK_IMG}
             loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if ((img as any)._fallbackApplied) return;
+              (img as any)._fallbackApplied = true;
+              img.src = FALLBACK_IMG;
+            }}
             className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
@@ -159,7 +191,7 @@ function ProductCard({ p }: { p: UIProduct }) {
               )}
 
               {parts && (
-                <div className="flex items-end" style={{ color: '#1c40b7' }}>
+                <div className="flex items-end" style={{ color: "#1c40b7" }}>
                   <span className="text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
@@ -177,127 +209,259 @@ function ProductCard({ p }: { p: UIProduct }) {
           <div className="mt-auto">
             <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
-              <span className="transition group-hover:translate-x-0.5">View product</span>
+              <span className="transition group-hover:translate-x-0.5">
+                View product
+              </span>
               <svg
                 className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
               >
-                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 01-1.414 0z" />
               </svg>
             </div>
           </div>
         </div>
       </div>
     </a>
-  )
+  );
 }
 
-/* ============================ Página 25/26 ============================ */
+/* ============================ Paginação com ... (como Jerseys avançada) ============================ */
 
-const PAGE_SIZE = 12
+function buildPaginationRange(
+  current: number,
+  total: number
+): (number | "dots")[] {
+  const pages: (number | "dots")[] = [];
+
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+    return pages;
+  }
+
+  const first = 1;
+  const last = total;
+  const left = Math.max(current - 1, 2);
+  const right = Math.min(current + 1, total - 1);
+
+  pages.push(first);
+
+  if (left > 2) {
+    pages.push("dots");
+  }
+
+  for (let i = left; i <= right; i++) {
+    pages.push(i);
+  }
+
+  if (right < total - 1) {
+    pages.push("dots");
+  }
+
+  pages.push(last);
+
+  return pages;
+}
+
+/* ============================ Página Current Season 25/26 ============================ */
+
+const PAGE_SIZE = 12;
 
 export default function CurrentSeasonPage() {
-  const [results, setResults] = useState<UIProduct[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(1)
+  const [results, setResults] = useState<UIProduct[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  // fetch FIXO: q=25/26  → o backend devolve todos os produtos cujo nome contém "25/26"
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
+    "team"
+  );
+
+  // fetch FIXO: q=25/26
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
 
-    const qParam = `?q=${encodeURIComponent('25/26')}`
+    const qParam = `?q=${encodeURIComponent("25/26")}`;
 
-    fetch(`/api/search${qParam}`, { cache: 'no-store' })
+    fetch(`/api/search${qParam}`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`)
-        const json = await r.json()
+        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
-          : []
+          : [];
 
-        // por precaução, ainda filtramos pelo nome conter "25/26"
-        const filtered = arr.filter((p) =>
-          p.name?.toLowerCase().includes('25/26'.toLowerCase())
-        )
+        // igual à Home: só 25/26 não-player e não-retro
+        const filtered = arr.filter(isCurrentSeasonProduct);
 
         if (!cancelled) {
-          setResults(filtered)
-          setPage(1)
+          setResults(filtered);
+          setPage(1);
         }
       })
       .catch((e) => {
         if (!cancelled) {
-          setResults([])
-          setError(e?.message || 'Search error')
+          setResults([]);
+          setError(e?.message || "Search error");
         }
       })
-      .finally(() => !cancelled && setLoading(false))
+      .finally(() => !cancelled && setLoading(false));
 
     return () => {
-      cancelled = true
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredSorted = useMemo(() => {
+    let base = results;
+
+    // filtro de texto (nome / equipa)
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      base = base.filter((p) => {
+        const name = (p.name ?? "").toUpperCase();
+        const team = (p.team ?? "").toUpperCase();
+        return name.includes(q) || team.includes(q);
+      });
     }
-  }, [])
+
+    // sort
+    if (sort === "random") {
+      const copy = base.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    if (sort === "price-asc" || sort === "price-desc") {
+      const copy = base.slice();
+      copy.sort((a, b) => {
+        const pa =
+          typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const pb =
+          typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        return sort === "price-asc" ? pa - pb : pb - pa;
+      });
+      return copy;
+    }
+
+    // default: ordenar por club + nome
+    const copy = base.slice();
+    copy.sort((a, b) => {
+      const ta = getClubLabel(a).toUpperCase();
+      const tb = getClubLabel(b).toUpperCase();
+      if (ta === tb) {
+        return (a.name ?? "").localeCompare(b.name ?? "");
+      }
+      return ta.localeCompare(tb);
+    });
+    return copy;
+  }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(results.length / PAGE_SIZE)),
-    [results.length]
-  )
+    () => Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE)),
+    [filteredSorted.length]
+  );
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const pageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    const end = start + PAGE_SIZE
-    return results.slice(start, end)
-  }, [results, page])
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredSorted.slice(start, end);
+  }, [filteredSorted, page]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [page])
+  }, [page]);
 
   return (
-    <main className="min-h-screen bg-white">
-      <section className="container-fw pt-10 pb-16 md:pt-12 md:pb-20">
-        {/* Header */}
-        <header className="mb-8 md:mb-10">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-            Product category
-          </p>
-          <h1 className="mt-2 text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-            Current season 25/26
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600">
-            All products whose name contains <strong>&quot;25/26&quot;</strong>.
-          </p>
+    <div className="min-h-screen bg-white">
+      {/* HEADER (igual estrutura da página de Jerseys avançada) */}
+      <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
+        <div className="container-fw py-10 sm:py-14">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                Product category
+              </p>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
+                Current season 25/26
+              </h1>
+              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
+                All non-player, non-retro items whose name contains{" "}
+                <strong>&quot;25/26&quot;</strong>.
+              </p>
+            </div>
 
-          <div className="mt-3 text-xs sm:text-sm text-gray-500">
+            <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
+              <a href="/" className="btn-outline text-sm">
+                ← Back to Home Page
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CONTEÚDO (barra de info + filtros como na Jerseys) */}
+      <section className="container-fw section-gap">
+        {/* Filtros + info */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              'Loading products...'
-            ) : error ? (
-              <>Error loading products: {error}</>
-            ) : results.length > 0 ? (
-              <>
-                Showing{' '}
-                <span className="font-semibold">{pageItems.length}</span> of{' '}
-                <span className="font-semibold">{results.length}</span> products (page{' '}
-                {page} of {totalPages}).
-              </>
+              <span>Loading products…</span>
             ) : (
-              'No products with "25/26" in the name were found.'
+              <span>{filteredSorted.length} products found</span>
             )}
           </div>
-        </header>
 
-        {/* GRID – máx 4 por linha, 12 por página */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by team or product name"
+                className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
+              <span className="text-gray-500">Sort by:</span>
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as any);
+                  setPage(1);
+                }}
+                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="team">Team & name</option>
+                <option value="price-asc">Price (low → high)</option>
+                <option value="price-desc">Price (high → low)</option>
+                <option value="random">Random</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* LOADING */}
         {loading && (
           <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -318,12 +482,16 @@ export default function CurrentSeasonPage() {
           </div>
         )}
 
+        {/* ERRO */}
+        {!loading && error && <p className="text-red-600">{error}</p>}
+
+        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
-                  No products with &quot;25/26&quot; in the name were found.
+                  No current-season 25/26 products were found.
                 </p>
               )}
 
@@ -332,9 +500,9 @@ export default function CurrentSeasonPage() {
               ))}
             </div>
 
-            {/* Paginação: « 1 2 3 » */}
-            {results.length > PAGE_SIZE && (
+            {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -345,29 +513,41 @@ export default function CurrentSeasonPage() {
                   «
                 </button>
 
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {Array.from({ length: totalPages }).map((_, idx) => {
-                    const n = idx + 1
-                    const active = n === page
+                {/* números com ... */}
+                {buildPaginationRange(page, totalPages).map((item, idx) => {
+                  if (item === "dots") {
                     return (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setPage(n)}
-                        className={[
-                          'min-w-[40px] px-3 py-2 rounded-xl ring-1 transition',
-                          active
-                            ? 'bg-sky-600 text-white ring-sky-600 shadow-sm'
-                            : 'bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm',
-                        ].join(' ')}
-                        aria-current={active ? 'page' : undefined}
+                      <span
+                        key={`dots-${idx}`}
+                        className="px-3 py-2 text-sm text-slate-500"
                       >
-                        {n}
-                      </button>
-                    )
-                  })}
-                </div>
+                        ...
+                      </span>
+                    );
+                  }
 
+                  const n = item as number;
+                  const active = n === page;
+
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      className={[
+                        "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                        active
+                          ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
+                          : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                      ].join(" ")}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+
+                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -382,7 +562,7 @@ export default function CurrentSeasonPage() {
           </>
         )}
 
-        {/* Link de fallback para catálogo completo */}
+        {/* Botão final (igual estilo) */}
         <div className="mt-10 text-center">
           <Link
             href="/products"
@@ -392,6 +572,6 @@ export default function CurrentSeasonPage() {
           </Link>
         </div>
       </section>
-    </main>
-  )
+    </div>
+  );
 }
