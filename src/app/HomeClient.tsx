@@ -1145,20 +1145,20 @@ export default function Home() {
       group: 'Training',
     },
 
-    // Kids & Lifestyle
+    // Kids & Woman
     {
       key: 'kidsKits',
       title: 'Kids Kits',
       subtitle: 'Full sets for kids',
       href: '/products/kids-kits',
-      group: 'Kids & Lifestyle',
+      group: 'Kids & Woman',
     },
     {
       key: 'cropTops',
       title: 'Crop Tops',
       subtitle: 'Stylish cropped tops',
       href: '/products/crop-tops',
-      group: 'Kids & Lifestyle',
+      group: 'Kids & Woman',
     },
   ]
 
@@ -1167,7 +1167,7 @@ export default function Home() {
     'Retro',
     'Concept & Special',
     'Training',
-    'Kids & Lifestyle',
+    'Kids & Woman',
   ]
 
   return (
