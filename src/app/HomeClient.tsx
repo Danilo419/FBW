@@ -1,4 +1,3 @@
-// src/app/HomeClient.tsx
 'use client'
 
 import React, {
@@ -84,7 +83,7 @@ function MagneticButton({
   const springY = useSpring(y, { stiffness: 300, damping: 20 })
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    const el = ref.current as HTMLElement
+    const el = ref.current as HTMLElement | null
     if (!el) return
     const rect = el.getBoundingClientRect()
     const mx = e.clientX - rect.left - rect.width / 2
@@ -548,7 +547,7 @@ function HeroImageCycler({
           height: 100%;
           object-fit: cover;
           opacity: 0;
-          transform: scale(1.0);
+          transform: scale(1);
           transition-property: opacity, transform;
           transition-timing-function: ease-in-out;
           transition-duration: 800ms;
@@ -872,10 +871,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
 
-  const duplicated = useMemo(
-    () => [...products, ...products],
-    [products]
-  )
+  const duplicated = useMemo(() => [...products, ...products], [products])
 
   const trackRef = useRef<HTMLDivElement | null>(null)
   const baseWidthRef = useRef<number>(0)
@@ -888,7 +884,7 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
 
     const measure = () => {
       const full = el.scrollWidth
-      baseWidthRef.current = full / 2 // largura de um ciclo
+      baseWidthRef.current = full / 2
     }
 
     measure()
@@ -901,7 +897,7 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
     const base = baseWidthRef.current
     if (!base) return
 
-    const speedPxPerSec = 60 // velocidade
+    const speedPxPerSec = 60
     const move = (speedPxPerSec * delta) / 1000
 
     let next = lastXRef.current - move
@@ -916,11 +912,7 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
   return (
     <div className="relative -mx-4 sm:mx-0 overflow-hidden">
       <div className="py-3">
-        <motion.div
-          ref={trackRef}
-          style={{ x }}
-          className="flex gap-2 sm:gap-4"
-        >
+        <motion.div ref={trackRef} style={{ x }} className="flex gap-2 sm:gap-4">
           {duplicated.map((p, i) => (
             <ProductCard key={`${p.id ?? p.slug ?? i}-${i}`} product={p} />
           ))}
@@ -1023,24 +1015,17 @@ export default function Home() {
         (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
       jerseys: mk(filterJerseys),
-      longSleeve: mk(
-        (p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
-      ),
-      playerVersion: mk(
-        (p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
-      ),
+      longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
+      playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
-      retro: mk(
-        (p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
-      ),
+      retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
       retroLongSleeve: mk(
         (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
       ),
       conceptKits: mk(
-        (p) =>
-          hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
+        (p) => hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
       preMatch: mk(
         (p) => hasTerm(p, 'PRE-MATCH') && !isRetro(p) && !isPlayerVersion(p)
@@ -1066,90 +1051,123 @@ export default function Home() {
     }
   }, [homeProducts])
 
+  type CategoryKey = keyof NonNullable<typeof categories>
+
   const CATEGORY_UI: {
-    key: keyof NonNullable<typeof categories>
+    key: CategoryKey
     title: string
     subtitle?: string
     href: string
+    group: string
   }[] = [
+    // Jerseys
     {
       key: 'currentSeason',
       title: 'Current season 25/26',
       subtitle: 'Latest club & national-team drops (non-player version)',
       href: '/products/current-season-25-26',
+      group: 'Jerseys',
     },
     {
       key: 'jerseys',
-      title: 'Jerseys',
+      title: 'Jerseys (short sleeve)',
       subtitle: 'Standard short-sleeve jerseys (non-player version)',
       href: '/products/jerseys',
+      group: 'Jerseys',
     },
     {
       key: 'longSleeve',
       title: 'Long Sleeve Jerseys',
       subtitle: 'Non-player long-sleeve jerseys',
       href: '/products/long-sleeve-jerseys',
+      group: 'Jerseys',
     },
     {
       key: 'playerVersion',
       title: 'Player Version Jerseys',
       subtitle: 'On-pitch fit, short sleeve',
       href: '/products/player-version-jerseys',
+      group: 'Jerseys',
     },
     {
       key: 'playerVersionLongSleeve',
       title: 'Player Version Long Sleeve Jerseys',
       subtitle: 'On-pitch fit, long sleeve',
       href: '/products/player-version-long-sleeve-jerseys',
+      group: 'Jerseys',
     },
+
+    // Retro
     {
       key: 'retro',
       title: 'Retro Jerseys',
       subtitle: 'Throwback legends from classic seasons',
       href: '/products/retro-jerseys',
+      group: 'Retro',
     },
     {
       key: 'retroLongSleeve',
       title: 'Retro Long Sleeve Jerseys',
       subtitle: 'Retro designs with long sleeves',
       href: '/products/retro-long-sleeve-jerseys',
+      group: 'Retro',
     },
+
+    // Concept & Special
     {
       key: 'conceptKits',
       title: 'Concept Kits',
       subtitle: 'Original concept designs',
       href: '/products/concept-kits',
+      group: 'Concept & Special',
     },
     {
       key: 'preMatch',
       title: 'Pre-Match Jerseys',
       subtitle: 'Warm-up and pre-game tops',
       href: '/products/pre-match-jerseys',
+      group: 'Concept & Special',
     },
+
+    // Training
     {
       key: 'trainingSleeveless',
       title: 'Training Sleeveless Sets',
       subtitle: 'Tank + shorts training sets',
       href: '/products/training-sleeveless-sets',
+      group: 'Training',
     },
     {
       key: 'trainingTracksuit',
       title: 'Training Tracksuits',
       subtitle: 'Full training sets (top & pants)',
       href: '/products/training-tracksuits',
+      group: 'Training',
     },
+
+    // Kids & Lifestyle
     {
       key: 'kidsKits',
       title: 'Kids Kits',
       subtitle: 'Full sets for kids',
       href: '/products/kids-kits',
+      group: 'Kids & Lifestyle',
     },
     {
       key: 'cropTops',
       title: 'Crop Tops',
       subtitle: 'Stylish cropped tops',
       href: '/products/crop-tops',
+      group: 'Kids & Lifestyle',
     },
+  ]
+
+  const GROUP_ORDER = [
+    'Jerseys',
+    'Retro',
+    'Concept & Special',
+    'Training',
+    'Kids & Lifestyle',
   ]
 
   return (
@@ -1312,32 +1330,55 @@ export default function Home() {
 
             {!loadingHomeProducts && categories && (
               <div className="space-y-10">
-                {CATEGORY_UI.map(({ key, title, subtitle, href }) => {
-                  const list = categories[key]
-                  if (!list || !list.length) return null
+                {GROUP_ORDER.map((groupLabel) => {
+                  const groupItems = CATEGORY_UI.filter(
+                    (c) =>
+                      c.group === groupLabel &&
+                      categories[c.key] &&
+                      categories[c.key]!.length
+                  )
+
+                  if (!groupItems.length) return null
 
                   return (
-                    <div key={key} className="space-y-3">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div>
-                          <h4 className="text-lg sm:text-xl font-semibold tracking-tight">
-                            {title}
-                          </h4>
-                          {subtitle && (
-                            <p className="text-xs sm:text-sm text-gray-500">
-                              {subtitle}
-                            </p>
-                          )}
-                        </div>
-                        <a
-                          href={href}
-                          className="text-xs sm:text-sm text-blue-700 hover:underline"
-                        >
-                          View all →
-                        </a>
+                    <div key={groupLabel} className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
+                          {groupLabel}
+                        </h3>
                       </div>
 
-                      <ProductMarquee products={list} />
+                      <div className="space-y-8">
+                        {groupItems.map(({ key, title, subtitle, href }) => {
+                          const list = categories[key]
+                          if (!list || !list.length) return null
+
+                          return (
+                            <div key={key} className="space-y-3">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <div>
+                                  <h4 className="text-lg sm:text-xl font-semibold tracking-tight">
+                                    {title}
+                                  </h4>
+                                  {subtitle && (
+                                    <p className="text-xs sm:text-sm text-gray-500">
+                                      {subtitle}
+                                    </p>
+                                  )}
+                                </div>
+                                <a
+                                  href={href}
+                                  className="text-xs sm:text-sm text-blue-700 hover:underline"
+                                >
+                                  View all →
+                                </a>
+                              </div>
+
+                              <ProductMarquee products={list} />
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )
                 })}
@@ -1411,7 +1452,9 @@ export default function Home() {
         <TiltCard>
           <div className="grid md:grid-cols-2 gap-6 items-center p-8">
             <div>
-              <h3 className="text-2xl font-bold">Choose your next jersey with confidence</h3>
+              <h3 className="text-2xl font-bold">
+                Choose your next jersey with confidence
+              </h3>
               <p className="mt-2 text-gray-600">
                 Discover authentic club and national-team kits alongside our original
                 concept designs, then pick your next favorite.
