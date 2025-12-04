@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient)
@@ -16,8 +16,7 @@ type UIProduct = {
   team?: string | null;
 };
 
-const FALLBACK_IMG =
-  "/images/players/RealMadrid/RealMadrid12.png";
+const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
 
 /* ============================================================
    Preços / Promo (copiado do search)
@@ -122,7 +121,6 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
   if (n.includes("LONG SLEEVE")) return false;
 
   // ⚠️ NÃO excluímos mais RETRO → retro também aparecem
-  // if (n.includes("RETRO")) return false;
 
   if (n.includes("SET")) return false;
   if (n.includes("SHORTS")) return false;
@@ -221,7 +219,7 @@ function ProductCard({ p }: { p: UIProduct }) {
                 fill="currentColor"
                 aria-hidden="true"
               >
-                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 01-1.414 0z" />
               </svg>
             </div>
           </div>
@@ -229,6 +227,46 @@ function ProductCard({ p }: { p: UIProduct }) {
       </div>
     </a>
   );
+}
+
+/* ============================================================
+   Helper de paginação com "..."
+   Ex.: 1 2 3 ... 8
+============================================================ */
+
+function buildPaginationRange(
+  current: number,
+  total: number
+): (number | "dots")[] {
+  const pages: (number | "dots")[] = [];
+
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+    return pages;
+  }
+
+  const first = 1;
+  const last = total;
+  const left = Math.max(current - 1, 2);
+  const right = Math.min(current + 1, total - 1);
+
+  pages.push(first);
+
+  if (left > 2) {
+    pages.push("dots");
+  }
+
+  for (let i = left; i <= right; i++) {
+    pages.push(i);
+  }
+
+  if (right < total - 1) {
+    pages.push("dots");
+  }
+
+  pages.push(last);
+
+  return pages;
 }
 
 /* ============================================================
@@ -259,7 +297,9 @@ export default function JerseysPage() {
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+        const arr: UIProduct[] = Array.isArray(json?.products)
+          ? json.products
+          : [];
         if (!cancelled) {
           setResults(arr);
           setPage(1);
@@ -304,8 +344,10 @@ export default function JerseysPage() {
     if (sort === "price-asc" || sort === "price-desc") {
       const copy = base.slice();
       copy.sort((a, b) => {
-        const pa = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
-        const pb = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        const pa =
+          typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const pb =
+          typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
         return sort === "price-asc" ? pa - pb : pb - pa;
       });
       return copy;
@@ -359,8 +401,9 @@ export default function JerseysPage() {
                 Standard short-sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Standard short-sleeve jerseys (non-player version). Esta listagem inclui
-                também modelos retro que sejam camisolas de manga curta.
+                Standard short-sleeve jerseys (non-player version). Esta
+                listagem inclui também modelos retro que sejam camisolas de
+                manga curta.
               </p>
             </div>
 
@@ -445,9 +488,7 @@ export default function JerseysPage() {
         )}
 
         {/* ERRO */}
-        {!loading && error && (
-          <p className="text-red-600">{error}</p>
-        )}
+        {!loading && error && <p className="text-red-600">{error}</p>}
 
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
@@ -466,48 +507,38 @@ export default function JerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-                  aria-label="Página anterior"
-                >
-                  «
-                </button>
-
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {Array.from({ length: totalPages }).map((_, idx) => {
-                    const n = idx + 1;
-                    const active = n === page;
+                {buildPaginationRange(page, totalPages).map((item, idx) => {
+                  if (item === "dots") {
                     return (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setPage(n)}
-                        className={[
-                          "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
-                          active
-                            ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                            : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
-                        ].join(" ")}
-                        aria-current={active ? "page" : undefined}
+                      <span
+                        key={`dots-${idx}`}
+                        className="px-3 py-2 text-sm text-slate-500"
                       >
-                        {n}
-                      </button>
+                        ...
+                      </span>
                     );
-                  })}
-                </div>
+                  }
 
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-                  aria-label="Próxima página"
-                >
-                  »
-                </button>
+                  const n = item as number;
+                  const active = n === page;
+
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      className={[
+                        "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                        active
+                          ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
+                          : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                      ].join(" ")}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
               </nav>
             )}
           </>
