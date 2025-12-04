@@ -1,8 +1,7 @@
-// src/app/products/current-season-25-26/page.tsx
+// src/app/products/long-sleeve-jerseys/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Search } from "lucide-react";
 
 /* ============================ Tipagem (igual ao search) ============================ */
@@ -121,21 +120,25 @@ function isRetro(p: UIProduct) {
   return hasTerm(p, "RETRO");
 }
 
-/** Mesma lógica que o "currentSeason" da Home:
- *  - nome contém "25/26"
- *  - NÃO é player version
- *  - NÃO é retro
+function isLongSleeve(p: UIProduct) {
+  return hasTerm(p, "LONG SLEEVE");
+}
+
+/** Long Sleeve Jerseys:
+ *  - LONG SLEEVE
+ *  - não player version
+ *  - não retro
  */
-function isCurrentSeasonProduct(p: UIProduct): boolean {
+function isLongSleeveNonPlayer(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
-  if (!n.includes("25/26")) return false;
+  if (!isLongSleeve(p)) return false;
   if (isPlayerVersion(p)) return false;
   if (isRetro(p)) return false;
   return true;
 }
 
-/* ============================ Card de produto (igual ao da Jerseys avançada) ============================ */
+/* ============================ Card de produto (igual ao da Jerseys) ============================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
   const href = p.slug ? `/products/${p.slug}` : "#";
@@ -228,7 +231,7 @@ function ProductCard({ p }: { p: UIProduct }) {
   );
 }
 
-/* ============================ Paginação com ... (como Jerseys avançada) ============================ */
+/* ============================ Paginação com ... ============================ */
 
 function buildPaginationRange(
   current: number,
@@ -265,11 +268,11 @@ function buildPaginationRange(
   return pages;
 }
 
-/* ============================ Página Current Season 25/26 ============================ */
+/* ============================ Página Long Sleeve Jerseys ============================ */
 
 const PAGE_SIZE = 12;
 
-export default function CurrentSeasonPage() {
+export default function LongSleeveJerseysPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -280,13 +283,13 @@ export default function CurrentSeasonPage() {
     "team"
   );
 
-  // fetch FIXO: q=25/26
+  // fetch via search (q=jersey) e depois filtramos long sleeve
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    const qParam = `?q=${encodeURIComponent("25/26")}`;
+    const qParam = `?q=${encodeURIComponent("jersey")}`;
 
     fetch(`/api/search${qParam}`, { cache: "no-store" })
       .then(async (r) => {
@@ -296,8 +299,7 @@ export default function CurrentSeasonPage() {
           ? json.products
           : [];
 
-        // igual à Home: só 25/26 não-player e não-retro
-        const filtered = arr.filter(isCurrentSeasonProduct);
+        const filtered = arr.filter(isLongSleeveNonPlayer);
 
         if (!cancelled) {
           setResults(filtered);
@@ -388,7 +390,7 @@ export default function CurrentSeasonPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER (igual estrutura da página de Jerseys avançada) */}
+      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-10 sm:py-14">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -397,11 +399,10 @@ export default function CurrentSeasonPage() {
                 Product category
               </p>
               <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
-                Current season 25/26
+                Long sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                All non-player, non-retro items whose name contains{" "}
-                <strong>&quot;25/26&quot;</strong>.
+                Non-player long-sleeve jerseys.
               </p>
             </div>
 
@@ -414,16 +415,16 @@ export default function CurrentSeasonPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO (barra de info + filtros como na Jerseys) */}
+      {/* CONTEÚDO */}
       <section className="container-fw section-gap">
         {/* Filtros + info */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading products…</span>
+              <span>Loading jerseys…</span>
             ) : (
-              <span>{filteredSorted.length} products found</span>
+              <span>{filteredSorted.length} jerseys found</span>
             )}
           </div>
 
@@ -437,7 +438,7 @@ export default function CurrentSeasonPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or product name"
+                placeholder="Search by team or jersey name"
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -491,7 +492,7 @@ export default function CurrentSeasonPage() {
             <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
-                  No current-season 25/26 products were found.
+                  No long-sleeve jerseys were found.
                 </p>
               )}
 
@@ -561,8 +562,6 @@ export default function CurrentSeasonPage() {
             )}
           </>
         )}
-
-        
       </section>
     </div>
   );
