@@ -1,9 +1,11 @@
+// src/app/products/jerseys/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Loader2, Search } from "lucide-react";
 
 /* ============================================================
-   Tipos
+   Tipos (iguais ao ResultsClient)
 ============================================================ */
 type UIProduct = {
   id: string | number;
@@ -14,9 +16,13 @@ type UIProduct = {
   team?: string | null;
 };
 
+const FALLBACK_IMG =
+  "/images/players/RealMadrid/RealMadrid12.png";
+
 /* ============================================================
-   SALE MAP
+   Preços / Promo (copiado do search)
 ============================================================ */
+
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
   34.99: 100,
@@ -28,7 +34,7 @@ const SALE_MAP_EUR: Record<number, number> = {
 };
 
 function toCents(eur?: number | null) {
-  if (typeof eur !== "number") return null;
+  if (typeof eur !== "number" || Number.isNaN(eur)) return null;
   return Math.round(eur * 100);
 }
 
@@ -58,25 +64,32 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB NAME NORMALIZATION
+   CLUB LABEL (igual ao search)
 ============================================================ */
+
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
+  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\bsevilla\b/i, "Sevilla FC"],
+  [/\breal\s*sociedad\b/i, "Real Sociedad"],
+  [/\bvillarreal\b/i, "Villarreal"],
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
   [/\bsc\s*braga|braga\b/i, "SC Braga"],
+  [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
 ];
 
 function normalizeStr(s?: string | null) {
-  return (s ?? "").replace(/\s+/g, " ").trim();
+  return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
+
   for (const [re, club] of CLUB_PATTERNS) {
     if (re.test(s)) return club;
   }
@@ -84,25 +97,31 @@ function clubFromString(input?: string | null): string | null {
 }
 
 function getClubLabel(p: UIProduct): string {
-  return (
-    clubFromString(p.team) ||
-    clubFromString(p.name) ||
-    "Club"
-  );
+  const byTeam = clubFromString(p.team);
+  if (byTeam) return byTeam;
+
+  const byName = clubFromString(p.name);
+  if (byName) return byName;
+
+  return "Club";
 }
 
 /* ============================================================
-   FILTRO — AGORA INCLUI RETRO
+   Filtro: standard short-sleeve (inclui RETRO)
 ============================================================ */
+
+function normName(p: UIProduct) {
+  return (p.name ?? "").toUpperCase();
+}
+
 function isStandardShortSleeveJersey(p: UIProduct): boolean {
-  const n = (p.name ?? "").toUpperCase();
+  const n = normName(p);
   if (!n) return false;
 
   if (n.includes("PLAYER VERSION")) return false;
   if (n.includes("LONG SLEEVE")) return false;
 
-  // ★★ IMPORTANTE ★★  
-  // Removemos completamente:
+  // ⚠️ NÃO excluímos mais RETRO → retro também aparecem
   // if (n.includes("RETRO")) return false;
 
   if (n.includes("SET")) return false;
@@ -112,68 +131,213 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-
-  // Só excluímos KIT quando é kit completo – mas jerseys retro ficam incluídas
-  if (n.includes(" KIT")) return false;
+  if (n.includes(" KIT")) return false; // kit completo
 
   return true;
 }
 
 /* ============================================================
-   COMPONENTE DA PÁGINA
+   Card de produto (igual look & feel do search)
 ============================================================ */
+
+function ProductCard({ p }: { p: UIProduct }) {
+  const href = p.slug ? `/products/${p.slug}` : undefined;
+  const cents = typeof p.price === "number" ? toCents(p.price)! : null;
+  const sale = cents != null ? getSale(p.price!) : null;
+  const parts = cents != null ? pricePartsFromCents(cents) : null;
+  const teamLabel = getClubLabel(p);
+
+  return (
+    <a
+      key={String(p.id)}
+      href={href}
+      className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
+    >
+      {sale && (
+        <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+          -{sale.pct}%
+        </div>
+      )}
+
+      <div className="flex flex-col h-full">
+        <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={p.name}
+            src={p.img || FALLBACK_IMG}
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if ((img as any)._fallbackApplied) return;
+              (img as any)._fallbackApplied = true;
+              img.src = FALLBACK_IMG;
+            }}
+            className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+
+        <div className="p-5 flex flex-col grow">
+          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+            {teamLabel}
+          </div>
+
+          <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+            {p.name}
+          </div>
+
+          <div className="mt-4">
+            <div className="flex items-end gap-2">
+              {sale && (
+                <div className="text-[13px] text-slate-500 line-through">
+                  {moneyAfter(sale.compareAtCents)}
+                </div>
+              )}
+
+              {parts && (
+                <div className="flex items-end" style={{ color: "#1c40b7" }}>
+                  <span className="text-2xl font-semibold tracking-tight leading-none">
+                    {parts.int}
+                  </span>
+                  <span className="text-[13px] font-medium translate-y-[1px]">
+                    ,{parts.dec}
+                  </span>
+                  <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                    {parts.sym}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-auto">
+            <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span className="transition group-hover:translate-x-0.5">
+                View product
+              </span>
+              <svg
+                className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+/* ============================================================
+   Página Jerseys
+   - Busca via /api/search?q=jersey (como ResultsClient)
+   - Inclui retro (não excluímos "RETRO")
+============================================================ */
+
 export default function JerseysPage() {
-  const [loading, setLoading] = useState(true);
-  const [allProducts, setAllProducts] = useState<UIProduct[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // paginação
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
+    "team"
+  );
 
-  /* Fetch dos produtos (SEM LIMIT) */
+  // 👉 Usa a mesma API que a search, mas com query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
-    fetch("/api/home-products?limit=9999", { cache: "no-store" })
+    fetch(`/api/search?q=jersey`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error("Failed to load products");
+        if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json.products)
-          ? json.products
-          : [];
-        if (!cancelled) setAllProducts(arr);
+        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+        if (!cancelled) {
+          setResults(arr);
+          setPage(1);
+        }
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) {
+          setResults([]);
+          setError(e?.message || "Search error");
+        }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .finally(() => !cancelled && setLoading(false));
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  /* Filtrar jerseys */
-  const jerseys = useMemo(
-    () => allProducts.filter(isStandardShortSleeveJersey),
-    [allProducts]
+  const jerseysFiltered = useMemo(() => {
+    let base = results.filter(isStandardShortSleeveJersey);
+
+    // filtro de texto (nome / equipa)
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      base = base.filter((p) => {
+        const name = (p.name ?? "").toUpperCase();
+        const team = (p.team ?? "").toUpperCase();
+        return name.includes(q) || team.includes(q);
+      });
+    }
+
+    // sort
+    if (sort === "random") {
+      const copy = base.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    if (sort === "price-asc" || sort === "price-desc") {
+      const copy = base.slice();
+      copy.sort((a, b) => {
+        const pa = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const pb = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        return sort === "price-asc" ? pa - pb : pb - pa;
+      });
+      return copy;
+    }
+
+    // default: ordenar por club + nome
+    const copy = base.slice();
+    copy.sort((a, b) => {
+      const ta = getClubLabel(a).toUpperCase();
+      const tb = getClubLabel(b).toUpperCase();
+      if (ta === tb) {
+        return (a.name ?? "").localeCompare(b.name ?? "");
+      }
+      return ta.localeCompare(tb);
+    });
+    return copy;
+  }, [results, searchTerm, sort]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
+    [jerseysFiltered.length]
   );
 
-  const totalPages = Math.max(1, Math.ceil(jerseys.length / PAGE_SIZE));
-
-  // garantir que a página válida
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
-    return jerseys.slice(start, start + PAGE_SIZE);
-  }, [jerseys, page]);
+    const end = start + PAGE_SIZE;
+    return jerseysFiltered.slice(start, end);
+  }, [jerseysFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -181,144 +345,174 @@ export default function JerseysPage() {
     }
   }, [page]);
 
-  /* ============================================================
-     RENDER
-  ============================================================ */
-  if (loading) {
-    return <p className="text-gray-500">Loading…</p>;
-  }
-
-  if (error) {
-    return <p className="text-red-600">{error}</p>;
-  }
-
   return (
-    <div className="container-fw py-12">
-      <h1 className="text-3xl font-bold mb-2">Jerseys</h1>
-      <p className="text-gray-600 mb-8">
-        Standard short-sleeve jerseys (non-player version)
-      </p>
+    <div className="min-h-screen bg-white">
+      {/* HEADER */}
+      <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
+        <div className="container-fw py-10 sm:py-14">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                Jerseys
+              </p>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
+                Standard short-sleeve jerseys
+              </h1>
+              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
+                Standard short-sleeve jerseys (non-player version). Esta listagem inclui
+                também modelos retro que sejam camisolas de manga curta.
+              </p>
+            </div>
 
-      <p className="text-sm text-gray-700 mb-6">
-        <strong>{jerseys.length}</strong> jerseys found
-      </p>
+            <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
+              <a href="/#products" className="btn-outline text-sm">
+                ← Back to highlights
+              </a>
+              <a href="/products" className="btn-primary text-sm">
+                View full catalog
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {jerseys.length === 0 && (
-        <p className="text-gray-500">No jerseys found.</p>
-      )}
+      {/* CONTEÚDO */}
+      <section className="container-fw section-gap">
+        {/* Filtros + info */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            {loading ? (
+              <span>Loading jerseys…</span>
+            ) : (
+              <span>{jerseysFiltered.length} jerseys found</span>
+            )}
+          </div>
 
-      {/* GRID */}
-      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {pageItems.map((p) => {
-          const href = p.slug ? `/products/${p.slug}` : undefined;
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by team or jersey name"
+                className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-          const cents = p.price ? toCents(p.price) : null;
-          const sale = p.price ? getSale(p.price) : null;
-          const parts =
-            cents != null ? pricePartsFromCents(cents) : null;
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
+              <span className="text-gray-500">Sort by:</span>
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as any);
+                  setPage(1);
+                }}
+                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="team">Team & name</option>
+                <option value="price-asc">Price (low → high)</option>
+                <option value="price-desc">Price (high → low)</option>
+                <option value="random">Random</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
-          const teamLabel = getClubLabel(p);
-
-          return (
-            <a
-              key={String(p.id)}
-              href={href}
-              className="group block rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition overflow-hidden"
-            >
-              {sale && (
-                <div className="absolute left-3 top-3 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold">
-                  -{sale.pct}%
+        {/* LOADING */}
+        {loading && (
+          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+              >
+                <div className="aspect-[4/5] bg-slate-100" />
+                <div className="p-5">
+                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
+                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
+                  <div className="h-3 w-20 bg-slate-200 rounded" />
+                  <div className="mt-6 h-px bg-slate-200/70" />
+                  <div className="h-12" />
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ERRO */}
+        {!loading && error && (
+          <p className="text-red-600">{error}</p>
+        )}
+
+        {/* GRID + PAGINAÇÃO */}
+        {!loading && !error && (
+          <>
+            <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {pageItems.length === 0 && (
+                <p className="text-gray-500 col-span-full">
+                  Nenhum jersey encontrado.
+                </p>
               )}
 
-              <div className="aspect-[4/5] bg-slate-50 relative">
-                <img
-                  src={p.img}
-                  alt={p.name}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-contain p-6 group-hover:scale-105 transition"
-                />
-              </div>
+              {pageItems.map((p) => (
+                <ProductCard key={String(p.id)} p={p} />
+              ))}
+            </div>
 
-              <div className="p-5">
-                <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
-                  {teamLabel}
+            {pageItems.length > 0 && totalPages > 1 && (
+              <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  aria-label="Página anterior"
+                >
+                  «
+                </button>
+
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    const n = idx + 1;
+                    const active = n === page;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setPage(n)}
+                        className={[
+                          "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                          active
+                            ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
+                            : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                        ].join(" ")}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="mt-1 text-base font-semibold leading-tight line-clamp-2">
-                  {p.name}
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-end gap-2">
-                    {sale && (
-                      <div className="text-[13px] text-gray-400 line-through">
-                        {moneyAfter(sale.compareAtCents)}
-                      </div>
-                    )}
-
-                    {parts && (
-                      <div className="flex items-end text-blue-800">
-                        <span className="text-2xl font-semibold">
-                          {parts.int}
-                        </span>
-                        <span className="text-[13px] ml-0.5">
-                          ,{parts.dec}
-                        </span>
-                        <span className="text-[15px] ml-1">€</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 h-px bg-slate-200" />
-                <div className="h-10 flex items-center gap-2 text-sm text-slate-700">
-                  View product →
-                </div>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-
-      {/* Paginação */}
-      {totalPages > 1 && (
-        <nav className="mt-10 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-2 rounded-xl ring-1 ring-slate-300 bg-white disabled:opacity-40"
-          >
-            «
-          </button>
-
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const n = i + 1;
-            const active = n === page;
-            return (
-              <button
-                key={n}
-                onClick={() => setPage(n)}
-                className={
-                  active
-                    ? "px-3 py-2 rounded-xl bg-sky-600 text-white"
-                    : "px-3 py-2 rounded-xl bg-white ring-1 ring-slate-300"
-                }
-              >
-                {n}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-2 rounded-xl ring-1 ring-slate-300 bg-white disabled:opacity-40"
-          >
-            »
-          </button>
-        </nav>
-      )}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  aria-label="Próxima página"
+                >
+                  »
+                </button>
+              </nav>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }
