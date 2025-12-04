@@ -401,17 +401,13 @@ export default function JerseysPage() {
                 Standard short-sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Standard short-sleeve jerseys (non-player version). Esta listagem
-                inclui também modelos retro que sejam camisolas de manga curta.
+                Standard short-sleeve jerseys (non-player version).
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/#products" className="btn-outline text-sm">
-                ← Back to highlights
-              </a>
-              <a href="/products" className="btn-primary text-sm">
-                View full catalog
+              <a href="/" className="btn-outline text-sm">
+                ← Back to Home Page
               </a>
             </div>
           </div>
