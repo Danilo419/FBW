@@ -106,7 +106,7 @@ function getClubLabel(p: UIProduct): string {
 }
 
 /* ============================================================
-   Filtro: standard short-sleeve (inclui RETRO)
+   Filtro: standard short-sleeve (AGORA EXCLUI RETRO)
 ============================================================ */
 
 function normName(p: UIProduct) {
@@ -120,7 +120,8 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
   if (n.includes("PLAYER VERSION")) return false;
   if (n.includes("LONG SLEEVE")) return false;
 
-  // ⚠️ NÃO excluímos mais RETRO → retro também aparecem
+  // ❗ Agora RETRO é excluído
+  if (n.includes("RETRO")) return false;
 
   if (n.includes("SET")) return false;
   if (n.includes("SHORTS")) return false;
@@ -272,7 +273,7 @@ function buildPaginationRange(
 /* ============================================================
    Página Jerseys
    - Busca via /api/search?q=jersey (como ResultsClient)
-   - Inclui retro (não excluímos "RETRO")
+   - EXCLUI retro (RETRO não aparece)
 ============================================================ */
 
 export default function JerseysPage() {
