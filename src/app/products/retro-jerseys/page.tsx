@@ -130,6 +130,9 @@ function isRetroJersey(p: UIProduct): boolean {
   if (n.includes("INFANT")) return false;
   if (n.includes(" KIT")) return false; // kit completo
 
+  // *** NOVO: excluir jerseys "Long Sleeve" ***
+  if (n.includes("LONG SLEEVE")) return false;
+
   return true;
 }
 

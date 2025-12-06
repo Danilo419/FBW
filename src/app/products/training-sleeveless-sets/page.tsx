@@ -117,22 +117,13 @@ function isTrainingSleevelessSet(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // tem de ser sem mangas / tank
+  // tem de ser sem mangas / tank / vest
   const hasSleeveless =
     n.includes("SLEEVELESS") ||
     n.includes("TANK") ||
     n.includes("VEST");
 
   if (!hasSleeveless) return false;
-
-  // tem de ser de treino / gym
-  const isTraining =
-    n.includes("TRAINING") ||
-    n.includes("GYM") ||
-    n.includes("WORKOUT") ||
-    n.includes("FITNESS");
-
-  if (!isTraining) return false;
 
   // tem de ser conjunto (camisola + calções)
   const hasSetParts =
@@ -294,7 +285,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Training Sleeveless Sets
-   - Busca via /api/search?q=jersey
+   - Busca via /api/search?q=training
    - Filtra conjuntos de treino sem mangas (tank + shorts)
 ============================================================ */
 
@@ -310,13 +301,13 @@ export default function TrainingSleevelessSetsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
+  // mesma API que a search, query mais alinhada com training sets
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/search?q=training`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
@@ -341,7 +332,7 @@ export default function TrainingSleevelessSetsPage() {
     };
   }, []);
 
-  const jerseysFiltered = useMemo(() => {
+  const setsFiltered = useMemo(() => {
     let base = results.filter(isTrainingSleevelessSet);
 
     // filtro de texto (nome / equipa)
@@ -390,8 +381,8 @@ export default function TrainingSleevelessSetsPage() {
   }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
-    [jerseysFiltered.length]
+    () => Math.max(1, Math.ceil(setsFiltered.length / PAGE_SIZE)),
+    [setsFiltered.length]
   );
 
   useEffect(() => {
@@ -401,8 +392,8 @@ export default function TrainingSleevelessSetsPage() {
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    return jerseysFiltered.slice(start, end);
-  }, [jerseysFiltered, page]);
+    return setsFiltered.slice(start, end);
+  }, [setsFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -447,7 +438,7 @@ export default function TrainingSleevelessSetsPage() {
             {loading ? (
               <span>Loading training sleeveless sets…</span>
             ) : (
-              <span>{jerseysFiltered.length} training sleeveless sets found</span>
+              <span>{setsFiltered.length} training sleeveless sets found</span>
             )}
           </div>
 
