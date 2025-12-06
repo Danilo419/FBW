@@ -1,4 +1,3 @@
-// src/app/products/kids-kits/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -298,7 +297,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Kids Kits
-   - Busca via /api/search?q=jersey
+   - Busca via /api/search?q=kit
    - Filtra full sets para crianças
 ============================================================ */
 
@@ -314,13 +313,13 @@ export default function KidsKitsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
+  // mesma API que a search, query mais alinhada com kits
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/search?q=kit`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
@@ -345,7 +344,7 @@ export default function KidsKitsPage() {
     };
   }, []);
 
-  const jerseysFiltered = useMemo(() => {
+  const kitsFiltered = useMemo(() => {
     let base = results.filter(isKidsKit);
 
     // filtro de texto (nome / equipa)
@@ -394,8 +393,8 @@ export default function KidsKitsPage() {
   }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
-    [jerseysFiltered.length]
+    () => Math.max(1, Math.ceil(kitsFiltered.length / PAGE_SIZE)),
+    [kitsFiltered.length]
   );
 
   useEffect(() => {
@@ -405,8 +404,8 @@ export default function KidsKitsPage() {
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    return jerseysFiltered.slice(start, end);
-  }, [jerseysFiltered, page]);
+    return kitsFiltered.slice(start, end);
+  }, [kitsFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -451,7 +450,7 @@ export default function KidsKitsPage() {
             {loading ? (
               <span>Loading kids kits…</span>
             ) : (
-              <span>{jerseysFiltered.length} kids kits found</span>
+              <span>{kitsFiltered.length} kids kits found</span>
             )}
           </div>
 

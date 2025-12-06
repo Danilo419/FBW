@@ -121,6 +121,7 @@ function isTrainingTracksuit(p: UIProduct): boolean {
   // Tem de indicar fato de treino / tracksuit
   const isTracksuit =
     n.includes("TRACKSUIT") ||
+    n.includes("TRACK SUIT") ||
     n.includes("TRAINING SUIT") ||
     n.includes("TRAINING SET") ||
     n.includes("PRESENTATION SUIT");
@@ -140,9 +141,10 @@ function isTrainingTracksuit(p: UIProduct): boolean {
     n.includes("TROUSERS") ||
     n.includes("BOTTOMS");
 
-  // Se o nome já tiver "TRACKSUIT" normalmente implica o conjunto completo,
-  // mas reforçamos o check de top & bottom quando possível
-  if (!hasBottom && !n.includes("TRACKSUIT")) return false;
+  // Se NÃO tiver "TRACKSUIT" literal, exigimos ter bottom explícito
+  if (!hasBottom && !n.includes("TRACKSUIT") && !n.includes("TRACK SUIT")) {
+    return false;
+  }
 
   // Excluir coisas que não interessam
   if (n.includes("SHORTS ONLY")) return false;
@@ -154,7 +156,7 @@ function isTrainingTracksuit(p: UIProduct): boolean {
   if (n.includes("BALL")) return false;
   if (n.includes("POSTER")) return false;
 
-  // Excluir baby / infant (se quiseres kids incluído, remove estas linhas)
+  // Excluir baby / infant
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
 
@@ -297,7 +299,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Training Tracksuits
-   - Busca via /api/search?q=jersey
+   - Busca via /api/search?q=tracksuit
    - Filtra full training sets (top & pants)
 ============================================================ */
 
@@ -313,13 +315,13 @@ export default function TrainingTracksuitsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
+  // mesma API que a search, query mais alinhada com tracksuits
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/search?q=tracksuit`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
@@ -344,7 +346,7 @@ export default function TrainingTracksuitsPage() {
     };
   }, []);
 
-  const jerseysFiltered = useMemo(() => {
+  const tracksuitsFiltered = useMemo(() => {
     let base = results.filter(isTrainingTracksuit);
 
     // filtro de texto (nome / equipa)
@@ -393,8 +395,8 @@ export default function TrainingTracksuitsPage() {
   }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
-    [jerseysFiltered.length]
+    () => Math.max(1, Math.ceil(tracksuitsFiltered.length / PAGE_SIZE)),
+    [tracksuitsFiltered.length]
   );
 
   useEffect(() => {
@@ -404,8 +406,8 @@ export default function TrainingTracksuitsPage() {
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    return jerseysFiltered.slice(start, end);
-  }, [jerseysFiltered, page]);
+    return tracksuitsFiltered.slice(start, end);
+  }, [tracksuitsFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -450,7 +452,7 @@ export default function TrainingTracksuitsPage() {
             {loading ? (
               <span>Loading training tracksuits…</span>
             ) : (
-              <span>{jerseysFiltered.length} training tracksuits found</span>
+              <span>{tracksuitsFiltered.length} training tracksuits found</span>
             )}
           </div>
 

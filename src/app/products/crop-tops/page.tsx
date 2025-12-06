@@ -117,19 +117,26 @@ function isCropTop(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // Tem de indicar crop top
+  // Tem de indicar crop / cropped de forma razoável
   const isCrop =
     n.includes("CROP TOP") ||
     n.includes("CROP-TOP") ||
     n.includes("CROPPED TOP") ||
     n.includes("CROPPED TEE") ||
-    n.includes("CROPPED SHIRT");
+    n.includes("CROPPED SHIRT") ||
+    n.includes("CROP TEE") ||
+    n.includes("CROP SHIRT") ||
+    n.includes("CROPPED JERSEY") ||
+    n.includes("CROP JERSEY") ||
+    n.startsWith("CROP ") ||
+    n.includes(" CROP ") ||
+    n.includes(" CROPPED ");
 
   if (!isCrop) return false;
 
   // Excluir conjuntos completos; aqui queremos só o top
   if (n.includes(" KIT")) return false;
-  if (n.includes("SET")) return false;
+  if (n.includes(" SET")) return false;
   if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
 
@@ -324,7 +331,7 @@ export default function CropTopsPage() {
     };
   }, []);
 
-  const jerseysFiltered = useMemo(() => {
+  const cropTopsFiltered = useMemo(() => {
     let base = results.filter(isCropTop);
 
     // filtro de texto (nome / equipa)
@@ -373,8 +380,8 @@ export default function CropTopsPage() {
   }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
-    [jerseysFiltered.length]
+    () => Math.max(1, Math.ceil(cropTopsFiltered.length / PAGE_SIZE)),
+    [cropTopsFiltered.length]
   );
 
   useEffect(() => {
@@ -384,8 +391,8 @@ export default function CropTopsPage() {
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    return jerseysFiltered.slice(start, end);
-  }, [jerseysFiltered, page]);
+    return cropTopsFiltered.slice(start, end);
+  }, [cropTopsFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -430,7 +437,7 @@ export default function CropTopsPage() {
             {loading ? (
               <span>Loading crop tops…</span>
             ) : (
-              <span>{jerseysFiltered.length} crop tops found</span>
+              <span>{cropTopsFiltered.length} crop tops found</span>
             )}
           </div>
 
