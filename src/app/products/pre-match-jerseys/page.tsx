@@ -181,36 +181,36 @@ function ProductCard({ p }: { p: UIProduct }) {
               (img as any)._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-5 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-4 sm:p-5 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-4 flex flex-col grow">
-          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
+        <div className="p-3 sm:p-4 flex flex-col grow">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
             {teamLabel}
           </div>
 
-          <div className="mt-1 text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
+          <div className="mt-1 text-[13px] sm:text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
             {p.name}
           </div>
 
           <div className="mt-3">
             <div className="flex items-end gap-2">
               {sale && (
-                <div className="text-[12px] text-slate-500 line-through">
+                <div className="text-[11px] sm:text-[12px] text-slate-500 line-through">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-xl font-semibold tracking-tight leading-none">
+                  <span className="text-lg sm:text-xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
-                  <span className="text-[12px] font-medium translate-y-[1px]">
+                  <span className="text-[11px] sm:text-[12px] font-medium translate-y-[1px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px] ml-1">
+                  <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px] ml-1">
                     {parts.sym}
                   </span>
                 </div>
@@ -220,12 +220,12 @@ function ProductCard({ p }: { p: UIProduct }) {
 
           <div className="mt-auto">
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 flex items-center gap-2 text-[12px] font-medium text-slate-700">
+            <div className="h-9 sm:h-10 flex items-center gap-2 text-[11px] sm:text-[12px] font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -401,22 +401,22 @@ export default function PreMatchJerseysPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6">
+        <div className="container-fw px-4 sm:px-6 py-5 sm:py-6">
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Pre-Match Jerseys
               </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
                 Pre-match jerseys
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
+              <p className="mt-2 max-w-xl text-xs sm:text-sm text-gray-600">
                 Warm-up and pre-game tops — what players wear before kick-off.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3 justify-start mt-1">
-              <a href="/" className="btn-outline text-sm">
+              <a href="/" className="btn-outline text-xs sm:text-sm">
                 ← Back to Home Page
               </a>
             </div>
@@ -425,10 +425,10 @@ export default function PreMatchJerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap">
+      <section className="container-fw px-4 sm:px-6 section-gap">
         {/* Filtros + info */}
         <div className="mb-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading pre-match jerseys…</span>
@@ -452,7 +452,7 @@ export default function PreMatchJerseysPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-[11px] sm:text-xs">
               <span className="text-gray-500">Sort by:</span>
               <select
                 value={sort}
@@ -473,19 +473,19 @@ export default function PreMatchJerseysPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
-                <div className="p-4">
+                <div className="p-3 sm:p-4">
                   <div className="h-3 w-20 bg-slate-200 rounded mb-2" />
                   <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
                   <div className="h-3 w-16 bg-slate-200 rounded" />
                   <div className="mt-4 h-px bg-slate-200/70" />
-                  <div className="h-9" />
+                  <div className="h-8 sm:h-9" />
                 </div>
               </div>
             ))}
@@ -493,12 +493,12 @@ export default function PreMatchJerseysPage() {
         )}
 
         {/* ERRO */}
-        {!loading && error && <p className="text-red-600">{error}</p>}
+        {!loading && error && <p className="text-red-600 text-sm">{error}</p>}
 
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
                   Nenhum pre-match jersey encontrado.
@@ -517,7 +517,7 @@ export default function PreMatchJerseysPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-2.5 sm:px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Página anterior"
                 >
                   «
@@ -529,7 +529,7 @@ export default function PreMatchJerseysPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-3 py-2 text-sm text-slate-500"
+                        className="px-2.5 sm:px-3 py-2 text-xs sm:text-sm text-slate-500"
                       >
                         ...
                       </span>
@@ -545,7 +545,7 @@ export default function PreMatchJerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[36px] px-3 py-2 rounded-xl ring-1 text-sm transition",
+                        "min-w-[32px] sm:min-w-[36px] px-2.5 sm:px-3 py-2 rounded-xl ring-1 text-xs sm:text-sm transition",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
                           : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
@@ -564,7 +564,7 @@ export default function PreMatchJerseysPage() {
                     setPage((p) => Math.min(totalPages, p + 1))
                   }
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-2.5 sm:px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Próxima página"
                 >
                   »
