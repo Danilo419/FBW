@@ -478,7 +478,7 @@ export default function TrainingSleevelessSetsPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -503,7 +503,7 @@ export default function TrainingSleevelessSetsPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
                   Nenhum training sleeveless set encontrado.

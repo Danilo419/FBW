@@ -465,7 +465,7 @@ export default function RetroJerseysPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -490,7 +490,7 @@ export default function RetroJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
                   Nenhum retro jersey encontrado.
