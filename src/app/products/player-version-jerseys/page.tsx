@@ -175,36 +175,36 @@ function ProductCard({ p }: { p: UIProduct }) {
               (img as any)._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-5 flex flex-col grow">
-          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+        <div className="p-4 sm:p-5 flex flex-col grow">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
             {teamLabel}
           </div>
 
-          <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+          <div className="mt-1 text-[13px] sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-2">
               {sale && (
-                <div className="text-[13px] text-slate-500 line-through">
+                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-2xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px]">
+                  <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                     {parts.sym}
                   </span>
                 </div>
@@ -213,13 +213,13 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-10 sm:h-12 flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -275,47 +275,38 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Player Version Jerseys
-   - Busca via /api/search?q=jersey (como ResultsClient)
-   - Filtra apenas PLAYER VERSION, short-sleeve, exclui RETRO
 ============================================================ */
 
-const DESKTOP_PAGE_SIZE = 12;
-const MOBILE_PAGE_SIZE = 2; // 2 produtos por página em mobile
+const DESKTOP_PAGE_SIZE = 12; // PC: 12 por página
+const MOBILE_PAGE_SIZE = 2;   // MOBILE: 2 por página
 
 export default function PlayerVersionJerseysPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // começa logo com o page size de mobile (2),
-  // e no efeito ajusta para desktop quando for o caso
-  const [pageSize, setPageSize] = useState<number>(MOBILE_PAGE_SIZE);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // definir pageSize responsivo (2 no mobile, 12 no desktop)
+  // detectar mobile vs desktop (sem mexer no PC)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const updatePageSize = () => {
-      if (window.innerWidth < 640) {
-        // MOBILE → 2 produtos por página
-        setPageSize(MOBILE_PAGE_SIZE);
-      } else {
-        // DESKTOP → 12 produtos por página (mantém o anterior)
-        setPageSize(DESKTOP_PAGE_SIZE);
-      }
+    const updateIsMobile = () => {
+      setIsMobile(window.innerWidth < 640);
       setPage(1);
     };
 
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-
-    return () => window.removeEventListener("resize", updatePageSize);
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+    return () => window.removeEventListener("resize", updateIsMobile);
   }, []);
+
+  const pageSize = isMobile ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
 
   // mesma API que a search, query "jersey"
   useEffect(() => {
@@ -519,7 +510,7 @@ export default function PlayerVersionJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            {/* MOBILE: 2 colunas; DESKTOP mantém 3/4 colunas */}
+            {/* MOBILE: 2 colunas; DESKTOP: 3/4 colunas, igual ao PC */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
