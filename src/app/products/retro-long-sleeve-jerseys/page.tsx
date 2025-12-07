@@ -467,7 +467,7 @@ export default function RetroLongSleeveJerseysPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -492,7 +492,7 @@ export default function RetroLongSleeveJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
                   Nenhum retro long-sleeve jersey encontrado.
