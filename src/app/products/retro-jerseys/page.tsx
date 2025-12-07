@@ -138,6 +138,8 @@ function isRetroJersey(p: UIProduct): boolean {
 
 /* ============================================================
    Card de produto (igual look & feel do search)
+   - Mobile com paddings / fontes ligeiramente menores
+   - Desktop (sm+) mantém o que tinhas
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
@@ -154,7 +156,7 @@ function ProductCard({ p }: { p: UIProduct }) {
       className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
     >
       {sale && (
-        <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2 sm:left-3 top-2 sm:top-3 z-10 rounded-full bg-red-600 text-white px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
           -{sale.pct}%
         </div>
       )}
@@ -172,36 +174,36 @@ function ProductCard({ p }: { p: UIProduct }) {
               (img as any)._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-3 sm:p-6 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-5 flex flex-col grow">
-          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+        <div className="p-3 sm:p-5 flex flex-col grow">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
             {teamLabel}
           </div>
 
-          <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+          <div className="mt-1 text-[13px] sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
           </div>
 
-          <div className="mt-4">
-            <div className="flex items-end gap-2">
+          <div className="mt-3 sm:mt-4">
+            <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
-                <div className="text-[13px] text-slate-500 line-through">
+                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-2xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px]">
+                  <span className="text-[11px] sm:text-[13px] font-medium translate-y-[1px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                     {parts.sym}
                   </span>
                 </div>
@@ -210,13 +212,13 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-10 sm:h-12 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -272,8 +274,6 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Retro Jerseys
-   - Busca via /api/search?q=jersey
-   - Filtra apenas RETRO jerseys, exclui kits/sets, etc.
 ============================================================ */
 
 export default function RetroJerseysPage() {
@@ -465,19 +465,19 @@ export default function RetroJerseysPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
                   <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
                   <div className="h-3 w-20 bg-slate-200 rounded" />
                   <div className="mt-6 h-px bg-slate-200/70" />
-                  <div className="h-12" />
+                  <div className="h-10 sm:h-12" />
                 </div>
               </div>
             ))}
@@ -490,7 +490,7 @@ export default function RetroJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
                   Nenhum retro jersey encontrado.
