@@ -281,7 +281,9 @@ export default function RetroJerseysPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const PAGE_SIZE = 12;
+  // MOBILE: 2 produtos por página
+  const PAGE_SIZE = 2;
+
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
@@ -369,7 +371,7 @@ export default function RetroJerseysPage() {
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(jerseysFiltered.length / PAGE_SIZE)),
-    [jerseysFiltered.length]
+    [jerseysFiltered.length, PAGE_SIZE]
   );
 
   useEffect(() => {
@@ -380,7 +382,7 @@ export default function RetroJerseysPage() {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
     return jerseysFiltered.slice(start, end);
-  }, [jerseysFiltered, page]);
+  }, [jerseysFiltered, page, PAGE_SIZE]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
