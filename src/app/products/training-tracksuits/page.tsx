@@ -300,6 +300,7 @@ function buildPaginationRange(
    Página Training Tracksuits
    - Busca via /api/search?q=tracksuit
    - Filtra full training sets (top & pants)
+   - Mobile-first, 2 produtos por página
 ============================================================ */
 
 export default function TrainingTracksuitsPage() {
@@ -307,7 +308,9 @@ export default function TrainingTracksuitsPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const PAGE_SIZE = 12;
+  // ➜ 2 produtos por "página"
+  const PAGE_SIZE = 2;
+
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
@@ -395,7 +398,7 @@ export default function TrainingTracksuitsPage() {
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(tracksuitsFiltered.length / PAGE_SIZE)),
-    [tracksuitsFiltered.length]
+    [tracksuitsFiltered.length, PAGE_SIZE]
   );
 
   useEffect(() => {
@@ -406,7 +409,7 @@ export default function TrainingTracksuitsPage() {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
     return tracksuitsFiltered.slice(start, end);
-  }, [tracksuitsFiltered, page]);
+  }, [tracksuitsFiltered, page, PAGE_SIZE]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -492,7 +495,7 @@ export default function TrainingTracksuitsPage() {
         {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
+            {Array.from({ length: 2 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
