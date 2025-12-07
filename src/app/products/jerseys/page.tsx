@@ -150,10 +150,10 @@ function ProductCard({ p }: { p: UIProduct }) {
     <a
       key={String(p.id)}
       href={href}
-      className="group block h-full rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-md hover:ring-sky-200 transition duration-200 overflow-hidden relative"
+      className="group block h-full rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
     >
       {sale && (
-        <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-[11px] font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2.5 top-2.5 sm:left-3 sm:top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-[10px] sm:text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
           -{sale.pct}%
         </div>
       )}
@@ -171,36 +171,36 @@ function ProductCard({ p }: { p: UIProduct }) {
               (img as any)._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-5 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-4 flex flex-col grow">
-          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
+        <div className="p-4 sm:p-5 flex flex-col grow">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
             {teamLabel}
           </div>
 
-          <div className="mt-1 text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
+          <div className="mt-1 text-sm sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
           </div>
 
-          <div className="mt-3">
+          <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-2">
               {sale && (
-                <div className="text-[12px] text-slate-500 line-through">
+                <div className="text-[12px] sm:text-[13px] text-slate-500 line-through">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
-                  <span className="text-[12px] font-medium translate-y-[1px]">
+                  <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px] ml-1">
+                  <span className="text-[14px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                     {parts.sym}
                   </span>
                 </div>
@@ -209,13 +209,13 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 flex items-center gap-2 text-[12px] font-medium text-slate-700">
+            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-10 sm:h-12 flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -271,7 +271,7 @@ function buildPaginationRange(
 }
 
 /* ============================================================
-   Página Jerseys
+   Página Jerseys (mobile-first)
    - Busca via /api/search?q=jersey (como ResultsClient)
    - EXCLUI retro (RETRO não aparece)
 ============================================================ */
@@ -288,7 +288,7 @@ export default function JerseysPage() {
     "team"
   );
 
-  // Usa a mesma API que a search, mas com query fixa "jersey"
+  // 👉 Usa a mesma API que a search, mas com query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -389,25 +389,28 @@ export default function JerseysPage() {
   }, [page]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-8">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6">
-          <div className="flex flex-col gap-3">
+        <div className="container-fw py-8 sm:py-12 px-4 sm:px-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Jerseys
               </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Standard short-sleeve jerseys
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
+              <p className="mt-2 max-w-xl text-xs sm:text-base text-gray-600">
                 Standard short-sleeve jerseys (non-player version).
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-start mt-1">
-              <a href="/" className="btn-outline text-sm">
+            <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
+              <a
+                href="/"
+                className="btn-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full"
+              >
                 ← Back to Home Page
               </a>
             </div>
@@ -416,10 +419,10 @@ export default function JerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap">
+      <section className="container-fw section-gap px-4 sm:px-0">
         {/* Filtros + info */}
-        <div className="mb-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="mb-5 sm:mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading jerseys…</span>
@@ -428,8 +431,8 @@ export default function JerseysPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="relative w-full">
+          <div className="flex flex-col w-full sm:w-auto gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="search"
@@ -439,19 +442,19 @@ export default function JerseysPage() {
                   setPage(1);
                 }}
                 placeholder="Search by team or jersey name"
-                className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-full border px-9 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Sort by:</span>
+            <div className="flex items-center justify-between sm:justify-end gap-2 text-xs sm:text-sm">
+              <span className="text-gray-500 whitespace-nowrap">Sort by:</span>
               <select
                 value={sort}
                 onChange={(e) => {
                   setSort(e.target.value as any);
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-full border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]"
               >
                 <option value="team">Team & name</option>
                 <option value="price-asc">Price (low → high)</option>
@@ -464,19 +467,19 @@ export default function JerseysPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+                className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
-                <div className="p-4">
-                  <div className="h-3 w-20 bg-slate-200 rounded mb-2" />
+                <div className="p-4 sm:p-5">
+                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
                   <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
-                  <div className="h-3 w-16 bg-slate-200 rounded" />
-                  <div className="mt-4 h-px bg-slate-200/70" />
-                  <div className="h-9" />
+                  <div className="h-3 w-20 bg-slate-200 rounded" />
+                  <div className="mt-6 h-px bg-slate-200/70" />
+                  <div className="h-10 sm:h-12" />
                 </div>
               </div>
             ))}
@@ -484,14 +487,14 @@ export default function JerseysPage() {
         )}
 
         {/* ERRO */}
-        {!loading && error && <p className="text-red-600">{error}</p>}
+        {!loading && error && <p className="text-red-600 text-sm">{error}</p>}
 
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 col-span-full text-sm">
+                <p className="text-gray-500 text-sm col-span-full">
                   Nenhum jersey encontrado.
                 </p>
               )}
@@ -502,13 +505,13 @@ export default function JerseysPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-2 select-none">
+              <nav className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 select-none">
                 {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Página anterior"
                 >
                   «
@@ -520,7 +523,7 @@ export default function JerseysPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-3 py-2 text-sm text-slate-500"
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-500"
                       >
                         ...
                       </span>
@@ -536,7 +539,7 @@ export default function JerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[36px] px-3 py-2 rounded-xl ring-1 text-sm transition",
+                        "min-w-[34px] sm:min-w-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 transition text-xs sm:text-sm",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
                           : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
@@ -551,11 +554,9 @@ export default function JerseysPage() {
                 {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Próxima página"
                 >
                   »
