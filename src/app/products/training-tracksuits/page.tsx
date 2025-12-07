@@ -212,7 +212,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             {p.name}
           </div>
 
-          <div className="mt-4">
+        <div className="mt-4">
             <div className="flex items-end gap-2">
               {sale && (
                 <div className="text-[13px] text-slate-500 line-through">
@@ -301,7 +301,6 @@ function buildPaginationRange(
    Página Training Tracksuits
    - Busca via /api/search?q=tracksuit
    - Filtra full training sets (top & pants)
-   - MOBILE: 2 produtos por página, PC mantém 12
 ============================================================ */
 
 export default function TrainingTracksuitsPage() {
@@ -309,33 +308,15 @@ export default function TrainingTracksuitsPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const DEFAULT_PAGE_SIZE = 12;
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  // PC mantém 12 por página; mobile continua com as mesmas páginas,
+  // mas a grelha já mostra 2 cards por linha (grid-cols-2)
+  const PAGE_SIZE = 12;
 
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
-
-  // Detectar mobile vs desktop e ajustar pageSize (sem mexer no layout do PC)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updatePageSize = () => {
-      const width = window.innerWidth;
-      // < 640px (tailwind "sm") conta como mobile
-      if (width < 640) {
-        setPageSize(2); // 2 produtos por página no mobile
-      } else {
-        setPageSize(DEFAULT_PAGE_SIZE); // PC / tablet mantém 12
-      }
-    };
-
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
 
   // mesma API que a search, query mais alinhada com tracksuits
   useEffect(() => {
@@ -417,8 +398,8 @@ export default function TrainingTracksuitsPage() {
   }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(tracksuitsFiltered.length / pageSize)),
-    [tracksuitsFiltered.length, pageSize]
+    () => Math.max(1, Math.ceil(tracksuitsFiltered.length / PAGE_SIZE)),
+    [tracksuitsFiltered.length]
   );
 
   useEffect(() => {
@@ -426,10 +407,10 @@ export default function TrainingTracksuitsPage() {
   }, [page, totalPages]);
 
   const pageItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
     return tracksuitsFiltered.slice(start, end);
-  }, [tracksuitsFiltered, page, pageSize]);
+  }, [tracksuitsFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -515,7 +496,7 @@ export default function TrainingTracksuitsPage() {
         {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {Array.from({ length: pageSize }).map((_, i) => (
+            {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
