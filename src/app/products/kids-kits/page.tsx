@@ -306,7 +306,7 @@ export default function KidsKitsPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const PAGE_SIZE = 12;
+  const PAGE_SIZE = 12; // 2 colunas x 6 linhas por página no mobile
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
