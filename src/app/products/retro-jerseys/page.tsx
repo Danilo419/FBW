@@ -378,7 +378,7 @@ export default function RetroJerseysPage() {
 
   const pageItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
+       const end = start + PAGE_SIZE;
     return jerseysFiltered.slice(start, end);
   }, [jerseysFiltered, page]);
 
