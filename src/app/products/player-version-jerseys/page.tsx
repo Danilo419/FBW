@@ -280,14 +280,16 @@ function buildPaginationRange(
 ============================================================ */
 
 const DESKTOP_PAGE_SIZE = 12;
-const MOBILE_PAGE_SIZE = 2;
+const MOBILE_PAGE_SIZE = 2; // 2 produtos por página em mobile
 
 export default function PlayerVersionJerseysPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [pageSize, setPageSize] = useState<number>(DESKTOP_PAGE_SIZE);
+  // começa logo com o page size de mobile (2),
+  // e no efeito ajusta para desktop quando for o caso
+  const [pageSize, setPageSize] = useState<number>(MOBILE_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
@@ -300,9 +302,9 @@ export default function PlayerVersionJerseysPage() {
 
     const updatePageSize = () => {
       if (window.innerWidth < 640) {
-        setPageSize(MOBILE_PAGE_SIZE);
+        setPageSize(MOBILE_PAGE_SIZE); // mobile: 2 produtos
       } else {
-        setPageSize(DESKTOP_PAGE_SIZE);
+        setPageSize(DESKTOP_PAGE_SIZE); // desktop: 12 produtos
       }
       setPage(1);
     };
@@ -515,6 +517,7 @@ export default function PlayerVersionJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
+            {/* grid mobile já é 2 colunas */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
