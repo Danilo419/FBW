@@ -284,6 +284,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Continua a paginar normalmente, mas com grelha mobile em 2 colunas
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -395,13 +396,13 @@ export default function PlayerVersionLongSleeveJerseysPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6">
+        <div className="container-fw py-5 px-4 sm:px-6">
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Player Version
               </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
                 Player version jerseys (on-pitch fit, long sleeve)
               </h1>
               <p className="mt-2 max-w-xl text-sm text-gray-600">
@@ -420,7 +421,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap">
+      <section className="container-fw section-gap px-4 sm:px-6">
         {/* Filtros + info */}
         <div className="mb-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -471,7 +472,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -496,7 +497,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
                   Nenhum player version long-sleeve jersey encontrado.
