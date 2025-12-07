@@ -270,9 +270,7 @@ function buildPaginationRange(
 
 /* ============================ Página Long Sleeve Jerseys ============================ */
 
-// desktop vs mobile
-const PAGE_SIZE_DESKTOP = 12;
-const PAGE_SIZE_MOBILE = 2;
+const PAGE_SIZE = 12;
 
 export default function LongSleeveJerseysPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
@@ -280,49 +278,10 @@ export default function LongSleeveJerseysPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_DESKTOP);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
     "team"
   );
-
-  // detectar mobile para usar 2 produtos por página
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mq = window.matchMedia("(max-width: 640px)");
-
-    const apply = (m: MediaQueryList | MediaQueryListEvent) => {
-      if (m.matches) {
-        setPageSize(PAGE_SIZE_MOBILE); // mobile -> 2 produtos
-      } else {
-        setPageSize(PAGE_SIZE_DESKTOP); // desktop -> 12
-      }
-      setPage(1);
-    };
-
-    apply(mq);
-
-    const handler = (e: MediaQueryListEvent) => apply(e);
-
-    if (mq.addEventListener) {
-      mq.addEventListener("change", handler);
-    } else {
-      // fallback para browsers antigos
-      // @ts-ignore
-      mq.addListener(handler);
-    }
-
-    return () => {
-      if (mq.removeEventListener) {
-        mq.removeEventListener("change", handler);
-      } else {
-        // @ts-ignore
-        mq.removeListener(handler);
-      }
-    };
-  }, []);
 
   // fetch via search (q=jersey) e depois filtramos long sleeve
   useEffect(() => {
@@ -409,8 +368,8 @@ export default function LongSleeveJerseysPage() {
   }, [results, searchTerm, sort]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filteredSorted.length / pageSize)),
-    [filteredSorted.length, pageSize]
+    () => Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE)),
+    [filteredSorted.length]
   );
 
   useEffect(() => {
@@ -418,10 +377,10 @@ export default function LongSleeveJerseysPage() {
   }, [page, totalPages]);
 
   const pageItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
     return filteredSorted.slice(start, end);
-  }, [filteredSorted, page, pageSize]);
+  }, [filteredSorted, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -433,13 +392,13 @@ export default function LongSleeveJerseysPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-10 sm:py-14">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="container-fw py-8 sm:py-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-0">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Product category
               </p>
-              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Long sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
@@ -457,7 +416,7 @@ export default function LongSleeveJerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap">
+      <section className="container-fw section-gap px-4 sm:px-0">
         {/* Filtros + info */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
@@ -503,10 +462,10 @@ export default function LongSleeveJerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
+        {/* LOADING – 2 produtos por linha no mobile */}
         {loading && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {Array.from({ length: pageSize }).map((_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+            {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
@@ -530,7 +489,8 @@ export default function LongSleeveJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            {/* 2 produtos por linha no mobile */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
                   No long-sleeve jerseys were found.
