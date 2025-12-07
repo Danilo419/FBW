@@ -154,7 +154,7 @@ function ProductCard({ p }: { p: UIProduct }) {
       className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
     >
       {sale && (
-        <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2 top-2 sm:left-3 sm:top-3 z-10 rounded-full bg-red-600 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
           -{sale.pct}%
         </div>
       )}
@@ -172,36 +172,36 @@ function ProductCard({ p }: { p: UIProduct }) {
               (img as any)._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-3 sm:p-6 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-5 flex flex-col grow">
-          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+        <div className="p-3 sm:p-5 flex flex-col grow">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
             {teamLabel}
           </div>
 
-          <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+          <div className="mt-1 text-xs sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
           </div>
 
-          <div className="mt-4">
-            <div className="flex items-end gap-2">
+          <div className="mt-3 sm:mt-4">
+            <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
-                <div className="text-[13px] text-slate-500 line-through">
+                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-2xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px]">
+                  <span className="text-[11px] sm:text-[13px] font-medium translate-y-[1px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                     {parts.sym}
                   </span>
                 </div>
@@ -210,13 +210,13 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-10 sm:h-12 flex items-center gap-2 text-[11px] sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -279,9 +279,9 @@ export default function LongSleeveJerseysPage() {
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
-    "team"
-  );
+  const [sort, setSort] = useState<
+    "team" | "price-asc" | "price-desc" | "random"
+  >("team");
 
   // fetch via search (q=jersey) e depois filtramos long sleeve
   useEffect(() => {
@@ -392,22 +392,22 @@ export default function LongSleeveJerseysPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-8 sm:py-10">
+        <div className="container-fw py-6 sm:py-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-0">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Product category
               </p>
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Long sleeve jerseys
               </h1>
-              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
+              <p className="mt-2 max-w-xl text-xs sm:text-base text-gray-600">
                 Non-player long-sleeve jerseys.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/" className="btn-outline text-sm">
+            <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
+              <a href="/" className="btn-outline text-xs sm:text-sm px-3 py-1.5">
                 ← Back to Home Page
               </a>
             </div>
@@ -416,10 +416,10 @@ export default function LongSleeveJerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap px-4 sm:px-0">
+      <section className="container-fw section-gap px-3 sm:px-0">
         {/* Filtros + info */}
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+        <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading jerseys…</span>
@@ -464,19 +464,19 @@ export default function LongSleeveJerseysPage() {
 
         {/* LOADING – 2 produtos por linha no mobile */}
         {loading && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
-                <div className="p-5">
-                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
-                  <div className="h-3 w-20 bg-slate-200 rounded" />
-                  <div className="mt-6 h-px bg-slate-200/70" />
-                  <div className="h-12" />
+                <div className="p-3 sm:p-5">
+                  <div className="h-3 w-20 sm:w-24 bg-slate-200 rounded mb-2" />
+                  <div className="h-4 w-2/3 sm:w-3/4 bg-slate-200 rounded mb-3 sm:mb-4" />
+                  <div className="h-3 w-16 sm:w-20 bg-slate-200 rounded" />
+                  <div className="mt-4 sm:mt-6 h-px bg-slate-200/70" />
+                  <div className="h-9 sm:h-12" />
                 </div>
               </div>
             ))}
@@ -484,15 +484,17 @@ export default function LongSleeveJerseysPage() {
         )}
 
         {/* ERRO */}
-        {!loading && error && <p className="text-red-600">{error}</p>}
+        {!loading && error && (
+          <p className="mt-2 text-red-600 text-sm sm:text-base">{error}</p>
+        )}
 
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             {/* 2 produtos por linha no mobile */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 col-span-full">
+                <p className="text-gray-500 text-sm sm:text-base col-span-full text-center py-6">
                   No long-sleeve jerseys were found.
                 </p>
               )}
@@ -503,13 +505,13 @@ export default function LongSleeveJerseysPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-10 flex items-center justify-center gap-2 select-none">
+              <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
                 {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
                   aria-label="Previous page"
                 >
                   «
@@ -521,7 +523,7 @@ export default function LongSleeveJerseysPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-3 py-2 text-sm text-slate-500"
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-500"
                       >
                         ...
                       </span>
@@ -537,7 +539,7 @@ export default function LongSleeveJerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                        "min-w-[34px] sm:min-w-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 transition text-xs sm:text-sm",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
                           : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
@@ -554,7 +556,7 @@ export default function LongSleeveJerseysPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
                   aria-label="Next page"
                 >
                   »
