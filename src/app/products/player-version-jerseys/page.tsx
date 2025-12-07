@@ -76,7 +76,10 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\bvillarreal\b/i, "Villarreal"],
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
-  [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
+  [
+    /\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i,
+    "Sporting CP",
+  ],
   [/\bsc\s*braga|braga\b/i, "SC Braga"],
   [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
 ];
@@ -279,41 +282,19 @@ function buildPaginationRange(
    - Filtra apenas PLAYER VERSION, short-sleeve, exclui RETRO
 ============================================================ */
 
-const DESKTOP_PAGE_SIZE = 12;
-const MOBILE_PAGE_SIZE = 2; // 2 produtos por página em mobile
+const PAGE_SIZE = 2; // 2 produtos por página (mobile-first)
 
 export default function PlayerVersionJerseysPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // começa logo com o page size de mobile (2),
-  // e no efeito ajusta para desktop quando for o caso
-  const [pageSize, setPageSize] = useState<number>(MOBILE_PAGE_SIZE);
+  const pageSize = PAGE_SIZE; // fixo: 2 produtos por página
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
-
-  // definir pageSize responsivo (2 no mobile, 12 no desktop)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updatePageSize = () => {
-      if (window.innerWidth < 640) {
-        setPageSize(MOBILE_PAGE_SIZE); // mobile: 2 produtos
-      } else {
-        setPageSize(DESKTOP_PAGE_SIZE); // desktop: 12 produtos
-      }
-      setPage(1);
-    };
-
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
 
   // mesma API que a search, query "jersey"
   useEffect(() => {
@@ -517,7 +498,7 @@ export default function PlayerVersionJerseysPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            {/* grid mobile já é 2 colunas */}
+            {/* grid mobile: 2 colunas */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
