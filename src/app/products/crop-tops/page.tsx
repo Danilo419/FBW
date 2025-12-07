@@ -286,38 +286,22 @@ function buildPaginationRange(
    Página Crop Tops
    - Busca via /api/search?q=jersey
    - Filtra crop tops
-   - Mobile: 2 produtos por página; desktop: 12
+   - Mobile: 2 produtos por página
 ============================================================ */
-
-const DEFAULT_PAGE_SIZE_DESKTOP = 12;
-const MOBILE_PAGE_SIZE = 2;
 
 export default function CropTopsPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE_DESKTOP);
+  // -> MOSTRAR 2 PRODUTOS POR PÁGINA (2 colunas x 1 linha)
+  const PAGE_SIZE = 2;
+
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
-
-  // Definir pageSize em função do tamanho do ecrã (mobile vs desktop)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updatePageSize = () => {
-      const isMobile = window.innerWidth < 640; // < sm
-      setPageSize(isMobile ? MOBILE_PAGE_SIZE : DEFAULT_PAGE_SIZE_DESKTOP);
-      setPage(1);
-    };
-
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
 
   // mesma API que a search, query fixa "jersey"
   useEffect(() => {
@@ -398,21 +382,20 @@ export default function CropTopsPage() {
     return copy;
   }, [results, searchTerm, sort]);
 
-  const totalPages = useMemo(() => {
-    const size = pageSize || 1;
-    return Math.max(1, Math.ceil(cropTopsFiltered.length / size));
-  }, [cropTopsFiltered.length, pageSize]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(cropTopsFiltered.length / PAGE_SIZE)),
+    [cropTopsFiltered.length, PAGE_SIZE]
+  );
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
   const pageItems = useMemo(() => {
-    const size = pageSize || 1;
-    const start = (page - 1) * size;
-    const end = start + size;
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
     return cropTopsFiltered.slice(start, end);
-  }, [cropTopsFiltered, page, pageSize]);
+  }, [cropTopsFiltered, page, PAGE_SIZE]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -424,7 +407,7 @@ export default function CropTopsPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6 px-4 sm:px-0">
+        <div className="container-fw py-6">
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -449,7 +432,7 @@ export default function CropTopsPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap px-4 sm:px-0">
+      <section className="container-fw section-gap">
         {/* Filtros + info */}
         <div className="mb-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -497,8 +480,8 @@ export default function CropTopsPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {Array.from({ length: pageSize || MOBILE_PAGE_SIZE }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
@@ -517,12 +500,12 @@ export default function CropTopsPage() {
         )}
 
         {/* ERRO */}
-        {!loading && error && <p className="text-red-600 text-sm">{error}</p>}
+        {!loading && error && <p className="text-red-600">{error}</p>}
 
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
                   Nenhum crop top encontrado.
