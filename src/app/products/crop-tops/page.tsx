@@ -149,7 +149,7 @@ function isCropTop(p: UIProduct): boolean {
 }
 
 /* ============================================================
-   Card de produto (mobile-first, 2 colunas)
+   Card de produto (optimizado para 2 colunas no mobile)
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
@@ -163,16 +163,16 @@ function ProductCard({ p }: { p: UIProduct }) {
     <a
       key={String(p.id)}
       href={href}
-      className="group block h-full rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-md hover:ring-sky-200 transition duration-200 overflow-hidden relative"
+      className="group block h-full rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
     >
       {sale && (
-        <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2.5 top-2.5 sm:left-3 sm:top-3 z-10 rounded-full bg-red-600 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
           -{sale.pct}%
         </div>
       )}
 
       <div className="flex flex-col h-full">
-        <div className="relative aspect-[3/4] bg-gradient-to-b from-slate-50 to-slate-100">
+        <div className="relative aspect-[3/4] sm:aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt={p.name}
@@ -184,36 +184,36 @@ function ProductCard({ p }: { p: UIProduct }) {
               (img as any)._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-3 flex flex-col grow">
-          <div className="text-[10px] uppercase tracking-wide text-sky-600 font-semibold">
+        <div className="p-3 sm:p-5 flex flex-col grow">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
             {teamLabel}
           </div>
 
-          <div className="mt-1 text-[13px] font-semibold text-slate-900 leading-snug line-clamp-2">
+          <div className="mt-0.5 sm:mt-1 text-[13px] sm:text-base font-semibold text-slate-900 leading-snug sm:leading-tight line-clamp-2">
             {p.name}
           </div>
 
-          <div className="mt-3">
-            <div className="flex items-end gap-1.5">
+          <div className="mt-3 sm:mt-4">
+            <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
-                <div className="text-[11px] text-slate-500 line-through">
+                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-lg font-semibold tracking-tight leading-none">
+                  <span className="text-lg sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
-                  <span className="text-[11px] font-medium translate-y-[1px]">
+                  <span className="text-[11px] sm:text-[13px] font-medium translate-y-[1px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[12px] font-medium translate-y-[1px] ml-0.5">
+                  <span className="text-[12px] sm:text-[15px] font-medium translate-y-[1px] ml-0.5 sm:ml-1">
                     {parts.sym}
                   </span>
                 </div>
@@ -222,13 +222,13 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 flex items-center gap-1.5 text-[12px] font-medium text-slate-700">
+            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <div className="h-10 sm:h-12 flex items-center gap-1.5 sm:gap-2 text-[12px] sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -286,7 +286,6 @@ function buildPaginationRange(
    Página Crop Tops
    - Busca via /api/search?q=jersey
    - Filtra crop tops
-   - Mobile: 2 produtos por página
 ============================================================ */
 
 export default function CropTopsPage() {
@@ -294,9 +293,7 @@ export default function CropTopsPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // -> MOSTRAR 2 PRODUTOS POR PÁGINA (2 colunas x 1 linha)
-  const PAGE_SIZE = 2;
-
+  const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<
@@ -384,7 +381,7 @@ export default function CropTopsPage() {
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(cropTopsFiltered.length / PAGE_SIZE)),
-    [cropTopsFiltered.length, PAGE_SIZE]
+    [cropTopsFiltered.length]
   );
 
   useEffect(() => {
@@ -395,7 +392,7 @@ export default function CropTopsPage() {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
     return cropTopsFiltered.slice(start, end);
-  }, [cropTopsFiltered, page, PAGE_SIZE]);
+  }, [cropTopsFiltered, page]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -407,22 +404,22 @@ export default function CropTopsPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6">
-          <div className="flex flex-col gap-3">
+        <div className="container-fw py-10 sm:py-14">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Crop Tops
               </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
                 Crop tops
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
+              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
                 Stylish cropped tops inspired by your favourite clubs and
                 colours.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-start mt-1">
+            <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
               <a href="/" className="btn-outline text-sm">
                 ← Back to Home Page
               </a>
@@ -434,8 +431,8 @@ export default function CropTopsPage() {
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
         {/* Filtros + info */}
-        <div className="mb-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading crop tops…</span>
@@ -444,8 +441,8 @@ export default function CropTopsPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="relative w-full">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="search"
@@ -459,7 +456,7 @@ export default function CropTopsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
               <span className="text-gray-500">Sort by:</span>
               <select
                 value={sort}
@@ -467,7 +464,7 @@ export default function CropTopsPage() {
                   setSort(e.target.value as any);
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="team">Team & name</option>
                 <option value="price-asc">Price (low → high)</option>
@@ -480,19 +477,19 @@ export default function CropTopsPage() {
 
         {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4">
-            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+                className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
               >
-                <div className="aspect-[3/4] bg-slate-100" />
-                <div className="p-3">
-                  <div className="h-3 w-20 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-2/3 bg-slate-200 rounded mb-4" />
-                  <div className="h-3 w-16 bg-slate-200 rounded" />
-                  <div className="mt-4 h-px bg-slate-200/70" />
-                  <div className="h-9" />
+                <div className="aspect-[3/4] sm:aspect-[4/5] bg-slate-100" />
+                <div className="p-3 sm:p-5">
+                  <div className="h-3 w-20 sm:w-24 bg-slate-200 rounded mb-2" />
+                  <div className="h-4 w-2/3 sm:w-3/4 bg-slate-200 rounded mb-4" />
+                  <div className="h-3 w-16 sm:w-20 bg-slate-200 rounded" />
+                  <div className="mt-4 sm:mt-6 h-px bg-slate-200/70" />
+                  <div className="h-9 sm:h-12" />
                 </div>
               </div>
             ))}
@@ -505,9 +502,9 @@ export default function CropTopsPage() {
         {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 col-span-full text-sm">
+                <p className="text-gray-500 col-span-full">
                   Nenhum crop top encontrado.
                 </p>
               )}
@@ -518,13 +515,13 @@ export default function CropTopsPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-2 select-none">
+              <nav className="mt-10 flex items-center justify-center gap-2 select-none">
                 {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
                   aria-label="Página anterior"
                 >
                   «
@@ -552,7 +549,7 @@ export default function CropTopsPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[36px] px-3 py-2 rounded-xl ring-1 text-sm transition",
+                        "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
                           : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
@@ -567,11 +564,9 @@ export default function CropTopsPage() {
                 {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
                   aria-label="Próxima página"
                 >
                   »
