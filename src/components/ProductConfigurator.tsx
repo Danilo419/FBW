@@ -463,40 +463,43 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="h-10 w-10 shrink-0 hidden lg:block" />
           )}
 
-          <div
-            ref={imgWrapRef}
-            className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
-          >
-            <Image
-              src={activeSrc}
-              alt={product.name}
-              fill
-              className="object-contain"
-              sizes="(min-width: 1024px) 540px, 100vw"
-              priority
-              unoptimized
-            />
+          {/* wrapper para conseguir encolher a imagem em mobile */}
+          <div className="flex-1 flex justify-center">
+            <div
+              ref={imgWrapRef}
+              className="relative aspect-[3/4] w-[82%] sm:w-[88%] lg:w-full overflow-hidden rounded-xl bg-white"
+            >
+              <Image
+                src={activeSrc}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(min-width: 1024px) 540px, 100vw"
+                priority
+                unoptimized
+              />
 
-            {images.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  aria-label="Previous image"
-                  className="lg:hidden absolute left-2 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <ChevronLeft />
-                </button>
-                <button
-                  type="button"
-                  onClick={goNext}
-                  aria-label="Next image"
-                  className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <ChevronRight />
-                </button>
-              </>
-            )}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label="Previous image"
+                    className="lg:hidden absolute left-1.5 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <ChevronLeft />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label="Next image"
+                    className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <ChevronRight />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {images.length > 1 ? (
@@ -514,10 +517,10 @@ export default function ProductConfigurator({ product }: Props) {
         </div>
 
         {images.length > 1 && (
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <div
               ref={thumbsRef}
-              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2.5 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
             >
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
               <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
@@ -530,7 +533,7 @@ export default function ProductConfigurator({ product }: Props) {
                       onClick={() => setActiveIndex(i)}
                       aria-label={`Image ${i + 1}`}
                       className={cx(
-                        "relative flex-none h-[82px] w-[68px] rounded-xl border transition focus:outline-none",
+                        "relative flex-none h-[64px] w-[52px] sm:h-[74px] sm:w-[60px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
                         isActive ? "border-transparent" : "hover:opacity-90"
                       )}
                     >
@@ -546,7 +549,7 @@ export default function ProductConfigurator({ product }: Props) {
                           alt={`thumb ${i + 1}`}
                           fill
                           className="object-contain"
-                          sizes="68px"
+                          sizes="52px"
                           unoptimized
                         />
                       </span>
@@ -562,10 +565,10 @@ export default function ProductConfigurator({ product }: Props) {
       {/* ===== CONFIGURATOR ===== */}
       <div className="card w-full p-4 sm:p-5 lg:p-6 space-y-5 lg:space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight">
+          <h1 className="text-base sm:text-lg lg:text-2xl font-extrabold tracking-tight">
             {product.name}
           </h1>
-          <div className="text-lg sm:text-xl font-semibold">
+          <div className="text-base sm:text-lg lg:text-xl font-semibold">
             {money(product.basePrice)}
           </div>
           {product.description && (
@@ -595,7 +598,7 @@ export default function ProductConfigurator({ product }: Props) {
                     aria-disabled={unavailable}
                     title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                     className={cx(
-                      "rounded-xl px-3 py-2 border text-xs sm:text-sm transition",
+                      "rounded-xl px-3 py-1.5 border text-xs sm:text-sm transition",
                       unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
                       isActive && "bg-blue-600 text-white border-blue-600"
                     )}
@@ -697,16 +700,16 @@ export default function ProductConfigurator({ product }: Props) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <button
-              className="rounded-xl border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-xl border px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
               onClick={() => setQty((q) => Math.max(1, q - 1))}
               aria-label="Decrease quantity"
               disabled={pending}
             >
               −
             </button>
-            <span className="min-w-[2ch] text-center">{qty}</span>
+            <span className="min-w-[2ch] text-center text-sm">{qty}</span>
             <button
-              className="rounded-xl border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-xl border px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
               onClick={() => setQty((q) => q + 1)}
               aria-label="Increase quantity"
               disabled={pending}
