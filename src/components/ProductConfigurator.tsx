@@ -28,7 +28,6 @@ type ProductUI = {
   images: string[];
   optionGroups: OptionGroupUI[];
   sizes?: SizeUI[];
-  /** ✅ novo: badges guardados no produto (array de valores/keys) */
   badges?: string[];
 };
 
@@ -42,7 +41,6 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 /* ============ Catálogo (label) para valores de badge conhecidos ============ */
 const BADGE_LABELS: Record<string, string> = {
-  // Ligas
   "premier-league-regular": "Premier League – League Badge",
   "premier-league-champions": "Premier League – Champions (Gold)",
   "la-liga-regular": "La Liga – League Badge",
@@ -59,7 +57,6 @@ const BADGE_LABELS: Record<string, string> = {
   "eredivisie-champions": "Eredivisie – Champion",
   "scottish-premiership-regular": "Scottish Premiership – League Badge",
   "scottish-premiership-champions": "Scottish Premiership – Champion",
-  // Outras ligas
   "mls-regular": "MLS – League Badge",
   "mls-champions": "MLS – Champions (MLS Cup Holders)",
   "brasileirao-regular": "Brasileirão – League Badge",
@@ -68,21 +65,17 @@ const BADGE_LABELS: Record<string, string> = {
   "super-lig-champions": "Süper Lig – Champion",
   "spl-saudi-regular": "Saudi Pro League – League Badge",
   "spl-saudi-champions": "Saudi Pro League – Champion",
-  // UEFA
   "ucl-regular": "UEFA Champions League – Starball Badge",
   "ucl-winners": "UEFA Champions League – Winners Badge",
   "uel-regular": "UEFA Europa League – Badge",
   "uel-winners": "UEFA Europa League – Winners Badge",
   "uecl-regular": "UEFA Europa Conference League – Badge",
   "uecl-winners": "UEFA Europa Conference League – Winners Badge",
-  // Mundial de Clubes
   "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
 };
 
-/** Humaniza um valor desconhecido para mostrar algo decente ao utilizador */
 function humanizeBadge(value: string) {
   if (BADGE_LABELS[value]) return BADGE_LABELS[value];
-  // fallback: "ucl-regular" -> "Ucl Regular"
   return value
     .replace(/[-_]/g, " ")
     .replace(/\s+/g, " ")
@@ -90,7 +83,6 @@ function humanizeBadge(value: string) {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-/* ========= Helper para badges ========= */
 function competitionKey(value: string, label?: string) {
   const take = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
   if (value.includes("_")) return take(value.split("_")[0]);
@@ -121,7 +113,6 @@ export default function ProductConfigurator({ product }: Props) {
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
-  const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -179,14 +170,13 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
-  /** ✅ Grupo virtual de badges construído a partir de `product.badges` */
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
     const values: OptionValueUI[] = product.badges.map((v) => ({
       id: v,
       value: v,
       label: humanizeBadge(v),
-      priceDelta: 0, // grátis
+      priceDelta: 0,
     }));
     return {
       id: "badges-virtual",
@@ -198,11 +188,6 @@ export default function ProductConfigurator({ product }: Props) {
     };
   }, [product.badges]);
 
-  /**
-   * ✅ Merge do grupo real "badges" (BD) com o virtual (product.badges)
-   * - Mantém a ordem do real e adiciona valores que existam só no virtual.
-   * - Evita duplicados por `value`.
-   */
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
     const real = product.optionGroups.find((g) => g.key === "badges");
     const virtual = badgesGroupVirtual;
@@ -218,7 +203,6 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
-  // ✅ Só mostramos a secção customization se existir na BD e tiver valores (após filtros).
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
@@ -231,21 +215,18 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
-  // Outros grupos (shorts, socks, etc. — fora size/customization/badges)
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
   );
 
   const customization = selected["customization"] ?? "";
 
-  // Se a secção customization for escondida, limpa seleção relacionada
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // se não houver badges e a seleção tiver "badge", limpar
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
       setSelected((s) => ({ ...s, customization: "none" }));
@@ -296,7 +277,6 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
-        // Garante exclusividade por competição (ex.: só 1 UCL)
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -354,12 +334,14 @@ export default function ProductConfigurator({ product }: Props) {
     }
     return best.getBoundingClientRect();
   }
+
   function pulseCart() {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
     setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
+
   function flyToCart() {
     if (typeof document === "undefined") return;
     const start = imgWrapRef.current?.getBoundingClientRect();
@@ -460,13 +442,13 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    <div className="relative flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
+    <div className="relative w-full px-3 sm:px-4 flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {showToast ? "Item added to cart." : ""}
       </div>
 
       {/* ===== GALLERY ===== */}
-      <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-3 sm:p-4 lg:p-6">
+      <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
         <div className="flex items-center gap-3 sm:gap-4">
           {images.length > 1 ? (
             <button
@@ -495,7 +477,6 @@ export default function ProductConfigurator({ product }: Props) {
               unoptimized
             />
 
-            {/* Controlo de navegação em MOBILE / TABLET (sobre a imagem) */}
             {images.length > 1 && (
               <>
                 <button
@@ -536,11 +517,10 @@ export default function ProductConfigurator({ product }: Props) {
           <div className="mt-4">
             <div
               ref={thumbsRef}
-              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none]"
-              style={{ maxWidth: STRIP_MAX_W }}
+              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
             >
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-              <div className="inline-flex gap-2 no-scrollbar" style={{ scrollBehavior: "smooth" }}>
+              <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
                 {images.map((src, i) => {
                   const isActive = i === activeIndex;
                   return (
@@ -580,7 +560,7 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== CONFIGURATOR ===== */}
-      <div className="card p-4 sm:p-5 lg:p-6 space-y-5 lg:space-y-6 flex-1 min-w-0">
+      <div className="card w-full p-4 sm:p-5 lg:p-6 space-y-5 lg:space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
           <h1 className="text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight">
             {product.name}
@@ -637,7 +617,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </div>
 
-        {/* Customization (FREE) — só mostra se existir grupo efetivo e tiver valores */}
+        {/* Customization */}
         {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
           <GroupBlock
             group={effectiveCustomizationGroup}
@@ -648,7 +628,7 @@ export default function ProductConfigurator({ product }: Props) {
           />
         )}
 
-        {/* Personalization inputs (FREE) */}
+        {/* Personalization inputs */}
         {showNameNumber && (
           <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">
@@ -690,7 +670,7 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         )}
 
-        {/* Badges (FREE) — aparece se a escolha tiver "badge" e houver grupo (real ou virtual) */}
+        {/* Badges */}
         {showBadgePicker && badgesGroup && (
           <GroupBlock
             group={badgesGroup}
