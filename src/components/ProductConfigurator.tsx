@@ -349,7 +349,7 @@ export default function ProductConfigurator({ product }: Props) {
       const d = Math.hypot(cx - imgCx, cy - imgCy);
       if (d < bestDist) {
         bestDist = d;
-      best = el;
+        best = el;
       }
     }
     return best.getBoundingClientRect();
@@ -460,28 +460,31 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    <div className="relative flex flex-col gap-8 lg:flex-row lg:items-start">
+    <div className="relative flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {showToast ? "Item added to cart." : ""}
       </div>
 
       {/* ===== GALLERY ===== */}
-      <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-6">
-        <div className="flex items-center gap-4">
+      <div className="rounded-2xl border bg-white w-full lg:w-[560px] flex-none lg:self-start p-3 sm:p-4 lg:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
           {images.length > 1 ? (
             <button
               type="button"
               onClick={goPrev}
               aria-label="Previous image"
-              className="group h-10 w-10 shrink-0 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <ChevronLeft />
             </button>
           ) : (
-            <div className="h-10 w-10 shrink-0" />
+            <div className="h-10 w-10 shrink-0 hidden lg:block" />
           )}
 
-          <div ref={imgWrapRef} className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white">
+          <div
+            ref={imgWrapRef}
+            className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white"
+          >
             <Image
               src={activeSrc}
               alt={product.name}
@@ -491,6 +494,28 @@ export default function ProductConfigurator({ product }: Props) {
               priority
               unoptimized
             />
+
+            {/* Controlo de navegação em MOBILE / TABLET (sobre a imagem) */}
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  aria-label="Previous image"
+                  className="lg:hidden absolute left-2 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <ChevronLeft />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  aria-label="Next image"
+                  className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <ChevronRight />
+                </button>
+              </>
+            )}
           </div>
 
           {images.length > 1 ? (
@@ -498,12 +523,12 @@ export default function ProductConfigurator({ product }: Props) {
               type="button"
               onClick={goNext}
               aria-label="Next image"
-              className="group h-10 w-10 shrink-0 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <ChevronRight />
             </button>
           ) : (
-            <div className="h-10 w-10 shrink-0" />
+            <div className="h-10 w-10 shrink-0 hidden lg:block" />
           )}
         </div>
 
@@ -536,7 +561,14 @@ export default function ProductConfigurator({ product }: Props) {
                         />
                       )}
                       <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                        <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" unoptimized />
+                        <Image
+                          src={src}
+                          alt={`thumb ${i + 1}`}
+                          fill
+                          className="object-contain"
+                          sizes="68px"
+                          unoptimized
+                        />
                       </span>
                     </button>
                   );
@@ -548,18 +580,24 @@ export default function ProductConfigurator({ product }: Props) {
       </div>
 
       {/* ===== CONFIGURATOR ===== */}
-      <div className="card p-6 space-y-6 flex-1 min-w-0">
+      <div className="card p-4 sm:p-5 lg:p-6 space-y-5 lg:space-y-6 flex-1 min-w-0">
         <header className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight">{product.name}</h1>
-          <div className="text-xl font-semibold">{money(product.basePrice)}</div>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight">
+            {product.name}
+          </h1>
+          <div className="text-lg sm:text-xl font-semibold">
+            {money(product.basePrice)}
+          </div>
           {product.description && (
-            <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
+            <p className="mt-2 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
+              {product.description}
+            </p>
           )}
         </header>
 
         {/* Size */}
-        <div className="rounded-2xl border p-4 bg-white/70">
-          <div className="mb-2 text-sm text-gray-700">
+        <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+          <div className="mb-2 text-xs sm:text-sm text-gray-700">
             Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
           </div>
 
@@ -577,7 +615,7 @@ export default function ProductConfigurator({ product }: Props) {
                     aria-disabled={unavailable}
                     title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                     className={cx(
-                      "rounded-xl px-3 py-2 border text-sm transition",
+                      "rounded-xl px-3 py-2 border text-xs sm:text-sm transition",
                       unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
                       isActive && "bg-blue-600 text-white border-blue-600"
                     )}
@@ -593,7 +631,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
           {kid && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
               Ages are approximate. If in between, we recommend sizing up.
             </p>
           )}
@@ -612,18 +650,20 @@ export default function ProductConfigurator({ product }: Props) {
 
         {/* Personalization inputs (FREE) */}
         {showNameNumber && (
-          <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
+          <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-4">
             <div className="text-sm text-gray-700">
               Personalization{" "}
               <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
                 FREE
               </span>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
               <label className="block">
-                <span className="text-xs text-gray-600">Name (uppercase)</span>
+                <span className="text-[11px] sm:text-xs text-gray-600">
+                  Name (uppercase)
+                </span>
                 <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g. BELLINGHAM"
                   value={custName}
                   onChange={(e) => setCustName(e.target.value)}
@@ -631,9 +671,11 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-gray-600">Number (0–99)</span>
+                <span className="text-[11px] sm:text-xs text-gray-600">
+                  Number (0–99)
+                </span>
                 <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g. 5"
                   value={custNumber}
                   onChange={(e) => setCustNumber(e.target.value)}
@@ -642,7 +684,9 @@ export default function ProductConfigurator({ product }: Props) {
                 />
               </label>
             </div>
-            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+            <p className="text-[11px] sm:text-xs text-gray-500">
+              Personalization will be printed in the club’s official style.
+            </p>
           </div>
         )}
 
@@ -670,10 +714,10 @@ export default function ProductConfigurator({ product }: Props) {
         ))}
 
         {/* Qty + Total */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <button
-              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
               onClick={() => setQty((q) => Math.max(1, q - 1))}
               aria-label="Decrease quantity"
               disabled={pending}
@@ -682,7 +726,7 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
             <span className="min-w-[2ch] text-center">{qty}</span>
             <button
-              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
               onClick={() => setQty((q) => q + 1)}
               aria-label="Increase quantity"
               disabled={pending}
@@ -691,9 +735,11 @@ export default function ProductConfigurator({ product }: Props) {
             </button>
           </div>
 
-          <div className="text-right">
-            <div className="text-sm text-gray-600">Total</div>
-            <div className="text-lg font-semibold">{money(finalPrice)}</div>
+          <div className="text-right sm:text-left">
+            <div className="text-xs sm:text-sm text-gray-600">Total</div>
+            <div className="text-base sm:text-lg font-semibold">
+              {money(finalPrice)}
+            </div>
           </div>
         </div>
 
@@ -701,7 +747,7 @@ export default function ProductConfigurator({ product }: Props) {
         <motion.button
           onClick={addToCart}
           className={cx(
-            "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2",
+            "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
             justAdded && "bg-green-600 hover:bg-green-600"
           )}
           disabled={pending || !selectedSize || qty < 1}
@@ -730,7 +776,7 @@ export default function ProductConfigurator({ product }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.18 }}
-            className="fixed bottom-4 right-4 z-50"
+            className="fixed bottom-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4 sm:left-auto sm:right-4 sm:translate-x-0 sm:px-0"
             role="status"
             aria-live="polite"
           >
@@ -740,7 +786,9 @@ export default function ProductConfigurator({ product }: Props) {
               </div>
               <div className="text-sm">
                 <div className="font-semibold">Item added to cart</div>
-                <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
+                <div className="text-gray-600">
+                  You can keep shopping or proceed to checkout.
+                </div>
               </div>
               <button
                 className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
@@ -776,8 +824,8 @@ function GroupBlock({
 
   if (group.type === "RADIO") {
     return (
-      <div className="rounded-2xl border p-4 bg-white/70">
-        <div className="mb-2 text-sm text-gray-700">
+      <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+        <div className="mb-2 text-xs sm:text-sm text-gray-700">
           {group.label} {group.required && <span className="text-red-500">*</span>}
         </div>
         <div className="grid gap-2">
@@ -798,7 +846,7 @@ function GroupBlock({
                     checked={!!active}
                     onChange={() => onPickRadio(group.key, v.value)}
                   />
-                  <span>{v.label}</span>
+                  <span className="text-sm">{v.label}</span>
                 </div>
                 {forceFree ? (
                   <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
@@ -817,8 +865,8 @@ function GroupBlock({
   const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
-    <div className="rounded-2xl border p-4 bg-white/70">
-      <div className="mb-2 text-sm text-gray-700">
+    <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+      <div className="mb-2 text-xs sm:text-sm text-gray-700">
         {group.label} {group.required && <span className="text-red-500">*</span>}
       </div>
       <div className="grid gap-2">
@@ -842,7 +890,7 @@ function GroupBlock({
                       : onToggleAddon(group.key, v.value, e.target.checked)
                   }
                 />
-                <span>{v.label}</span>
+                <span className="text-sm">{v.label}</span>
               </div>
               {forceFree ? (
                 <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
@@ -860,8 +908,20 @@ function GroupBlock({
 /* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      {...props}
+      className={cx("h-5 w-5", props.className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 7L9 18l-5-5"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -870,11 +930,20 @@ function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      className={cx(
+        "mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform",
+        props.className
+      )}
       fill="none"
       aria-hidden="true"
     >
-      <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M15 6l-6 6 6 6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -883,11 +952,20 @@ function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      className={cx(
+        "mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform",
+        props.className
+      )}
       fill="none"
       aria-hidden="true"
     >
-      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
