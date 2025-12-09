@@ -8,19 +8,17 @@ import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 
 /* ====================== MAPA DE DESCONTOS ======================
- * chave  = preço atual (em euros, ex.: 34.99)
- * valor  = preço original antes do desconto
- * Para qualquer product.basePrice que esteja aqui,
- * mostramos o preço original riscado e o % de desconto.
+ * chave  = preço atual (EUROS, como aparece no site, ex: "34.99")
+ * valor  = preço ORIGINAL antes do desconto (em euros)
  */
-const SALE_MAP_EUR: Record<number, number> = {
-  29.99: 70,
-  34.99: 100,
-  39.99: 120,
-  44.99: 150,
-  49.99: 165,
-  59.99: 200,
-  69.99: 230,
+const SALE_MAP_EUR: Record<string, number> = {
+  "29.99": 70,
+  "34.99": 100,
+  "39.99": 120,
+  "44.99": 150,
+  "49.99": 165,
+  "59.99": 200,
+  "69.99": 230,
 };
 
 /* ====================== UI Types ====================== */
@@ -120,9 +118,10 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  /* ---------- DESCONTO (preço riscado + %) ---------- */
-  const saleUnitPrice = product.basePrice;
-  const originalUnitPrice = SALE_MAP_EUR[saleUnitPrice];
+  /* ---------- DESCONTO ---------- */
+  const saleUnitPrice = product.basePrice; // preço atual (ex.: 34.99)
+  const saleKey = saleUnitPrice.toFixed(2); // "34.99"
+  const originalUnitPrice = SALE_MAP_EUR[saleKey]; // preço original (ex.: 100)
   const hasDiscount =
     typeof originalUnitPrice === "number" && originalUnitPrice > saleUnitPrice;
 
@@ -307,7 +306,6 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
-        // remove qualquer badge da mesma competição
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -611,7 +609,7 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
-            {/* <-- AQUI: preço original riscado + badge de % + preço atual */}
+            {/* <-- AQUI aparecem o preço riscado, badge de %, e preço atual */}
             <div className="flex items-baseline gap-2">
               {hasDiscount && (
                 <>
