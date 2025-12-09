@@ -293,7 +293,7 @@ function Lightbox({
         <X className="h-5 w-5" />
       </button>
 
-      {/* SETAS FORA DA IMAGEM – nas laterais do ecrã */}
+      {/* SETAS NAS LATERAIS (DESKTOP / TABLET) */}
       {urls.length > 1 && (
         <>
           <button
@@ -301,7 +301,7 @@ function Lightbox({
               e.stopPropagation();
               onPrev();
             }}
-            className="fixed left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            className="hidden sm:inline-flex fixed left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
             aria-label="Previous image"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -311,7 +311,7 @@ function Lightbox({
               e.stopPropagation();
               onNext();
             }}
-            className="fixed right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            className="hidden sm:inline-flex fixed right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
             aria-label="Next image"
           >
             <ChevronRight className="h-6 w-6" />
@@ -329,6 +329,32 @@ function Lightbox({
             className="block w-auto h-auto max-w-[95vw] max-h-[85vh] object-contain select-none"
             draggable={false}
           />
+
+          {/* SETAS SOBRE A IMAGEM (MOBILE) */}
+          {urls.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPrev();
+                }}
+                className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNext();
+                }}
+                className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Thumbnails */}
