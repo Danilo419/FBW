@@ -119,14 +119,37 @@ export default function ProductConfigurator({ product }: Props) {
   const [showToast, setShowToast] = useState(false);
 
   /* ---------- DESCONTO ---------- */
-  const saleUnitPrice = product.basePrice; // preço atual (ex.: 34.99)
-  const saleKey = saleUnitPrice.toFixed(2); // "34.99"
-  const originalUnitPrice = SALE_MAP_EUR[saleKey]; // preço original (ex.: 100)
+  const rawUnitPrice = product.basePrice; // mesmo valor que já usas com money()
+  // Tentamos perceber se o preço está em euros (34.99) ou em cêntimos (3499)
+  const candidateEur1 = rawUnitPrice;
+  const candidateEur2 = rawUnitPrice / 100;
+
+  let salePriceEur: number;
+  if (SALE_MAP_EUR[candidateEur1.toFixed(2)]) {
+    salePriceEur = candidateEur1;
+  } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
+    salePriceEur = candidateEur2;
+  } else {
+    // fallback: se for um valor grande, assumimos cêntimos
+    salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
+  }
+
+  const saleKey = salePriceEur.toFixed(2);
+  const originalPriceEur = SALE_MAP_EUR[saleKey]; // preço original em euros, vindo do mapa
+
+  // Convertemos o preço original para a mesma unidade de rawUnitPrice,
+  // para poder usar money() sem mexer nessa função.
+  let originalUnitPriceForMoney: number | undefined;
+  if (typeof originalPriceEur === "number") {
+    const factor = rawUnitPrice / salePriceEur; // 1 (se raw for euros) ou ~100 (se raw for cêntimos)
+    originalUnitPriceForMoney = originalPriceEur * factor;
+  }
+
   const hasDiscount =
-    typeof originalUnitPrice === "number" && originalUnitPrice > saleUnitPrice;
+    typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
 
   const discountPercent = hasDiscount
-    ? Math.round(((originalUnitPrice - saleUnitPrice) / originalUnitPrice) * 100)
+    ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
     : 0;
 
   /* ---------- Images ---------- */
@@ -400,7 +423,7 @@ export default function ProductConfigurator({ product }: Props) {
       zIndex: "9999",
       pointerEvents: "none",
       transition:
-        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
+        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms.ease",
       opacity: "0.9",
       transform: "translate3d(0,0,0) scale(1)",
     } as CSSStyleDeclaration);
@@ -517,6 +540,13 @@ export default function ProductConfigurator({ product }: Props) {
                 unoptimized
               />
 
+              {/* Badge de desconto por cima da imagem */}
+              {hasDiscount && (
+                <div className="absolute left-2 top-2 rounded-full bg-red-500 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-white shadow-md">
+                  -{discountPercent}%
+                </div>
+              )}
+
               {images.length > 1 && (
                 <>
                   <button
@@ -609,12 +639,12 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
-            {/* <-- AQUI aparecem o preço riscado, badge de %, e preço atual */}
+            {/* Preço riscado + badge de % + preço atual */}
             <div className="flex items-baseline gap-2">
-              {hasDiscount && (
+              {hasDiscount && originalUnitPriceForMoney && (
                 <>
                   <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                    {money(originalUnitPrice)}
+                    {money(originalUnitPriceForMoney)}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
                     -{discountPercent}%
@@ -622,7 +652,7 @@ export default function ProductConfigurator({ product }: Props) {
                 </>
               )}
               <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
-                {money(saleUnitPrice)}
+                {money(rawUnitPrice)}
               </span>
             </div>
 
