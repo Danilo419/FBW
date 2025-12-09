@@ -126,7 +126,6 @@ function SelectStars({
           );
         })}
       </div>
-      {/* Texto em baixo das estrelas no mobile, ao lado em telas ≥ sm */}
       <span className="text-sm text-gray-500">Click a star (0–5)</span>
     </div>
   );
@@ -278,7 +277,7 @@ function Lightbox({
       role="dialog"
       aria-modal="true"
     >
-      {/* Botão fechar FIXO ao viewport (nunca sai da página) */}
+      {/* Botão fechar FIXO ao viewport */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -287,13 +286,38 @@ function Lightbox({
         className="fixed z-[90] rounded-full bg-white/95 p-2 shadow ring-1 ring-black/10 hover:brightness-105"
         aria-label="Close"
         style={{
-          // respeita áreas seguras (iPhone com notch, etc.)
           right: "max(1rem, env(safe-area-inset-right))",
           top: "max(1rem, env(safe-area-inset-top))",
         }}
       >
         <X className="h-5 w-5" />
       </button>
+
+      {/* SETAS FORA DA IMAGEM – nas laterais do ecrã */}
+      {urls.length > 1 && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPrev();
+            }}
+            className="fixed left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNext();
+            }}
+            className="fixed right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            aria-label="Next image"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </>
+      )}
 
       {/* contentor */}
       <div className="relative inline-flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
@@ -305,26 +329,6 @@ function Lightbox({
             className="block w-auto h-auto max-w-[95vw] max-h-[85vh] object-contain select-none"
             draggable={false}
           />
-
-          {/* Navegação */}
-          {urls.length > 1 && (
-            <>
-              <button
-                onClick={onPrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                onClick={onNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10"
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            </>
-          )}
         </div>
 
         {/* Thumbnails */}
@@ -544,7 +548,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
             </span>
           </h2>
 
-          {/* Pill MOBILE: em baixo do título */}
+          {/* Pill MOBILE */}
           <div className="mt-3 flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1 shadow-sm sm:hidden">
             <ReadOnlyStars value={average} />
             <span className="text-sm text-gray-700">
@@ -558,7 +562,7 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
           </p>
         </div>
 
-        {/* Pill DESKTOP/TABLET: à direita do título */}
+        {/* Pill DESKTOP/TABLET */}
         <div className="hidden sm:flex absolute right-5 top-1/2 -translate-y-1/2 items-center gap-3 rounded-full border bg-white/70 px-3 py-1 shadow-sm">
           <ReadOnlyStars value={average} />
           <span className="text-sm text-gray-700">
