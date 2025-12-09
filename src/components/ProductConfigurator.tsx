@@ -7,7 +7,12 @@ import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 
-/* ====================== SALE MAP ====================== */
+/* ====================== MAPA DE DESCONTOS ======================
+ * chave  = preço atual (em euros, ex.: 34.99)
+ * valor  = preço original antes do desconto
+ * Para qualquer product.basePrice que esteja aqui,
+ * mostramos o preço original riscado e o % de desconto.
+ */
 const SALE_MAP_EUR: Record<number, number> = {
   29.99: 70,
   34.99: 100,
@@ -115,13 +120,14 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  /* ---------- Desconto ---------- */
-  const basePrice = product.basePrice;
-  const discountAmount = SALE_MAP_EUR[basePrice];
-  const hasDiscount = typeof discountAmount === "number" && discountAmount > 0;
-  const originalUnitPrice = hasDiscount ? basePrice + discountAmount : basePrice;
+  /* ---------- DESCONTO (preço riscado + %) ---------- */
+  const saleUnitPrice = product.basePrice;
+  const originalUnitPrice = SALE_MAP_EUR[saleUnitPrice];
+  const hasDiscount =
+    typeof originalUnitPrice === "number" && originalUnitPrice > saleUnitPrice;
+
   const discountPercent = hasDiscount
-    ? Math.round((discountAmount / originalUnitPrice) * 100)
+    ? Math.round(((originalUnitPrice - saleUnitPrice) / originalUnitPrice) * 100)
     : 0;
 
   /* ---------- Images ---------- */
@@ -188,7 +194,9 @@ export default function ProductConfigurator({ product }: Props) {
   }, [sizes, selectedSize]);
 
   /* ---------- Groups ---------- */
-  const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
+  const customizationGroupFromDb = product.optionGroups.find(
+    (g) => g.key === "customization"
+  );
 
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
@@ -229,7 +237,9 @@ export default function ProductConfigurator({ product }: Props) {
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
-      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+      : original.values.filter(
+          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
+        );
 
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
@@ -297,6 +307,7 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
+        // remove qualquer badge da mesma competição
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -312,14 +323,20 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
-  const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
+  const finalPrice = useMemo(
+    () => unitJerseyPrice * qty,
+    [unitJerseyPrice, qty]
+  );
 
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
     [custName]
   );
-  const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
+  const safeNumber = useMemo(
+    () => custNumber.replace(/\D/g, "").slice(0, 2),
+    [custNumber]
+  );
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
@@ -359,7 +376,10 @@ export default function ProductConfigurator({ product }: Props) {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
-    setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
+    setTimeout(
+      () => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"),
+      450
+    );
   }
 
   function flyToCart() {
@@ -439,7 +459,7 @@ export default function ProductConfigurator({ product }: Props) {
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
       Object.entries(selected).map(([k, v]) => [
         k,
-        Array.isArray(v) ? (v.length ? v.join(",") : null) : (v ?? null),
+        Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null,
       ])
     );
 
@@ -448,7 +468,9 @@ export default function ProductConfigurator({ product }: Props) {
         productId: product.id,
         qty,
         options: optionsForCart,
-        personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
+        personalization: showNameNumber
+          ? { name: safeName, number: safeNumber }
+          : null,
       });
 
       setJustAdded(true);
@@ -540,7 +562,10 @@ export default function ProductConfigurator({ product }: Props) {
                 className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
+                <div
+                  className="inline-flex gap-2"
+                  style={{ scrollBehavior: "smooth" }}
+                >
                   {images.map((src, i) => {
                     const isActive = i === activeIndex;
                     return (
@@ -586,7 +611,7 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
-            {/* Preço com antigo riscado + símbolo de desconto */}
+            {/* <-- AQUI: preço original riscado + badge de % + preço atual */}
             <div className="flex items-baseline gap-2">
               {hasDiscount && (
                 <>
@@ -594,12 +619,12 @@ export default function ProductConfigurator({ product }: Props) {
                     {money(originalUnitPrice)}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-                    -{discountPercent}% 
+                    -{discountPercent}%
                   </span>
                 </>
               )}
               <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
-                {money(basePrice)}
+                {money(saleUnitPrice)}
               </span>
             </div>
 
@@ -620,7 +645,8 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {sizes.map((s) => {
                   const unavailable = isUnavailable(s);
-                  const isActive = (selected.size as string) === s.size && !unavailable;
+                  const isActive =
+                    (selected.size as string) === s.size && !unavailable;
                   return (
                     <button
                       key={s.id}
@@ -631,7 +657,9 @@ export default function ProductConfigurator({ product }: Props) {
                       title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                       className={cx(
                         "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
-                        unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
+                        unavailable
+                          ? "opacity-50 line-through cursor-not-allowed"
+                          : "hover:bg-gray-50",
                         isActive && "bg-blue-600 text-white border-blue-600"
                       )}
                       aria-pressed={isActive}
@@ -653,15 +681,16 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
 
           {/* Customization (FREE) */}
-          {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock
-              group={effectiveCustomizationGroup!}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              forceFree
-            />
-          )}
+          {effectiveCustomizationGroup &&
+            effectiveCustomizationGroup.values.length > 0 && (
+              <GroupBlock
+                group={effectiveCustomizationGroup!}
+                selected={selected}
+                onPickRadio={setRadio}
+                onToggleAddon={toggleAddon}
+                forceFree
+              />
+            )}
 
           {/* Personalization */}
           {showNameNumber && (
@@ -752,25 +781,9 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="text-right sm:text-left">
               <div className="text-xs sm:text-sm text-gray-600">Total</div>
-              {hasDiscount ? (
-                <div className="flex flex-col items-end sm:items-start gap-0.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                      {money((originalUnitPrice) * qty)}
-                    </span>
-                    <span className="inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
-                      -{discountPercent}%
-                    </span>
-                  </div>
-                  <div className="text-base sm:text-lg font-semibold">
-                    {money(finalPrice)}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-base sm:text-lg font-semibold">
-                  {money(finalPrice)}
-                </div>
-              )}
+              <div className="text-base sm:text-lg font-semibold">
+                {money(finalPrice)}
+              </div>
             </div>
           </div>
 
@@ -894,7 +907,8 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
+  const isActive = (value: string) =>
+    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
