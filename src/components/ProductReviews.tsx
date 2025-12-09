@@ -102,7 +102,7 @@ function SelectStars({
   const live = hover ?? value;
 
   return (
-    <div className="inline-flex items-center gap-3">
+    <div className="inline-flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
       <div className="flex gap-2">
         {Array.from({ length: 5 }).map((_, i) => {
           const idx = i + 1;
@@ -126,6 +126,7 @@ function SelectStars({
           );
         })}
       </div>
+      {/* Texto em baixo das estrelas no mobile, ao lado em telas ≥ sm */}
       <span className="text-sm text-gray-500">Click a star (0–5)</span>
     </div>
   );
@@ -534,28 +535,37 @@ export default function ReviewsPanel({ productId }: { productId: string }) {
       {/* Cabeçalho */}
       <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-r from-slate-50 via-white to-cyan-50 p-5 ring-1 ring-black/5">
         <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl" />
-        {/* Reservamos espaço à direita para o “pill” absoluto */}
-        <div className="pr-44">
+
+        <div className="sm:pr-44">
           <h2 className="text-lg font-semibold tracking-tight flex items-center">
             <span className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-600" />
               Ratings & Reviews
             </span>
           </h2>
+
+          {/* Pill MOBILE: em baixo do título */}
+          <div className="mt-3 flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1 shadow-sm sm:hidden">
+            <ReadOnlyStars value={average} />
+            <span className="text-sm text-gray-700">
+              <span className="font-semibold">{average.toFixed(1)}</span>/5
+            </span>
+            <span className="text-xs text-gray-500">({total})</span>
+          </div>
+
+          <p className="mt-2 text-xs text-gray-600">
+            You must have an account and be logged in to make a review.
+          </p>
         </div>
 
-        {/* Pill ABSOLUTO: centrado verticalmente no cabeçalho */}
-        <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3 rounded-full border bg-white/70 px-3 py-1 shadow-sm">
+        {/* Pill DESKTOP/TABLET: à direita do título */}
+        <div className="hidden sm:flex absolute right-5 top-1/2 -translate-y-1/2 items-center gap-3 rounded-full border bg-white/70 px-3 py-1 shadow-sm">
           <ReadOnlyStars value={average} />
           <span className="text-sm text-gray-700">
             <span className="font-semibold">{average.toFixed(1)}</span>/5
           </span>
           <span className="text-xs text-gray-500">({total})</span>
         </div>
-
-        <p className="mt-2 text-xs text-gray-600">
-          You must have an account and be logged in to make a review.
-        </p>
       </div>
 
       {/* Layout 2 colunas */}
