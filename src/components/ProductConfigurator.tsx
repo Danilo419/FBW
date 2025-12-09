@@ -7,6 +7,17 @@ import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 
+/* ====================== SALE MAP ====================== */
+const SALE_MAP_EUR: Record<number, number> = {
+  29.99: 70,
+  34.99: 100,
+  39.99: 120,
+  44.99: 150,
+  49.99: 165,
+  59.99: 200,
+  69.99: 230,
+};
+
 /* ====================== UI Types ====================== */
 type OptionValueUI = { id: string; value: string; label: string; priceDelta: number };
 type OptionGroupUI = {
@@ -103,6 +114,15 @@ export default function ProductConfigurator({ product }: Props) {
   const [pending, startTransition] = useTransition();
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
+
+  /* ---------- Desconto ---------- */
+  const basePrice = product.basePrice;
+  const discountAmount = SALE_MAP_EUR[basePrice];
+  const hasDiscount = typeof discountAmount === "number" && discountAmount > 0;
+  const originalUnitPrice = hasDiscount ? basePrice + discountAmount : basePrice;
+  const discountPercent = hasDiscount
+    ? Math.round((discountAmount / originalUnitPrice) * 100)
+    : 0;
 
   /* ---------- Images ---------- */
   const images = product.images?.length ? product.images : ["/placeholder.png"];
@@ -565,9 +585,24 @@ export default function ProductConfigurator({ product }: Props) {
             <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight">
               {product.name}
             </h1>
-            <div className="text-sm sm:text-lg lg:text-xl font-semibold">
-              {money(product.basePrice)}
+
+            {/* Preço com antigo riscado + símbolo de desconto */}
+            <div className="flex items-baseline gap-2">
+              {hasDiscount && (
+                <>
+                  <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+                    {money(originalUnitPrice)}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                    -{discountPercent}% 
+                  </span>
+                </>
+              )}
+              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
+                {money(basePrice)}
+              </span>
             </div>
+
             {product.description && (
               <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
                 {product.description}
@@ -717,9 +752,25 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="text-right sm:text-left">
               <div className="text-xs sm:text-sm text-gray-600">Total</div>
-              <div className="text-base sm:text-lg font-semibold">
-                {money(finalPrice)}
-              </div>
+              {hasDiscount ? (
+                <div className="flex flex-col items-end sm:items-start gap-0.5">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+                      {money((originalUnitPrice) * qty)}
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                      -{discountPercent}%
+                    </span>
+                  </div>
+                  <div className="text-base sm:text-lg font-semibold">
+                    {money(finalPrice)}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-base sm:text-lg font-semibold">
+                  {money(finalPrice)}
+                </div>
+              )}
             </div>
           </div>
 
