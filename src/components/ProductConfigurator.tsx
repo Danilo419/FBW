@@ -119,37 +119,14 @@ export default function ProductConfigurator({ product }: Props) {
   const [showToast, setShowToast] = useState(false);
 
   /* ---------- DESCONTO ---------- */
-  const rawUnitPrice = product.basePrice; // mesmo valor que já usas com money()
-  // Tentamos perceber se o preço está em euros (34.99) ou em cêntimos (3499)
-  const candidateEur1 = rawUnitPrice;
-  const candidateEur2 = rawUnitPrice / 100;
-
-  let salePriceEur: number;
-  if (SALE_MAP_EUR[candidateEur1.toFixed(2)]) {
-    salePriceEur = candidateEur1;
-  } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
-    salePriceEur = candidateEur2;
-  } else {
-    // fallback: se for um valor grande, assumimos cêntimos
-    salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
-  }
-
-  const saleKey = salePriceEur.toFixed(2);
-  const originalPriceEur = SALE_MAP_EUR[saleKey]; // preço original em euros, vindo do mapa
-
-  // Convertemos o preço original para a mesma unidade de rawUnitPrice,
-  // para poder usar money() sem mexer nessa função.
-  let originalUnitPriceForMoney: number | undefined;
-  if (typeof originalPriceEur === "number") {
-    const factor = rawUnitPrice / salePriceEur; // 1 (se raw for euros) ou ~100 (se raw for cêntimos)
-    originalUnitPriceForMoney = originalPriceEur * factor;
-  }
-
+  const saleUnitPrice = product.basePrice; // preço atual (ex.: 34.99)
+  const saleKey = saleUnitPrice.toFixed(2); // "34.99"
+  const originalUnitPrice = SALE_MAP_EUR[saleKey]; // preço original (ex.: 100)
   const hasDiscount =
-    typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
+    typeof originalUnitPrice === "number" && originalUnitPrice > saleUnitPrice;
 
   const discountPercent = hasDiscount
-    ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
+    ? Math.round(((originalUnitPrice - saleUnitPrice) / originalUnitPrice) * 100)
     : 0;
 
   /* ---------- Images ---------- */
@@ -423,7 +400,7 @@ export default function ProductConfigurator({ product }: Props) {
       zIndex: "9999",
       pointerEvents: "none",
       transition:
-        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms.ease",
+        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
       opacity: "0.9",
       transform: "translate3d(0,0,0) scale(1)",
     } as CSSStyleDeclaration);
@@ -542,7 +519,7 @@ export default function ProductConfigurator({ product }: Props) {
 
               {/* Badge de desconto por cima da imagem */}
               {hasDiscount && (
-                <div className="absolute left-2 top-2 rounded-full bg-red-500 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-white shadow-md">
+                <div className="absolute left-1/2 -translate-x-1/2 top-3 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md">
                   -{discountPercent}%
                 </div>
               )}
@@ -574,7 +551,7 @@ export default function ProductConfigurator({ product }: Props) {
                 type="button"
                 onClick={goNext}
                 aria-label="Next image"
-                className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group hidden lg:inline-flex h-10 w-10 shrink-0.items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <ChevronRight />
               </button>
@@ -603,7 +580,7 @@ export default function ProductConfigurator({ product }: Props) {
                         onClick={() => setActiveIndex(i)}
                         aria-label={`Image ${i + 1}`}
                         className={cx(
-                          "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
+                          "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl.border transition focus:outline-none",
                           isActive ? "border-transparent" : "hover:opacity-90"
                         )}
                       >
@@ -639,20 +616,15 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
-            {/* Preço riscado + badge de % + preço atual */}
+            {/* Preço riscado + preço atual (sem % aqui) */}
             <div className="flex items-baseline gap-2">
-              {hasDiscount && originalUnitPriceForMoney && (
-                <>
-                  <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                    {money(originalUnitPriceForMoney)}
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-                    -{discountPercent}%
-                  </span>
-                </>
+              {hasDiscount && (
+                <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+                  {money(originalUnitPrice)}
+                </span>
               )}
               <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
-                {money(rawUnitPrice)}
+                {money(saleUnitPrice)}
               </span>
             </div>
 
@@ -664,7 +636,7 @@ export default function ProductConfigurator({ product }: Props) {
           </header>
 
           {/* Size */}
-          <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+          <div className="rounded-2xl border p-3 sm:p-4 bg.white/70">
             <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
               Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
             </div>
@@ -747,7 +719,7 @@ export default function ProductConfigurator({ product }: Props) {
                     Number (0–99)
                   </span>
                   <input
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 w-full rounded-xl border px-3.py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. 5"
                     value={custNumber}
                     onChange={(e) => setCustNumber(e.target.value)}
@@ -848,11 +820,11 @@ export default function ProductConfigurator({ product }: Props) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className="fixed bottom-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4 sm:left-auto sm:right-4 sm:translate-x-0 sm:px-0"
+              className="fixed.bottom-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4 sm:left-auto sm:right-4 sm:translate-x-0 sm:px-0"
               role="status"
               aria-live="polite"
             >
-              <div className="rounded-xl border bg-white/95 backdrop-blur px-4 py-3 shadow-xl flex items-center gap-3">
+              <div className="rounded-xl border bg-white/95 backdrop-blur px-4 py-3 shadow-xl flex.items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
                   <CheckIcon className="h-4 w-4 text-green-700" />
                 </div>
@@ -911,7 +883,7 @@ function GroupBlock({
                   active ? "border-blue-600 ring-2 ring-blue-100" : "hover:bg-gray-50"
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex.items-center gap-2">
                   <input
                     type="radio"
                     name={group.key}
