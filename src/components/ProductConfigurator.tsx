@@ -28,7 +28,6 @@ type ProductUI = {
   images: string[];
   optionGroups: OptionGroupUI[];
   sizes?: SizeUI[];
-  /** ✅ novo: badges guardados no produto (array de valores/keys) */
   badges?: string[];
 };
 
@@ -40,9 +39,8 @@ const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-/* ============ Catálogo (label) para valores de badge conhecidos ============ */
+/* ============ Badge helpers ============ */
 const BADGE_LABELS: Record<string, string> = {
-  // Ligas
   "premier-league-regular": "Premier League – League Badge",
   "premier-league-champions": "Premier League – Champions (Gold)",
   "la-liga-regular": "La Liga – League Badge",
@@ -59,7 +57,6 @@ const BADGE_LABELS: Record<string, string> = {
   "eredivisie-champions": "Eredivisie – Champion",
   "scottish-premiership-regular": "Scottish Premiership – League Badge",
   "scottish-premiership-champions": "Scottish Premiership – Champion",
-  // Outras ligas
   "mls-regular": "MLS – League Badge",
   "mls-champions": "MLS – Champions (MLS Cup Holders)",
   "brasileirao-regular": "Brasileirão – League Badge",
@@ -68,21 +65,17 @@ const BADGE_LABELS: Record<string, string> = {
   "super-lig-champions": "Süper Lig – Champion",
   "spl-saudi-regular": "Saudi Pro League – League Badge",
   "spl-saudi-champions": "Saudi Pro League – Champion",
-  // UEFA
   "ucl-regular": "UEFA Champions League – Starball Badge",
   "ucl-winners": "UEFA Champions League – Winners Badge",
   "uel-regular": "UEFA Europa League – Badge",
   "uel-winners": "UEFA Europa League – Winners Badge",
   "uecl-regular": "UEFA Europa Conference League – Badge",
   "uecl-winners": "UEFA Europa Conference League – Winners Badge",
-  // Mundial de Clubes
   "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
 };
 
-/** Humaniza um valor desconhecido para mostrar algo decente ao utilizador */
 function humanizeBadge(value: string) {
   if (BADGE_LABELS[value]) return BADGE_LABELS[value];
-  // fallback: "ucl-regular" -> "Ucl Regular"
   return value
     .replace(/[-_]/g, " ")
     .replace(/\s+/g, " ")
@@ -90,7 +83,6 @@ function humanizeBadge(value: string) {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-/* ========= Helper para badges ========= */
 function competitionKey(value: string, label?: string) {
   const take = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
   if (value.includes("_")) return take(value.split("_")[0]);
@@ -121,7 +113,6 @@ export default function ProductConfigurator({ product }: Props) {
   const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
-  const STRIP_MAX_W = MAX_VISIBLE_THUMBS * THUMB_W + (MAX_VISIBLE_THUMBS - 1) * GAP;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -179,14 +170,13 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
-  /** ✅ Grupo virtual de badges construído a partir de `product.badges` */
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
     const values: OptionValueUI[] = product.badges.map((v) => ({
       id: v,
       value: v,
       label: humanizeBadge(v),
-      priceDelta: 0, // grátis
+      priceDelta: 0,
     }));
     return {
       id: "badges-virtual",
@@ -198,11 +188,6 @@ export default function ProductConfigurator({ product }: Props) {
     };
   }, [product.badges]);
 
-  /**
-   * ✅ Merge do grupo real "badges" (BD) com o virtual (product.badges)
-   * - Mantém a ordem do real e adiciona valores que existam só no virtual.
-   * - Evita duplicados por `value`.
-   */
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
     const real = product.optionGroups.find((g) => g.key === "badges");
     const virtual = badgesGroupVirtual;
@@ -218,7 +203,6 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
-  // ✅ Só mostramos a secção customization se existir na BD e tiver valores (após filtros).
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
@@ -231,21 +215,18 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
-  // Outros grupos (shorts, socks, etc. — fora size/customization/badges)
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
   );
 
   const customization = selected["customization"] ?? "";
 
-  // Se a secção customization for escondida, limpa seleção relacionada
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // se não houver badges e a seleção tiver "badge", limpar
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
       setSelected((s) => ({ ...s, customization: "none" }));
@@ -296,7 +277,6 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
-        // Garante exclusividade por competição (ex.: só 1 UCL)
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -312,53 +292,8 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
-  // Calculamos o delta do preço total com base nas opções selecionadas
-  const selectedOptionsPriceDelta = useMemo(() => {
-    let delta = 0;
+  const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-    // Calcula o delta para grupos de rádio (seleção única)
-    [
-      effectiveCustomizationGroup,
-      badgesGroup,
-      ...otherGroups,
-    ].forEach((group) => {
-      if (!group || group.type === "SIZE") return;
-      const selectedValue = selected[group.key];
-
-      if (group.type === "RADIO" && typeof selectedValue === "string") {
-        const option = group.values.find((v) => v.value === selectedValue);
-        if (option) {
-          delta += option.priceDelta;
-        }
-      }
-      // Calcula o delta para addons (seleção múltipla, incluindo badges)
-      else if (group.type === "ADDON") {
-        const selectedValues = Array.isArray(selectedValue)
-          ? selectedValue
-          : typeof selectedValue === "string" && selectedValue
-          ? [selectedValue]
-          : [];
-
-        selectedValues.forEach((val) => {
-          const option = group.values.find((v) => v.value === val);
-          // Nota: badges virtuais (product.badges) têm priceDelta: 0
-          if (option && !forceFreeGroup(group.key)) {
-            delta += option.priceDelta;
-          }
-        });
-      }
-    });
-
-    return delta;
-  }, [effectiveCustomizationGroup, badgesGroup, otherGroups, selected]);
-  
-  const unitFinalPrice = unitJerseyPrice + selectedOptionsPriceDelta;
-  const finalPrice = unitFinalPrice * qty;
-  
-  function forceFreeGroup(key: string) {
-    return key === effectiveCustomizationGroup?.key || key === badgesGroup?.key;
-  }
-  
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
@@ -367,7 +302,6 @@ export default function ProductConfigurator({ product }: Props) {
   const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
-  // ... (funções getCartTargetRect, pulseCart, flyToCart, sem alteração)
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
     const anchors = Array.from(
@@ -395,17 +329,19 @@ export default function ProductConfigurator({ product }: Props) {
       const d = Math.hypot(cx - imgCx, cy - imgCy);
       if (d < bestDist) {
         bestDist = d;
-      best = el;
+        best = el;
       }
     }
     return best.getBoundingClientRect();
   }
+
   function pulseCart() {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
     setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
+
   function flyToCart() {
     if (typeof document === "undefined") return;
     const start = imgWrapRef.current?.getBoundingClientRect();
@@ -450,7 +386,6 @@ export default function ProductConfigurator({ product }: Props) {
     };
     ghost.addEventListener("transitionend", cleanup);
   }
-
 
   /* ---------- Navegação ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
@@ -507,320 +442,351 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    // Ajuste da div principal: no mobile (padrão), removemos o flex-col, e adicionamos padding-bottom para o rodapé fixo. No LG, mantém a estrutura de duas colunas.
-    <div className="relative flex flex-col gap-8 lg:flex-row lg:items-start pb-20 lg:pb-0">
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {showToast ? "Item added to cart." : ""}
-      </div>
+    <div className="w-full flex justify-center px-2 sm:px-4">
+      <div className="relative w-full max-w-[360px] sm:max-w-[420px] lg:max-w-none flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {showToast ? "Item added to cart." : ""}
+        </div>
 
-      {/* ===== GALLERY ===== */}
-      {/* Ajuste da Gallery: No mobile, não tem borda, nem background, nem padding (para ocupar a largura total e ser a primeira coisa a ser vista). No LG, volta a ter a aparência de card. */}
-      <div className="bg-white w-full lg:w-[560px] flex-none lg:self-start lg:p-6 lg:rounded-2xl lg:border">
-        {/* Gallery/Image Container */}
-        <div className="flex items-center gap-2 sm:gap-4 p-4 lg:p-0">
-          {images.length > 1 ? (
-            <button
-              type="button"
-              onClick={goPrev}
-              aria-label="Previous image"
-              className="group h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* ===== GALLERY ===== */}
+        <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {images.length > 1 ? (
+              <button
+                type="button"
+                onClick={goPrev}
+                aria-label="Previous image"
+                className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <ChevronLeft />
+              </button>
+            ) : (
+              <div className="h-10 w-10 shrink-0 hidden lg:block" />
+            )}
+
+            <div
+              ref={imgWrapRef}
+              className="relative aspect-[3/4] w-full max-w-[320px] sm:max-w-[360px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
             >
-              <ChevronLeft />
-            </button>
-          ) : (
-            <div className="h-8 w-8 sm:h-10 sm:w-10 shrink-0" />
-          )}
+              <Image
+                src={activeSrc}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(min-width: 1024px) 540px, 100vw"
+                priority
+                unoptimized
+              />
 
-          <div ref={imgWrapRef} className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-white">
-            <Image
-              src={activeSrc}
-              alt={product.name}
-              fill
-              className="object-contain"
-              sizes="(min-width: 1024px) 540px, 100vw"
-              priority
-              unoptimized
-            />
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label="Previous image"
+                    className="lg:hidden absolute left-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <ChevronLeft />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label="Next image"
+                    className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <ChevronRight />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {images.length > 1 ? (
+              <button
+                type="button"
+                onClick={goNext}
+                aria-label="Next image"
+                className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <ChevronRight />
+              </button>
+            ) : (
+              <div className="h-10 w-10 shrink-0 hidden lg:block" />
+            )}
           </div>
 
-          {images.length > 1 ? (
-            <button
-              type="button"
-              onClick={goNext}
-              aria-label="Next image"
-              className="group h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <ChevronRight />
-            </button>
-          ) : (
-            <div className="h-8 w-8 sm:h-10 sm:w-10 shrink-0" />
+          {images.length > 1 && (
+            <div className="mt-3">
+              <div
+                ref={thumbsRef}
+                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+              >
+                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
+                  {images.map((src, i) => {
+                    const isActive = i === activeIndex;
+                    return (
+                      <button
+                        key={src + i}
+                        type="button"
+                        onClick={() => setActiveIndex(i)}
+                        aria-label={`Image ${i + 1}`}
+                        className={cx(
+                          "relative flex-none h-[56px] w-[46px] sm:h-[68px] sm:w-[56px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
+                          isActive ? "border-transparent" : "hover:opacity-90"
+                        )}
+                      >
+                        {isActive && (
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
+                          />
+                        )}
+                        <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
+                          <Image
+                            src={src}
+                            alt={`thumb ${i + 1}`}
+                            fill
+                            className="object-contain"
+                            sizes="46px"
+                            unoptimized
+                          />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Thumbs */}
-        {images.length > 1 && (
-          <div className="mt-2 lg:mt-4">
-            <div
-              ref={thumbsRef}
-              className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-3 [scrollbar-width:none] [-ms-overflow-style:none]"
-              style={{ maxWidth: STRIP_MAX_W }}
-            >
-              <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-              <div className="inline-flex gap-2 no-scrollbar px-4 lg:px-0" style={{ scrollBehavior: "smooth" }}>
-                {images.map((src, i) => {
-                  const isActive = i === activeIndex;
+        {/* ===== CONFIGURATOR ===== */}
+        <div className="card w-full p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 min-w-0">
+          <header className="space-y-1">
+            <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight">
+              {product.name}
+            </h1>
+            <div className="text-sm sm:text-lg lg:text-xl font-semibold">
+              {money(product.basePrice)}
+            </div>
+            {product.description && (
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
+                {product.description}
+              </p>
+            )}
+          </header>
+
+          {/* Size */}
+          <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+            <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
+              Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
+            </div>
+
+            {sizes.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {sizes.map((s) => {
+                  const unavailable = isUnavailable(s);
+                  const isActive = (selected.size as string) === s.size && !unavailable;
                   return (
                     <button
-                      key={src + i}
+                      key={s.id}
                       type="button"
-                      onClick={() => setActiveIndex(i)}
-                      aria-label={`Image ${i + 1}`}
+                      onClick={() => pickSize(s.size)}
+                      disabled={unavailable}
+                      aria-disabled={unavailable}
+                      title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                       className={cx(
-                        "relative flex-none h-[64px] w-[52px] sm:h-[82px] sm:w-[68px] rounded-xl border transition focus:outline-none", // Reduzir o tamanho dos thumbs no mobile
-                        isActive ? "border-transparent" : "hover:opacity-90"
+                        "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
+                        unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
+                        isActive && "bg-blue-600 text-white border-blue-600"
                       )}
+                      aria-pressed={isActive}
                     >
-                      {isActive && (
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
-                        />
-                      )}
-                      <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                        <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="68px" unoptimized />
-                      </span>
+                      {s.size}
                     </button>
                   );
                 })}
               </div>
-            </div>
-          </div>
-        )}
-      </div>
+            ) : (
+              <div className="text-sm text-gray-500">No sizes available.</div>
+            )}
 
-      {/* ===== CONFIGURATOR (Ajustado para Scroll) ===== */}
-      <div className="card p-4 sm:p-6 space-y-6 flex-1 min-w-0"> {/* Reduzido o padding no mobile */}
-        <header className="space-y-1">
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">{product.name}</h1>
-          <div className="text-lg sm:text-xl font-semibold">{money(unitFinalPrice)}</div> {/* Usa o preço por unidade */}
-          {product.description && (
-            <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
-          )}
-        </header>
-
-        {/* Size */}
-        <div className="rounded-2xl border p-4 bg-white/70">
-          <div className="mb-2 text-sm text-gray-700">
-            Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
+            {kid && (
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                Ages are approximate. If in between, we recommend sizing up.
+              </p>
+            )}
           </div>
 
-          {sizes.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {sizes.map((s) => {
-                const unavailable = isUnavailable(s);
-                const isActive = (selected.size as string) === s.size && !unavailable;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => pickSize(s.size)}
-                    disabled={unavailable}
-                    aria-disabled={unavailable}
-                    title={unavailable ? "Unavailable" : `Select size ${s.size}`}
-                    className={cx(
-                      "rounded-xl px-3 py-2 border text-sm transition",
-                      unavailable ? "opacity-50 line-through cursor-not-allowed" : "hover:bg-gray-50",
-                      isActive && "bg-blue-600 text-white border-blue-600"
-                    )}
-                    aria-pressed={isActive}
-                  >
-                    {s.size}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500">No sizes available.</div>
+          {/* Customization (FREE) */}
+          {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
+            <GroupBlock
+              group={effectiveCustomizationGroup!}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              forceFree
+            />
           )}
 
-          {kid && (
-            <p className="mt-2 text-xs text-gray-500">
-              Ages are approximate. If in between, we recommend sizing up.
-            </p>
-          )}
-        </div>
-
-        {/* Customization (FREE) — só mostra se existir grupo efetivo e tiver valores */}
-        {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-          <GroupBlock
-            group={effectiveCustomizationGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-            forceFree
-          />
-        )}
-
-        {/* Personalization inputs (FREE) */}
-        {showNameNumber && (
-          <div className="rounded-2xl border p-4 bg-white/70 space-y-4">
-            <div className="text-sm text-gray-700">
-              Personalization{" "}
-              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                FREE
-              </span>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-xs text-gray-600">Name (uppercase)</span>
-                <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. BELLINGHAM"
-                  value={custName}
-                  onChange={(e) => setCustName(e.target.value)}
-                  maxLength={20}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs text-gray-600">Number (0–99)</span>
-                <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. 5"
-                  value={custNumber}
-                  onChange={(e) => setCustNumber(e.target.value)}
-                  inputMode="numeric"
-                  maxLength={2}
-                />
-              </label>
-            </div>
-            <p className="text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
-          </div>
-        )}
-
-        {/* Badges (FREE) — aparece se a escolha tiver "badge" e houver grupo (real ou virtual) */}
-        {showBadgePicker && badgesGroup && (
-          <GroupBlock
-            group={badgesGroup}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-            onToggleBadge={toggleBadge}
-            forceFree
-          />
-        )}
-
-        {/* Other groups */}
-        {otherGroups.map((g) => (
-          <GroupBlock
-            key={g.id}
-            group={g}
-            selected={selected}
-            onPickRadio={setRadio}
-            onToggleAddon={toggleAddon}
-            // Não aplica forceFree a outros grupos
-          />
-        ))}
-
-        {/* Qty + Total (Versão PC) - Escondido no Mobile */}
-        <div className="hidden lg:flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              aria-label="Decrease quantity"
-              disabled={pending}
-            >
-              −
-            </button>
-            <span className="min-w-[2ch] text-center">{qty}</span>
-            <button
-              className="rounded-XL border px-3 py-2 hover:bg-gray-50"
-              onClick={() => setQty((q) => q + 1)}
-              aria-label="Increase quantity"
-              disabled={pending}
-            >
-              +
-            </button>
-          </div>
-
-          <div className="text-right">
-            <div className="text-sm text-gray-600">Total</div>
-            <div className="text-lg font-semibold">{money(finalPrice)}</div>
-          </div>
-        </div>
-
-        {/* Add to cart (Versão PC) - Escondido no Mobile */}
-        <motion.button
-          onClick={addToCart}
-          className={cx(
-            "hidden lg:inline-flex btn-primary w-full sm:w-auto disabled:opacity-60 items-center justify-center gap-2",
-            justAdded && "bg-green-600 hover:bg-green-600"
-          )}
-          disabled={pending || !selectedSize || qty < 1}
-          animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
-        >
-          {justAdded ? (
-            <>
-              <CheckIcon />
-              Added!
-            </>
-          ) : pending ? (
-            "Adding…"
-          ) : (
-            "Add to cart"
-          )}
-        </motion.button>
-      </div>
-      
-      {/* ===== MOBILE FIXED FOOTER ===== */}
-      {/* O rodapé fixo aparece apenas em ecrãs pequenos (max-lg). */}
-      <MobileFixedFooter
-        qty={qty}
-        setQty={setQty}
-        finalPrice={finalPrice}
-        addToCart={addToCart}
-        pending={pending}
-        justAdded={justAdded}
-        selectedSize={selectedSize}
-      />
-
-      {/* Toast */}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div
-            key="cart-toast"
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.98 }}
-            transition={{ duration: 0.18 }}
-            className="fixed bottom-4 right-4 z-50"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="rounded-xl border bg-white/95 backdrop-blur px-4 py-3 shadow-xl flex items-center gap-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
-                <CheckIcon className="h-4 w-4 text-green-700" />
+          {/* Personalization */}
+          {showNameNumber && (
+            <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
+              <div className="text-sm text-gray-700">
+                Personalization{" "}
+                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                  FREE
+                </span>
               </div>
-              <div className="text-sm">
-                <div className="font-semibold">Item added to cart</div>
-                <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
+              <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                <label className="block">
+                  <span className="text-[11px] sm:text-xs text-gray-600">
+                    Name (uppercase)
+                  </span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. BELLINGHAM"
+                    value={custName}
+                    onChange={(e) => setCustName(e.target.value)}
+                    maxLength={20}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] sm:text-xs text-gray-600">
+                    Number (0–99)
+                  </span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 5"
+                    value={custNumber}
+                    onChange={(e) => setCustNumber(e.target.value)}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
+                </label>
               </div>
+              <p className="text-[11px] sm:text-xs text-gray-500">
+                Personalization will be printed in the club’s official style.
+              </p>
+            </div>
+          )}
+
+          {/* Badges */}
+          {showBadgePicker && badgesGroup && (
+            <GroupBlock
+              group={badgesGroup!}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              onToggleBadge={toggleBadge}
+              forceFree
+            />
+          )}
+
+          {/* Other groups */}
+          {otherGroups.map((g) => (
+            <GroupBlock
+              key={g.id}
+              group={g}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+            />
+          ))}
+
+          {/* Qty + Total */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
               <button
-                className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                onClick={() => setShowToast(false)}
+                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                aria-label="Decrease quantity"
+                disabled={pending}
               >
-                Close
+                −
+              </button>
+              <span className="min-w-[2ch] text-center text-sm">{qty}</span>
+              <button
+                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => setQty((q) => q + 1)}
+                aria-label="Increase quantity"
+                disabled={pending}
+              >
+                +
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+            <div className="text-right sm:text-left">
+              <div className="text-xs sm:text-sm text-gray-600">Total</div>
+              <div className="text-base sm:text-lg font-semibold">
+                {money(finalPrice)}
+              </div>
+            </div>
+          </div>
+
+          {/* Add to cart */}
+          <motion.button
+            onClick={addToCart}
+            className={cx(
+              "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
+              justAdded && "bg-green-600 hover:bg-green-600"
+            )}
+            disabled={pending || !selectedSize || qty < 1}
+            animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
+            transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
+          >
+            {justAdded ? (
+              <>
+                <CheckIcon />
+                Added!
+              </>
+            ) : pending ? (
+              "Adding…"
+            ) : (
+              "Add to cart"
+            )}
+          </motion.button>
+        </div>
+
+        {/* Toast */}
+        <AnimatePresence>
+          {showToast && (
+            <motion.div
+              key="cart-toast"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              className="fixed bottom-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4 sm:left-auto sm:right-4 sm:translate-x-0 sm:px-0"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="rounded-xl border bg-white/95 backdrop-blur px-4 py-3 shadow-xl flex items-center gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
+                  <CheckIcon className="h-4 w-4 text-green-700" />
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold">Item added to cart</div>
+                  <div className="text-gray-600">
+                    You can keep shopping or proceed to checkout.
+                  </div>
+                </div>
+                <button
+                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                  onClick={() => setShowToast(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
 
-/* ====================== Group Subcomponent (Mantido, com ajustes de padding se necessário) ====================== */
+/* ====================== Group Subcomponent ====================== */
 function GroupBlock({
   group,
   selected,
@@ -840,8 +806,8 @@ function GroupBlock({
 
   if (group.type === "RADIO") {
     return (
-      <div className="rounded-2xl border p-4 bg-white/70">
-        <div className="mb-2 text-sm text-gray-700">
+      <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+        <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
           {group.label} {group.required && <span className="text-red-500">*</span>}
         </div>
         <div className="grid gap-2">
@@ -862,19 +828,13 @@ function GroupBlock({
                     checked={!!active}
                     onChange={() => onPickRadio(group.key, v.value)}
                   />
-                  <span>{v.label}</span>
+                  <span className="text-sm">{v.label}</span>
                 </div>
                 {forceFree ? (
                   <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
                     FREE
                   </span>
-                ) : (
-                  v.priceDelta !== 0 ? (
-                    <span className="text-[11px] font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
-                      +{money(v.priceDelta)}
-                    </span>
-                  ) : null
-                )}
+                ) : null}
               </label>
             );
           })}
@@ -887,8 +847,8 @@ function GroupBlock({
   const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
-    <div className="rounded-2xl border p-4 bg-white/70">
-      <div className="mb-2 text-sm text-gray-700">
+    <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+      <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
         {group.label} {group.required && <span className="text-red-500">*</span>}
       </div>
       <div className="grid gap-2">
@@ -912,19 +872,13 @@ function GroupBlock({
                       : onToggleAddon(group.key, v.value, e.target.checked)
                   }
                 />
-                <span>{v.label}</span>
+                <span className="text-sm">{v.label}</span>
               </div>
               {forceFree ? (
                 <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
                   FREE
                 </span>
-              ) : (
-                v.priceDelta !== 0 ? (
-                  <span className="text-[11px] font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
-                    +{money(v.priceDelta)}
-                  </span>
-                ) : null
-              )}
+              ) : null}
             </label>
           );
         })}
@@ -933,89 +887,23 @@ function GroupBlock({
   );
 }
 
-/* ====================== NOVO: Mobile Fixed Footer ====================== */
-function MobileFixedFooter({
-  qty,
-  setQty,
-  finalPrice,
-  addToCart,
-  pending,
-  justAdded,
-  selectedSize,
-}: {
-  qty: number;
-  setQty: React.Dispatch<React.SetStateAction<number>>;
-  finalPrice: number;
-  addToCart: () => void;
-  pending: boolean;
-  justAdded: boolean;
-  selectedSize: string | null;
-}) {
-  return (
-    <div className="fixed inset-x-0 bottom-0 bg-white border-t p-4 shadow-2xl z-40 lg:hidden">
-      <div className="flex items-center justify-between gap-4">
-        {/* Qty Controls */}
-        <div className="flex flex-col items-center">
-          <div className="text-xs text-gray-500 mb-1">Qty</div>
-          <div className="flex items-center gap-2">
-            <button
-              className="rounded-full border h-8 w-8 flex items-center justify-center hover:bg-gray-50"
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              aria-label="Decrease quantity"
-              disabled={pending}
-            >
-              −
-            </button>
-            <span className="min-w-[2ch] text-center font-semibold">{qty}</span>
-            <button
-              className="rounded-full border h-8 w-8 flex items-center justify-center hover:bg-gray-50"
-              onClick={() => setQty((q) => q + 1)}
-              aria-label="Increase quantity"
-              disabled={pending}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {/* Price Total */}
-        <div className="text-right flex-1 min-w-0">
-          <div className="text-sm text-gray-600">Total</div>
-          <div className="text-xl font-bold text-blue-600">{money(finalPrice)}</div>
-        </div>
-
-        {/* Add to cart Button */}
-        <motion.button
-          onClick={addToCart}
-          className={cx(
-            "btn-primary flex-none w-1/2 disabled:opacity-60 h-10 inline-flex items-center justify-center gap-2 text-sm",
-            justAdded && "bg-green-600 hover:bg-green-600"
-          )}
-          disabled={pending || !selectedSize || qty < 1}
-          animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
-        >
-          {justAdded ? (
-            <>
-              <CheckIcon className="h-4 w-4" />
-              Added!
-            </>
-          ) : pending ? (
-            "Adding…"
-          ) : (
-            "Add"
-          )}
-        </motion.button>
-      </div>
-    </div>
-  );
-}
-
 /* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      {...props}
+      className={cx("h-5 w-5", props.className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 7L9 18l-5-5"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -1024,9 +912,20 @@ function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      className={cx(
+        "mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform",
+        props.className
+      )}
+      fill="none"
+      aria-hidden="true"
     >
-      <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M15 6l-6 6 6 6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -1035,9 +934,20 @@ function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className="mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform"
+      className={cx(
+        "mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform",
+        props.className
+      )}
+      fill="none"
+      aria-hidden="true"
     >
-      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
