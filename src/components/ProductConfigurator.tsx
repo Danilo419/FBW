@@ -680,10 +680,11 @@ export default function ProductConfigurator({ product }: Props) {
                       title={unavailable ? "Unavailable" : `Select size ${s.size}`}
                       className={cx(
                         "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
-                        unavailable
-                          ? "opacity-50 line-through cursor-not-allowed"
-                          : "hover:bg-gray-50",
-                        isActive && "bg-blue-600 text-white border-blue-600"
+                        unavailable && "opacity-50 line-through cursor-not-allowed",
+                        !unavailable && !isActive && "hover:bg-gray-50",
+                        isActive &&
+                          !unavailable &&
+                          "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
                       )}
                       aria-pressed={isActive}
                     >
