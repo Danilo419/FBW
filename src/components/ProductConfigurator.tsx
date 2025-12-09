@@ -434,7 +434,6 @@ export default function ProductConfigurator({ product }: Props) {
       setJustAdded(true);
       setShowToast(true);
       flyToCart();
-
       window.setTimeout(() => setShowToast(false), 2000);
       window.setTimeout(() => setJustAdded(false), 900);
     });
@@ -442,8 +441,8 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    <div className="w-full flex justify-center px-2 sm:px-4">
-      <div className="relative w-full max-w-[360px] sm:max-w-[420px] lg:max-w-none flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
+    <div className="w-full flex justify-center overflow-x-hidden px-2">
+      <div className="relative w-full max-w-[260px] sm:max-w-[320px] lg:max-w-none flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {showToast ? "Item added to cart." : ""}
         </div>
@@ -466,7 +465,7 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div
               ref={imgWrapRef}
-              className="relative aspect-[3/4] w-full max-w-[320px] sm:max-w-[360px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
+              className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[260px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
             >
               <Image
                 src={activeSrc}
@@ -531,7 +530,7 @@ export default function ProductConfigurator({ product }: Props) {
                         onClick={() => setActiveIndex(i)}
                         aria-label={`Image ${i + 1}`}
                         className={cx(
-                          "relative flex-none h-[56px] w-[46px] sm:h-[68px] sm:w-[56px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
+                          "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
                           isActive ? "border-transparent" : "hover:opacity-90"
                         )}
                       >
@@ -547,7 +546,7 @@ export default function ProductConfigurator({ product }: Props) {
                             alt={`thumb ${i + 1}`}
                             fill
                             className="object-contain"
-                            sizes="46px"
+                            sizes="42px"
                             unoptimized
                           />
                         </span>
