@@ -950,6 +950,12 @@ export default function Home() {
     'EASY-WEAR',
   ]
 
+  const promos = [
+    'Buy 1, Get 1 — Only €5 Shipping',
+    'Buy 2, Get 3 — FREE Shipping',
+    'Buy 3, Get 5 — FREE Shipping',
+  ]
+
   const [homeProducts, setHomeProducts] = useState<HomeProduct[]>([])
   const [loadingHomeProducts, setLoadingHomeProducts] = useState(true)
 
@@ -1261,6 +1267,21 @@ export default function Home() {
               }
             }
           `}</style>
+        </section>
+
+        {/* PROMO BADGES – logo abaixo da linha das tech-specs */}
+        <section className="border-b bg-white">
+          <div className="container-fw py-3 flex flex-wrap items-center justify-center gap-3">
+            {promos.map((p) => (
+              <div
+                key={p}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-50/90 px-4 py-1.5 text-[11px] sm:text-xs font-semibold tracking-[0.18em] uppercase text-slate-700 ring-1 ring-black/5 shadow-sm"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                <span>{p}</span>
+              </div>
+            ))}
+          </div>
         </section>
       </section>
 
