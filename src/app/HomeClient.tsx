@@ -619,7 +619,7 @@ function ImageSpaces() {
               src={s.img}
               alt={s.alt || s.label}
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="absolute inset-0 h/full w/full object-cover transition-transform duration-500 group-hover:scale-105"
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement
                 if ((img as any)._fallbackApplied) return
@@ -1263,15 +1263,14 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE (logo por baixo da linha de textos que andam) */}
-        <div className="border-b bg-white/80">
-          <div className="container-fw py-4 sm:py-6">
+        {/* PROMOTION IMAGE - tamanho médio logo por baixo da linha que anda */}
+        <section className="w-full flex justify-center bg-white/80 border-b px-4 py-5 sm:py-7">
+          <div className="w-full max-w-[900px]">
             <div className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5">
               <img
                 src="/images/promos/home-promo.png"
-                alt="Special promotion"
+                alt="Special Promotion"
                 className="w-full h-auto object-cover"
-                style={{ aspectRatio: '1687 / 1024' }}
                 onError={(e) => {
                   const img = e.currentTarget as HTMLImageElement
                   if ((img as any)._fallbackApplied) return
@@ -1281,7 +1280,7 @@ export default function Home() {
               />
             </div>
           </div>
-        </div>
+        </section>
       </section>
 
       {/* HIGHLIGHTS + PRODUCTS */}
@@ -1451,7 +1450,7 @@ export default function Home() {
                   <h3 className="font-semibold">{f.t}</h3>
                 </div>
                 <p className="mt-2 text-sm text-gray-600">{f.s}</p>
-                <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w-full transition-all" />
+                <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w/full transition-all" />
               </motion.div>
             ))}
           </div>
@@ -1533,7 +1532,7 @@ export default function Home() {
                 <div className="font-semibold">{f.title}</div>
               </div>
               <p className="mt-2 text-sm text-gray-600">{f.desc}</p>
-              <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w-full transition-all" />
+              <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w/full transition-all" />
             </div>
           ))}
         </div>
