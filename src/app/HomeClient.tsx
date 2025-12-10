@@ -414,11 +414,9 @@ function HeroImageCycler({
 }) {
   const fade = 800
 
+  // ordem aleatória apenas para as próximas imagens (a primeira é sempre index 0)
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
-
-  const firstIndex = orderRef.current[ptrRef.current]
-  const secondIndex = orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
 
   const aRef = useRef<HTMLImageElement>(null)
   const bRef = useRef<HTMLImageElement>(null)
@@ -472,24 +470,27 @@ function HeroImageCycler({
     let killed = false
 
     const start = () => {
-      const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
+      const firstSrc = heroImages[0]?.src || FALLBACK_IMG
+      const secondIndex = orderRef.current[0] ?? 0
       const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
 
-      // MOSTRAR LOGO A PRIMEIRA IMAGEM (sem esperar preload)
+      // garantir que a primeira imagem visível é SEMPRE a mesma (index 0)
       if (aRef.current) {
         aRef.current.src = firstSrc
-        aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
+        aRef.current.alt = heroImages[0]?.alt || 'image'
         aRef.current.classList.add('is-visible')
         playKenBurns(aRef.current, firstHold - fade)
       }
 
-      // Preload da segunda em background (para a primeira transição ser suave)
+      // preload da segunda imagem em background
       load(secondSrc).catch(() => {})
 
       const tick = async () => {
         if (killed) return
         ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
-        if (ptrRef.current === 0) orderRef.current = shuffle(orderRef.current)
+        if (ptrRef.current === 0) {
+          orderRef.current = shuffle(orderRef.current)
+        }
         const nextIdx = orderRef.current[ptrRef.current]
         await swapTo(nextIdx)
         timerRef.current = window.setTimeout(tick, interval) as any
@@ -503,9 +504,9 @@ function HeroImageCycler({
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval, firstHold, firstIndex, secondIndex])
+  }, [interval, firstHold])
 
-  // Usar uma imagem inicial logo no HTML renderizado (para aparecer antes do JS)
+  // a imagem inicial que vem no HTML (SSR + primeiro render)
   const initialHero = heroImages[0] ?? { src: FALLBACK_IMG, alt: 'image' }
 
   return (
