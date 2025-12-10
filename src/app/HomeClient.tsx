@@ -1265,10 +1265,13 @@ export default function Home() {
 
         {/* PROMO IMAGE PEQUENA LOGO A SEGUIR AO MARQUEE */}
         <section className="w-full flex justify-center bg-white px-4 py-4">
-          <div className="w-full max-w-[520px]">
+          <div className="w-full max-w-[520px] flex flex-col items-center gap-2">
+            <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-slate-500">
+              Special Promotion
+            </p>
             <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 bg-slate-900/5">
               <img
-                src="/images/promotions/promo1.png"
+                src="/images/promos/home-promo.png"
                 alt="Special Promotion"
                 className="w-full h-auto object-cover"
                 onError={(e) => {
