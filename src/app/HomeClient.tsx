@@ -407,16 +407,21 @@ function shuffle<T>(arr: T[]) {
 
 function HeroImageCycler({
   interval = 4200,
-  firstHold = 10000,
+  firstHold,
 }: {
   interval?: number
   firstHold?: number
 }) {
   const fade = 800
+  const firstHoldMs = firstHold ?? interval
 
-  // ordem aleatória apenas para as próximas imagens (a primeira é sempre index 0)
+  // ordem aleatória estável por render (server + client)
   const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
   const ptrRef = useRef<number>(0)
+
+  const firstIndex = orderRef.current[ptrRef.current]
+  const secondIndex =
+    orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
 
   const aRef = useRef<HTMLImageElement>(null)
   const bRef = useRef<HTMLImageElement>(null)
@@ -469,21 +474,19 @@ function HeroImageCycler({
   useEffect(() => {
     let killed = false
 
-    const start = () => {
-      const firstSrc = heroImages[0]?.src || FALLBACK_IMG
-      const secondIndex = orderRef.current[0] ?? 0
+    const start = async () => {
+      const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
       const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
 
-      // garantir que a primeira imagem visível é SEMPRE a mesma (index 0)
+      await Promise.all([load(firstSrc), load(secondSrc)])
+      if (killed) return
+
       if (aRef.current) {
         aRef.current.src = firstSrc
-        aRef.current.alt = heroImages[0]?.alt || 'image'
+        aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
         aRef.current.classList.add('is-visible')
-        playKenBurns(aRef.current, firstHold - fade)
+        playKenBurns(aRef.current, firstHoldMs - fade)
       }
-
-      // preload da segunda imagem em background
-      load(secondSrc).catch(() => {})
 
       const tick = async () => {
         if (killed) return
@@ -496,7 +499,7 @@ function HeroImageCycler({
         timerRef.current = window.setTimeout(tick, interval) as any
       }
 
-      timerRef.current = window.setTimeout(tick, firstHold) as any
+      timerRef.current = window.setTimeout(tick, firstHoldMs) as any
     }
 
     start()
@@ -504,10 +507,9 @@ function HeroImageCycler({
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval, firstHold])
+  }, [interval, firstHoldMs, firstIndex, secondIndex])
 
-  // a imagem inicial que vem no HTML (SSR + primeiro render)
-  const initialHero = heroImages[0] ?? { src: FALLBACK_IMG, alt: 'image' }
+  const initialHero = heroImages[firstIndex] ?? { src: FALLBACK_IMG, alt: 'image' }
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
@@ -1231,8 +1233,9 @@ export default function Home() {
                 transition={{ duration: 0.7 }}
                 className="relative"
               >
+                {/* primeira imagem aleatória + duração igual às outras */}
                 <TiltCard className="shadow-glow overflow-hidden">
-                  <HeroImageCycler interval={4200} firstHold={10000} />
+                  <HeroImageCycler interval={4200} firstHold={4200} />
                 </TiltCard>
               </motion.div>
             </div>
