@@ -424,7 +424,6 @@ function HeroImageCycler({
   const bRef = useRef<HTMLImageElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
-  const [firstShown, setFirstShown] = useState(false)
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -472,19 +471,20 @@ function HeroImageCycler({
   useEffect(() => {
     let killed = false
 
-    const start = async () => {
+    const start = () => {
       const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
       const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
-      await Promise.all([load(firstSrc), load(secondSrc)])
-      if (killed) return
 
+      // MOSTRAR LOGO A PRIMEIRA IMAGEM (sem esperar preload)
       if (aRef.current) {
         aRef.current.src = firstSrc
         aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
         aRef.current.classList.add('is-visible')
-        setFirstShown(true)
         playKenBurns(aRef.current, firstHold - fade)
       }
+
+      // Preload da segunda em background (para a primeira transição ser suave)
+      load(secondSrc).catch(() => {})
 
       const tick = async () => {
         if (killed) return
@@ -505,16 +505,18 @@ function HeroImageCycler({
     }
   }, [interval, firstHold, firstIndex, secondIndex])
 
+  // Usar uma imagem inicial logo no HTML renderizado (para aparecer antes do JS)
+  const initialHero = heroImages[0] ?? { src: FALLBACK_IMG, alt: 'image' }
+
   return (
-    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
+    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
-      {!firstShown && <div className="absolute inset-0 bg-black" />}
 
       <img
         ref={aRef}
-        className="hero-layer"
-        src=""
-        alt="image"
+        className="hero-layer is-visible"
+        src={initialHero.src}
+        alt={initialHero.alt}
         decoding="async"
         onError={(e: any) => {
           const img = e.currentTarget as HTMLImageElement

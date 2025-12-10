@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { calculateCartTotals } from '@/lib/cart/pricing';
 
 /* ========= validação ========= */
 const AddToCartSchema = z.object({
@@ -138,18 +139,72 @@ export async function addToCartAction(raw: AddToCartInput) {
   }
 }
 
+/**
+ * getCartSummary agora:
+ * - lê as linhas do carrinho
+ * - monta array de itens com (id, name, price, quantity)
+ * - usa calculateCartTotals (promoções + shipping)
+ * - devolve subtotal, discount, shipping, total, etc.
+ */
 export async function getCartSummary() {
   const jar = await cookies(); // ✅ usar await
   const sid = jar.get('sid')?.value ?? null;
-  if (!sid) return { count: 0, total: 0 };
+  if (!sid) {
+    return {
+      count: 0,
+      subtotal: 0,
+      discount: 0,
+      shipping: 0,
+      total: 0,
+      promotion: {
+        discount: 0,
+        freeUnitsCount: 0,
+        hasPromotion: false,
+      },
+    };
+  }
 
-  const items = await prisma.cartItem.findMany({
+  const rawItems = await prisma.cartItem.findMany({
     where: { cart: { sessionId: sid } },
-    select: { totalPrice: true },
+    select: {
+      id: true,
+      qty: true,
+      unitPrice: true,
+      product: {
+        select: { name: true },
+      },
+    },
   });
 
-  const total = items.reduce((acc, it) => acc + it.totalPrice, 0);
-  return { count: items.length, total };
+  if (!rawItems.length) {
+    return {
+      count: 0,
+      subtotal: 0,
+      discount: 0,
+      shipping: 0,
+      total: 0,
+      promotion: {
+        discount: 0,
+        freeUnitsCount: 0,
+        hasPromotion: false,
+      },
+    };
+  }
+
+  // Montar array no formato esperado pelo calculateCartTotals
+  const cartItemsForPricing = rawItems.map((it) => ({
+    id: it.id,
+    name: it.product?.name ?? '',
+    price: it.unitPrice,
+    quantity: it.qty,
+  }));
+
+  const totals = calculateCartTotals(cartItemsForPricing);
+
+  return {
+    count: rawItems.length, // nº de linhas do carrinho (como antes)
+    ...totals,              // subtotal, discount, shipping, total, promotion
+  };
 }
 
 /* ====== EXTRA: mover estas actions para fora do page.tsx ====== */
@@ -168,14 +223,19 @@ export async function updateQty(formData: FormData) {
   const qty = Number(formData.get('qty'));
   if (!id || typeof id !== 'string' || !Number.isFinite(qty) || qty < 1) return;
   try {
-    const item = await prisma.cartItem.update({
+    // buscar item para ter o unitPrice
+    const item = await prisma.cartItem.findUnique({
       where: { id },
-      data: { qty, totalPrice: { set: undefined } }, // opcional: se calculas noutro lado
+      select: { unitPrice: true },
     });
-    // se quiseres recalcular aqui:
+    if (!item) return;
+
     await prisma.cartItem.update({
       where: { id },
-      data: { totalPrice: item.unitPrice * qty },
+      data: {
+        qty,
+        totalPrice: item.unitPrice * qty,
+      },
     });
   } catch {}
   revalidatePath('/cart');
