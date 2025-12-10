@@ -918,232 +918,6 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
 }
 
 /* ======================================================================================
-   4.5) PROMO BUNDLES (Buy X, Get Y)
-====================================================================================== */
-
-function PromoBundles() {
-  return (
-    <section className="bg-slate-950 border-y border-slate-900">
-      <div className="container-fw py-10 sm:py-12">
-        <div className="relative overflow-hidden rounded-3xl ring-1 ring-blue-500/20 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-          {/* glow de fundo */}
-          <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_0%_0%,rgba(56,189,248,0.20),transparent_45%),radial-gradient(circle_at_100%_0%,rgba(59,130,246,0.26),transparent_50%)]" />
-          <div className="relative grid gap-8 px-5 py-7 sm:px-8 sm:py-10 lg:grid-cols-[1.1fr,1.2fr] items-center">
-            {/* Texto principal */}
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-200 ring-1 ring-blue-500/40">
-                <BadgePercent className="h-3 w-3 text-blue-300" />
-                Bundle Deals Live Now
-              </div>
-              <h2 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
-                Stack jerseys, unlock extra pieces for free.
-              </h2>
-              <p className="mt-3 text-sm sm:text-base text-slate-200 max-w-xl">
-                Add várias camisolas ao carrinho e deixa o resto connosco.
-                As promoções são aplicadas automaticamente: os produtos mais
-                baratos tornam-se grátis e o envio ajusta-se de acordo com o
-                bundle que escolheste.
-              </p>
-
-              {/* As três frases principais em formato de “chips” */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {[
-                  'Buy 1, Get 1 — Only €5 Shipping',
-                  'Buy 2, Get 3 — FREE Shipping',
-                  'Buy 3, Get 5 — FREE Shipping',
-                ].map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full bg-slate-900/90 px-3 py-1 text-[10px] sm:text-[11px] font-medium text-slate-100 ring-1 ring-blue-500/40 shadow-[0_0_25px_rgba(37,99,235,0.35)]"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-
-              <ul className="mt-5 space-y-2 text-[12px] sm:text-sm text-slate-200">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-400" />
-                  <span>
-                    <strong>Mix &amp; match livre:</strong> combina qualquer jersey,
-                    set de treino, retro, concept kit, etc. Tudo conta para o bundle.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-400" />
-                  <span>
-                    <strong>Os mais baratos ficam grátis:</strong> sempre que há
-                    produtos grátis na promoção, são automaticamente os itens mais
-                    baratos no carrinho.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Truck className="mt-0.5 h-4 w-4 text-sky-300" />
-                  <span>
-                    <strong>Envio ajustado ao bundle:</strong> na oferta “Buy 1, Get 1”
-                    pagas apenas <strong>5&nbsp;€</strong> de envio; nas ofertas
-                    “Buy 2, Get 3” e “Buy 3, Get 5” o envio é{' '}
-                    <strong>totalmente grátis</strong>.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Package className="mt-0.5 h-4 w-4 text-blue-300" />
-                  <span>
-                    <strong>Aplicado automaticamente:</strong> adiciona os produtos,
-                    vê o desconto aparecer no carrinho e faz o checkout normalmente.
-                  </span>
-                </li>
-              </ul>
-
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <MagneticButton href="/products" className="w-full sm:w-auto">
-                  Start your bundle now
-                  <Zap className="ml-1.5 h-4 w-4" />
-                </MagneticButton>
-                <p className="text-[11px] sm:text-xs text-slate-300 max-w-xs">
-                  Exemplo: adiciona 5 produtos ao carrinho. Com “Buy 3, Get 5”,
-                  pagas apenas os 3 mais caros — os 2 mais baratos tornam-se grátis
-                  + envio grátis.
-                </p>
-              </div>
-            </div>
-
-            {/* Cards dos três níveis de promoção */}
-            <div className="grid gap-4 sm:gap-5">
-              {/* Buy 1, Get 1 */}
-              <div className="relative overflow-hidden rounded-2xl bg-slate-900/90 ring-1 ring-blue-400/40 shadow-[0_0_40px_rgba(59,130,246,0.45)]">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(56,189,248,0.30),transparent_55%)]" />
-                <div className="relative p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-200">
-                        Entry Bundle
-                      </p>
-                      <h3 className="mt-1 text-lg sm:text-xl font-bold text-white">
-                        Buy 1, Get 1
-                      </h3>
-                      <p className="mt-1 text-[11px] sm:text-sm text-slate-100/90">
-                        Adiciona <strong>2 produtos</strong> ao carrinho e pagas
-                        apenas o mais caro. O outro torna-se grátis.
-                      </p>
-                    </div>
-                    <div className="shrink-0 rounded-2xl bg-slate-900/90 px-3 py-2 text-right ring-1 ring-blue-400/50">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-blue-200">
-                        2 Items
-                      </div>
-                      <div className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
-                        1 FREE
-                      </div>
-                      <div className="text-[10px] text-blue-100">
-                        + Only <strong>5&nbsp;€</strong> shipping
-                      </div>
-                    </div>
-                  </div>
-                  <ul className="mt-3 space-y-1.5 text-[11px] sm:text-xs text-slate-100">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>O item mais barato dos 2 fica totalmente grátis.</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Truck className="h-3.5 w-3.5 text-sky-300" />
-                      <span>Envio rastreado por apenas 5&nbsp;€.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Buy 2, Get 3 */}
-              <div className="relative overflow-hidden rounded-2xl bg-slate-900/95 ring-1 ring-emerald-400/40">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(16,185,129,0.30),transparent_55%)]" />
-                <div className="relative p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200">
-                        Sweet Spot
-                      </p>
-                      <h3 className="mt-1 text-lg sm:text-xl font-bold text-white">
-                        Buy 2, Get 3
-                      </h3>
-                      <p className="mt-1 text-[11px] sm:text-sm text-slate-100/90">
-                        Adiciona <strong>3 produtos</strong>, paga apenas 2
-                        — o terceiro (o mais barato) é grátis.
-                      </p>
-                    </div>
-                    <div className="shrink-0 rounded-2xl bg-slate-900/90 px-3 py-2 text-right ring-1 ring-emerald-400/50">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-200">
-                        3 Items
-                      </div>
-                      <div className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
-                        1 FREE
-                      </div>
-                      <div className="text-[10px] text-emerald-100">
-                        + <strong>FREE</strong> shipping
-                      </div>
-                    </div>
-                  </div>
-                  <ul className="mt-3 space-y-1.5 text-[11px] sm:text-xs text-slate-100">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>Perfeito para juntar 3 camisolas favoritas.</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Truck className="h-3.5 w-3.5 text-emerald-300" />
-                      <span>Envio mundial totalmente grátis.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Buy 3, Get 5 */}
-              <div className="relative overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-fuchsia-400/40">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(217,70,239,0.32),transparent_55%)]" />
-                <div className="relative p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.22em] text-fuchsia-200">
-                        Collector Mode
-                      </p>
-                      <h3 className="mt-1 text-lg sm:text-xl font-bold text-white">
-                        Buy 3, Get 5
-                      </h3>
-                      <p className="mt-1 text-[11px] sm:text-sm text-slate-100/90">
-                        Adiciona <strong>5 produtos</strong>, paga apenas 3 —
-                        os dois mais baratos ficam totalmente grátis.
-                      </p>
-                    </div>
-                    <div className="shrink-0 rounded-2xl bg-slate-900/90 px-3 py-2 text-right ring-1 ring-fuchsia-400/60">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-fuchsia-100">
-                        5 Items
-                      </div>
-                      <div className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
-                        2 FREE
-                      </div>
-                      <div className="text-[10px] text-fuchsia-100">
-                        + <strong>FREE</strong> shipping
-                      </div>
-                    </div>
-                  </div>
-                  <ul className="mt-3 space-y-1.5 text-[11px] sm:text-xs text-slate-100">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>Ideal para colecionadores ou compras em grupo.</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Shirt className="h-3.5 w-3.5 text-sky-300" />
-                      <span>Mistura ligas, clubes, retro, concept, treino e mais.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ======================================================================================
    5) PAGE
 ====================================================================================== */
 
@@ -1488,10 +1262,27 @@ export default function Home() {
             }
           `}</style>
         </section>
-      </section>
 
-      {/* PROMO BUNDLES – Buy X, Get Y */}
-      <PromoBundles />
+        {/* PROMO IMAGE (logo por baixo da linha de textos que andam) */}
+        <div className="border-b bg-white/80">
+          <div className="container-fw py-4 sm:py-6">
+            <div className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5">
+              <img
+                src="/images/promos/home-promo.png"
+                alt="Special promotion"
+                className="w-full h-auto object-cover"
+                style={{ aspectRatio: '1687 / 1024' }}
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement
+                  if ((img as any)._fallbackApplied) return
+                  ;(img as any)._fallbackApplied = true
+                  img.src = FALLBACK_IMG
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
