@@ -405,28 +405,26 @@ function shuffle<T>(arr: T[]) {
   return a
 }
 
-function HeroImageCycler({
-  interval = 4200,
-  firstHold,
-}: {
-  interval?: number
-  firstHold?: number
-}) {
+function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const fade = 800
-  const firstHoldMs = firstHold ?? interval
 
-  // ordem aleatória estável por render (server + client)
-  const orderRef = useRef<number[]>(shuffle([...Array(heroImages.length).keys()]))
+  // ordem aleatória estável por montagem
+  const orderRef = useRef<number[]>([])
+  if (!orderRef.current.length) {
+    orderRef.current = shuffle([...Array(heroImages.length).keys()])
+  }
+
   const ptrRef = useRef<number>(0)
-
-  const firstIndex = orderRef.current[ptrRef.current]
-  const secondIndex =
-    orderRef.current[(ptrRef.current + 1) % orderRef.current.length]
-
   const aRef = useRef<HTMLImageElement>(null)
   const bRef = useRef<HTMLImageElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
+
+  const firstIndex = orderRef.current[0]
+  const initialHero = heroImages[firstIndex] ?? {
+    src: FALLBACK_IMG,
+    alt: 'image',
+  }
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -454,6 +452,7 @@ function HeroImageCycler({
   const swapTo = async (nextIndex: number) => {
     const nextSrc = heroImages[nextIndex]?.src || FALLBACK_IMG
     await load(nextSrc)
+
     const frontIsA = frontIsARef.current
     const front = frontIsA ? aRef.current : bRef.current
     const back = frontIsA ? bRef.current : aRef.current
@@ -462,7 +461,7 @@ function HeroImageCycler({
     back.src = nextSrc
     back.alt = heroImages[nextIndex]?.alt || 'image'
     back.style.transitionDuration = `${fade}ms`
-    // reflow
+    // forçar reflow
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
     back.classList.add('is-visible')
@@ -474,47 +473,40 @@ function HeroImageCycler({
   useEffect(() => {
     let killed = false
 
-    const start = async () => {
-      const firstSrc = heroImages[firstIndex]?.src || FALLBACK_IMG
-      const secondSrc = heroImages[secondIndex]?.src || FALLBACK_IMG
-
-      await Promise.all([load(firstSrc), load(secondSrc)])
-      if (killed) return
-
-      if (aRef.current) {
-        aRef.current.src = firstSrc
-        aRef.current.alt = heroImages[firstIndex]?.alt || 'image'
-        aRef.current.classList.add('is-visible')
-        playKenBurns(aRef.current, firstHoldMs - fade)
-      }
-
-      const tick = async () => {
-        if (killed) return
-        ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
-        if (ptrRef.current === 0) {
-          orderRef.current = shuffle(orderRef.current)
-        }
-        const nextIdx = orderRef.current[ptrRef.current]
-        await swapTo(nextIdx)
-        timerRef.current = window.setTimeout(tick, interval) as any
-      }
-
-      timerRef.current = window.setTimeout(tick, firstHoldMs) as any
+    // aplica Ken Burns na primeira imagem logo ao montar
+    if (aRef.current) {
+      playKenBurns(aRef.current, interval - fade)
     }
 
-    start()
+    const tick = async () => {
+      if (killed) return
+
+      // próximo índice
+      ptrRef.current = (ptrRef.current + 1) % orderRef.current.length
+      if (ptrRef.current === 0) {
+        orderRef.current = shuffle(orderRef.current)
+      }
+      const nextIdx = orderRef.current[ptrRef.current]
+      await swapTo(nextIdx)
+
+      if (!killed) {
+        timerRef.current = window.setTimeout(tick, interval) as any
+      }
+    }
+
+    timerRef.current = window.setTimeout(tick, interval) as any
+
     return () => {
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval, firstHoldMs, firstIndex, secondIndex])
-
-  const initialHero = heroImages[firstIndex] ?? { src: FALLBACK_IMG, alt: 'image' }
+  }, [interval])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
+      {/* camada A já começa visível com imagem aleatória */}
       <img
         ref={aRef}
         className="hero-layer is-visible"
@@ -528,6 +520,8 @@ function HeroImageCycler({
           img.src = FALLBACK_IMG
         }}
       />
+
+      {/* camada B começa vazia e entra nas trocas seguintes */}
       <img
         ref={bRef}
         className="hero-layer"
@@ -1233,9 +1227,9 @@ export default function Home() {
                 transition={{ duration: 0.7 }}
                 className="relative"
               >
-                {/* primeira imagem aleatória + duração igual às outras */}
                 <TiltCard className="shadow-glow overflow-hidden">
-                  <HeroImageCycler interval={4200} firstHold={4200} />
+                  {/* agora a primeira imagem tem SEMPRE a mesma duração que as outras */}
+                  <HeroImageCycler interval={4200} />
                 </TiltCard>
               </motion.div>
             </div>
