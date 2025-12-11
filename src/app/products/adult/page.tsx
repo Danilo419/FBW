@@ -126,6 +126,90 @@ function isAdultProduct(p: UIProduct): boolean {
   return true;
 }
 
+/* ============================ MAPEAR PRODUTO DA API → UIProduct ============================ */
+
+function getImageFromApi(raw: any): string | undefined {
+  return (
+    raw.img ??
+    raw.image ??
+    raw.imageUrl ??
+    raw.imageURL ??
+    raw.mainImage ??
+    raw.mainImageUrl ??
+    raw.mainImageURL ??
+    raw.thumbnail ??
+    raw.thumbnailUrl ??
+    raw.coverImage ??
+    raw.coverImageUrl ??
+    raw.cardImage ??
+    raw.cardImageUrl ??
+    raw.listImage ??
+    raw.listImageUrl ??
+    raw.gridImage ??
+    raw.gridImageUrl ??
+    raw.heroImage ??
+    raw.heroImageUrl ??
+    raw.primaryImage ??
+    raw.primaryImageUrl ??
+    raw.picture ??
+    raw.pictureUrl ??
+    raw.photo ??
+    raw.photoUrl ??
+    raw.imageUrls?.[0] ??
+    raw.images?.[0]?.url ??
+    raw.gallery?.[0]?.url ??
+    undefined
+  );
+}
+
+function getPriceEurFromApi(raw: any): number | undefined {
+  if (typeof raw.price === "number") return raw.price;
+  if (typeof raw.currentPrice === "number") return raw.currentPrice;
+
+  if (typeof raw.basePrice === "number") {
+    // normalmente basePrice vem em cêntimos (ex.: 3499)
+    const v = raw.basePrice;
+    if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
+    return v;
+  }
+
+  if (typeof raw.priceCents === "number") {
+    return Math.round(raw.priceCents) / 100;
+  }
+
+  return undefined;
+}
+
+function mapApiToUIProduct(raw: any): UIProduct {
+  const name =
+    raw.name ??
+    raw.title ??
+    raw.productName ??
+    raw.fullName ??
+    "Unnamed product";
+
+  const img = getImageFromApi(raw);
+
+  const price = getPriceEurFromApi(raw);
+
+  const team =
+    raw.team ??
+    raw.club ??
+    raw.clubName ??
+    raw.teamName ??
+    raw.nationalTeam ??
+    null;
+
+  return {
+    id: raw.id ?? raw.productId ?? raw._id ?? raw.slug ?? name,
+    name,
+    slug: raw.slug ?? raw.handle ?? undefined,
+    img: img ?? FALLBACK_IMG,
+    price,
+    team,
+  };
+}
+
 /* ============================ Card de produto (mobile-first) ============================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
@@ -283,10 +367,13 @@ export default function AdultPage() {
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products)
+        const rawArr: any[] = Array.isArray(json?.products)
           ? json.products
+          : Array.isArray(json)
+          ? json
           : [];
 
+        const arr: UIProduct[] = rawArr.map(mapApiToUIProduct);
         const filtered = arr.filter(isAdultProduct);
 
         if (!cancelled) {
@@ -389,11 +476,7 @@ export default function AdultPage() {
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Adult
               </h1>
-              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                All adult products in the store, excluding{" "}
-                <strong>&quot;Kid(s)&quot;</strong> and{" "}
-                <strong>&quot;Crop Top&quot;</strong> items.
-              </p>
+              {/* texto descritivo removido a pedido */}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mt-2 sm:mt-0">
