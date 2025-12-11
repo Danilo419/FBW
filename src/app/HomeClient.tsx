@@ -1263,24 +1263,36 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE – ocupa o retângulo inteiro e cria espaço antes dos Highlights */}
+        {/* PROMO IMAGE – PC usa home-promo, mobile usa home-promo2 */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
               Special Promotion
             </p>
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[3689/1024]">
-              <img
-                src="/images/promos/home-promo.png"
-                alt="Special Promotion"
-                className="absolute inset-0 h-full w-full object-cover"
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement
-                  if ((img as any)._fallbackApplied) return
-                  ;(img as any)._fallbackApplied = true
-                  img.src = FALLBACK_IMG
-                }}
-              />
+              <picture className="absolute inset-0 h-full w-full">
+                {/* mobile: até 767px */}
+                <source
+                  srcSet="/images/promos/home-promo2.png"
+                  media="(max-width: 767px)"
+                />
+                {/* desktop / tablet: 768px+ */}
+                <source
+                  srcSet="/images/promos/home-promo.png"
+                  media="(min-width: 768px)"
+                />
+                <img
+                  src="/images/promos/home-promo.png"
+                  alt="Special Promotion"
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement
+                    if ((img as any)._fallbackApplied) return
+                    ;(img as any)._fallbackApplied = true
+                    img.src = FALLBACK_IMG
+                  }}
+                />
+              </picture>
             </div>
           </div>
         </section>
