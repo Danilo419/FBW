@@ -162,7 +162,7 @@ function getPriceEurFromApi(raw: any): number | undefined {
   if (typeof raw.price === "number") return raw.price;
   if (typeof raw.currentPrice === "number") return raw.currentPrice;
 
-  // muitos endpoints teus usam basePrice em cêntimos
+  // basePrice / priceCents em cêntimos
   if (typeof raw.basePrice === "number") {
     const v = raw.basePrice;
     if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
@@ -340,6 +340,25 @@ function buildPaginationRange(
 
 const PAGE_SIZE = 12;
 
+// queries largas para puxar praticamente o catálogo todo
+const SEARCH_QUERIES = [
+  "a",
+  "e",
+  "i",
+  "o",
+  "u",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+];
+
 export default function AdultPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -351,38 +370,59 @@ export default function AdultPage() {
     "team"
   );
 
-  // 🔥 Em vez de /api/search, usamos o mesmo endpoint da Home
+  // Agora usamos /api/search com várias queries para trazer o catálogo completo
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    fetch(`/api/home-products?limit=600`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Home products failed (${r.status})`);
-        const json = await r.json();
-        const rawArr: any[] = Array.isArray(json?.products)
-          ? json.products
-          : Array.isArray(json)
-          ? json
-          : [];
+    const load = async () => {
+      setLoading(true);
+      setError(null);
 
-        const arr: UIProduct[] = rawArr.map(mapApiToUIProduct);
-        const filtered = arr.filter(isAdultProduct);
+      try {
+        const allRaw: any[] = [];
+
+        for (const q of SEARCH_QUERIES) {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+            cache: "no-store",
+          });
+          if (!res.ok) continue;
+          const json = await res.json();
+          const list: any[] = Array.isArray(json?.products)
+            ? json.products
+            : Array.isArray(json)
+            ? json
+            : [];
+          allRaw.push(...list);
+        }
+
+        // remover duplicados (id / slug / name)
+        const seen = new Set<string>();
+        const uniqueRaw: any[] = [];
+        for (const p of allRaw) {
+          const key = String(p.id ?? p.slug ?? p.name ?? Math.random());
+          if (seen.has(key)) continue;
+          seen.add(key);
+          uniqueRaw.push(p);
+        }
+
+        const mapped: UIProduct[] = uniqueRaw.map(mapApiToUIProduct);
+        const filtered = mapped.filter(isAdultProduct);
 
         if (!cancelled) {
           setResults(filtered);
           setPage(1);
         }
-      })
-      .catch((e) => {
+      } catch (e: any) {
         if (!cancelled) {
           setResults([]);
           setError(e?.message || "Error loading products");
         }
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
+    load();
     return () => {
       cancelled = true;
     };
