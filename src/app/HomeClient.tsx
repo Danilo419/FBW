@@ -1263,20 +1263,20 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE – PC usa home-promo, mobile usa home-promo2 */}
+        {/* PROMO IMAGE – mobile: 1687x1024, desktop: 3689x1024, mobile usa home-promo2, desktop home-promo */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
               Special Promotion
             </p>
-            <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[3689/1024]">
+            <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
-                {/* mobile: até 767px */}
+                {/* mobile (até 767px) */}
                 <source
                   srcSet="/images/promos/home-promo2.png"
                   media="(max-width: 767px)"
                 />
-                {/* desktop / tablet: 768px+ */}
+                {/* desktop/tablet (768px+) */}
                 <source
                   srcSet="/images/promos/home-promo.png"
                   media="(min-width: 768px)"
