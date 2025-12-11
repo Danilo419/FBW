@@ -1263,20 +1263,17 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE – espaço 3689x1024, imagem pequena */}
-        <section className="w-full flex justify-center bg-white px-4 py-4">
-          <div className="w-full max-w-[520px] flex flex-col items-center gap-2">
-            <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-slate-500">
+        {/* PROMO IMAGE – ocupa o retângulo inteiro e cria espaço antes dos Highlights */}
+        <section className="bg-white">
+          <div className="container-fw pt-4 pb-10">
+            <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
               Special Promotion
             </p>
-            <div
-              className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 bg-slate-900/5 w-full"
-              style={{ aspectRatio: '3689 / 1024' }}
-            >
+            <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[3689/1024]">
               <img
                 src="/images/promos/home-promo.png"
                 alt="Special Promotion"
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[65%] h-auto object-contain"
+                className="absolute inset-0 h-full w-full object-cover"
                 onError={(e) => {
                   const img = e.currentTarget as HTMLImageElement
                   if ((img as any)._fallbackApplied) return
