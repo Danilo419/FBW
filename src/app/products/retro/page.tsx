@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
-/* ============================ Tipagem (igual ao search) ============================ */
+/* ============================ Tipagem ============================ */
 
 type UIProduct = {
   id: string | number;
@@ -62,7 +62,7 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (mesmo código do search) ========= */
+/* ========= Extração do NOME DO CLUBE ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
@@ -92,7 +92,7 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
-/** Obtém SEMPRE só o nome do clube (capitalização normal) */
+/** Só o nome do clube (capitalização normal) */
 function getClubLabel(p: UIProduct): string {
   const byTeam = clubFromString(p.team);
   if (byTeam) return byTeam;
@@ -109,18 +109,97 @@ function normName(p: UIProduct) {
   return (p.name ?? "").toUpperCase();
 }
 
-function hasTerm(p: UIProduct, term: string) {
-  return normName(p).includes(term.toUpperCase());
-}
-
 /** Retro:
- *  - APENAS produtos cujo nome contenha "Retro"
+ *  - SÓ produtos cujo nome contenha "RETRO"
  */
 function isRetroProduct(p: UIProduct): boolean {
-  return hasTerm(p, "RETRO");
+  const n = normName(p);
+  if (!n) return false;
+  return n.includes("RETRO");
 }
 
-/* ============================ Card de produto (mobile-first) ============================ */
+/* ============================ MAPEAR API → UIProduct ============================ */
+
+function getImageFromApi(raw: any): string | undefined {
+  return (
+    raw.img ??
+    raw.image ??
+    raw.imageUrl ??
+    raw.imageURL ??
+    raw.mainImage ??
+    raw.mainImageUrl ??
+    raw.mainImageURL ??
+    raw.thumbnail ??
+    raw.thumbnailUrl ??
+    raw.coverImage ??
+    raw.coverImageUrl ??
+    raw.cardImage ??
+    raw.cardImageUrl ??
+    raw.listImage ??
+    raw.listImageUrl ??
+    raw.gridImage ??
+    raw.gridImageUrl ??
+    raw.heroImage ??
+    raw.heroImageUrl ??
+    raw.primaryImage ??
+    raw.primaryImageUrl ??
+    raw.picture ??
+    raw.pictureUrl ??
+    raw.photo ??
+    raw.photoUrl ??
+    raw.imageUrls?.[0] ??
+    raw.images?.[0]?.url ??
+    raw.gallery?.[0]?.url ??
+    undefined
+  );
+}
+
+function getPriceEurFromApi(raw: any): number | undefined {
+  if (typeof raw.price === "number") return raw.price;
+  if (typeof raw.currentPrice === "number") return raw.currentPrice;
+
+  if (typeof raw.basePrice === "number") {
+    const v = raw.basePrice;
+    if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
+    return v;
+  }
+
+  if (typeof raw.priceCents === "number") {
+    return Math.round(raw.priceCents) / 100;
+  }
+
+  return undefined;
+}
+
+function mapApiToUIProduct(raw: any): UIProduct {
+  const name =
+    raw.name ??
+    raw.title ??
+    raw.productName ??
+    raw.fullName ??
+    "Unnamed product";
+
+  const img = getImageFromApi(raw);
+  const price = getPriceEurFromApi(raw);
+  const team =
+    raw.team ??
+    raw.club ??
+    raw.clubName ??
+    raw.teamName ??
+    raw.nationalTeam ??
+    null;
+
+  return {
+    id: raw.id ?? raw.productId ?? raw._id ?? raw.slug ?? name,
+    name,
+    slug: raw.slug ?? raw.handle ?? undefined,
+    img: img ?? FALLBACK_IMG,
+    price,
+    team,
+  };
+}
+
+/* ============================ Card de produto ============================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
   const href = p.slug ? `/products/${p.slug}` : "#";
@@ -178,7 +257,7 @@ function ProductCard({ p }: { p: UIProduct }) {
               )}
 
               {parts && (
-                <div className="flex items-end" style={{ color: "#1c40b7" }}>
+                <div className="flex items	end" style={{ color: "#1c40b7" }}>
                   <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
@@ -256,6 +335,25 @@ function buildPaginationRange(
 
 const PAGE_SIZE = 12;
 
+// mesmas queries largas para puxar o catálogo quase todo
+const SEARCH_QUERIES = [
+  "a",
+  "e",
+  "i",
+  "o",
+  "u",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+];
+
 export default function RetroPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -267,35 +365,57 @@ export default function RetroPage() {
     "team"
   );
 
-  // fetch: todos os produtos, depois filtramos só os Retro
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    fetch(`/api/search`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
-        const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products)
-          ? json.products
-          : [];
+    const load = async () => {
+      setLoading(true);
+      setError(null);
 
-        const filtered = arr.filter(isRetroProduct);
+      try {
+        const allRaw: any[] = [];
+
+        for (const q of SEARCH_QUERIES) {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+            cache: "no-store",
+          });
+          if (!res.ok) continue;
+          const json = await res.json();
+          const list: any[] = Array.isArray(json?.products)
+            ? json.products
+            : Array.isArray(json)
+            ? json
+            : [];
+          allRaw.push(...list);
+        }
+
+        const seen = new Set<string>();
+        const uniqueRaw: any[] = [];
+        for (const p of allRaw) {
+          const key = String(p.id ?? p.slug ?? p.name ?? Math.random());
+          if (seen.has(key)) continue;
+          seen.add(key);
+          uniqueRaw.push(p);
+        }
+
+        const mapped: UIProduct[] = uniqueRaw.map(mapApiToUIProduct);
+        const filtered = mapped.filter(isRetroProduct);
 
         if (!cancelled) {
           setResults(filtered);
           setPage(1);
         }
-      })
-      .catch((e) => {
+      } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Error loading products");
         }
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
+    load();
     return () => {
       cancelled = true;
     };
@@ -304,7 +424,6 @@ export default function RetroPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -314,7 +433,6 @@ export default function RetroPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -336,7 +454,6 @@ export default function RetroPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
@@ -372,7 +489,7 @@ export default function RetroPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER (mobile-first) */}
+      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -383,11 +500,6 @@ export default function RetroPage() {
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Retro
               </h1>
-              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                All{" "}
-                <strong>&quot;Retro&quot;</strong> products in the store
-                (classic &amp; throwback designs).
-              </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mt-2 sm:mt-0">
@@ -402,7 +514,7 @@ export default function RetroPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO (barra de info + filtros) */}
+      {/* CONTEÚDO */}
       <section className="container-fw section-gap pb-10">
         {/* Filtros + info */}
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -481,8 +593,8 @@ export default function RetroPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm col-span-full">
-                  No retro products were found. Try adding some classic kits to
-                  your catalogue.
+                  No retro products were found (check if the product name
+                  contains "Retro").
                 </p>
               )}
 
