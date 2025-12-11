@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
-/* ============================ Tipagem (igual ao search) ============================ */
+/* ============================ Tipagem ============================ */
 
 type UIProduct = {
   id: string | number;
@@ -62,7 +62,7 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (mesmo código do search) ========= */
+/* ========= Extração do NOME DO CLUBE ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
@@ -92,7 +92,7 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
-/** Obtém SEMPRE só o nome do clube (capitalização normal) */
+/** Só o nome do clube (capitalização normal) */
 function getClubLabel(p: UIProduct): string {
   const byTeam = clubFromString(p.team);
   if (byTeam) return byTeam;
@@ -109,24 +109,20 @@ function normName(p: UIProduct) {
   return (p.name ?? "").toUpperCase();
 }
 
-function hasTerm(p: UIProduct, term: string) {
-  return normName(p).includes(term.toUpperCase());
-}
-
 /** Adult:
- *  - EXCLUI produtos cujo nome contenha "Kid" / "Kids"
- *  - EXCLUI produtos cujo nome contenha "Crop Top"
- *  - De resto mostra TUDO (jerseys, retro, player version, training, etc.)
+ *  - EXCLUI nome com "Kid" / "Kids"
+ *  - EXCLUI nome com "Crop Top"
+ *  - Mostra tudo o resto
  */
 function isAdultProduct(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
-  if (n.includes("KID")) return false; // apanha "KID" e "KIDS"
+  if (n.includes("KID")) return false; // apanha "KID", "KIDS", "KIDS KIT", etc.
   if (n.includes("CROP TOP")) return false;
   return true;
 }
 
-/* ============================ MAPEAR PRODUTO DA API → UIProduct ============================ */
+/* ============================ MAPEAR API → UIProduct ============================ */
 
 function getImageFromApi(raw: any): string | undefined {
   return (
@@ -166,8 +162,8 @@ function getPriceEurFromApi(raw: any): number | undefined {
   if (typeof raw.price === "number") return raw.price;
   if (typeof raw.currentPrice === "number") return raw.currentPrice;
 
+  // muitos endpoints teus usam basePrice em cêntimos
   if (typeof raw.basePrice === "number") {
-    // normalmente basePrice vem em cêntimos (ex.: 3499)
     const v = raw.basePrice;
     if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
     return v;
@@ -189,9 +185,7 @@ function mapApiToUIProduct(raw: any): UIProduct {
     "Unnamed product";
 
   const img = getImageFromApi(raw);
-
   const price = getPriceEurFromApi(raw);
-
   const team =
     raw.team ??
     raw.club ??
@@ -210,7 +204,7 @@ function mapApiToUIProduct(raw: any): UIProduct {
   };
 }
 
-/* ============================ Card de produto (mobile-first) ============================ */
+/* ============================ Card de produto ============================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
   const href = p.slug ? `/products/${p.slug}` : "#";
@@ -357,15 +351,15 @@ export default function AdultPage() {
     "team"
   );
 
-  // fetch: todos os produtos, depois filtramos para Adult
+  // 🔥 Em vez de /api/search, usamos o mesmo endpoint da Home
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search`, { cache: "no-store" })
+    fetch(`/api/home-products?limit=600`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Home products failed (${r.status})`);
         const json = await r.json();
         const rawArr: any[] = Array.isArray(json?.products)
           ? json.products
@@ -384,7 +378,7 @@ export default function AdultPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Error loading products");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -476,7 +470,7 @@ export default function AdultPage() {
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Adult
               </h1>
-              {/* texto descritivo removido a pedido */}
+              {/* descrição removida a pedido */}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mt-2 sm:mt-0">
