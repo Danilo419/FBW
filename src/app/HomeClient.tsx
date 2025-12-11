@@ -573,7 +573,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'adult',
     label: 'Adult',
-    href: '/products?group=adult',
+    href: '/products/adult', // <<--- página Adult
     img: '/images/spaces/adult.png',
     alt: 'Adult Collection',
     subtitle: 'Sizes S–2XL',
@@ -581,7 +581,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'kids',
     label: 'Kids',
-    href: '/products?group=kids',
+    href: '/products/kids', // <<--- página Kids
     img: '/images/spaces/kids.png',
     alt: 'Kids Collection',
     subtitle: 'Ages 2–13',
@@ -589,7 +589,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'retro',
     label: 'Retro',
-    href: '/products?group=retro',
+    href: '/products/retro', // <<--- página Retro
     img: '/images/spaces/retro.png',
     alt: 'Retro Collection',
     subtitle: 'Timeless classics',
@@ -597,7 +597,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'concept',
     label: 'Concept Kits',
-    href: '/products?group=concept-kits',
+    href: '/products/concept-kits', // <<--- página Concept Kits
     img: '/images/spaces/concept.png',
     alt: 'Concept Kits',
     subtitle: 'Original designs',
@@ -1288,11 +1288,8 @@ export default function Home() {
 
       {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Highlights</h2>
-          <a href="/products" className="text-sm text-blue-700 hover:underline">
-            See all →
-          </a>
         </div>
 
         <ImageSpaces />
