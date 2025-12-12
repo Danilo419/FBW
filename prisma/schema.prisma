@@ -78,6 +78,23 @@ model VerificationToken {
 
 /**
  * =========================================================
+ * =============== Password Reset ===========================
+ * =========================================================
+ * Used by "Forgot your password?" flow.
+ */
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+/**
+ * =========================================================
  * =============== Store / Products ========================
  * =========================================================
  */
@@ -86,9 +103,9 @@ model Product {
   slug        String  @unique
   name        String
   team        String
-  season      String?          // e.g. "25/26"
-  basePrice   Int              // cents
-  description String?          // texto livre por produto
+  season      String? // e.g. "25/26"
+  basePrice   Int     // cents
+  description String? // texto livre por produto
 
   // Imagens hospedadas (ex.: Vercel Blob/Cloud)
   imageUrls String[] @default([])
@@ -345,14 +362,14 @@ model OrderItem {
  * =========================================================
  */
 model Review {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // relações obrigatórias
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // dados do review
   rating    Int

@@ -1,7 +1,7 @@
 // src/app/account/login/LoginClient.tsx
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSession, signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -28,6 +28,16 @@ export default function LoginClient() {
   const qpFrom = searchParams.get("from");
   const qpCallback = searchParams.get("callbackUrl");
   const preferredCallback = qpNext || qpFrom || qpCallback || "";
+
+  // Preserve redirect params for links (signup/forgot)
+  const preservedQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (qpNext) params.set("next", qpNext);
+    else if (qpFrom) params.set("from", qpFrom);
+    else if (qpCallback) params.set("callbackUrl", qpCallback);
+    const s = params.toString();
+    return s ? `?${s}` : "";
+  }, [qpNext, qpFrom, qpCallback]);
 
   // Map error via query (?error=...)
   useEffect(() => {
@@ -138,9 +148,20 @@ export default function LoginClient() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">
-            Password
-          </label>
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="password" className="text-sm font-medium">
+              Password
+            </label>
+
+            {/* Forgot password link */}
+            <Link
+              href={`/forgot-password${preservedQuery}`}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          </div>
+
           <input
             id="password"
             type="password"
@@ -165,7 +186,10 @@ export default function LoginClient() {
 
       <p className="mt-6 text-sm text-gray-600">
         Don’t have an account?{" "}
-        <Link href="/account/signup" className="text-blue-600 hover:underline">
+        <Link
+          href={`/account/signup${preservedQuery}`}
+          className="text-blue-600 hover:underline"
+        >
           Sign up
         </Link>
       </p>
