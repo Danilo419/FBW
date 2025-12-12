@@ -17,13 +17,12 @@ type Strength = {
 function passwordStrength(pw: string): Strength {
   const len = pw.length;
   const sets = [
-    /[a-z]/.test(pw), // lower
-    /[A-Z]/.test(pw), // upper
-    /\d/.test(pw), // digit
-    /[^A-Za-z0-9]/.test(pw), // symbol
+    /[a-z]/.test(pw),
+    /[A-Z]/.test(pw),
+    /\d/.test(pw),
+    /[^A-Za-z0-9]/.test(pw),
   ].filter(Boolean).length;
 
-  // usar number e só no fim transformar para o union 0|1|2|3|4
   let scoreNum = 0;
   if (len >= 8) scoreNum++;
   if (len >= 12) scoreNum++;
@@ -37,7 +36,11 @@ function passwordStrength(pw: string): Strength {
     1: { label: "Weak", barClass: "bg-red-300", textClass: "text-red-600" },
     2: { label: "Fair", barClass: "bg-amber-300", textClass: "text-amber-700" },
     3: { label: "Strong", barClass: "bg-green-400", textClass: "text-green-700" },
-    4: { label: "Very strong", barClass: "bg-emerald-500", textClass: "text-emerald-700" },
+    4: {
+      label: "Very strong",
+      barClass: "bg-emerald-500",
+      textClass: "text-emerald-700",
+    },
   };
 
   const { label, barClass, textClass } = map[score];
@@ -48,7 +51,7 @@ export default function SignupClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const s = useSession(); // safe on build
+  const s = useSession();
   const status = s?.status;
 
   const [name, setName] = useState("");
@@ -62,7 +65,6 @@ export default function SignupClient() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // If already authenticated, go to /account
   useEffect(() => {
     if (status === "authenticated") {
       router.replace("/account");
@@ -70,20 +72,25 @@ export default function SignupClient() {
   }, [status, router]);
 
   const strength = useMemo(() => passwordStrength(password), [password]);
+
   const canSubmit =
     !busy &&
     name.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length >= 8 &&
+    strength.score >= 2 &&
     confirm === password;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
 
-    // client validations
     if (password.length < 8) {
       setErr("Password must be at least 8 characters.");
+      return;
+    }
+    if (strength.score < 2) {
+      setErr("Please choose a stronger password (at least Fair).");
       return;
     }
     if (password !== confirm) {
@@ -106,7 +113,6 @@ export default function SignupClient() {
     };
 
     try {
-      // 1) Create account
       const res = await fetch("/api/account/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,22 +120,18 @@ export default function SignupClient() {
       });
 
       if (res.status === 201) {
-        // 2) Auto login (NextAuth Credentials)
-        const result = await signIn("credentials", {
+        await signIn("credentials", {
           identifier: payload.email,
           password: payload.password,
           redirect: true,
           callbackUrl: next,
         });
-
-        if (!result) router.replace(next); // rare fallback
         return;
       }
 
-      // handle API errors
       const data = await res.json().catch(() => ({}));
       if (data?.code === "USERNAME_TAKEN") {
-        setErr("A user with this name already exists. Please choose another name.");
+        setErr("A user with this name already exists.");
       } else if (data?.code === "EMAIL_TAKEN") {
         setErr("An account with this email already exists.");
       } else if (data?.message) {
@@ -157,135 +159,99 @@ export default function SignupClient() {
 
         {/* Name */}
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium">
-            Name
-          </label>
+          <label className="text-sm font-medium">Name</label>
           <input
-            id="name"
-            type="text"
-            className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Your name"
+            className="w-full rounded-2xl border px-4 py-3"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            autoComplete="name"
-            disabled={busy}
           />
         </div>
 
         {/* Email */}
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email
-          </label>
+          <label className="text-sm font-medium">Email</label>
           <input
-            id="email"
             type="email"
-            className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="you@example.com"
+            className="w-full rounded-2xl border px-4 py-3"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoComplete="email"
-            inputMode="email"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            disabled={busy}
           />
         </div>
 
         {/* Password */}
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">
-            Password
-          </label>
+          <label className="text-sm font-medium">Password</label>
           <div className="relative">
             <input
-              id="password"
               type={showPw ? "text" : "password"}
-              className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
+              className="w-full rounded-2xl border px-4 py-3 pr-24"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              autoComplete="new-password"
-              minLength={8}
-              disabled={busy}
             />
             <button
               type="button"
               onClick={() => setShowPw((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-              aria-label={showPw ? "Hide password" : "Show password"}
-              tabIndex={0}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-sm"
             >
               {showPw ? "Hide" : "Show"}
             </button>
-          </div>
-
-          {/* Strength meter */}
-          <div className="mt-2">
-            <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-              <div
-                className={`h-2 ${strength.barClass} transition-all`}
-                style={{
-                  width:
-                    strength.score === 0
-                      ? "10%"
-                      : strength.score === 1
-                      ? "25%"
-                      : strength.score === 2
-                      ? "50%"
-                      : strength.score === 3
-                      ? "75%"
-                      : "100%",
-                }}
-              />
-            </div>
-            <div className={`mt-1 text-xs ${strength.textClass}`}>
-              {strength.label}
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
-            </p>
           </div>
         </div>
 
         {/* Confirm password */}
         <div className="space-y-2">
-          <label htmlFor="confirm" className="text-sm font-medium">
-            Confirm password
-          </label>
+          <label className="text-sm font-medium">Confirm password</label>
           <div className="relative">
             <input
-              id="confirm"
               type={showPw2 ? "text" : "password"}
-              className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Repeat your password"
+              className="w-full rounded-2xl border px-4 py-3 pr-24"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
-              autoComplete="new-password"
-              minLength={8}
-              disabled={busy}
             />
             <button
               type="button"
               onClick={() => setShowPw2((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-              aria-label={showPw2 ? "Hide password" : "Show password"}
-              tabIndex={0}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-sm"
             >
               {showPw2 ? "Hide" : "Show"}
             </button>
           </div>
-          {confirm.length > 0 && confirm !== password && (
+          {confirm && confirm !== password && (
             <p className="text-xs text-red-600">Passwords do not match.</p>
           )}
         </div>
 
-        {/* Submit */}
+        {/* ✅ Password strength – now BELOW confirm password */}
+        <div className="mt-1">
+          <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+            <div
+              className={`h-2 ${strength.barClass}`}
+              style={{
+                width:
+                  strength.score === 0
+                    ? "10%"
+                    : strength.score === 1
+                    ? "25%"
+                    : strength.score === 2
+                    ? "50%"
+                    : strength.score === 3
+                    ? "75%"
+                    : "100%",
+              }}
+            />
+          </div>
+          <div className={`mt-1 text-xs ${strength.textClass}`}>
+            {password.length ? strength.label : ""}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
+          </p>
+        </div>
+
         <button
           type="submit"
           disabled={!canSubmit}
