@@ -1,214 +1,259 @@
 // src/lib/email.ts
-import { Resend } from "resend";
+import "server-only";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+/* =========================================================
+   Config
+========================================================= */
 
-const FROM =
-  process.env.EMAIL_FROM ||
-  "FootballWorld <no-reply@footballworld.com>";
+const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
+const EMAIL_FROM = process.env.EMAIL_FROM || "FootballWorld <onboarding@resend.dev>";
+const STORE_NAME = process.env.STORE_NAME || "FootballWorld";
 
-/* ============================================================
-   TYPES
-============================================================ */
+function isEmailEnabled() {
+  // Resend keys look like "re_..."
+  return RESEND_API_KEY.startsWith("re_") && RESEND_API_KEY.length > 10;
+}
 
-type OrderItemEmail = {
+/**
+ * Build-safe: we only load & construct Resend at runtime, inside a function.
+ * This avoids crashes during Next build "Collecting page data".
+ */
+async function getResendClient() {
+  if (!isEmailEnabled()) return null;
+
+  const mod = await import("resend");
+  const Resend = mod.Resend;
+
+  try {
+    return new Resend(RESEND_API_KEY);
+  } catch (e) {
+    console.error("Resend init failed:", e);
+    return null;
+  }
+}
+
+/* =========================================================
+   Types
+========================================================= */
+
+export type EmailLineItem = {
   name: string;
   qty: number;
   price: number; // EUR
 };
 
-type OrderEmailBase = {
+export type OrderConfirmationEmailData = {
   to: string;
   orderId: string;
-  items: OrderItemEmail[];
+  items: EmailLineItem[];
   total: number; // EUR
-  shippingPrice: number; // EUR
+  shippingPrice?: number; // EUR
   customerName?: string | null;
   shippingAddress?: string | null;
 };
 
-/* ============================================================
-   ORDER CONFIRMATION EMAIL
-============================================================ */
-
-export async function sendOrderConfirmationEmail(
-  data: OrderEmailBase
-) {
-  const {
-    to,
-    orderId,
-    items,
-    total,
-    shippingPrice,
-    customerName,
-    shippingAddress,
-  } = data;
-
-  const itemsHtml = items
-    .map(
-      (item) => `
-        <tr>
-          <td style="padding:6px 8px;">${item.name}</td>
-          <td style="padding:6px 8px; text-align:center;">${item.qty}</td>
-          <td style="padding:6px 8px; text-align:right;">€${item.price.toFixed(
-            2
-          )}</td>
-        </tr>
-      `
-    )
-    .join("");
-
-  const html = `
-    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#111;">
-      <h1 style="font-size:20px;">Thank you for your purchase 🎉</h1>
-
-      <p>Hello${customerName ? " " + customerName : ""},</p>
-
-      <p>Your order has been successfully placed and is now being processed.</p>
-
-      <p><strong>Order number:</strong> ${orderId}</p>
-
-      <h2 style="font-size:16px;margin-top:16px;">Order summary</h2>
-
-      <table style="border-collapse:collapse;width:100%;max-width:480px;">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:6px 8px;">Product</th>
-            <th style="text-align:center;padding:6px 8px;">Qty</th>
-            <th style="text-align:right;padding:6px 8px;">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-      </table>
-
-      <p style="margin-top:12px;">
-        <strong>Shipping:</strong> €${shippingPrice.toFixed(2)}<br/>
-        <strong>Total paid:</strong> €${total.toFixed(2)}
-      </p>
-
-      ${
-        shippingAddress
-          ? `<p><strong>Shipping address:</strong><br/>${shippingAddress.replace(
-              /\n/g,
-              "<br/>"
-            )}</p>`
-          : ""
-      }
-
-      <p style="margin-top:16px;">
-        You will receive another email once your order has been shipped.
-      </p>
-
-      <p style="margin-top:24px;font-size:12px;color:#555;">
-        FootballWorld<br/>
-        If you have any questions, just reply to this email.
-      </p>
-    </div>
-  `;
-
-  await resend.emails.send({
-    from: FROM,
-    to,
-    subject: `Your order #${orderId} has been confirmed ✅`,
-    html,
-  });
-}
-
-/* ============================================================
-   ORDER SHIPPED EMAIL (TRACKING)
-============================================================ */
-
-type ShippedEmailData = OrderEmailBase & {
+export type ShippedEmailData = {
+  to: string;
+  orderId: string;
+  items: EmailLineItem[];
+  total: number; // EUR
+  shippingPrice?: number; // EUR
+  customerName?: string | null;
+  shippingAddress?: string | null;
   trackingCode: string;
-  trackingUrl?: string | null;
+  trackingUrl?: string;
 };
 
-export async function sendOrderShippedEmail(
-  data: ShippedEmailData
-) {
-  const {
-    to,
-    orderId,
-    items,
-    total,
-    shippingPrice,
-    customerName,
-    shippingAddress,
-    trackingCode,
-    trackingUrl,
-  } = data;
+/* =========================================================
+   Helpers
+========================================================= */
 
-  const itemsHtml = items
-    .map(
-      (item) => `
+function escapeHtml(s: string) {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function moneyEur(n: number) {
+  const safe = Number.isFinite(n) ? n : 0;
+  return safe.toLocaleString("en-GB", { style: "currency", currency: "EUR" });
+}
+
+function safeName(name?: string | null) {
+  const v = (name || "").trim();
+  return v.length ? v : "there";
+}
+
+function renderItemsTable(items: EmailLineItem[]) {
+  const rows = items
+    .map((it) => {
+      const name = escapeHtml(it.name);
+      const qty = Number.isFinite(it.qty) ? it.qty : 1;
+      const price = moneyEur(it.price);
+      return `
         <tr>
-          <td style="padding:6px 8px;">${item.name}</td>
-          <td style="padding:6px 8px; text-align:center;">${item.qty}</td>
+          <td style="padding:10px 0; border-bottom:1px solid #eee;">
+            <div style="font-weight:600;">${name}</div>
+            <div style="color:#666; font-size:12px;">Qty: ${qty}</div>
+          </td>
+          <td style="padding:10px 0; border-bottom:1px solid #eee; text-align:right; white-space:nowrap;">
+            ${price}
+          </td>
         </tr>
-      `
-    )
+      `;
+    })
     .join("");
 
-  const html = `
-    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#111;">
-      <h1 style="font-size:20px;">Your order has been shipped 🚚</h1>
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      ${rows}
+    </table>
+  `;
+}
 
-      <p>Hello${customerName ? " " + customerName : ""},</p>
+function wrapEmailHtml(title: string, bodyHtml: string) {
+  return `
+  <div style="background:#f6f7fb; padding:24px;">
+    <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #e9e9ef; border-radius:16px; overflow:hidden;">
+      <div style="padding:18px 20px; background:#0b0f19; color:#fff;">
+        <div style="font-weight:800; letter-spacing:0.3px;">${escapeHtml(STORE_NAME)}</div>
+        <div style="opacity:0.9; font-size:12px; margin-top:4px;">${escapeHtml(title)}</div>
+      </div>
+      <div style="padding:20px;">
+        ${bodyHtml}
+        <div style="margin-top:18px; color:#666; font-size:12px;">
+          If you didn’t place this order, please ignore this email.
+        </div>
+      </div>
+    </div>
+    <div style="max-width:640px; margin:10px auto 0; color:#888; font-size:12px; text-align:center;">
+      © ${new Date().getFullYear()} ${escapeHtml(STORE_NAME)}
+    </div>
+  </div>
+  `;
+}
 
-      <p>Your order <strong>#${orderId}</strong> is on its way.</p>
+/* =========================================================
+   Public API
+========================================================= */
 
-      <h2 style="font-size:16px;margin-top:16px;">Tracking information</h2>
+export async function sendOrderConfirmationEmail(data: OrderConfirmationEmailData) {
+  const resend = await getResendClient();
+  if (!resend) return { ok: false, skipped: true as const };
 
-      <p>
-        <strong>Tracking code:</strong> ${trackingCode}<br/>
-        ${
-          trackingUrl
-            ? `Track your order here: <a href="${trackingUrl}" target="_blank">${trackingUrl}</a>`
-            : ""
-        }
-      </p>
+  const title = "Order confirmed";
+  const greeting = `Hi ${escapeHtml(safeName(data.customerName))},`;
 
-      <h2 style="font-size:16px;margin-top:16px;">Order summary</h2>
+  const itemsHtml = renderItemsTable(data.items);
 
-      <table style="border-collapse:collapse;width:100%;max-width:480px;">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:6px 8px;">Product</th>
-            <th style="text-align:center;padding:6px 8px;">Qty</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-      </table>
+  const shippingLine =
+    typeof data.shippingPrice === "number"
+      ? `<div style="display:flex; justify-content:space-between; margin-top:8px;">
+           <div style="color:#666;">Shipping</div>
+           <div style="font-weight:600;">${moneyEur(data.shippingPrice)}</div>
+         </div>`
+      : "";
 
-      <p style="margin-top:12px;">
-        <strong>Shipping:</strong> €${shippingPrice.toFixed(2)}<br/>
-        <strong>Total paid:</strong> €${total.toFixed(2)}
-      </p>
+  const addressHtml =
+    data.shippingAddress && data.shippingAddress.trim().length
+      ? `<div style="margin-top:14px; padding:12px; border:1px solid #eee; border-radius:12px;">
+           <div style="font-weight:700; margin-bottom:6px;">Shipping address</div>
+           <div style="color:#444; line-height:1.5;">${escapeHtml(data.shippingAddress)}</div>
+         </div>`
+      : "";
 
-      ${
-        shippingAddress
-          ? `<p><strong>Shipping address:</strong><br/>${shippingAddress.replace(
-              /\n/g,
-              "<br/>"
-            )}</p>`
-          : ""
-      }
+  const body = `
+    <div style="font-size:14px; color:#111; line-height:1.6;">
+      <div style="font-size:16px; font-weight:700;">${greeting}</div>
+      <div style="margin-top:8px;">
+        Thanks for your purchase! Your order <strong>#${escapeHtml(data.orderId)}</strong> has been confirmed.
+      </div>
 
-      <p style="margin-top:24px;font-size:12px;color:#555;">
-        FootballWorld<br/>
-        If you have any questions, just reply to this email.
-      </p>
+      <div style="margin-top:16px; font-weight:800;">Items</div>
+      <div style="margin-top:6px;">${itemsHtml}</div>
+
+      <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #eee;">
+        ${shippingLine}
+        <div style="display:flex; justify-content:space-between; margin-top:8px;">
+          <div style="font-weight:800;">Total</div>
+          <div style="font-weight:900;">${moneyEur(data.total)}</div>
+        </div>
+      </div>
+
+      ${addressHtml}
     </div>
   `;
 
+  const html = wrapEmailHtml(title, body);
+
   await resend.emails.send({
-    from: FROM,
-    to,
-    subject: `Your order #${orderId} has been shipped 🚚`,
+    from: EMAIL_FROM,
+    to: data.to,
+    subject: `${STORE_NAME} — Order confirmed (#${data.orderId})`,
     html,
   });
+
+  return { ok: true as const };
+}
+
+export async function sendOrderShippedEmail(data: ShippedEmailData) {
+  const resend = await getResendClient();
+  if (!resend) return { ok: false, skipped: true as const };
+
+  const title = "Your order has shipped";
+  const greeting = `Hi ${escapeHtml(safeName(data.customerName))},`;
+
+  const itemsHtml = renderItemsTable(data.items);
+
+  const trackButton = data.trackingUrl
+    ? `
+      <div style="margin-top:14px;">
+        <a href="${escapeHtml(data.trackingUrl)}"
+           style="display:inline-block; background:#2998ff; color:#fff; text-decoration:none; padding:10px 14px; border-radius:12px; font-weight:800;">
+          Track your order
+        </a>
+      </div>
+    `
+    : "";
+
+  const body = `
+    <div style="font-size:14px; color:#111; line-height:1.6;">
+      <div style="font-size:16px; font-weight:700;">${greeting}</div>
+      <div style="margin-top:8px;">
+        Good news — your order <strong>#${escapeHtml(data.orderId)}</strong> has shipped.
+      </div>
+
+      <div style="margin-top:14px; padding:12px; border:1px solid #eee; border-radius:12px;">
+        <div style="font-weight:800;">Tracking code</div>
+        <div style="margin-top:4px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px;">
+          ${escapeHtml(data.trackingCode)}
+        </div>
+        ${trackButton}
+      </div>
+
+      <div style="margin-top:16px; font-weight:800;">Items</div>
+      <div style="margin-top:6px;">${itemsHtml}</div>
+
+      <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #eee;">
+        <div style="display:flex; justify-content:space-between;">
+          <div style="font-weight:800;">Total</div>
+          <div style="font-weight:900;">${moneyEur(data.total)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const html = wrapEmailHtml(title, body);
+
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    to: data.to,
+    subject: `${STORE_NAME} — Shipped (#${data.orderId})`,
+    html,
+  });
+
+  return { ok: true as const };
 }
