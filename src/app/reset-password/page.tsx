@@ -79,6 +79,7 @@ export default function ResetPasswordPage() {
   const tokenInvalid = !token || token.length < 10;
 
   const strength = useMemo(() => passwordStrength(password), [password]);
+
   const canSubmit =
     !loading &&
     !tokenInvalid &&
@@ -129,7 +130,6 @@ export default function ResetPasswordPage() {
 
       setDone(true);
 
-      // Give a short moment so the user sees success, then go to login
       setTimeout(() => {
         router.push(`/account/login${preservedQuery}`);
       }, 700);
@@ -210,38 +210,6 @@ export default function ResetPasswordPage() {
                     {showPw ? "Hide" : "Show"}
                   </button>
                 </div>
-
-                {/* Strength meter (same as Signup) */}
-                <div className="mt-2">
-                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                    <div
-                      className={`h-2 ${strength.barClass} transition-all`}
-                      style={{
-                        width:
-                          strength.score === 0
-                            ? "10%"
-                            : strength.score === 1
-                            ? "25%"
-                            : strength.score === 2
-                            ? "50%"
-                            : strength.score === 3
-                            ? "75%"
-                            : "100%",
-                      }}
-                    />
-                  </div>
-                  <div className={`mt-1 text-xs ${strength.textClass}`}>
-                    {password.length ? strength.label : ""}
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
-                  </p>
-                  {password.length > 0 && strength.score < 2 && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      Security check: choose at least a <b>Fair</b> password.
-                    </p>
-                  )}
-                </div>
               </div>
 
               {/* Confirm password */}
@@ -276,6 +244,41 @@ export default function ResetPasswordPage() {
                 </div>
 
                 {mismatch && <p className="text-xs text-red-600">Passwords do not match.</p>}
+              </div>
+
+              {/* ✅ Strength meter moved below the second password box */}
+              <div className="mt-1">
+                <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className={`h-2 ${strength.barClass} transition-all`}
+                    style={{
+                      width:
+                        strength.score === 0
+                          ? "10%"
+                          : strength.score === 1
+                          ? "25%"
+                          : strength.score === 2
+                          ? "50%"
+                          : strength.score === 3
+                          ? "75%"
+                          : "100%",
+                    }}
+                  />
+                </div>
+
+                <div className={`mt-1 text-xs ${strength.textClass}`}>
+                  {password.length ? strength.label : ""}
+                </div>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
+                </p>
+
+                {password.length > 0 && strength.score < 2 && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    Security check: choose at least a <b>Fair</b> password.
+                  </p>
+                )}
               </div>
 
               {/* Submit */}
