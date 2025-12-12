@@ -7,7 +7,7 @@ import Link from "next/link";
 
 /* ------------------------ password strength ------------------------ */
 type Strength = {
-  score: 0 | 1 | 2 | 3 | 4;
+  score: 0 | 1 | 2 | 3 | 4; // 0=very weak … 4=very strong
   label: "Weak" | "Fair" | "Strong" | "Very strong" | "Very weak";
   barClass: string;
   textClass: string;
@@ -35,11 +35,7 @@ function passwordStrength(pw: string): Strength {
     1: { label: "Weak", barClass: "bg-red-300", textClass: "text-red-600" },
     2: { label: "Fair", barClass: "bg-amber-300", textClass: "text-amber-700" },
     3: { label: "Strong", barClass: "bg-green-400", textClass: "text-green-700" },
-    4: {
-      label: "Very strong",
-      barClass: "bg-emerald-500",
-      textClass: "text-emerald-700",
-    },
+    4: { label: "Very strong", barClass: "bg-emerald-500", textClass: "text-emerald-700" },
   };
 
   const { label, barClass, textClass } = map[score];
@@ -162,9 +158,11 @@ export default function SignupClient() {
             id="name"
             type="text"
             className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            autoComplete="name"
             disabled={busy}
           />
         </div>
@@ -178,9 +176,11 @@ export default function SignupClient() {
             id="email"
             type="email"
             className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="email"
             disabled={busy}
           />
         </div>
@@ -195,16 +195,18 @@ export default function SignupClient() {
               id="password"
               type={showPw ? "text" : "password"}
               className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="new-password"
               minLength={8}
               disabled={busy}
             />
             <button
               type="button"
               onClick={() => setShowPw((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
             >
               {showPw ? "Hide" : "Show"}
             </button>
@@ -221,16 +223,18 @@ export default function SignupClient() {
               id="confirm"
               type={showPw2 ? "text" : "password"}
               className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Repeat your password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
+              autoComplete="new-password"
               minLength={8}
               disabled={busy}
             />
             <button
               type="button"
               onClick={() => setShowPw2((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
             >
               {showPw2 ? "Hide" : "Show"}
             </button>
@@ -240,8 +244,8 @@ export default function SignupClient() {
             <p className="text-xs text-red-600">Passwords do not match.</p>
           )}
 
-          {/* Strength meter (AGORA AQUI) */}
-          <div className="mt-3">
+          {/* Strength meter (MOVIDO PARA AQUI, SEM ALTERAÇÕES) */}
+          <div className="mt-2">
             <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
               <div
                 className={`h-2 ${strength.barClass} transition-all`}
