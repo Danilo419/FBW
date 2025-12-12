@@ -83,10 +83,9 @@ export default function LoginClient() {
     setLoading(true);
 
     try {
-      // Authenticate without redirect so we choose destination
       const res = await signIn("credentials", {
         redirect: false,
-        identifier, // username OR email
+        identifier,
         password,
       });
 
@@ -99,7 +98,6 @@ export default function LoginClient() {
         };
         setErr(map[res.error] || "Unable to sign in. Please try again.");
       } else {
-        // Read fresh session and decide destination
         const s = await getSession();
         const isAdmin = (s?.user as any)?.isAdmin === true;
         const next = decideNext(isAdmin, preferredCallback);
@@ -148,19 +146,9 @@ export default function LoginClient() {
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-
-            {/* Forgot password link */}
-            <Link
-              href={`/forgot-password${preservedQuery}`}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Forgot your password?
-            </Link>
-          </div>
+          <label htmlFor="password" className="text-sm font-medium">
+            Password
+          </label>
 
           <input
             id="password"
@@ -173,6 +161,16 @@ export default function LoginClient() {
             autoComplete="current-password"
             minLength={6}
           />
+
+          {/* Forgot password link BELOW the input */}
+          <div className="text-right">
+            <Link
+              href={`/forgot-password${preservedQuery}`}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          </div>
         </div>
 
         <button
