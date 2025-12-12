@@ -23,6 +23,15 @@ function getClientIp(req: Request) {
   return "unknown";
 }
 
+function getBaseUrl(req: Request) {
+  const envBase = (process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/$/, "");
+  if (envBase) return envBase;
+
+  // fallback: use request origin (works in dev + production)
+  const origin = req.headers.get("origin")?.trim().replace(/\/$/, "");
+  return origin || "http://localhost:3000";
+}
+
 export async function POST(req: Request) {
   // Always return generic ok to avoid leaking whether the email exists
   const genericOk = NextResponse.json({ ok: true });
@@ -32,86 +41,71 @@ export async function POST(req: Request) {
     const json = await req.json();
     const parsed = BodySchema.safeParse(json);
     if (!parsed.success) return genericOk;
-    email = parsed.data.email.toLowerCase().trim();
+    email = parsed.data.email.trim();
   } catch {
     return genericOk;
   }
 
   const ip = getClientIp(req);
+  const emailNormalized = email.toLowerCase();
 
   // ✅ Rate-limit by IP
-  const ipKey = ip === "unknown" ? "unknown" : ip;
-  const ipRes = await rlForgotPasswordByIp.limit(ipKey);
-  if (!ipRes.success) {
-    return NextResponse.json(
-      { ok: true },
-      {
-        status: 200,
-        headers: { "X-RateLimit-Remaining": String(ipRes.remaining) },
-      }
-    );
-  }
+  const ipRes = await rlForgotPasswordByIp.limit(ip);
+  if (!ipRes.success) return genericOk;
 
   // ✅ Rate-limit by email
-  const emailRes = await rlForgotPasswordByEmail.limit(email);
-  if (!emailRes.success) {
-    return NextResponse.json(
-      { ok: true },
-      {
-        status: 200,
-        headers: { "X-RateLimit-Remaining": String(emailRes.remaining) },
-      }
-    );
-  }
+  const emailRes = await rlForgotPasswordByEmail.limit(emailNormalized);
+  if (!emailRes.success) return genericOk;
 
-  // Check user exists
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return genericOk;
+  // ✅ Find user (case-insensitive)
+  const user = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: emailNormalized,
+        mode: "insensitive",
+      },
+    },
+    select: { id: true, email: true },
+  });
 
-  /**
-   * ✅ IMPORTANT:
-   * If your Prisma Client hasn't been regenerated yet,
-   * TypeScript won't know prisma.passwordResetToken exists.
-   * This cast makes it compile immediately.
-   *
-   * After you run `npx prisma generate`, you can remove this `as any`
-   * and go back to `prisma.passwordResetToken`.
-   */
-  const passwordResetToken = (prisma as any).passwordResetToken as
-    | {
-        deleteMany: (args: any) => Promise<any>;
-        create: (args: any) => Promise<any>;
-      }
-    | undefined;
+  if (!user?.email) return genericOk;
 
-  // If the model doesn't exist in the generated client (or schema), fail silently (still generic ok)
-  if (!passwordResetToken) return genericOk;
-
-  // Invalidate old tokens for this email (recommended)
-  await passwordResetToken.deleteMany({ where: { email } });
+  // ✅ Invalidate old tokens for this email
+  // (Se isto der erro TypeScript, é porque não fizeste `prisma generate`)
+  await prisma.passwordResetToken.deleteMany({
+    where: { email: user.email },
+  });
 
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
-  await passwordResetToken.create({
-    data: { email, token, expiresAt },
+  await prisma.passwordResetToken.create({
+    data: { email: user.email, token, expiresAt },
   });
 
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+  const base = getBaseUrl(req);
   const resetUrl = `${base}/reset-password?token=${token}`;
 
-  // ✅ Send email via Resend
-  await resend.emails.send({
-    from: EMAIL_FROM,
-    to: email,
-    replyTo: EMAIL_REPLY_TO,
-    subject: "Reset your FootballWorld password",
-    html: resetPasswordEmailHtml({
-      resetUrl,
-      ipHint: ip !== "unknown" ? ip : undefined,
-    }),
-    text: resetPasswordEmailText(resetUrl),
-  });
+  try {
+    const resp = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: user.email,
+      replyTo: EMAIL_REPLY_TO,
+      subject: "Reset your FootballWorld password",
+      html: resetPasswordEmailHtml({
+        resetUrl,
+        ipHint: ip !== "unknown" ? ip : undefined,
+      }),
+      text: resetPasswordEmailText(resetUrl),
+    });
+
+    // log útil para debug (aparece na Vercel logs)
+    console.log("[forgot-password] Resend response:", resp);
+  } catch (e) {
+    console.error("[forgot-password] Resend send failed:", e);
+    // não revelar ao utilizador
+    return genericOk;
+  }
 
   return genericOk;
 }
