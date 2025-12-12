@@ -1,4 +1,3 @@
-// src/app/account/signup/SignupClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -8,7 +7,7 @@ import Link from "next/link";
 
 /* ------------------------ password strength ------------------------ */
 type Strength = {
-  score: 0 | 1 | 2 | 3 | 4; // 0=very weak … 4=very strong
+  score: 0 | 1 | 2 | 3 | 4;
   label: "Weak" | "Fair" | "Strong" | "Very strong" | "Very weak";
   barClass: string;
   textClass: string;
@@ -78,7 +77,6 @@ export default function SignupClient() {
     name.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length >= 8 &&
-    strength.score >= 2 &&
     confirm === password;
 
   const onSubmit = async (e: FormEvent) => {
@@ -87,10 +85,6 @@ export default function SignupClient() {
 
     if (password.length < 8) {
       setErr("Password must be at least 8 characters.");
-      return;
-    }
-    if (strength.score < 2) {
-      setErr("Please choose a stronger password (at least Fair).");
       return;
     }
     if (password !== confirm) {
@@ -120,18 +114,20 @@ export default function SignupClient() {
       });
 
       if (res.status === 201) {
-        await signIn("credentials", {
+        const result = await signIn("credentials", {
           identifier: payload.email,
           password: payload.password,
           redirect: true,
           callbackUrl: next,
         });
+
+        if (!result) router.replace(next);
         return;
       }
 
       const data = await res.json().catch(() => ({}));
       if (data?.code === "USERNAME_TAKEN") {
-        setErr("A user with this name already exists.");
+        setErr("A user with this name already exists. Please choose another name.");
       } else if (data?.code === "EMAIL_TAKEN") {
         setErr("An account with this email already exists.");
       } else if (data?.message) {
@@ -159,42 +155,56 @@ export default function SignupClient() {
 
         {/* Name */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Name</label>
+          <label htmlFor="name" className="text-sm font-medium">
+            Name
+          </label>
           <input
-            className="w-full rounded-2xl border px-4 py-3"
+            id="name"
+            type="text"
+            className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            disabled={busy}
           />
         </div>
 
         {/* Email */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Email</label>
+          <label htmlFor="email" className="text-sm font-medium">
+            Email
+          </label>
           <input
+            id="email"
             type="email"
-            className="w-full rounded-2xl border px-4 py-3"
+            className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={busy}
           />
         </div>
 
         {/* Password */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Password</label>
+          <label htmlFor="password" className="text-sm font-medium">
+            Password
+          </label>
           <div className="relative">
             <input
+              id="password"
               type={showPw ? "text" : "password"}
-              className="w-full rounded-2xl border px-4 py-3 pr-24"
+              className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={8}
+              disabled={busy}
             />
             <button
               type="button"
               onClick={() => setShowPw((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm"
             >
               {showPw ? "Hide" : "Show"}
             </button>
@@ -203,53 +213,59 @@ export default function SignupClient() {
 
         {/* Confirm password */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Confirm password</label>
+          <label htmlFor="confirm" className="text-sm font-medium">
+            Confirm password
+          </label>
           <div className="relative">
             <input
+              id="confirm"
               type={showPw2 ? "text" : "password"}
-              className="w-full rounded-2xl border px-4 py-3 pr-24"
+              className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
+              minLength={8}
+              disabled={busy}
             />
             <button
               type="button"
               onClick={() => setShowPw2((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm"
             >
               {showPw2 ? "Hide" : "Show"}
             </button>
           </div>
-          {confirm && confirm !== password && (
+
+          {confirm.length > 0 && confirm !== password && (
             <p className="text-xs text-red-600">Passwords do not match.</p>
           )}
-        </div>
 
-        {/* ✅ Password strength – now BELOW confirm password */}
-        <div className="mt-1">
-          <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-            <div
-              className={`h-2 ${strength.barClass}`}
-              style={{
-                width:
-                  strength.score === 0
-                    ? "10%"
-                    : strength.score === 1
-                    ? "25%"
-                    : strength.score === 2
-                    ? "50%"
-                    : strength.score === 3
-                    ? "75%"
-                    : "100%",
-              }}
-            />
+          {/* Strength meter (AGORA AQUI) */}
+          <div className="mt-3">
+            <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+              <div
+                className={`h-2 ${strength.barClass} transition-all`}
+                style={{
+                  width:
+                    strength.score === 0
+                      ? "10%"
+                      : strength.score === 1
+                      ? "25%"
+                      : strength.score === 2
+                      ? "50%"
+                      : strength.score === 3
+                      ? "75%"
+                      : "100%",
+                }}
+              />
+            </div>
+            <div className={`mt-1 text-xs ${strength.textClass}`}>
+              {strength.label}
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
+            </p>
           </div>
-          <div className={`mt-1 text-xs ${strength.textClass}`}>
-            {password.length ? strength.label : ""}
-          </div>
-          <p className="mt-1 text-xs text-gray-500">
-            Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
-          </p>
         </div>
 
         <button
