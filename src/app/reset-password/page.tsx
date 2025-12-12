@@ -5,6 +5,47 @@ import React, { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+/* ------------------------ password strength (same style as Signup) ------------------------ */
+type Strength = {
+  score: 0 | 1 | 2 | 3 | 4; // 0=very weak … 4=very strong
+  label: "Weak" | "Fair" | "Strong" | "Very strong" | "Very weak";
+  barClass: string;
+  textClass: string;
+};
+
+function passwordStrength(pw: string): Strength {
+  const len = pw.length;
+  const sets = [
+    /[a-z]/.test(pw), // lower
+    /[A-Z]/.test(pw), // upper
+    /\d/.test(pw), // digit
+    /[^A-Za-z0-9]/.test(pw), // symbol
+  ].filter(Boolean).length;
+
+  let scoreNum = 0;
+  if (len >= 8) scoreNum++;
+  if (len >= 12) scoreNum++;
+  if (sets >= 2) scoreNum++;
+  if (sets >= 4) scoreNum++;
+
+  const score = Math.max(0, Math.min(4, scoreNum)) as 0 | 1 | 2 | 3 | 4;
+
+  const map: Record<number, Omit<Strength, "score">> = {
+    0: { label: "Very weak", barClass: "bg-red-200", textClass: "text-red-600" },
+    1: { label: "Weak", barClass: "bg-red-300", textClass: "text-red-600" },
+    2: { label: "Fair", barClass: "bg-amber-300", textClass: "text-amber-700" },
+    3: { label: "Strong", barClass: "bg-green-400", textClass: "text-green-700" },
+    4: {
+      label: "Very strong",
+      barClass: "bg-emerald-500",
+      textClass: "text-emerald-700",
+    },
+  };
+
+  const { label, barClass, textClass } = map[score];
+  return { score, label, barClass, textClass };
+}
+
 export default function ResetPasswordPage() {
   const params = useSearchParams();
   const router = useRouter();
@@ -13,7 +54,8 @@ export default function ResetPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [show, setShow] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -36,20 +78,15 @@ export default function ResetPasswordPage() {
 
   const tokenInvalid = !token || token.length < 10;
 
-  function strengthLabel(pw: string) {
-    if (!pw) return { label: "", score: 0 };
-    let score = 0;
-    if (pw.length >= 8) score++;
-    if (pw.length >= 12) score++;
-    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
-    if (/\d/.test(pw)) score++;
-    if (/[^a-zA-Z0-9]/.test(pw)) score++;
-    const labels = ["Weak", "Ok", "Good", "Strong", "Very strong"];
-    return { label: labels[Math.max(0, Math.min(4, score - 1))] || "Weak", score };
-  }
+  const strength = useMemo(() => passwordStrength(password), [password]);
+  const canSubmit =
+    !loading &&
+    !tokenInvalid &&
+    password.length >= 8 &&
+    strength.score >= 2 && // ✅ security rule: at least "Fair"
+    confirm === password;
 
-  const strength = useMemo(() => strengthLabel(password), [password]);
-  const mismatch = confirm.length > 0 && password !== confirm;
+  const mismatch = confirm.length > 0 && confirm !== password;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -60,8 +97,14 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    // ✅ Security checks (client-side)
     if (password.length < 8) {
       setErr("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (strength.score < 2) {
+      setErr("Please choose a stronger password (at least “Fair”).");
       return;
     }
 
@@ -136,71 +179,110 @@ export default function ResetPasswordPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4" aria-busy={loading}>
+              {/* Password */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <label htmlFor="password" className="text-sm font-medium">
-                    New password
-                  </label>
+                <label htmlFor="password" className="text-sm font-medium">
+                  New password
+                </label>
 
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    minLength={8}
+                    disabled={loading}
+                  />
                   <button
                     type="button"
-                    onClick={() => setShow((v) => !v)}
-                    className="text-sm text-gray-600 hover:underline"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                    tabIndex={0}
+                    disabled={loading}
                   >
-                    {show ? "Hide" : "Show"}
+                    {showPw ? "Hide" : "Show"}
                   </button>
                 </div>
 
-                <input
-                  id="password"
-                  type={show ? "text" : "password"}
-                  required
-                  placeholder="New password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-                  autoComplete="new-password"
-                  minLength={8}
-                />
-
-                {!!password && (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">
-                      Use 8+ chars, mix letters, numbers, symbols.
-                    </span>
-                    <span className="font-medium text-gray-700">
-                      {strength.label}
-                    </span>
+                {/* Strength meter (same as Signup) */}
+                <div className="mt-2">
+                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className={`h-2 ${strength.barClass} transition-all`}
+                      style={{
+                        width:
+                          strength.score === 0
+                            ? "10%"
+                            : strength.score === 1
+                            ? "25%"
+                            : strength.score === 2
+                            ? "50%"
+                            : strength.score === 3
+                            ? "75%"
+                            : "100%",
+                      }}
+                    />
                   </div>
-                )}
+                  <div className={`mt-1 text-xs ${strength.textClass}`}>
+                    {password.length ? strength.label : ""}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.
+                  </p>
+                  {password.length > 0 && strength.score < 2 && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Security check: choose at least a <b>Fair</b> password.
+                    </p>
+                  )}
+                </div>
               </div>
 
+              {/* Confirm password */}
               <div className="space-y-2">
                 <label htmlFor="confirm" className="text-sm font-medium">
                   Confirm password
                 </label>
-                <input
-                  id="confirm"
-                  type={show ? "text" : "password"}
-                  required
-                  placeholder="Confirm password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-                  autoComplete="new-password"
-                  minLength={8}
-                />
 
-                {mismatch && (
-                  <p className="text-xs text-red-600">Passwords do not match.</p>
-                )}
+                <div className="relative">
+                  <input
+                    id="confirm"
+                    type={showPw2 ? "text" : "password"}
+                    className="w-full rounded-2xl border px-4 py-3 pr-24 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Repeat your password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    minLength={8}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw2((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                    aria-label={showPw2 ? "Hide password" : "Show password"}
+                    tabIndex={0}
+                    disabled={loading}
+                  >
+                    {showPw2 ? "Hide" : "Show"}
+                  </button>
+                </div>
+
+                {mismatch && <p className="text-xs text-red-600">Passwords do not match.</p>}
               </div>
 
+              {/* Submit */}
               <button
                 type="submit"
-                disabled={loading || tokenInvalid}
-                className="w-full btn-primary justify-center"
+                disabled={!canSubmit}
+                className="w-full btn-primary justify-center disabled:opacity-60"
               >
                 {loading ? "Resetting…" : "Reset password"}
               </button>
