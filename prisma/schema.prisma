@@ -240,6 +240,17 @@ enum OrderStatus {
   delivered
 }
 
+/**
+ * Optional but recommended, to separate shipping workflow from payment status.
+ * You can keep using Order.status only, but this helps for admin & tracking.
+ */
+enum ShippingStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+}
+
 model Order {
   id     String  @id @default(cuid())
   userId String?
@@ -283,6 +294,13 @@ model Order {
   shippingPostalCode String?
   shippingCountry    String?
 
+  // ✅ Tracking / fulfillment (ADDED)
+  shippingStatus ShippingStatus @default(PENDING)
+  trackingCode   String?
+  trackingUrl    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+
   // Other
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -295,6 +313,12 @@ model Order {
   @@index([createdAt])
   @@index([shippingCountry])
   @@index([paidAt])
+
+  // ✅ Helpful indexes (ADDED)
+  @@index([shippingStatus])
+  @@index([shippedAt])
+  @@index([deliveredAt])
+  @@index([trackingCode])
 }
 
 model OrderItem {

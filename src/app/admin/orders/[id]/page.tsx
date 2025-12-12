@@ -15,12 +15,13 @@ import {
   Printer,
 } from "lucide-react";
 import { PrintButton } from "@/components/admin/PrintButton"; // client component
+import { updateOrderTrackingAction } from "../actions";
 
 /* ========================= Helpers ========================= */
 
 type Currency = "EUR" | "USD" | "GBP" | "BRL" | "AUD" | "CAD" | "JPY";
 const toCurrency = (s?: string | null): Currency =>
-  (String(s || "EUR").toUpperCase() as Currency);
+  String(s || "EUR").toUpperCase() as Currency;
 
 function money(cents: number, currency: Currency = "EUR") {
   const safe = Number.isFinite(cents) ? cents : 0;
@@ -80,12 +81,12 @@ function extractShipping(order: any) {
 
     return {
       fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
-      email: g("email") ?? order?.user?.email ?? null,
-      phone: g("phone", "telephone"),
-      address1: g("address1", "addressLine1", "line1", "street"),
-      address2: g("address2", "addressLine2", "line2", "street2"),
-      city: g("city", "locality", "town"),
-      region: g("region", "state", "province"),
+      email: g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
+      phone: g("phone", "telephone", "ship_phone"),
+      address1: g("address1", "addressLine1", "line1", "street", "ship_line1"),
+      address2: g("address2", "addressLine2", "line2", "street2", "ship_line2"),
+      city: g("city", "locality", "town", "ship_city"),
+      region: g("region", "state", "province", "ship_state"),
       postalCode: g(
         "postalCode",
         "postal_code",
@@ -96,9 +97,10 @@ function extractShipping(order: any) {
         "codigoPostal",
         "cep",
         "pincode",
-        "eircode"
+        "eircode",
+        "ship_postal"
       ),
-      country: g("country", "countryCode", "shippingCountry"),
+      country: g("country", "countryCode", "shippingCountry", "ship_country"),
     };
   } catch {
     return {
@@ -113,6 +115,28 @@ function extractShipping(order: any) {
       country: null,
     };
   }
+}
+
+function extractTracking(order: any) {
+  const j = safeParseJSON(order?.shippingJson);
+  const trackingCode =
+    pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
+  const trackingUrl =
+    pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
+
+  // Your admin action uses Order.status as the shipping flow
+  // We map it back to the select values the form sends.
+  const status = String(order?.status ?? "pending");
+  const shippingStatus =
+    status === "delivered"
+      ? "DELIVERED"
+      : status === "shipped"
+      ? "SHIPPED"
+      : status === "paid"
+      ? "PROCESSING"
+      : "PENDING";
+
+  return { trackingCode, trackingUrl, shippingStatus };
 }
 
 function ensureArray<T>(v: any): T[] {
@@ -135,7 +159,8 @@ async function fetchOrder(id: string) {
         items: {
           orderBy: { id: "asc" },
           include: {
-            product: { select: { id: true, slug: true, images: true, name: true } },
+            // ✅ schema uses imageUrls (not images)
+            product: { select: { id: true, slug: true, imageUrls: true, name: true } },
           },
         },
       },
@@ -196,7 +221,7 @@ async function fetchOrder(id: string) {
         badges = Object.values(rawBadges).join(", ");
       } else if (rawBadges) badges = String(rawBadges);
 
-      const productImages = ensureArray<string>(it?.product?.images);
+      const productImages = ensureArray<string>(it?.product?.imageUrls);
       const image = it?.image ?? productImages[0] ?? "/placeholder.png";
 
       const unitPriceCents = Number(it?.unitPrice ?? 0);
@@ -240,6 +265,7 @@ async function fetchOrder(id: string) {
         totalCents,
         user: order.user ?? null,
         shipping: extractShipping(order),
+        tracking: extractTracking(order),
         stripeSessionId: order.stripeSessionId ?? null,
         stripePaymentIntentId: order.stripePaymentIntentId ?? null,
         paypalOrderId: order.paypalOrderId ?? null,
@@ -259,7 +285,7 @@ async function fetchOrder(id: string) {
 export default async function AdminOrderViewPage({
   params,
 }: {
-  // ✅ Next 15: params é Promise
+  // ✅ Next 15: params is a Promise
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -304,7 +330,8 @@ export default async function AdminOrderViewPage({
             <div>
               <div className="font-semibold">We couldn’t load some data</div>
               <div className="text-sm opacity-90">
-                The page is still displayed with what we could parse. Error: {error}
+                The page is still displayed with what we could parse. Error:{" "}
+                {error}
               </div>
             </div>
           </div>
@@ -349,6 +376,84 @@ export default async function AdminOrderViewPage({
                   PayPal Capture: {order.paypalCaptureId}
                 </div>
               )}
+            </section>
+
+            {/* ✅ Fulfillment / Tracking (NEW) */}
+            <section className="rounded-2xl border bg-white p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="font-semibold">Fulfillment / Tracking</div>
+                <span className="text-xs text-gray-500">
+                  Stored in shippingJson
+                </span>
+              </div>
+
+              <form action={updateOrderTrackingAction} className="space-y-3">
+                <input type="hidden" name="orderId" value={order.id} />
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Shipping status
+                  </label>
+                  <select
+                    name="shippingStatus"
+                    defaultValue={order.tracking.shippingStatus}
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  >
+                    <option value="PENDING">PENDING</option>
+                    <option value="PROCESSING">PROCESSING</option>
+                    <option value="SHIPPED">SHIPPED</option>
+                    <option value="DELIVERED">DELIVERED</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Tracking code
+                  </label>
+                  <input
+                    name="trackingCode"
+                    defaultValue={order.tracking.trackingCode ?? ""}
+                    placeholder="e.g. RR123456789PT"
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Tracking URL (optional)
+                  </label>
+                  <input
+                    name="trackingUrl"
+                    defaultValue={order.tracking.trackingUrl ?? ""}
+                    placeholder="https://..."
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <button className="w-full rounded-xl bg-black px-3 py-2 text-sm font-semibold text-white">
+                  Save
+                </button>
+
+                {(order.tracking.trackingCode || order.tracking.trackingUrl) && (
+                  <div className="text-xs text-gray-600">
+                    <div>
+                      <span className="font-semibold">Current:</span>{" "}
+                      {order.tracking.trackingCode ?? "—"}
+                    </div>
+                    {order.tracking.trackingUrl ? (
+                      <div className="break-all">
+                        <a
+                          href={order.tracking.trackingUrl}
+                          target="_blank"
+                          className="underline"
+                        >
+                          {order.tracking.trackingUrl}
+                        </a>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </form>
             </section>
 
             <section className="rounded-2xl border bg-white p-4">
@@ -458,7 +563,7 @@ function CustomerBlock({
   );
 }
 
-// ⬇️ Shipping address SEM Name/Email/Phone
+// ⬇️ Shipping address WITHOUT Name/Email/Phone
 function AddressBlock(props: {
   address1?: string | null;
   address2?: string | null;
@@ -472,7 +577,9 @@ function AddressBlock(props: {
   return (
     <div className="space-y-1">
       <LabeledRow label="Address" value={props.address1 ?? "—"} />
-      {props.address2 ? <LabeledRow label="Address 2" value={props.address2} /> : null}
+      {props.address2 ? (
+        <LabeledRow label="Address 2" value={props.address2} />
+      ) : null}
       <LabeledRow label="City / Region" value={cityRegion || "—"} />
       <LabeledRow label="Postal Code" value={props.postalCode ?? "—"} />
       <LabeledRow label="Country" value={props.country ?? "—"} />
@@ -521,7 +628,9 @@ function ItemRow({
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-medium leading-tight truncate">{item.name}</div>
+            <div className="font-medium leading-tight truncate">
+              {item.name}
+            </div>
             <div className="text-xs text-gray-500">
               Size: {item.size || "—"} • Qty: {item.qty}
             </div>

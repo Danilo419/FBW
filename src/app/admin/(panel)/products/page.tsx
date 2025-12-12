@@ -1,3 +1,4 @@
+// src/app/admin/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -10,11 +11,12 @@ import { Search as SearchIcon } from "lucide-react";
 import DeleteButton from "./DeleteButton";
 
 /* ---------- helpers ---------- */
-function fmtMoneyFromCents(cents: number, currency = "EUR") {
+function formatMoneyFromCents(cents: number, currency = "EUR") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(
-    cents / 100
+    (Number.isFinite(cents) ? cents : 0) / 100
   );
 }
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -45,8 +47,10 @@ export default async function ProductsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const sp = await searchParams;
+
   const q = (sp?.q || "").trim();
   const LIMIT = 10;
+
   const pageParam = Number(sp?.page ?? "1");
   let page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
@@ -89,8 +93,20 @@ export default async function ProductsPage({
     return `/admin/products?${usp.toString()}`;
   };
 
-  /* ---------- simple numeric pagination (1..N) ---------- */
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  /* ---------- pagination: show only 5 page buttons at a time ---------- */
+  const MAX_PAGE_BUTTONS = 5;
+
+  const half = Math.floor(MAX_PAGE_BUTTONS / 2);
+  let start = Math.max(1, page - half);
+  let end = start + MAX_PAGE_BUTTONS - 1;
+
+  if (end > totalPages) {
+    end = totalPages;
+    start = Math.max(1, end - MAX_PAGE_BUTTONS + 1);
+  }
+
+  const pageNumbers = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
 
@@ -145,6 +161,7 @@ export default async function ProductsPage({
                 <th className="py-2 pr-3 text-right">Actions</th>
               </tr>
             </thead>
+
             <tbody>
               {products.length === 0 && (
                 <tr>
@@ -182,7 +199,7 @@ export default async function ProductsPage({
                     <td className="py-2 pr-3">{p.name}</td>
                     <td className="py-2 pr-3">{p.team}</td>
                     <td className="py-2 pr-3">{p.season ?? "—"}</td>
-                    <td className="py-2 pr-3">{fmtMoneyFromCents(p.basePrice)}</td>
+                    <td className="py-2 pr-3">{formatMoneyFromCents(p.basePrice)}</td>
                     <td className="py-2 pr-3">
                       {p.sizes.length} ({availableCount} available)
                     </td>
@@ -195,6 +212,7 @@ export default async function ProductsPage({
                         >
                           Edit
                         </Link>
+
                         <DeleteButton
                           id={p.id}
                           name={p.name}
@@ -215,25 +233,25 @@ export default async function ProductsPage({
             aria-label="Pagination"
             className="mt-4 flex items-center justify-between gap-3"
           >
-            {/* Prev */}
+            {/* Previous */}
             <div>
               {hasPrev ? (
                 <Link
                   href={queryForLink(page - 1)}
                   className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
                 >
-                  Anterior
+                  Previous
                 </Link>
               ) : (
                 <span className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400 cursor-not-allowed">
-                  Anterior
+                  Previous
                 </span>
               )}
             </div>
 
-            {/* Page numbers */}
+            {/* Page numbers (max 5 visible) */}
             <ul className="flex flex-wrap items-center gap-1">
-              {pages.map((p) =>
+              {pageNumbers.map((p) =>
                 p === page ? (
                   <li key={p}>
                     <span className="inline-flex min-w-9 justify-center rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white">
@@ -260,11 +278,11 @@ export default async function ProductsPage({
                   href={queryForLink(page + 1)}
                   className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
                 >
-                  Seguinte
+                  Next
                 </Link>
               ) : (
                 <span className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400 cursor-not-allowed">
-                  Seguinte
+                  Next
                 </span>
               )}
             </div>

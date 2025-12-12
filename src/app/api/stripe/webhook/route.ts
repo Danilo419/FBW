@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
 import { finalizePaidOrder } from "@/lib/checkout";
 import { pusherServer } from "@/lib/pusher";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,12 +81,19 @@ function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
 }
 
 function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
-  const cd = session.customer_details as Stripe.Checkout.Session.CustomerDetails | null;
+  const cd =
+    session.customer_details as Stripe.Checkout.Session.CustomerDetails | null;
   if (!cd) return null;
 
   const addr = cd.address;
   const address =
-    addr && (addr.line1 || addr.line2 || addr.city || addr.state || addr.postal_code || addr.country)
+    addr &&
+    (addr.line1 ||
+      addr.line2 ||
+      addr.city ||
+      addr.state ||
+      addr.postal_code ||
+      addr.country)
       ? {
           line1: nz(addr.line1),
           line2: nz(addr.line2),
@@ -108,7 +116,13 @@ function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
 function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
   const s = pi.shipping || null;
   const address =
-    s?.address && (s.address.line1 || s.address.line2 || s.address.city || s.address.state || s.address.postal_code || s.address.country)
+    s?.address &&
+    (s.address.line1 ||
+      s.address.line2 ||
+      s.address.city ||
+      s.address.state ||
+      s.address.postal_code ||
+      s.address.country)
       ? {
           line1: nz(s.address.line1),
           line2: nz(s.address.line2),
@@ -128,10 +142,14 @@ function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
   return isEmptyShipping(out) ? null : out;
 }
 
-function prefer<A>(primary: A | null | undefined, fallback: A | null | undefined): A | null {
-  return primary != null && !(typeof primary === "string" && primary.trim() === "")
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
+  return primary != null &&
+    !(typeof primary === "string" && primary.trim() === "")
     ? (primary as A)
-    : (fallback ?? null);
+    : fallback ?? null;
 }
 
 /** Merge missing fields of base with add (base takes precedence). */
@@ -149,13 +167,36 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
       line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
       city: prefer(base.address?.city ?? null, add.address?.city ?? null),
       state: prefer(base.address?.state ?? null, add.address?.state ?? null),
-      postal_code: prefer(base.address?.postal_code ?? null, add.address?.postal_code ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
       country: prefer(base.address?.country ?? null, add.address?.country ?? null),
     },
   };
 }
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/* -------------------- email helpers (added) -------------------- */
+
+function shippingAddressToString(s?: ShippingJson | null): string | null {
+  if (!s?.address) return null;
+  const a = s.address;
+  const parts = [
+    a.line1,
+    a.line2,
+    a.postal_code,
+    a.city,
+    a.state,
+    a.country,
+  ].filter(Boolean) as string[];
+  return parts.length ? parts.join(", ") : null;
+}
+
+function centsToEur(n?: number | null): number {
+  return typeof n === "number" ? n / 100 : 0;
+}
 
 /* ------------------------- status updaters ------------------------- */
 
@@ -175,11 +216,17 @@ async function markPaid(
   });
 
   const wasAlreadyFinal =
-    existing?.status === "paid" || existing?.status === "shipped" || existing?.status === "delivered";
+    existing?.status === "paid" ||
+    existing?.status === "shipped" ||
+    existing?.status === "delivered";
 
-  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, opts.shipping ?? null);
+  const mergedShipping = mergeShipping(
+    existing?.shippingJson as ShippingJson,
+    opts.shipping ?? null
+  );
   const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
+    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() ||
+    null;
 
   await prisma.order.update({
     where: { id: orderId },
@@ -198,7 +245,80 @@ async function markPaid(
 
   if (!wasAlreadyFinal) {
     await finalizePaidOrder(orderId);
+
+    // ✅ SEND ORDER CONFIRMATION EMAIL (ADDED) - only on first transition to paid
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      // Try to discover the best email field without assuming too much
+      const to =
+        (order as any)?.email ??
+        (order as any)?.customerEmail ??
+        (order as any)?.shippingJson?.email ??
+        null;
+
+      if (to) {
+        const shippingJson =
+          (order as any)?.shippingJson
+            ? ((order as any).shippingJson as ShippingJson)
+            : mergedShipping;
+
+        // Totals: prefer explicit fields if they exist; fallback to cents if available
+        const totalEur =
+          typeof (order as any)?.total === "number"
+            ? (order as any).total
+            : typeof (order as any)?.totalCents === "number"
+            ? centsToEur((order as any).totalCents)
+            : typeof opts.totalCents === "number"
+            ? centsToEur(opts.totalCents)
+            : 0;
+
+        const shippingEur =
+          typeof (order as any)?.shippingPrice === "number"
+            ? (order as any).shippingPrice
+            : typeof (order as any)?.shippingCents === "number"
+            ? centsToEur((order as any).shippingCents)
+            : 0;
+
+        const customerName =
+          (order as any)?.customerName ??
+          (order as any)?.shippingJson?.name ??
+          null;
+
+        const shippingAddress =
+          (order as any)?.shippingAddress ??
+          shippingAddressToString(shippingJson) ??
+          null;
+
+        await sendOrderConfirmationEmail({
+          to,
+          orderId: (order as any)?.id ?? orderId,
+          items: ((order as any)?.items ?? []).map((i: any) => ({
+            name: i?.name ?? i?.title ?? "Item",
+            qty: typeof i?.qty === "number" ? i.qty : typeof i?.quantity === "number" ? i.quantity : 1,
+            // If your item price is stored in cents, adjust here. This keeps your old logic intact.
+            price:
+              typeof i?.price === "number"
+                ? i.price
+                : typeof i?.priceCents === "number"
+                ? centsToEur(i.priceCents)
+                : 0,
+          })),
+          total: totalEur,
+          shippingPrice: shippingEur,
+          customerName,
+          shippingAddress,
+        });
+      }
+    } catch (err) {
+      // Never fail the Stripe webhook because of email issues
+      console.error("Order confirmation email failed:", err);
+    }
   }
+
   return { transitioned: !wasAlreadyFinal };
 }
 
@@ -323,7 +443,10 @@ export const POST = async (req: NextRequest) => {
           });
           if (transitioned) {
             try {
-              await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
               await pusherServer.trigger("stats", "metric:update", {
                 metric: "countriesMaybeChanged",
                 value: 1,
@@ -331,7 +454,11 @@ export const POST = async (req: NextRequest) => {
             } catch {}
           }
         } else {
-          await markPending(orderId, { paymentIntentId: piId, sessionId: session.id, shipping });
+          await markPending(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            shipping,
+          });
         }
         break;
       }
@@ -370,12 +497,17 @@ export const POST = async (req: NextRequest) => {
           sessionId: session.id,
           currency: session.currency ?? undefined,
           totalCents:
-            typeof session.amount_total === "number" ? session.amount_total : undefined,
+            typeof session.amount_total === "number"
+              ? session.amount_total
+              : undefined,
           shipping,
         });
         if (transitioned) {
           try {
-            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
             await pusherServer.trigger("stats", "metric:update", {
               metric: "countriesMaybeChanged",
               value: 1,
@@ -411,7 +543,10 @@ export const POST = async (req: NextRequest) => {
         });
         if (transitioned) {
           try {
-            await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
             await pusherServer.trigger("stats", "metric:update", {
               metric: "countriesMaybeChanged",
               value: 1,
@@ -426,10 +561,17 @@ export const POST = async (req: NextRequest) => {
         const orderId =
           (pi.metadata?.orderId as string | undefined) ||
           (await prisma.order
-            .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
             .then((r) => r?.id));
         if (orderId) {
-          await markPending(orderId, { paymentIntentId: pi.id, sessionId: null, shipping: shippingFromPaymentIntent(pi) });
+          await markPending(orderId, {
+            paymentIntentId: pi.id,
+            sessionId: null,
+            shipping: shippingFromPaymentIntent(pi),
+          });
         }
         break;
       }
@@ -439,7 +581,10 @@ export const POST = async (req: NextRequest) => {
         const orderId =
           (pi.metadata?.orderId as string | undefined) ||
           (await prisma.order
-            .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
             .then((r) => r?.id));
         if (orderId) await markFailed(orderId);
         break;
@@ -450,7 +595,10 @@ export const POST = async (req: NextRequest) => {
         const orderId =
           (pi.metadata?.orderId as string | undefined) ||
           (await prisma.order
-            .findFirst({ where: { stripePaymentIntentId: pi.id }, select: { id: true } })
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
             .then((r) => r?.id));
         if (orderId) await markCanceled(orderId);
         break;
@@ -514,7 +662,10 @@ export const POST = async (req: NextRequest) => {
           });
           if (transitioned) {
             try {
-              await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
               await pusherServer.trigger("stats", "metric:update", {
                 metric: "countriesMaybeChanged",
                 value: 1,
