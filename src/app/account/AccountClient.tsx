@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import {
   CalendarDays,
   Mail,
@@ -13,6 +14,10 @@ import {
   User,
   Image as ImageIcon,
   UploadCloud,
+  ReceiptText,
+  ChevronRight,
+  Loader2,
+  Package,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
@@ -78,16 +83,32 @@ function isValidImg(file: File) {
   return okType && okSize;
 }
 
+function fmtMoneyFromCents(cents: number, currency = 'eur') {
+  const c = (currency || 'eur').toUpperCase();
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: c }).format(cents / 100);
+  } catch {
+    return `${(cents / 100).toFixed(2)} ${c}`;
+  }
+}
+
 /* ========= Componente principal ========= */
 export default function AccountClient(props: Props) {
-  const [tab, setTab] = useState<'overview' | 'profile' | 'security'>('overview');
+  const [tab, setTab] = useState<'overview' | 'profile' | 'security' | 'orders'>('overview');
 
   return (
     <div className="grid lg:grid-cols-[240px_1fr] gap-6">
       {/* Sidebar */}
       <aside className="card p-4 h-fit">
         <nav className="flex lg:flex-col gap-2">
-          {(['overview','profile','security'] as const).map(key => (
+          {(
+            [
+              ['overview', 'Overview'],
+              ['profile', 'Profile'],
+              ['security', 'Security'],
+              ['orders', 'My Orders'],
+            ] as const
+          ).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -95,7 +116,7 @@ export default function AccountClient(props: Props) {
                 tab === key ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'
               }`}
             >
-              {key[0].toUpperCase() + key.slice(1)}
+              {label}
             </button>
           ))}
         </nav>
@@ -106,20 +127,14 @@ export default function AccountClient(props: Props) {
         {tab === 'overview' && <Overview {...props} />}
         {tab === 'profile' && <ProfileForm {...props} />}
         {tab === 'security' && <SecurityForm />}
+        {tab === 'orders' && <MyOrders />}
       </section>
     </div>
   );
 }
 
 /* ========= OVERVIEW ========= */
-function Overview({
-  userId,
-  email,
-  defaultName,
-  defaultImage,
-  createdAt,
-  provider,
-}: Props) {
+function Overview({ userId, email, defaultName, defaultImage, createdAt, provider }: Props) {
   const joined = useMemo(() => formatDate(createdAt), [createdAt]);
 
   return (
@@ -144,7 +159,7 @@ function Overview({
           </div>
         </InfoCard>
 
-      <InfoCard label="Provider">
+        <InfoCard label="Provider">
           <div className="mt-1 font-semibold">{provider}</div>
         </InfoCard>
 
@@ -165,6 +180,116 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
+/* ========= MY ORDERS ========= */
+
+type OrderListItem = {
+  id: string;
+  createdAt: string;
+  status: string;
+  currency: string;
+  totalCents: number;
+  itemsCount: number;
+};
+
+function MyOrders() {
+  const { status } = useSession();
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [orders, setOrders] = useState<OrderListItem[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      setLoading(true);
+      setErr(null);
+      try {
+        const r = await fetch('/api/account/orders', { method: 'GET' });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j?.error || 'Failed to load orders');
+        if (!alive) return;
+        setOrders(Array.isArray(j?.orders) ? j.orders : []);
+      } catch (e: any) {
+        if (!alive) return;
+        setErr(e?.message ?? 'Something went wrong');
+      } finally {
+        if (!alive) return;
+        setLoading(false);
+      }
+    }
+
+    if (status !== 'loading') run();
+    return () => {
+      alive = false;
+    };
+  }, [status]);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <ReceiptText className="h-5 w-5" /> My Orders
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">See your full purchase history.</p>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        {loading && (
+          <div className="flex items-center gap-2 text-gray-600">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading orders…
+          </div>
+        )}
+
+        {!loading && err && (
+          <div className="rounded-2xl border p-4 bg-red-50 text-red-700 text-sm">{err}</div>
+        )}
+
+        {!loading && !err && orders.length === 0 && (
+          <div className="rounded-2xl border p-6 bg-white/70 text-center">
+            <Package className="h-6 w-6 mx-auto text-gray-400" />
+            <div className="mt-2 font-semibold">No orders yet</div>
+            <div className="mt-1 text-sm text-gray-600">
+              When you buy something, your orders will show up here.
+            </div>
+          </div>
+        )}
+
+        {!loading && !err && orders.length > 0 && (
+          <div className="grid gap-3">
+            {orders.map((o) => (
+              <div
+                key={o.id}
+                className="rounded-2xl border p-4 bg-white/70 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold truncate">{`Order #${o.id.slice(0, 8).toUpperCase()}`}</span>
+                    <span className="text-xs px-2 py-1 rounded-full border bg-white">{o.status}</span>
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                    <span>Placed: {formatDate(o.createdAt)}</span>
+                    <span>Items: {o.itemsCount}</span>
+                    <span>Total: {fmtMoneyFromCents(o.totalCents, o.currency)}</span>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/account/orders/${encodeURIComponent(o.id)}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-2 hover:bg-gray-50"
+                >
+                  See Details <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 /* ========= PROFILE (upload direto ao Cloudinary) ========= */
 function ProfileForm({ email, defaultName, defaultImage }: Props) {
   const { update } = useSession(); // ✅ para refrescar sessão no próprio separador
@@ -175,7 +300,6 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
   const [ok, setOk] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // Faz upload se houver ficheiro e devolve o secure_url
   async function uploadIfNeeded(): Promise<string | null> {
     if (!file) return null;
     if (!isValidImg(file)) throw new Error('Escolhe uma imagem JPG/PNG/WebP até 8 MB.');
@@ -202,20 +326,18 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to update profile');
 
-      // UI local
       setImage(data?.user?.image ?? finalImage ?? '');
       setFile(null);
       setOk('Profile updated successfully');
 
-      // 🔔 Notifica outros separadores + Header para refrescar
       try {
         localStorage.setItem('profile:updated', String(Date.now()));
         window.dispatchEvent(new Event('profile:updated'));
       } catch {}
 
-      // 🔁 Refresca sessão neste separador (NextAuth)
-      try { await update?.(); } catch {}
-
+      try {
+        await update?.();
+      } catch {}
     } catch (e: any) {
       setErr(e?.message ?? 'Something went wrong');
     } finally {
@@ -224,14 +346,17 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
   };
 
   const onFileChange = (f: File | null) => {
-    if (!f) { setFile(null); return; }
+    if (!f) {
+      setFile(null);
+      return;
+    }
     if (!isValidImg(f)) {
       setErr('Escolhe uma imagem JPG/PNG/WebP até 8 MB.');
       setTimeout(() => setErr(null), 2500);
       return;
     }
     setFile(f);
-    setImage(URL.createObjectURL(f)); // preview local
+    setImage(URL.createObjectURL(f));
   };
 
   return (
@@ -242,9 +367,7 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
         <div className="flex flex-col items-center gap-3">
           <Avatar src={image || undefined} name={name || email} size={96} />
           <UploadFromDevice onPick={onFileChange} />
-          <div className="text-xs text-gray-500 text-center">
-            JPG/PNG/WebP até 8MB.
-          </div>
+          <div className="text-xs text-gray-500 text-center">JPG/PNG/WebP até 8MB.</div>
         </div>
 
         <div className="grid gap-4">
@@ -313,7 +436,9 @@ function SecurityForm() {
   const [err, setErr] = useState<string | null>(null);
 
   const onChangePassword = async () => {
-    setLoading(true); setOk(null); setErr(null);
+    setLoading(true);
+    setOk(null);
+    setErr(null);
     try {
       if (newPassword.length < 8) throw new Error('New password must be at least 8 characters');
       if (newPassword !== confirm) throw new Error('Passwords do not match');
@@ -327,7 +452,9 @@ function SecurityForm() {
       if (!res.ok) throw new Error(data?.error || 'Failed to change password');
 
       setOk('Password changed successfully');
-      setCurrentPassword(''); setNewPassword(''); setConfirm('');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirm('');
     } catch (e: any) {
       setErr(e?.message ?? 'Something went wrong');
     } finally {
@@ -340,21 +467,9 @@ function SecurityForm() {
       <h2 className="text-xl font-semibold mb-4">Security</h2>
 
       <div className="grid gap-4">
-        <PasswordInput
-          label="Current password"
-          value={currentPassword}
-          onChange={setCurrentPassword}
-        />
-        <PasswordInput
-          label="New password"
-          value={newPassword}
-          onChange={setNewPassword}
-        />
-        <PasswordInput
-          label="Confirm new password"
-          value={confirm}
-          onChange={setConfirm}
-        />
+        <PasswordInput label="Current password" value={currentPassword} onChange={setCurrentPassword} />
+        <PasswordInput label="New password" value={newPassword} onChange={setNewPassword} />
+        <PasswordInput label="Confirm new password" value={confirm} onChange={setConfirm} />
       </div>
 
       <div className="mt-6 flex items-center gap-3">
@@ -369,9 +484,7 @@ function SecurityForm() {
   );
 }
 
-function PasswordInput(
-  { label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }
-) {
+function PasswordInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block">
       <span className="text-sm text-gray-700">{label}</span>

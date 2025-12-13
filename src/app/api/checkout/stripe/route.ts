@@ -4,8 +4,12 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
 import { getServerBaseUrl } from "@/lib/origin";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const runtime = "nodejs";
+
+/* ============================== TYPES ============================== */
 
 type Method =
   | "card"
@@ -31,7 +35,12 @@ type Shipping = {
   };
 };
 
-function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
+/* ============================== HELPERS ============================== */
+
+function toAbsoluteImage(
+  url: string | null | undefined,
+  APP: string
+): string | null {
   if (!url) return null;
   const t = url.trim();
   if (!t) return null;
@@ -40,43 +49,52 @@ function toAbsoluteImage(url: string | null | undefined, APP: string): string | 
   return null;
 }
 
-function shippingToMetadata(s?: Shipping | null) {
-  const clip = (v?: string) => (v ?? "").toString().slice(0, 500);
-  return s
-    ? {
-        ship_name: clip(s.name),
-        ship_phone: clip(s.phone),
-        ship_email: clip(s.email),
-        ship_line1: clip(s.address?.line1),
-        ship_line2: clip(s.address?.line2),
-        ship_city: clip(s.address?.city),
-        ship_state: clip(s.address?.state),
-        ship_postal: clip(s.address?.postal_code),
-        ship_country: clip(s.address?.country),
-      }
-    : {};
+/**
+ * ✅ Stripe metadata MUST be Record<string, string>
+ * ❌ undefined values are NOT allowed
+ */
+function shippingToMetadata(s?: Shipping | null): Record<string, string> {
+  const out: Record<string, string> = {};
+
+  const put = (key: string, value?: string) => {
+    if (value && value.trim()) out[key] = value.slice(0, 500);
+  };
+
+  if (!s) return out;
+
+  put("ship_name", s.name);
+  put("ship_phone", s.phone);
+  put("ship_email", s.email);
+
+  put("ship_line1", s.address?.line1);
+  put("ship_line2", s.address?.line2);
+  put("ship_city", s.address?.city);
+  put("ship_state", s.address?.state);
+  put("ship_postal", s.address?.postal_code);
+  put("ship_country", s.address?.country);
+
+  return out;
 }
+
+/* ============================== ROUTE ============================== */
 
 export async function POST(req: NextRequest) {
   try {
-    // Stripe client
-    let stripe;
-    try {
-      stripe = getStripe();
-    } catch (e: any) {
-      return NextResponse.json(
-        { error: e?.message ?? "Stripe not configured (missing STRIPE_SECRET_KEY)" },
-        { status: 500 }
-      );
+    const stripe = getStripe();
+
+    // Auth
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id as string | undefined;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method;
 
-    // Domínio dinâmico (preview/prod/local)
     const APP = await getServerBaseUrl();
 
-    // Cookie de sessão (Next 15: async)
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
@@ -86,69 +104,38 @@ export async function POST(req: NextRequest) {
         items: {
           include: {
             product: {
-              // ✅ usar imageUrls (String[])
               select: { name: true, imageUrls: true },
             },
           },
         },
       },
     });
+
     if (!cart || cart.items.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
     const currency = "eur";
-    const subtotal = cart.items.reduce((acc, it) => {
-      const line = (it as any).totalPrice ?? it.qty * it.unitPrice;
-      return acc + line;
-    }, 0);
+    const subtotal = cart.items.reduce(
+      (acc, it) => acc + ((it as any).totalPrice ?? it.qty * it.unitPrice),
+      0
+    );
 
-    // Shipping guardado no step /checkout/address (cookie base64 JSON)
+    /* -------- Shipping from cookie -------- */
     let shippingFromCookie: Shipping | null = null;
     const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
-        shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
-      } catch {
-        shippingFromCookie = null;
-      }
+        shippingFromCookie = JSON.parse(
+          Buffer.from(rawShip, "base64").toString("utf8")
+        );
+      } catch {}
     }
 
-    // Fluxo Link (Elements)
-    if (method === "link") {
-      const createdForLink = await prisma.order.create({
-        data: {
-          sessionId: cart.sessionId ?? null,
-          status: "pending",
-          currency,
-          subtotal,
-          shipping: 0,
-          tax: 0,
-          total: subtotal,
-          shippingJson: (shippingFromCookie as any) ?? null,
-          items: {
-            create: cart.items.map((it: (typeof cart.items)[number]) => ({
-              productId: it.productId,
-              name: it.product.name,
-              // ✅ primeira imagem a partir de imageUrls
-              image: (it.product as any).imageUrls?.[0] ?? null,
-              qty: it.qty,
-              unitPrice: it.unitPrice,
-              totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
-              snapshotJson: (it as any).optionsJson ?? {},
-            })),
-          },
-        },
-        include: { items: true },
-      });
-
-      const url = `${APP}/checkout/link?order=${createdForLink.id}`;
-      return NextResponse.json({ url, sessionId: null });
-    }
-
-    // Cria ordem local (pending)
+    /* -------- Create local order (PENDING) -------- */
     const createdOrder = await prisma.order.create({
       data: {
+        userId,
         sessionId: cart.sessionId ?? null,
         status: "pending",
         currency,
@@ -156,16 +143,16 @@ export async function POST(req: NextRequest) {
         shipping: 0,
         tax: 0,
         total: subtotal,
-        shippingJson: (shippingFromCookie as any) ?? null,
+        shippingJson: shippingFromCookie as any,
         items: {
-          create: cart.items.map((it: (typeof cart.items)[number]) => ({
+          create: cart.items.map((it) => ({
             productId: it.productId,
             name: it.product.name,
-            // ✅ primeira imagem a partir de imageUrls
-            image: (it.product as any).imageUrls?.[0] ?? null,
+            image: it.product.imageUrls?.[0] ?? null,
             qty: it.qty,
             unitPrice: it.unitPrice,
-            totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
+            totalPrice:
+              (it as any).totalPrice ?? it.qty * it.unitPrice,
             snapshotJson: (it as any).optionsJson ?? {},
           })),
         },
@@ -173,77 +160,57 @@ export async function POST(req: NextRequest) {
       include: { items: true },
     });
 
-    // Inclui {CHECKOUT_SESSION_ID} para confirmar na success page
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${APP}/cart`;
 
-    // Map para Stripe line_items
     const line_items = createdOrder.items.map((it) => {
       const img = toAbsoluteImage(it.image, APP);
-      const product_data: any = { name: it.name };
-      if (img) product_data.images = [img];
       return {
         quantity: it.qty,
-        price_data: { currency, unit_amount: it.unitPrice, product_data },
+        price_data: {
+          currency,
+          unit_amount: it.unitPrice,
+          product_data: {
+            name: it.name,
+            ...(img ? { images: [img] } : {}),
+          },
+        },
       };
     });
 
-    const metadata = { orderId: createdOrder.id, ...shippingToMetadata(shippingFromCookie) };
+    /* -------- METADATA (100% SAFE) -------- */
+    const metadata: Record<string, string> = {
+      orderId: createdOrder.id,
+      userId,
+      ...shippingToMetadata(shippingFromCookie),
+    };
 
-    const params: any = {
+    const stripeSession = await stripe.checkout.sessions.create({
       mode: "payment",
       success_url,
       cancel_url,
       line_items,
       metadata,
-    };
-
-    if (shippingFromCookie?.email) {
-      params.customer_email = String(shippingFromCookie.email).slice(0, 200);
-    }
-
-    // Força um método específico, se indicado
-    switch (method) {
-      case "card":
-        params.payment_method_types = ["card"];
-        break;
-      case "multibanco":
-        params.payment_method_types = ["multibanco"];
-        break;
-      case "klarna":
-        params.payment_method_types = ["klarna"];
-        break;
-      case "revolut_pay":
-        params.payment_method_types = ["revolut_pay"];
-        break;
-      case "satispay":
-        params.payment_method_types = ["satispay"];
-        break;
-      case "amazon_pay":
-        params.payment_method_types = ["amazon_pay"];
-        break;
-      case "automatic":
-      default:
-        break;
-    }
-
-    const session = await stripe.checkout.sessions.create(params);
+      client_reference_id: userId,
+      ...(shippingFromCookie?.email
+        ? { customer_email: shippingFromCookie.email.slice(0, 200) }
+        : {}),
+    });
 
     await prisma.order.update({
       where: { id: createdOrder.id },
-      data: { stripeSessionId: session.id },
+      data: { stripeSessionId: stripeSession.id },
     });
 
-    if (!session.url) {
-      return NextResponse.json(
-        { error: "Stripe did not return a hosted checkout URL.", sessionId: session.id },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ url: String(session.url), sessionId: session.id });
+    return NextResponse.json({
+      url: stripeSession.url,
+      sessionId: stripeSession.id,
+    });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);
-    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
+    return NextResponse.json(
+      { error: err?.message ?? "Stripe error" },
+      { status: 400 }
+    );
   }
 }

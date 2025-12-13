@@ -171,12 +171,33 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
         base.address?.postal_code ?? null,
         add.address?.postal_code ?? null
       ),
-      country: prefer(base.address?.country ?? null, add.address?.country ?? null),
+      country: prefer(
+        base.address?.country ?? null,
+        add.address?.country ?? null
+      ),
     },
   };
 }
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/* -------------------- userId helpers (added) -------------------- */
+
+function userIdFromCheckoutSession(session: Stripe.Checkout.Session): string | null {
+  // Prefer explicit metadata
+  const metaUser = nz((session.metadata as any)?.userId);
+  if (metaUser) return metaUser;
+
+  // Fallback: client_reference_id (we can set it to userId when creating session)
+  const ref = nz((session as any)?.client_reference_id);
+  if (ref) return ref;
+
+  return null;
+}
+
+function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
+  return nz((pi.metadata as any)?.userId);
+}
 
 /* -------------------- email helpers (added) -------------------- */
 
@@ -208,11 +229,17 @@ async function markPaid(
     currency?: string | null;
     totalCents?: number | null;
     shipping?: ShippingJson;
+    userId?: string | null; // ✅ added
   }
 ): Promise<{ transitioned: boolean }> {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { status: true, shippingJson: true, shippingCountry: true },
+    select: {
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      userId: true, // ✅ added
+    },
   });
 
   const wasAlreadyFinal =
@@ -225,12 +252,15 @@ async function markPaid(
     opts.shipping ?? null
   );
   const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() ||
-    null;
+    (mergedShipping?.address?.country || existing?.shippingCountry || null)
+      ?.toString() || null;
 
   await prisma.order.update({
     where: { id: orderId },
     data: {
+      // ✅ Link order to user for "My Orders"
+      ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
+
       status: "paid",
       paymentStatus: "paid",
       paidAt: new Date(),
@@ -253,7 +283,6 @@ async function markPaid(
         include: { items: true },
       });
 
-      // Try to discover the best email field without assuming too much
       const to =
         (order as any)?.email ??
         (order as any)?.customerEmail ??
@@ -266,7 +295,6 @@ async function markPaid(
             ? ((order as any).shippingJson as ShippingJson)
             : mergedShipping;
 
-        // Totals: prefer explicit fields if they exist; fallback to cents if available
         const totalEur =
           typeof (order as any)?.total === "number"
             ? (order as any).total
@@ -298,8 +326,12 @@ async function markPaid(
           orderId: (order as any)?.id ?? orderId,
           items: ((order as any)?.items ?? []).map((i: any) => ({
             name: i?.name ?? i?.title ?? "Item",
-            qty: typeof i?.qty === "number" ? i.qty : typeof i?.quantity === "number" ? i.quantity : 1,
-            // If your item price is stored in cents, adjust here. This keeps your old logic intact.
+            qty:
+              typeof i?.qty === "number"
+                ? i.qty
+                : typeof i?.quantity === "number"
+                ? i.quantity
+                : 1,
             price:
               typeof i?.price === "number"
                 ? i.price
@@ -314,7 +346,6 @@ async function markPaid(
         });
       }
     } catch (err) {
-      // Never fail the Stripe webhook because of email issues
       console.error("Order confirmation email failed:", err);
     }
   }
@@ -324,20 +355,32 @@ async function markPaid(
 
 async function markPending(
   orderId: string,
-  opts: { paymentIntentId?: string | null; sessionId?: string | null; shipping?: ShippingJson }
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    shipping?: ShippingJson;
+    userId?: string | null; // ✅ added
+  }
 ) {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { shippingJson: true, shippingCountry: true },
+    select: { shippingJson: true, shippingCountry: true, userId: true }, // ✅ added
   });
 
-  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, opts.shipping ?? null);
+  const mergedShipping = mergeShipping(
+    existing?.shippingJson as ShippingJson,
+    opts.shipping ?? null
+  );
   const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() || null;
+    (mergedShipping?.address?.country || existing?.shippingCountry || null)
+      ?.toString() || null;
 
   await prisma.order.update({
     where: { id: orderId },
     data: {
+      // ✅ Link order to user for "My Orders"
+      ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
+
       status: "pending",
       paymentStatus: "pending",
       stripePaymentIntentId: opts.paymentIntentId ?? null,
@@ -393,6 +436,9 @@ export const POST = async (req: NextRequest) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
+        // ✅ discover userId (for My Orders)
+        const userId = userIdFromCheckoutSession(session);
+
         // encontrar orderId
         let orderId =
           (session.metadata?.orderId as string | undefined) ??
@@ -440,6 +486,7 @@ export const POST = async (req: NextRequest) => {
             currency,
             totalCents,
             shipping,
+            userId, // ✅ added
           });
           if (transitioned) {
             try {
@@ -458,14 +505,18 @@ export const POST = async (req: NextRequest) => {
             paymentIntentId: piId,
             sessionId: session.id,
             shipping,
+            userId, // ✅ added
           });
         }
         break;
       }
 
       case "checkout.session.async_payment_succeeded": {
-        // pagamentos assíncronos (iDEAL, Bancontact, etc.)
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // ✅ discover userId (for My Orders)
+        const userId = userIdFromCheckoutSession(session);
+
         const piId =
           typeof session.payment_intent === "string"
             ? session.payment_intent
@@ -501,6 +552,7 @@ export const POST = async (req: NextRequest) => {
               ? session.amount_total
               : undefined,
           shipping,
+          userId, // ✅ added
         });
         if (transitioned) {
           try {
@@ -519,6 +571,10 @@ export const POST = async (req: NextRequest) => {
 
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
+
+        // ✅ discover userId (for My Orders)
+        const userId = userIdFromPaymentIntent(pi);
+
         let orderId = pi.metadata?.orderId as string | undefined;
 
         if (!orderId) {
@@ -540,6 +596,7 @@ export const POST = async (req: NextRequest) => {
           currency: pi.currency ?? undefined,
           totalCents,
           shipping,
+          userId, // ✅ added
         });
         if (transitioned) {
           try {
@@ -558,6 +615,10 @@ export const POST = async (req: NextRequest) => {
 
       case "payment_intent.processing": {
         const pi = event.data.object as Stripe.PaymentIntent;
+
+        // ✅ discover userId (for My Orders)
+        const userId = userIdFromPaymentIntent(pi);
+
         const orderId =
           (pi.metadata?.orderId as string | undefined) ||
           (await prisma.order
@@ -571,6 +632,7 @@ export const POST = async (req: NextRequest) => {
             paymentIntentId: pi.id,
             sessionId: null,
             shipping: shippingFromPaymentIntent(pi),
+            userId, // ✅ added
           });
         }
         break;
@@ -659,6 +721,8 @@ export const POST = async (req: NextRequest) => {
             currency: charge.currency,
             totalCents: cents,
             shipping: null,
+            // NOTE: charge doesn't reliably carry userId; keep null
+            userId: null,
           });
           if (transitioned) {
             try {
@@ -677,15 +741,12 @@ export const POST = async (req: NextRequest) => {
       }
 
       default:
-        // ignorar outros eventos
         break;
     }
 
-    // devolver 2xx para o Stripe não re-tentar desnecessariamente
     return NextResponse.json({ received: true });
   } catch (e) {
     console.error("stripe webhook error", e);
-    // 200 mesmo em erro interno para o Stripe não fazer retry infinito; logs ajudam a investigar.
     return new NextResponse("ok", { status: 200 });
   }
 };
