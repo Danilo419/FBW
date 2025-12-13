@@ -4,22 +4,24 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import OrderDetailsClient from "./OrderDetailsClient";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const runtime = "nodejs";
 
-type Props = {
-  params: { orderId: string };
+type PageProps = {
+  // ✅ Next build is expecting params as a Promise in your project
+  params: Promise<{ orderId: string }>;
 };
 
-export default async function OrderDetailsPage({ params }: Props) {
+export default async function OrderDetailsPage({ params }: PageProps) {
+  const { orderId } = await params;
+
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
 
   if (!userId) {
-    redirect("/account/login?next=/account"); // ajusta para o teu login
+    redirect(`/account/login?next=/account/orders/${orderId}`);
   }
 
-  // Passa só o que precisas para o client
-  return <OrderDetailsClient orderId={params.orderId} />;
+  return <OrderDetailsClient orderId={orderId} />;
 }
