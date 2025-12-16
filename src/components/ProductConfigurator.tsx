@@ -344,10 +344,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
-  const finalPrice = useMemo(
-    () => unitJerseyPrice * qty,
-    [unitJerseyPrice, qty]
-  );
+  const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
@@ -355,10 +352,7 @@ export default function ProductConfigurator({ product }: Props) {
     () => custName.toUpperCase().replace(/[^A-ZÀ-ÖØ-ÝĀ-ſ .'-]/g, "").slice(0, 14),
     [custName]
   );
-  const safeNumber = useMemo(
-    () => custNumber.replace(/\D/g, "").slice(0, 2),
-    [custNumber]
-  );
+  const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
@@ -398,21 +392,34 @@ export default function ProductConfigurator({ product }: Props) {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
-    setTimeout(
-      () => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"),
-      450
-    );
+    setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
 
+  // ✅ FIX: animação robusta (Web Animations API) + cleanup garantido (nunca fica "parada e transparente")
   function flyToCart() {
-    if (typeof document === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+
+    // Respeita "reduce motion"
+    const prefersReduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      pulseCart();
+      return;
+    }
+
     const start = imgWrapRef.current?.getBoundingClientRect();
     const end = getCartTargetRect();
     if (!start || !end) return;
 
+    // Normaliza URLs tipo "//..."
+    const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
+
     const ghost = document.createElement("img");
-    ghost.src = activeSrc;
+    ghost.src = src;
     ghost.alt = "flying image";
+    ghost.decoding = "async";
+
     Object.assign(ghost.style, {
       position: "fixed",
       left: `${start.left}px`,
@@ -423,30 +430,80 @@ export default function ProductConfigurator({ product }: Props) {
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
-      transition:
-        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms.ease",
-      opacity: "0.9",
+      opacity: "0.95",
       transform: "translate3d(0,0,0) scale(1)",
-    } as CSSStyleDeclaration);
+      transformOrigin: "center center",
+      willChange: "transform, opacity",
+    } as Partial<CSSStyleDeclaration>);
+
     document.body.appendChild(ghost);
 
     const startCx = start.left + start.width / 2;
     const startCy = start.top + start.height / 2;
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
+
     const dx = endCx - startCx;
     const dy = endCy - startCy;
 
-    void ghost.offsetHeight;
-    ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(0.25)`;
-    ghost.style.opacity = "0.1";
-
+    let cleaned = false;
     const cleanup = () => {
-      ghost.removeEventListener("transitionend", cleanup);
+      if (cleaned) return;
+      cleaned = true;
       ghost.remove();
       pulseCart();
     };
-    ghost.addEventListener("transitionend", cleanup);
+
+    // Fallback: mesmo que algo falhe, nunca fica "preso" no ecrã
+    const fallbackTimer = window.setTimeout(cleanup, 900);
+
+    const run = () => {
+      // 2 RAFs = garante que o browser aplica o layout antes de animar
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            const anim = ghost.animate(
+              [
+                { transform: "translate3d(0,0,0) scale(1)", opacity: 0.95, filter: "blur(0px)" },
+                {
+                  transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.18)`,
+                  opacity: 0,
+                  filter: "blur(1px)",
+                },
+              ],
+              {
+                duration: 650,
+                easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                fill: "forwards",
+              }
+            );
+
+            anim.onfinish = () => {
+              window.clearTimeout(fallbackTimer);
+              cleanup();
+            };
+            anim.oncancel = () => {
+              window.clearTimeout(fallbackTimer);
+              cleanup();
+            };
+          } catch {
+            // Se o animate() não existir por algum motivo, não deixamos lixo no DOM
+            window.clearTimeout(fallbackTimer);
+            cleanup();
+          }
+        });
+      });
+    };
+
+    // Se a imagem demorar a carregar, ainda assim animamos (mas isto evita flashes estranhos nalguns browsers)
+    if (ghost.complete) run();
+    else {
+      ghost.addEventListener("load", run, { once: true });
+      ghost.addEventListener("error", () => {
+        window.clearTimeout(fallbackTimer);
+        cleanup();
+      }, { once: true });
+    }
   }
 
   /* ---------- Navegação ---------- */
@@ -490,9 +547,7 @@ export default function ProductConfigurator({ product }: Props) {
         productId: product.id,
         qty,
         options: optionsForCart,
-        personalization: showNameNumber
-          ? { name: safeName, number: safeNumber }
-          : null,
+        personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
       setJustAdded(true);
@@ -591,10 +646,7 @@ export default function ProductConfigurator({ product }: Props) {
                 className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                <div
-                  className="inline-flex gap-2"
-                  style={{ scrollBehavior: "smooth" }}
-                >
+                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
                   {images.map((src, i) => {
                     const isActive = i === activeIndex;
                     return (
@@ -669,8 +721,7 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {sizes.map((s) => {
                   const unavailable = isUnavailable(s);
-                  const isActive =
-                    (selected.size as string) === s.size && !unavailable;
+                  const isActive = (selected.size as string) === s.size && !unavailable;
                   return (
                     <button
                       key={s.id}
@@ -706,16 +757,15 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
 
           {/* Customization (FREE) */}
-          {effectiveCustomizationGroup &&
-            effectiveCustomizationGroup.values.length > 0 && (
-              <GroupBlock
-                group={effectiveCustomizationGroup!}
-                selected={selected}
-                onPickRadio={setRadio}
-                onToggleAddon={toggleAddon}
-                forceFree
-              />
-            )}
+          {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
+            <GroupBlock
+              group={effectiveCustomizationGroup!}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              forceFree
+            />
+          )}
 
           {/* Personalization */}
           {showNameNumber && (
@@ -806,9 +856,7 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="text-right sm:text-left">
               <div className="text-xs sm:text-sm text-gray-600">Total</div>
-              <div className="text-base sm:text-lg font-semibold">
-                {money(finalPrice)}
-              </div>
+              <div className="text-base sm:text-lg font-semibold">{money(finalPrice)}</div>
             </div>
           </div>
 
