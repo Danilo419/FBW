@@ -21,7 +21,7 @@ type CartWithItems = Prisma.CartGetPayload<{
             id: true;
             name: true;
             team: true;
-            imageUrls: true; // ← atualizado
+            imageUrls: true;
             slug: true;
             basePrice: true;
           };
@@ -32,8 +32,143 @@ type CartWithItems = Prisma.CartGetPayload<{
   };
 }>;
 
+/* ------------------------------- helpers ------------------------------- */
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u);
+}
+
+function normalizeUrl(u: string) {
+  if (!u) return "";
+  // handle protocol-relative urls: //example.com/img.png
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
+/**
+ * imageUrls pode vir como:
+ * - string URL ("https://...")
+ * - array de URLs
+ * - JSON string '["...","..."]'
+ */
+function getCoverUrl(imageUrls: unknown) {
+  try {
+    if (!imageUrls) return "/placeholder.png";
+
+    // Already an array
+    if (Array.isArray(imageUrls)) {
+      const first = String(imageUrls[0] ?? "").trim();
+      return normalizeUrl(first) || "/placeholder.png";
+    }
+
+    // If it's a string
+    if (typeof imageUrls === "string") {
+      const s = imageUrls.trim();
+      if (!s) return "/placeholder.png";
+
+      // JSON string array
+      if (s.startsWith("[") && s.endsWith("]")) {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const first = String(parsed[0] ?? "").trim();
+          return normalizeUrl(first) || "/placeholder.png";
+        }
+      }
+
+      // Single URL string
+      return normalizeUrl(s) || "/placeholder.png";
+    }
+
+    // Fallback
+    return "/placeholder.png";
+  } catch {
+    return "/placeholder.png";
+  }
+}
+
+function getOpts(it: any) {
+  const raw = it?.optionsJson;
+
+  // already object
+  if (raw && typeof raw === "object") return raw;
+
+  // JSON string
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      // ignore
+    }
+  }
+
+  return null;
+}
+
+/** tenta encontrar name/number em vários formatos comuns */
+function extractCustomization(opts: Record<string, any> | null) {
+  if (!opts) return { name: null as string | null, number: null as string | null };
+
+  // casos comuns:
+  // opts.customization = { name, number }
+  const c = opts.customization && typeof opts.customization === "object" ? opts.customization : null;
+
+  const name =
+    (c?.name ?? c?.playerName ?? c?.player_name ?? opts.name ?? opts.playerName ?? opts.player_name) ?? null;
+
+  const number =
+    (c?.number ?? c?.playerNumber ?? c?.player_number ?? opts.number ?? opts.playerNumber ?? opts.player_number) ??
+    null;
+
+  const nameStr = name != null && String(name).trim() ? String(name).trim() : null;
+  const numStr = number != null && String(number).trim() ? String(number).trim() : null;
+
+  return { name: nameStr, number: numStr };
+}
+
+function prettifyKey(k: string) {
+  // deixa isto bonito no UI
+  const map: Record<string, string> = {
+    size: "Size",
+    badges: "Badges",
+    customization: "Customization",
+    league: "League",
+    season: "Season",
+  };
+  return map[k] ?? k.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+/** remove keys que vamos mostrar separadamente (name/number) */
+function filteredOptionEntries(opts: Record<string, any> | null) {
+  if (!opts) return [];
+
+  const { name, number } = extractCustomization(opts);
+
+  return Object.entries(opts)
+    .filter(([k]) => {
+      const key = k.toLowerCase();
+      if (key === "name" || key === "number") return false;
+      if (key === "playername" || key === "playernumber") return false;
+      if (key === "player_name" || key === "player_number") return false;
+      return true;
+    })
+    .map(([k, v]) => {
+      // se for customization object, vamos “resumir”
+      if (k === "customization" && v && typeof v === "object") {
+        const parts: string[] = [];
+        if (name) parts.push(`Name: ${name}`);
+        if (number) parts.push(`Number: ${number}`);
+        return [prettifyKey(k), parts.join(" · ") || "—"] as const;
+      }
+
+      // arrays -> "a, b, c"
+      if (Array.isArray(v)) return [prettifyKey(k), v.map(String).join(", ")] as const;
+
+      return [prettifyKey(k), String(v)] as const;
+    });
+}
+
 export default async function CartPage() {
-  const cookieStore = await cookies(); // em algumas versões é Promise
+  const cookieStore = await cookies();
   const sid = cookieStore.get("sid")?.value ?? null;
 
   const session = await getServerSession(authOptions);
@@ -55,7 +190,7 @@ export default async function CartPage() {
               id: true,
               name: true,
               team: true,
-              imageUrls: true, // ← atualizado
+              imageUrls: true,
               slug: true,
               basePrice: true,
             },
@@ -90,10 +225,7 @@ export default async function CartPage() {
     const displayUnit: number = (it as CartItem).unitPrice ?? 0;
     const displayTotal: number = displayUnit * it.qty;
 
-    const opts =
-      (it as any).optionsJson && typeof (it as any).optionsJson === "object"
-        ? (it as any).optionsJson
-        : null;
+    const opts = getOpts(it);
 
     return {
       ...it,
@@ -114,7 +246,12 @@ export default async function CartPage() {
 
       <div className="grid gap-5">
         {displayItems.map((it) => {
-          const cover = it.product.imageUrls?.[0] ?? "/placeholder.png"; // ← atualizado
+          const cover = getCoverUrl(it.product.imageUrls);
+          const external = isExternalUrl(cover);
+
+          const opts = (it as any).opts as Record<string, any> | null;
+          const { name, number } = extractCustomization(opts);
+          const optionEntries = filteredOptionEntries(opts);
 
           return (
             <div
@@ -122,51 +259,74 @@ export default async function CartPage() {
               className="group rounded-2xl border bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition"
             >
               <div className="flex gap-4 sm:gap-5">
-                <div className="relative h-28 w-24 sm:h-32 sm:w-28 overflow-hidden rounded-xl border">
+                <div className="relative h-28 w-24 sm:h-32 sm:w-28 overflow-hidden rounded-xl border bg-white">
                   <Image
                     src={cover}
                     alt={it.product.name}
                     fill
                     className="object-contain"
                     sizes="(max-width: 640px) 96px, 112px"
+                    unoptimized={external} // garante imagem externa sem precisar configurar domains
                   />
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold leading-tight">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold leading-snug break-words">
                         {it.product.name}
                       </h3>
+
                       {it.product.team && (
-                        <div className="text-sm text-gray-600">
+                        <div className="mt-0.5 text-sm text-gray-600">
                           {it.product.team}
                         </div>
                       )}
-                      {it.opts ? (
-                        <div className="mt-1 text-xs text-gray-500">
-                          {Object.entries(it.opts as Record<string, any>)
-                            .map(([k, v]) => `${k}: ${String(v)}`)
-                            .join(" · ")}
+
+                      {(name || number) && (
+                        <div className="mt-2 inline-flex flex-wrap items-center gap-2">
+                          {name && (
+                            <span className="rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
+                              <span className="text-gray-500">Name:</span>{" "}
+                              <span className="font-semibold">{name}</span>
+                            </span>
+                          )}
+                          {number && (
+                            <span className="rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
+                              <span className="text-gray-500">Number:</span>{" "}
+                              <span className="font-semibold">{number}</span>
+                            </span>
+                          )}
                         </div>
-                      ) : null}
+                      )}
+
+                      {optionEntries.length > 0 && (
+                        <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600">
+                          {optionEntries.map(([k, v]) => (
+                            <div key={k} className="flex flex-wrap gap-x-2 gap-y-1">
+                              <span className="font-semibold text-gray-700">{k}:</span>
+                              <span className="text-gray-600 break-words">{v}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <div className="text-sm text-gray-500">
                         Unit: {formatMoney(it.displayUnit)}
                       </div>
-                      <div className="text-base font-semibold">
+                      <div className="mt-0.5 text-base font-semibold">
                         {formatMoney(it.displayTotal)}
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-2 text-sm text-gray-600">
-                    Qty: <span className="font-medium">{it.qty}</span>
-                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-600">
+                      Qty: <span className="font-medium">{it.qty}</span>
+                    </div>
 
-                  <div className="mt-3 flex items-center justify-end">
                     <form action={removeItem}>
                       <input type="hidden" name="itemId" value={String(it.id)} />
                       <button
