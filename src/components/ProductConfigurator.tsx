@@ -3,6 +3,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
@@ -107,6 +108,15 @@ function competitionKey(value: string, label?: string) {
   return take(m);
 }
 
+/* ====================== Fly types ====================== */
+type FlyRect = { left: number; top: number; width: number; height: number };
+type FlyState = {
+  key: number;
+  src: string;
+  from: FlyRect;
+  to: FlyRect;
+};
+
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
@@ -118,9 +128,15 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  // ✅ new fly animation state (Framer Motion)
+  const [fly, setFly] = useState<FlyState | null>(null);
+  const flyKeyRef = useRef(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
   /* ---------- DESCONTO ---------- */
-  const rawUnitPrice = product.basePrice; // mesmo valor que já usas com money()
-  // Tentamos perceber se o preço está em euros (34.99) ou em cêntimos (3499)
+  const rawUnitPrice = product.basePrice;
   const candidateEur1 = rawUnitPrice;
   const candidateEur2 = rawUnitPrice / 100;
 
@@ -130,18 +146,15 @@ export default function ProductConfigurator({ product }: Props) {
   } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
     salePriceEur = candidateEur2;
   } else {
-    // fallback: se for um valor grande, assumimos cêntimos
     salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
   }
 
   const saleKey = salePriceEur.toFixed(2);
-  const originalPriceEur = SALE_MAP_EUR[saleKey]; // preço original em euros, vindo do mapa
+  const originalPriceEur = SALE_MAP_EUR[saleKey];
 
-  // Convertemos o preço original para a mesma unidade de rawUnitPrice,
-  // para poder usar money() sem mexer nessa função.
   let originalUnitPriceForMoney: number | undefined;
   if (typeof originalPriceEur === "number") {
-    const factor = rawUnitPrice / salePriceEur; // 1 (se raw for euros) ou ~100 (se raw for cêntimos)
+    const factor = rawUnitPrice / salePriceEur;
     originalUnitPriceForMoney = originalPriceEur * factor;
   }
 
@@ -216,9 +229,7 @@ export default function ProductConfigurator({ product }: Props) {
   }, [sizes, selectedSize]);
 
   /* ---------- Groups ---------- */
-  const customizationGroupFromDb = product.optionGroups.find(
-    (g) => g.key === "customization"
-  );
+  const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
@@ -259,9 +270,7 @@ export default function ProductConfigurator({ product }: Props) {
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
-      : original.values.filter(
-          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
-        );
+      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
 
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
@@ -348,7 +357,6 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
-    // ✅ CORRIGIDO: permite letras latinas (ç, á, ã, ê, etc.)
     () => custName.toUpperCase().replace(/[^A-ZÀ-ÖØ-ÝĀ-ſ .'-]/g, "").slice(0, 14),
     [custName]
   );
@@ -395,11 +403,10 @@ export default function ProductConfigurator({ product }: Props) {
     setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
 
-  // ✅ FIX: animação robusta (Web Animations API) + cleanup garantido (nunca fica "parada e transparente")
+  // ✅ NEW animation: Framer Motion "ghost" that flies to cart (and always disappears)
   function flyToCart() {
-    if (typeof window === "undefined" || typeof document === "undefined") return;
+    if (typeof window === "undefined") return;
 
-    // Respeita "reduce motion"
     const prefersReduced =
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -410,100 +417,23 @@ export default function ProductConfigurator({ product }: Props) {
 
     const start = imgWrapRef.current?.getBoundingClientRect();
     const end = getCartTargetRect();
-    if (!start || !end) return;
+    if (!start || !end) {
+      pulseCart();
+      return;
+    }
 
-    // Normaliza URLs tipo "//..."
+    // normalize //...
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const ghost = document.createElement("img");
-    ghost.src = src;
-    ghost.alt = "flying image";
-    ghost.decoding = "async";
-
-    Object.assign(ghost.style, {
-      position: "fixed",
-      left: `${start.left}px`,
-      top: `${start.top}px`,
-      width: `${start.width}px`,
-      height: `${start.height}px`,
-      objectFit: "contain",
-      borderRadius: "12px",
-      zIndex: "9999",
-      pointerEvents: "none",
-      opacity: "0.95",
-      transform: "translate3d(0,0,0) scale(1)",
-      transformOrigin: "center center",
-      willChange: "transform, opacity",
-    } as Partial<CSSStyleDeclaration>);
-
-    document.body.appendChild(ghost);
-
-    const startCx = start.left + start.width / 2;
-    const startCy = start.top + start.height / 2;
+    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
+    // target as a small "square" around cart center (looks nicer than shrinking into 0)
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
+    const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height))); // 18–34px
+    const to: FlyRect = { left: endCx - targetSize / 2, top: endCy - targetSize / 2, width: targetSize, height: targetSize };
 
-    const dx = endCx - startCx;
-    const dy = endCy - startCy;
-
-    let cleaned = false;
-    const cleanup = () => {
-      if (cleaned) return;
-      cleaned = true;
-      ghost.remove();
-      pulseCart();
-    };
-
-    // Fallback: mesmo que algo falhe, nunca fica "preso" no ecrã
-    const fallbackTimer = window.setTimeout(cleanup, 900);
-
-    const run = () => {
-      // 2 RAFs = garante que o browser aplica o layout antes de animar
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try {
-            const anim = ghost.animate(
-              [
-                { transform: "translate3d(0,0,0) scale(1)", opacity: 0.95, filter: "blur(0px)" },
-                {
-                  transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.18)`,
-                  opacity: 0,
-                  filter: "blur(1px)",
-                },
-              ],
-              {
-                duration: 650,
-                easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-                fill: "forwards",
-              }
-            );
-
-            anim.onfinish = () => {
-              window.clearTimeout(fallbackTimer);
-              cleanup();
-            };
-            anim.oncancel = () => {
-              window.clearTimeout(fallbackTimer);
-              cleanup();
-            };
-          } catch {
-            // Se o animate() não existir por algum motivo, não deixamos lixo no DOM
-            window.clearTimeout(fallbackTimer);
-            cleanup();
-          }
-        });
-      });
-    };
-
-    // Se a imagem demorar a carregar, ainda assim animamos (mas isto evita flashes estranhos nalguns browsers)
-    if (ghost.complete) run();
-    else {
-      ghost.addEventListener("load", run, { once: true });
-      ghost.addEventListener("error", () => {
-        window.clearTimeout(fallbackTimer);
-        cleanup();
-      }, { once: true });
-    }
+    flyKeyRef.current += 1;
+    setFly({ key: flyKeyRef.current, src, from, to });
   }
 
   /* ---------- Navegação ---------- */
@@ -552,7 +482,10 @@ export default function ProductConfigurator({ product }: Props) {
 
       setJustAdded(true);
       setShowToast(true);
+
+      // ✅ run new fly animation
       flyToCart();
+
       window.setTimeout(() => setShowToast(false), 2000);
       window.setTimeout(() => setJustAdded(false), 900);
     });
@@ -565,6 +498,58 @@ export default function ProductConfigurator({ product }: Props) {
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {showToast ? "Item added to cart." : ""}
         </div>
+
+        {/* ✅ NEW: Fly-to-cart overlay (portal to body) */}
+        {mounted &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {fly && (
+                <motion.img
+                  key={`fly-${fly.key}`}
+                  src={fly.src}
+                  alt=""
+                  initial={{
+                    left: fly.from.left,
+                    top: fly.from.top,
+                    width: fly.from.width,
+                    height: fly.from.height,
+                    opacity: 0.95,
+                    rotate: 0,
+                    scale: 1,
+                  }}
+                  animate={{
+                    left: fly.to.left,
+                    top: fly.to.top,
+                    width: fly.to.width,
+                    height: fly.to.height,
+                    opacity: 0,
+                    rotate: 8,
+                    scale: 0.2,
+                    filter: "blur(1px)",
+                  }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    duration: 0.65,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  onAnimationComplete={() => {
+                    setFly(null);
+                    pulseCart();
+                  }}
+                  style={{
+                    position: "fixed",
+                    zIndex: 9999,
+                    pointerEvents: "none",
+                    objectFit: "contain",
+                    borderRadius: 12,
+                    willChange: "left, top, width, height, opacity, transform",
+                  }}
+                />
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
 
         {/* ===== GALLERY ===== */}
         <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
@@ -596,7 +581,6 @@ export default function ProductConfigurator({ product }: Props) {
                 unoptimized
               />
 
-              {/* Badge de desconto por cima da imagem */}
               {hasDiscount && (
                 <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
                   -{discountPercent}%
@@ -692,7 +676,6 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
-            {/* Preço riscado + preço atual (sem % aqui) */}
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
                 <span className="text-[11px] sm:text-xs text-gray-400 line-through">
@@ -903,9 +886,7 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
                 <div className="text-sm">
                   <div className="font-semibold">Item added to cart</div>
-                  <div className="text-gray-600">
-                    You can keep shopping or proceed to checkout.
-                  </div>
+                  <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
                 <button
                   className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
