@@ -351,7 +351,8 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
-    () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
+    // ✅ CORRIGIDO: permite letras latinas (ç, á, ã, ê, etc.)
+    () => custName.toUpperCase().replace(/[^A-ZÀ-ÖØ-ÝĀ-ſ .'-]/g, "").slice(0, 14),
     [custName]
   );
   const safeNumber = useMemo(
