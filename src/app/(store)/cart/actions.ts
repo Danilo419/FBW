@@ -35,90 +35,81 @@ function normalizeOptions(obj?: Record<string, string | null>) {
 function sameJson(a: unknown, b: unknown) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
+function errToMessage(err: unknown) {
+  if (!err) return 'UNKNOWN_ERROR';
+  if (err instanceof z.ZodError) return err.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(' | ');
+  if (typeof err === 'object' && err && 'message' in err) return String((err as any).message);
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
 
 async function getUserId(): Promise<string | null> {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.id as string | undefined;
-    return uid ?? null;
+    return ((session?.user as any)?.id as string | undefined) ?? null;
   } catch {
     return null;
   }
 }
 
+async function ensureSid(jar: Awaited<ReturnType<typeof cookies>>) {
+  const existingSid = jar.get('sid')?.value ?? null;
+  if (existingSid) return existingSid;
+
+  const newSid: string =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+
+  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+  const isProd = process.env.NODE_ENV === 'production';
+
+  jar.set('sid', newSid, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    expires,
+    secure: isProd,
+  });
+
+  return newSid;
+}
+
 async function getOrCreateCart() {
   const jar = await cookies();
-
-  const sid = jar.get('sid')?.value ?? null;
+  const sid = await ensureSid(jar);
   const userId = await getUserId();
 
-  // 1) Se estiver logado, tenta primeiro achar carrinho por userId
+  // 1) se logado, procura por userId primeiro
   if (userId) {
     const byUser = await prisma.cart.findFirst({ where: { userId } });
     if (byUser) {
-      // garante que temos sid para a sessão anónima também (opcional, mas útil)
-      if (!sid) {
-        const isProd = process.env.NODE_ENV === 'production';
-        const newSid =
-          globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-        const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-
-        jar.set('sid', newSid, {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          expires,
-          secure: isProd,
-        });
-
-        // se o carrinho do user não tinha sessionId, podes guardar também
-        if (!byUser.sessionId) {
-          await prisma.cart.update({
-            where: { id: byUser.id },
-            data: { sessionId: newSid },
-          });
-          return { ...byUser, sessionId: newSid };
-        }
-      }
-      return byUser;
-    }
-  }
-
-  // 2) Se tiver sid, tenta achar por sessionId
-  if (sid) {
-    const bySid = await prisma.cart.findFirst({ where: { sessionId: sid } });
-    if (bySid) {
-      // Se agora estiver logado e o cart ainda não tiver userId, liga ao user
-      if (userId && !bySid.userId) {
+      // se o carrinho do user não tiver sessionId, mete
+      if (!byUser.sessionId) {
         await prisma.cart.update({
-          where: { id: bySid.id },
-          data: { userId },
+          where: { id: byUser.id },
+          data: { sessionId: sid },
         });
-        return { ...bySid, userId };
       }
-      return bySid;
+      return { ...byUser, sessionId: sid };
     }
   }
 
-  // 3) Criar sid (se não existir) + criar cart
-  const newSid: string =
-    sid ?? globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-
-  if (!sid) {
-    const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-    const isProd = process.env.NODE_ENV === 'production';
-
-    jar.set('sid', newSid, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      expires,
-      secure: isProd,
-    });
+  // 2) procura por sid
+  const bySid = await prisma.cart.findFirst({ where: { sessionId: sid } });
+  if (bySid) {
+    // se agora estiver logado e o cart não tiver userId, liga
+    if (userId && !bySid.userId) {
+      await prisma.cart.update({ where: { id: bySid.id }, data: { userId } });
+      return { ...bySid, userId };
+    }
+    return bySid;
   }
 
+  // 3) cria novo
   return prisma.cart.create({
-    data: { sessionId: newSid, userId: userId ?? null },
+    data: { sessionId: sid, userId: userId ?? null },
   });
 }
 
@@ -133,14 +124,20 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
 
 /* ========= actions ========= */
 export async function addToCartAction(raw: AddToCartInput) {
+  const jar = await cookies();
+  const sid = jar.get('sid')?.value ?? null;
+  const userId = await getUserId();
+
   try {
     const input = AddToCartSchema.parse(raw);
-
     const cart = await getOrCreateCart();
 
     const unitPrice = await getBaseUnitPrice(input.productId);
     const optionsJson = normalizeOptions(input.options ?? undefined);
     const personalization = input.personalization ?? null;
+
+    // DEBUG útil
+    console.log('[addToCartAction] sid=', sid, 'userId=', userId, 'cartId=', cart.id, 'productId=', input.productId);
 
     const siblings = await prisma.cartItem.findMany({
       where: { cartId: cart.id, productId: input.productId },
@@ -188,15 +185,12 @@ export async function addToCartAction(raw: AddToCartInput) {
     revalidatePath('/cart');
 
     const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
-    return {
-      ok: true as const,
-      cartId: cart.id,
-      count,
-      lineTotal: unitPrice * input.qty,
-    };
+
+    return { ok: true as const, cartId: cart.id, count };
   } catch (err) {
-    console.error('[addToCartAction] failed:', err);
-    return { ok: false as const, error: 'ADD_TO_CART_FAILED' };
+    const msg = errToMessage(err);
+    console.error('[addToCartAction] failed:', msg, err);
+    return { ok: false as const, error: msg };
   }
 }
 
@@ -205,7 +199,6 @@ export async function getCartSummary() {
   const sid = jar.get('sid')?.value ?? null;
   const userId = await getUserId();
 
-  // tenta por userId primeiro se existir, senão por sid
   const rawItems = await prisma.cartItem.findMany({
     where: {
       cart: {
@@ -243,31 +236,55 @@ export async function getCartSummary() {
 
   const totals = calculateCartTotals(cartItemsForPricing);
 
-  return {
-    count: rawItems.length,
-    ...totals,
-  };
+  return { count: rawItems.length, ...totals };
 }
 
 export async function removeItem(formData: FormData) {
+  const jar = await cookies();
+  const sid = jar.get('sid')?.value ?? null;
+  const userId = await getUserId();
+
   const id = formData.get('itemId');
   if (!id || typeof id !== 'string') return;
 
   try {
-    await prisma.cartItem.delete({ where: { id } });
+    // segurança: só apaga se o item pertencer ao teu carrinho
+    await prisma.cartItem.deleteMany({
+      where: {
+        id,
+        cart: {
+          OR: [
+            userId ? { userId } : undefined,
+            sid ? { sessionId: sid } : undefined,
+          ].filter(Boolean) as any,
+        },
+      },
+    });
   } catch {}
 
   revalidatePath('/cart');
 }
 
 export async function updateQty(formData: FormData) {
+  const jar = await cookies();
+  const sid = jar.get('sid')?.value ?? null;
+  const userId = await getUserId();
+
   const id = formData.get('itemId');
   const qty = Number(formData.get('qty'));
   if (!id || typeof id !== 'string' || !Number.isFinite(qty) || qty < 1) return;
 
   try {
-    const item = await prisma.cartItem.findUnique({
-      where: { id },
+    const item = await prisma.cartItem.findFirst({
+      where: {
+        id,
+        cart: {
+          OR: [
+            userId ? { userId } : undefined,
+            sid ? { sessionId: sid } : undefined,
+          ].filter(Boolean) as any,
+        },
+      },
       select: { unitPrice: true },
     });
     if (!item) return;

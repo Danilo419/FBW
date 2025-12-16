@@ -22,7 +22,12 @@ const SALE_MAP_EUR: Record<string, number> = {
 };
 
 /* ====================== UI Types ====================== */
-type OptionValueUI = { id: string; value: string; label: string; priceDelta: number };
+type OptionValueUI = {
+  id: string;
+  value: string;
+  label: string;
+  priceDelta: number;
+};
 type OptionGroupUI = {
   id: string;
   key: string;
@@ -31,7 +36,12 @@ type OptionGroupUI = {
   required: boolean;
   values: OptionValueUI[];
 };
-type SizeUI = { id: string; size: string; stock?: number | null; available?: boolean | null };
+type SizeUI = {
+  id: string;
+  size: string;
+  stock?: number | null;
+  available?: boolean | null;
+};
 type ProductUI = {
   id: string;
   slug: string;
@@ -50,7 +60,9 @@ type Props = { product: ProductUI };
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
+
 const isKidProduct = (name: string) => /kid/i.test(name);
+
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 /* ============ Badge helpers ============ */
@@ -118,6 +130,9 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  // ✅ debug/erro real no UI
+  const [addError, setAddError] = useState<string | null>(null);
+
   /* ---------- DESCONTO ---------- */
   const rawUnitPrice = product.basePrice;
   const candidateEur1 = rawUnitPrice;
@@ -154,7 +169,6 @@ export default function ProductConfigurator({ product }: Props) {
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
   /* ---------- Thumbs ---------- */
-  const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -181,13 +195,12 @@ export default function ProductConfigurator({ product }: Props) {
         available: s.available ?? true,
       }));
     }
-    const fallback = (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
+    return (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
       id: s,
       size: s,
       stock: 999,
       available: true,
     }));
-    return fallback;
   }, [product.sizes, kid]);
 
   const isUnavailable = (s: SizeUI) =>
@@ -200,6 +213,7 @@ export default function ProductConfigurator({ product }: Props) {
     if (!found || isUnavailable(found)) return;
     setSelectedSize(size);
     setSelected((st) => ({ ...st, size }));
+    setAddError(null);
   };
 
   useEffect(() => {
@@ -255,9 +269,7 @@ export default function ProductConfigurator({ product }: Props) {
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
-      : original.values.filter(
-          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
-        );
+      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
 
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
@@ -291,8 +303,10 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) =>
+  const setRadio = (key: string, value: string) => {
     setSelected((s) => ({ ...s, [key]: value || null }));
+    setAddError(null);
+  };
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -302,6 +316,7 @@ export default function ProductConfigurator({ product }: Props) {
         : typeof current === "string" && current
         ? [current]
         : [];
+
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
       } else {
@@ -309,6 +324,7 @@ export default function ProductConfigurator({ product }: Props) {
       }
       return { ...prev, [key]: arr.length ? arr : null };
     });
+    setAddError(null);
   }
 
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
@@ -336,6 +352,7 @@ export default function ProductConfigurator({ product }: Props) {
       }
       return { ...prev, [group.key]: arr.length ? arr : null };
     });
+    setAddError(null);
   }
 
   /* ---------- Price ---------- */
@@ -347,10 +364,7 @@ export default function ProductConfigurator({ product }: Props) {
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
     [custName]
   );
-  const safeNumber = useMemo(
-    () => custNumber.replace(/\D/g, "").slice(0, 2),
-    [custNumber]
-  );
+  const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
@@ -390,10 +404,7 @@ export default function ProductConfigurator({ product }: Props) {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
-    setTimeout(
-      () => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"),
-      450
-    );
+    setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
 
   function flyToCart() {
@@ -415,8 +426,7 @@ export default function ProductConfigurator({ product }: Props) {
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
-      transition:
-        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms.ease",
+      transition: "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
       opacity: "0.9",
       transform: "translate3d(0,0,0) scale(1)",
     } as CSSStyleDeclaration);
@@ -452,21 +462,24 @@ export default function ProductConfigurator({ product }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------- Add to cart ---------- */
   function addToCart() {
+    setAddError(null);
+
     if (!selectedSize) {
-      alert("Please choose a size first.");
+      setAddError("Please choose a size first.");
       return;
     }
     const sel = sizes.find((s) => s.size === selectedSize);
     if (!sel || isUnavailable(sel)) {
-      alert("This size is unavailable.");
+      setAddError("This size is unavailable.");
       return;
     }
     if (qty < 1) {
-      alert("Quantity must be at least 1.");
+      setAddError("Quantity must be at least 1.");
       return;
     }
 
@@ -485,10 +498,10 @@ export default function ProductConfigurator({ product }: Props) {
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
-      // ✅ FIX: só mostra "Added!" se o server action tiver sucesso
+      // ✅ MOSTRA erro real
       if (!res?.ok) {
         console.error("addToCartAction failed:", res);
-        alert("Failed to add to cart.");
+        setAddError((res as any)?.error ?? "Failed to add to cart.");
         return;
       }
 
@@ -651,6 +664,13 @@ export default function ProductConfigurator({ product }: Props) {
             )}
           </header>
 
+          {/* ✅ erro visível (em vez de alert) */}
+          {addError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs sm:text-sm text-red-800">
+              {addError}
+            </div>
+          )}
+
           {/* Size */}
           <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
             <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
@@ -725,7 +745,10 @@ export default function ProductConfigurator({ product }: Props) {
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. BELLINGHAM"
                     value={custName}
-                    onChange={(e) => setCustName(e.target.value)}
+                    onChange={(e) => {
+                      setCustName(e.target.value);
+                      setAddError(null);
+                    }}
                     maxLength={20}
                   />
                 </label>
@@ -737,7 +760,10 @@ export default function ProductConfigurator({ product }: Props) {
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. 5"
                     value={custNumber}
-                    onChange={(e) => setCustNumber(e.target.value)}
+                    onChange={(e) => {
+                      setCustNumber(e.target.value);
+                      setAddError(null);
+                    }}
                     inputMode="numeric"
                     maxLength={2}
                   />
@@ -804,7 +830,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Add to cart */}
           <motion.button
-            type="button" // ✅ FIX
+            type="button"
             onClick={addToCart}
             className={cx(
               "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
@@ -986,6 +1012,7 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -1008,6 +1035,7 @@ function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
