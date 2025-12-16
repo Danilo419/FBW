@@ -91,10 +91,18 @@ function parseMaybeJsonObject(x: unknown): Record<string, any> | null {
 function extractNameNumberFromOptions(opts: Record<string, any> | null) {
   if (!opts) return { name: null as string | null, number: null as string | null };
 
-  const c = opts.customization && typeof opts.customization === "object" ? opts.customization : null;
+  const c =
+    opts.customization && typeof opts.customization === "object"
+      ? opts.customization
+      : null;
 
   const name =
-    (c?.name ?? c?.playerName ?? c?.player_name ?? opts.name ?? opts.playerName ?? opts.player_name) ?? null;
+    (c?.name ??
+      c?.playerName ??
+      c?.player_name ??
+      opts.name ??
+      opts.playerName ??
+      opts.player_name) ?? null;
 
   const number =
     (c?.number ??
@@ -240,6 +248,13 @@ export default async function CartPage() {
 
           const optionRows = optionsToRows(it.opts);
 
+          // ✅ não repetir nome+team quando forem iguais
+          const teamRaw = it.product.team ? String(it.product.team) : "";
+          const nameRaw = it.product.name ? String(it.product.name) : "";
+          const showTeam =
+            !!teamRaw.trim() &&
+            teamRaw.trim().toLowerCase() !== nameRaw.trim().toLowerCase();
+
           return (
             <div
               key={String(it.id)}
@@ -264,7 +279,7 @@ export default async function CartPage() {
                         {it.product.name}
                       </h3>
 
-                      {it.product.team && (
+                      {showTeam && (
                         <div className="mt-0.5 text-sm text-gray-600">
                           {it.product.team}
                         </div>
