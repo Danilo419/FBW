@@ -22,12 +22,7 @@ const SALE_MAP_EUR: Record<string, number> = {
 };
 
 /* ====================== UI Types ====================== */
-type OptionValueUI = {
-  id: string;
-  value: string;
-  label: string;
-  priceDelta: number;
-};
+type OptionValueUI = { id: string; value: string; label: string; priceDelta: number };
 type OptionGroupUI = {
   id: string;
   key: string;
@@ -36,12 +31,7 @@ type OptionGroupUI = {
   required: boolean;
   values: OptionValueUI[];
 };
-type SizeUI = {
-  id: string;
-  size: string;
-  stock?: number | null;
-  available?: boolean | null;
-};
+type SizeUI = { id: string; size: string; stock?: number | null; available?: boolean | null };
 type ProductUI = {
   id: string;
   slug: string;
@@ -60,9 +50,7 @@ type Props = { product: ProductUI };
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
-
 const isKidProduct = (name: string) => /kid/i.test(name);
-
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 /* ============ Badge helpers ============ */
@@ -130,11 +118,9 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // ✅ debug/erro real no UI
-  const [addError, setAddError] = useState<string | null>(null);
-
   /* ---------- DESCONTO ---------- */
-  const rawUnitPrice = product.basePrice;
+  const rawUnitPrice = product.basePrice; // mesmo valor que já usas com money()
+  // Tentamos perceber se o preço está em euros (34.99) ou em cêntimos (3499)
   const candidateEur1 = rawUnitPrice;
   const candidateEur2 = rawUnitPrice / 100;
 
@@ -144,15 +130,18 @@ export default function ProductConfigurator({ product }: Props) {
   } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
     salePriceEur = candidateEur2;
   } else {
+    // fallback: se for um valor grande, assumimos cêntimos
     salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
   }
 
   const saleKey = salePriceEur.toFixed(2);
-  const originalPriceEur = SALE_MAP_EUR[saleKey];
+  const originalPriceEur = SALE_MAP_EUR[saleKey]; // preço original em euros, vindo do mapa
 
+  // Convertemos o preço original para a mesma unidade de rawUnitPrice,
+  // para poder usar money() sem mexer nessa função.
   let originalUnitPriceForMoney: number | undefined;
   if (typeof originalPriceEur === "number") {
-    const factor = rawUnitPrice / salePriceEur;
+    const factor = rawUnitPrice / salePriceEur; // 1 (se raw for euros) ou ~100 (se raw for cêntimos)
     originalUnitPriceForMoney = originalPriceEur * factor;
   }
 
@@ -169,6 +158,7 @@ export default function ProductConfigurator({ product }: Props) {
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
   /* ---------- Thumbs ---------- */
+  const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -195,12 +185,13 @@ export default function ProductConfigurator({ product }: Props) {
         available: s.available ?? true,
       }));
     }
-    return (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
+    const fallback = (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
       id: s,
       size: s,
       stock: 999,
       available: true,
     }));
+    return fallback;
   }, [product.sizes, kid]);
 
   const isUnavailable = (s: SizeUI) =>
@@ -213,7 +204,6 @@ export default function ProductConfigurator({ product }: Props) {
     if (!found || isUnavailable(found)) return;
     setSelectedSize(size);
     setSelected((st) => ({ ...st, size }));
-    setAddError(null);
   };
 
   useEffect(() => {
@@ -269,7 +259,9 @@ export default function ProductConfigurator({ product }: Props) {
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
-      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+      : original.values.filter(
+          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
+        );
 
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
@@ -303,10 +295,8 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) => {
+  const setRadio = (key: string, value: string) =>
     setSelected((s) => ({ ...s, [key]: value || null }));
-    setAddError(null);
-  };
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -316,7 +306,6 @@ export default function ProductConfigurator({ product }: Props) {
         : typeof current === "string" && current
         ? [current]
         : [];
-
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
       } else {
@@ -324,7 +313,6 @@ export default function ProductConfigurator({ product }: Props) {
       }
       return { ...prev, [key]: arr.length ? arr : null };
     });
-    setAddError(null);
   }
 
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
@@ -352,19 +340,24 @@ export default function ProductConfigurator({ product }: Props) {
       }
       return { ...prev, [group.key]: arr.length ? arr : null };
     });
-    setAddError(null);
   }
 
   /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
-  const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
+  const finalPrice = useMemo(
+    () => unitJerseyPrice * qty,
+    [unitJerseyPrice, qty]
+  );
 
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
     () => custName.toUpperCase().replace(/[^A-Z .'-]/g, "").slice(0, 14),
     [custName]
   );
-  const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
+  const safeNumber = useMemo(
+    () => custNumber.replace(/\D/g, "").slice(0, 2),
+    [custNumber]
+  );
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
@@ -404,7 +397,10 @@ export default function ProductConfigurator({ product }: Props) {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
-    setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
+    setTimeout(
+      () => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"),
+      450
+    );
   }
 
   function flyToCart() {
@@ -426,7 +422,8 @@ export default function ProductConfigurator({ product }: Props) {
       borderRadius: "12px",
       zIndex: "9999",
       pointerEvents: "none",
-      transition: "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease",
+      transition:
+        "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 600ms.ease",
       opacity: "0.9",
       transform: "translate3d(0,0,0) scale(1)",
     } as CSSStyleDeclaration);
@@ -462,24 +459,21 @@ export default function ProductConfigurator({ product }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------- Add to cart ---------- */
   function addToCart() {
-    setAddError(null);
-
     if (!selectedSize) {
-      setAddError("Please choose a size first.");
+      alert("Please choose a size first.");
       return;
     }
     const sel = sizes.find((s) => s.size === selectedSize);
     if (!sel || isUnavailable(sel)) {
-      setAddError("This size is unavailable.");
+      alert("This size is unavailable.");
       return;
     }
     if (qty < 1) {
-      setAddError("Quantity must be at least 1.");
+      alert("Quantity must be at least 1.");
       return;
     }
 
@@ -491,19 +485,14 @@ export default function ProductConfigurator({ product }: Props) {
     );
 
     startTransition(async () => {
-      const res = await addToCartAction({
+      await addToCartAction({
         productId: product.id,
         qty,
         options: optionsForCart,
-        personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
+        personalization: showNameNumber
+          ? { name: safeName, number: safeNumber }
+          : null,
       });
-
-      // ✅ MOSTRA erro real
-      if (!res?.ok) {
-        console.error("addToCartAction failed:", res);
-        setAddError((res as any)?.error ?? "Failed to add to cart.");
-        return;
-      }
 
       setJustAdded(true);
       setShowToast(true);
@@ -551,6 +540,7 @@ export default function ProductConfigurator({ product }: Props) {
                 unoptimized
               />
 
+              {/* Badge de desconto por cima da imagem */}
               {hasDiscount && (
                 <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
                   -{discountPercent}%
@@ -600,7 +590,10 @@ export default function ProductConfigurator({ product }: Props) {
                 className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
+                <div
+                  className="inline-flex gap-2"
+                  style={{ scrollBehavior: "smooth" }}
+                >
                   {images.map((src, i) => {
                     const isActive = i === activeIndex;
                     return (
@@ -646,6 +639,7 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
+            {/* Preço riscado + preço atual (sem % aqui) */}
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
                 <span className="text-[11px] sm:text-xs text-gray-400 line-through">
@@ -664,13 +658,6 @@ export default function ProductConfigurator({ product }: Props) {
             )}
           </header>
 
-          {/* ✅ erro visível (em vez de alert) */}
-          {addError && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs sm:text-sm text-red-800">
-              {addError}
-            </div>
-          )}
-
           {/* Size */}
           <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
             <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
@@ -681,7 +668,8 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {sizes.map((s) => {
                   const unavailable = isUnavailable(s);
-                  const isActive = (selected.size as string) === s.size && !unavailable;
+                  const isActive =
+                    (selected.size as string) === s.size && !unavailable;
                   return (
                     <button
                       key={s.id}
@@ -717,15 +705,16 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
 
           {/* Customization (FREE) */}
-          {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock
-              group={effectiveCustomizationGroup!}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              forceFree
-            />
-          )}
+          {effectiveCustomizationGroup &&
+            effectiveCustomizationGroup.values.length > 0 && (
+              <GroupBlock
+                group={effectiveCustomizationGroup!}
+                selected={selected}
+                onPickRadio={setRadio}
+                onToggleAddon={toggleAddon}
+                forceFree
+              />
+            )}
 
           {/* Personalization */}
           {showNameNumber && (
@@ -745,10 +734,7 @@ export default function ProductConfigurator({ product }: Props) {
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. BELLINGHAM"
                     value={custName}
-                    onChange={(e) => {
-                      setCustName(e.target.value);
-                      setAddError(null);
-                    }}
+                    onChange={(e) => setCustName(e.target.value)}
                     maxLength={20}
                   />
                 </label>
@@ -760,10 +746,7 @@ export default function ProductConfigurator({ product }: Props) {
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. 5"
                     value={custNumber}
-                    onChange={(e) => {
-                      setCustNumber(e.target.value);
-                      setAddError(null);
-                    }}
+                    onChange={(e) => setCustNumber(e.target.value)}
                     inputMode="numeric"
                     maxLength={2}
                   />
@@ -802,7 +785,6 @@ export default function ProductConfigurator({ product }: Props) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <button
-                type="button"
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 aria-label="Decrease quantity"
@@ -812,7 +794,6 @@ export default function ProductConfigurator({ product }: Props) {
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
               <button
-                type="button"
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => q + 1)}
                 aria-label="Increase quantity"
@@ -824,13 +805,14 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="text-right sm:text-left">
               <div className="text-xs sm:text-sm text-gray-600">Total</div>
-              <div className="text-base sm:text-lg font-semibold">{money(finalPrice)}</div>
+              <div className="text-base sm:text-lg font-semibold">
+                {money(finalPrice)}
+              </div>
             </div>
           </div>
 
           {/* Add to cart */}
           <motion.button
-            type="button"
             onClick={addToCart}
             className={cx(
               "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
@@ -872,10 +854,11 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
                 <div className="text-sm">
                   <div className="font-semibold">Item added to cart</div>
-                  <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
+                  <div className="text-gray-600">
+                    You can keep shopping or proceed to checkout.
+                  </div>
                 </div>
                 <button
-                  type="button"
                   className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
                   onClick={() => setShowToast(false)}
                 >
@@ -1012,7 +995,6 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -1035,7 +1017,6 @@ function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
