@@ -49,12 +49,16 @@ async function getOrCreateCart() {
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 dias
+
+  // ✅ FIX: secure só em produção (HTTPS). Em localhost/http, secure=true impede o cookie de ser guardado.
+  const isProd = process.env.NODE_ENV === 'production';
+
   jar.set('sid', newSid, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
     expires,
-    secure: true, // ✅ em prod
+    secure: isProd,
   });
 
   return prisma.cart.create({
@@ -91,7 +95,7 @@ export async function addToCartAction(raw: AddToCartInput) {
         optionsJson: true,     // ajusta se no schema o nome for diferente
         personalization: true, // idem
       },
-      orderBy: { createdAt: 'asc' }, // garante ordem determinística
+      orderBy: { createdAt: 'asc' },
     });
 
     const existing = siblings.find(
@@ -106,7 +110,7 @@ export async function addToCartAction(raw: AddToCartInput) {
         where: { id: existing.id },
         data: {
           qty: newQty,
-          unitPrice, // base
+          unitPrice,
           totalPrice: unitPrice * newQty,
           optionsJson: optionsJson as any,
           personalization: personalization as any,
@@ -118,7 +122,7 @@ export async function addToCartAction(raw: AddToCartInput) {
           cartId: cart.id,
           productId: input.productId,
           qty: input.qty,
-          unitPrice, // base
+          unitPrice,
           totalPrice: unitPrice * input.qty,
           optionsJson: optionsJson as any,
           personalization: personalization as any,
@@ -126,12 +130,15 @@ export async function addToCartAction(raw: AddToCartInput) {
       });
     }
 
+    // ✅ opcional mas útil para atualizar UI que dependa do /cart
+    revalidatePath('/cart');
+
     const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
     return {
       ok: true as const,
       cartId: cart.id,
-      count, // nº de linhas
-      lineTotal: unitPrice * input.qty, // total da operação atual
+      count,
+      lineTotal: unitPrice * input.qty,
     };
   } catch (err) {
     console.error('[addToCartAction] failed:', err);
@@ -147,8 +154,9 @@ export async function addToCartAction(raw: AddToCartInput) {
  * - devolve subtotal, discount, shipping, total, etc.
  */
 export async function getCartSummary() {
-  const jar = await cookies(); // ✅ usar await
+  const jar = await cookies();
   const sid = jar.get('sid')?.value ?? null;
+
   if (!sid) {
     return {
       count: 0,
@@ -170,9 +178,7 @@ export async function getCartSummary() {
       id: true,
       qty: true,
       unitPrice: true,
-      product: {
-        select: { name: true },
-      },
+      product: { select: { name: true } },
     },
   });
 
@@ -191,7 +197,6 @@ export async function getCartSummary() {
     };
   }
 
-  // Montar array no formato esperado pelo calculateCartTotals
   const cartItemsForPricing = rawItems.map((it) => ({
     id: it.id,
     name: it.product?.name ?? '',
@@ -202,8 +207,8 @@ export async function getCartSummary() {
   const totals = calculateCartTotals(cartItemsForPricing);
 
   return {
-    count: rawItems.length, // nº de linhas do carrinho (como antes)
-    ...totals,              // subtotal, discount, shipping, total, promotion
+    count: rawItems.length, // nº de linhas
+    ...totals,
   };
 }
 
@@ -212,9 +217,11 @@ export async function getCartSummary() {
 export async function removeItem(formData: FormData) {
   const id = formData.get('itemId');
   if (!id || typeof id !== 'string') return;
+
   try {
     await prisma.cartItem.delete({ where: { id } });
   } catch {}
+
   revalidatePath('/cart');
 }
 
@@ -222,8 +229,8 @@ export async function updateQty(formData: FormData) {
   const id = formData.get('itemId');
   const qty = Number(formData.get('qty'));
   if (!id || typeof id !== 'string' || !Number.isFinite(qty) || qty < 1) return;
+
   try {
-    // buscar item para ter o unitPrice
     const item = await prisma.cartItem.findUnique({
       where: { id },
       select: { unitPrice: true },
@@ -238,5 +245,6 @@ export async function updateQty(formData: FormData) {
       },
     });
   } catch {}
+
   revalidatePath('/cart');
 }

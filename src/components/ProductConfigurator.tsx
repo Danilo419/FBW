@@ -119,8 +119,7 @@ export default function ProductConfigurator({ product }: Props) {
   const [showToast, setShowToast] = useState(false);
 
   /* ---------- DESCONTO ---------- */
-  const rawUnitPrice = product.basePrice; // mesmo valor que já usas com money()
-  // Tentamos perceber se o preço está em euros (34.99) ou em cêntimos (3499)
+  const rawUnitPrice = product.basePrice;
   const candidateEur1 = rawUnitPrice;
   const candidateEur2 = rawUnitPrice / 100;
 
@@ -130,18 +129,15 @@ export default function ProductConfigurator({ product }: Props) {
   } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
     salePriceEur = candidateEur2;
   } else {
-    // fallback: se for um valor grande, assumimos cêntimos
     salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
   }
 
   const saleKey = salePriceEur.toFixed(2);
-  const originalPriceEur = SALE_MAP_EUR[saleKey]; // preço original em euros, vindo do mapa
+  const originalPriceEur = SALE_MAP_EUR[saleKey];
 
-  // Convertemos o preço original para a mesma unidade de rawUnitPrice,
-  // para poder usar money() sem mexer nessa função.
   let originalUnitPriceForMoney: number | undefined;
   if (typeof originalPriceEur === "number") {
-    const factor = rawUnitPrice / salePriceEur; // 1 (se raw for euros) ou ~100 (se raw for cêntimos)
+    const factor = rawUnitPrice / salePriceEur;
     originalUnitPriceForMoney = originalPriceEur * factor;
   }
 
@@ -344,10 +340,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
-  const finalPrice = useMemo(
-    () => unitJerseyPrice * qty,
-    [unitJerseyPrice, qty]
-  );
+  const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Sanitize ---------- */
   const safeName = useMemo(
@@ -485,14 +478,19 @@ export default function ProductConfigurator({ product }: Props) {
     );
 
     startTransition(async () => {
-      await addToCartAction({
+      const res = await addToCartAction({
         productId: product.id,
         qty,
         options: optionsForCart,
-        personalization: showNameNumber
-          ? { name: safeName, number: safeNumber }
-          : null,
+        personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
+
+      // ✅ FIX: só mostra "Added!" se o server action tiver sucesso
+      if (!res?.ok) {
+        console.error("addToCartAction failed:", res);
+        alert("Failed to add to cart.");
+        return;
+      }
 
       setJustAdded(true);
       setShowToast(true);
@@ -540,7 +538,6 @@ export default function ProductConfigurator({ product }: Props) {
                 unoptimized
               />
 
-              {/* Badge de desconto por cima da imagem */}
               {hasDiscount && (
                 <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
                   -{discountPercent}%
@@ -590,10 +587,7 @@ export default function ProductConfigurator({ product }: Props) {
                 className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                <div
-                  className="inline-flex gap-2"
-                  style={{ scrollBehavior: "smooth" }}
-                >
+                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
                   {images.map((src, i) => {
                     const isActive = i === activeIndex;
                     return (
@@ -639,7 +633,6 @@ export default function ProductConfigurator({ product }: Props) {
               {product.name}
             </h1>
 
-            {/* Preço riscado + preço atual (sem % aqui) */}
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
                 <span className="text-[11px] sm:text-xs text-gray-400 line-through">
@@ -668,8 +661,7 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {sizes.map((s) => {
                   const unavailable = isUnavailable(s);
-                  const isActive =
-                    (selected.size as string) === s.size && !unavailable;
+                  const isActive = (selected.size as string) === s.size && !unavailable;
                   return (
                     <button
                       key={s.id}
@@ -705,16 +697,15 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
 
           {/* Customization (FREE) */}
-          {effectiveCustomizationGroup &&
-            effectiveCustomizationGroup.values.length > 0 && (
-              <GroupBlock
-                group={effectiveCustomizationGroup!}
-                selected={selected}
-                onPickRadio={setRadio}
-                onToggleAddon={toggleAddon}
-                forceFree
-              />
-            )}
+          {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
+            <GroupBlock
+              group={effectiveCustomizationGroup!}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              forceFree
+            />
+          )}
 
           {/* Personalization */}
           {showNameNumber && (
@@ -785,6 +776,7 @@ export default function ProductConfigurator({ product }: Props) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 aria-label="Decrease quantity"
@@ -794,6 +786,7 @@ export default function ProductConfigurator({ product }: Props) {
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
               <button
+                type="button"
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => q + 1)}
                 aria-label="Increase quantity"
@@ -805,14 +798,13 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="text-right sm:text-left">
               <div className="text-xs sm:text-sm text-gray-600">Total</div>
-              <div className="text-base sm:text-lg font-semibold">
-                {money(finalPrice)}
-              </div>
+              <div className="text-base sm:text-lg font-semibold">{money(finalPrice)}</div>
             </div>
           </div>
 
           {/* Add to cart */}
           <motion.button
+            type="button" // ✅ FIX
             onClick={addToCart}
             className={cx(
               "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
@@ -854,11 +846,10 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
                 <div className="text-sm">
                   <div className="font-semibold">Item added to cart</div>
-                  <div className="text-gray-600">
-                    You can keep shopping or proceed to checkout.
-                  </div>
+                  <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
                 <button
+                  type="button"
                   className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
                   onClick={() => setShowToast(false)}
                 >
