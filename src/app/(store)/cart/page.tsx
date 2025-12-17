@@ -138,6 +138,25 @@ function optionsToRows(opts: Record<string, any> | null) {
     });
 }
 
+/* -------------------------- promo (Buy X Get Y) -------------------------- */
+
+type PromoKind = "B1G1" | "B2G3" | "B3G5" | null;
+
+function pickPromo(totalQty: number): { kind: PromoKind; groupSize: number; freePerGroup: number; shippingCents: number | null } {
+  // Aplicar o melhor tier possível (o "maior" primeiro)
+  if (totalQty >= 5) return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0 };
+  if (totalQty >= 3) return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0 };
+  if (totalQty >= 2) return { kind: "B1G1", groupSize: 2, freePerGroup: 1, shippingCents: 500 };
+  return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null };
+}
+
+function promoLabel(kind: PromoKind) {
+  if (kind === "B1G1") return "Buy 1, Get 1";
+  if (kind === "B2G3") return "Buy 2, Get 3";
+  if (kind === "B3G5") return "Buy 3, Get 5";
+  return null;
+}
+
 /* ------------------------------- types ------------------------------- */
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -218,7 +237,7 @@ export default async function CartPage() {
     // optionsJson pode vir objeto ou string
     const opts = parseMaybeJsonObject((it as any).optionsJson);
 
-    // personalization vem separado (é isto que faltava no cart)
+    // personalization vem separado
     const pers = parseMaybeJsonObject((it as any).personalization);
 
     // Name/Number: prioridade personalization, fallback optionsJson
@@ -232,14 +251,80 @@ export default async function CartPage() {
     return { ...it, displayUnit, displayTotal, opts, pers, name, number };
   });
 
-  const grandTotal: number = displayItems.reduce(
+  const subtotalCents: number = displayItems.reduce(
     (acc: number, it: any) => acc + it.displayTotal,
     0
   );
 
+  const totalQty = displayItems.reduce((acc: number, it: any) => acc + (it.qty ?? 0), 0);
+
+  const promo = pickPromo(totalQty);
+  const promoGroups = promo.kind ? Math.floor(totalQty / promo.groupSize) : 0;
+  const freeCount = promo.kind ? promoGroups * promo.freePerGroup : 0;
+
+  // Expand para unidades (para escolher as mais baratas como FREE)
+  const unitPool: Array<{ itemId: string; unitCents: number }> = [];
+  for (const it of displayItems as any[]) {
+    const q = Math.max(0, Number(it.qty ?? 0));
+    const unit = Math.max(0, Number(it.displayUnit ?? 0));
+    for (let i = 0; i < q; i++) unitPool.push({ itemId: String(it.id), unitCents: unit });
+  }
+
+  unitPool.sort((a, b) => a.unitCents - b.unitCents);
+
+  const freeQtyByItemId = new Map<string, number>();
+  let discountCents = 0;
+
+  for (let i = 0; i < Math.min(freeCount, unitPool.length); i++) {
+    const u = unitPool[i];
+    discountCents += u.unitCents;
+    freeQtyByItemId.set(u.itemId, (freeQtyByItemId.get(u.itemId) ?? 0) + 1);
+  }
+
+  const shippingCents: number | null = promo.kind && promoGroups > 0 ? promo.shippingCents : null;
+  const totalPayableCents = subtotalCents - discountCents + (shippingCents ?? 0);
+
+  const promoTitle = promo.kind && promoGroups > 0 ? promoLabel(promo.kind) : null;
+
   return (
     <div className="container-fw py-12">
       <h1 className="text-3xl font-extrabold mb-8">Your Cart</h1>
+
+      {/* Promo summary (preview final no carrinho) */}
+      <div className="mb-6 rounded-2xl border bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-gray-900">
+              Promotion Preview
+            </div>
+            <div className="text-sm text-gray-600">
+              The free items are always the cheapest ones.
+            </div>
+          </div>
+
+          {promoTitle ? (
+            <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
+              <span className="font-semibold text-gray-900">{promoTitle}</span>
+              <span className="text-gray-500">
+                • Free items: <span className="font-semibold text-gray-900">{freeCount}</span>
+                {promo.kind === "B1G1" ? (
+                  <>
+                    {" "}• Shipping: <span className="font-semibold text-gray-900">€5</span>
+                  </>
+                ) : (
+                  <>
+                    {" "}• Shipping: <span className="font-semibold text-gray-900">FREE</span>
+                  </>
+                )}
+              </span>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              Add more items to unlock: <span className="font-semibold">Buy 1 Get 1</span> (2+)
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid gap-5">
         {displayItems.map((it: any) => {
@@ -254,6 +339,11 @@ export default async function CartPage() {
           const showTeam =
             !!teamRaw.trim() &&
             teamRaw.trim().toLowerCase() !== nameRaw.trim().toLowerCase();
+
+          const freeQty = freeQtyByItemId.get(String(it.id)) ?? 0;
+          const payableQty = Math.max(0, (it.qty ?? 0) - freeQty);
+          const lineBefore = it.displayTotal;
+          const lineAfter = (it.displayUnit ?? 0) * payableQty;
 
           return (
             <div
@@ -285,7 +375,7 @@ export default async function CartPage() {
                         </div>
                       )}
 
-                      {(it.name || it.number) && (
+                      {(it.name || it.number || freeQty > 0) && (
                         <div className="mt-2 inline-flex flex-wrap items-center gap-2">
                           {it.name && (
                             <span className="rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
@@ -297,6 +387,12 @@ export default async function CartPage() {
                             <span className="rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
                               <span className="text-gray-500">Number:</span>{" "}
                               <span className="font-semibold">{it.number}</span>
+                            </span>
+                          )}
+                          {freeQty > 0 && (
+                            <span className="rounded-full border bg-green-50 px-3 py-1 text-xs text-green-800">
+                              <span className="font-semibold">FREE</span>{" "}
+                              <span className="text-green-700">x{freeQty}</span>
                             </span>
                           )}
                         </div>
@@ -318,15 +414,31 @@ export default async function CartPage() {
                       <div className="text-sm text-gray-500">
                         Unit: {formatMoney(it.displayUnit)}
                       </div>
+
+                      {/* Total com promo */}
                       <div className="mt-0.5 text-base font-semibold">
-                        {formatMoney(it.displayTotal)}
+                        {formatMoney(lineAfter)}
                       </div>
+
+                      {/* Antes (se mudou) */}
+                      {freeQty > 0 && lineAfter !== lineBefore && (
+                        <div className="mt-0.5 text-xs text-gray-500">
+                          Before:{" "}
+                          <span className="line-through">{formatMoney(lineBefore)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="text-sm text-gray-600">
                       Qty: <span className="font-medium">{it.qty}</span>
+                      {freeQty > 0 && (
+                        <>
+                          {" "}
+                          • Pay for: <span className="font-medium">{payableQty}</span>
+                        </>
+                      )}
                     </div>
 
                     <form action={removeItem}>
@@ -347,17 +459,65 @@ export default async function CartPage() {
         })}
       </div>
 
-      <div className="mt-8 flex items-center justify-end gap-4">
-        <div className="rounded-2xl border bg-white px-5 py-3 text-lg font-bold">
-          Total:&nbsp;{formatMoney(grandTotal)}
+      {/* Totals */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 sm:items-start">
+        <div className="rounded-2xl border bg-white p-5">
+          <div className="text-sm font-semibold text-gray-900">Order Summary</div>
+
+          <div className="mt-3 space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-semibold">{formatMoney(subtotalCents)}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">
+                Discount {promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
+              </span>
+              <span className={`font-semibold ${discountCents > 0 ? "text-green-700" : ""}`}>
+                -{formatMoney(discountCents)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Shipping</span>
+              {shippingCents == null ? (
+                <span className="font-semibold text-gray-500">Calculated at checkout</span>
+              ) : shippingCents === 0 ? (
+                <span className="font-semibold text-green-700">FREE</span>
+              ) : (
+                <span className="font-semibold">{formatMoney(shippingCents)}</span>
+              )}
+            </div>
+
+            <div className="pt-3 border-t flex items-center justify-between">
+              <span className="text-base font-extrabold">Total</span>
+              <span className="text-base font-extrabold">{formatMoney(totalPayableCents)}</span>
+            </div>
+
+            {promoTitle ? (
+              <div className="pt-3 text-xs text-gray-500">
+                Free items applied: <span className="font-semibold text-gray-800">{freeCount}</span>{" "}
+                (always the cheapest ones). Groups:{" "}
+                <span className="font-semibold text-gray-800">{promoGroups}</span>.
+              </div>
+            ) : (
+              <div className="pt-3 text-xs text-gray-500">
+                Tip: Add 1 more item to unlock <span className="font-semibold text-gray-800">Buy 1, Get 1</span>.
+              </div>
+            )}
+          </div>
         </div>
-        <Link
-          href="/checkout/address"
-          className="inline-flex items-center rounded-xl bg-black px-5 py-3 text-white font-semibold hover:bg-gray-900"
-          aria-label="Proceed to address step"
-        >
-          Go to Checkout
-        </Link>
+
+        <div className="flex sm:justify-end">
+          <Link
+            href="/checkout/address"
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-black px-6 py-3 text-white font-semibold hover:bg-gray-900"
+            aria-label="Proceed to address step"
+          >
+            Go to Checkout
+          </Link>
+        </div>
       </div>
     </div>
   );
