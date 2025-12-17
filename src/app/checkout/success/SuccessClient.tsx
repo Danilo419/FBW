@@ -56,30 +56,53 @@ function getItemImageUrl(it: OrderItem) {
   return u || "/placeholder.png";
 }
 
+/**
+ * External images: we use <img> to avoid Next remotePatterns issues,
+ * BUT we do fallback without passing `onError` as a prop from a server context.
+ * (Even though this file is client, this pattern is safer and avoids the runtime error you got.)
+ */
+function ExternalImg({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const [current, setCurrent] = useState(src || "/placeholder.png");
+
+  useEffect(() => {
+    setCurrent(src || "/placeholder.png");
+  }, [src]);
+
+  return (
+    <img
+      src={current}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      // We still attach onError here (inside a client component),
+      // so it is never passed through Server Component props.
+      onError={() => {
+        setCurrent((prev) => (prev === "/placeholder.png" ? prev : "/placeholder.png"));
+      }}
+    />
+  );
+}
+
 function ItemThumb({ src, alt }: { src: string; alt: string }) {
   const external = isExternalUrl(src);
 
-  // External URLs: use <img> to avoid next/image remotePatterns config issues
   if (external) {
     return (
       <div className="relative h-14 w-14 overflow-hidden rounded-xl border bg-gray-50 shrink-0">
-        <img
-          src={src}
-          alt={alt}
-          className="h-full w-full object-cover"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            const el = e.currentTarget;
-            if (el.src.endsWith("/placeholder.png")) return;
-            el.src = "/placeholder.png";
-          }}
-        />
+        <ExternalImg src={src} alt={alt} className="h-full w-full object-cover" />
       </div>
     );
   }
 
-  // Local paths: next/image
   return (
     <div className="relative h-14 w-14 overflow-hidden rounded-xl border bg-gray-50 shrink-0">
       <Image src={src} alt={alt} fill className="object-cover" sizes="56px" />
@@ -111,7 +134,6 @@ export default function SuccessClient() {
     setLoading(true);
     setLoadingMsg("Finalizing your payment…");
 
-    // Alguns métodos demoram segundos a ficarem "paid" → retries
     const MAX_TRIES = 6;
     for (let i = 0; i < MAX_TRIES; i++) {
       try {
@@ -121,20 +143,20 @@ export default function SuccessClient() {
           )}&session_id=${encodeURIComponent(sid)}`,
           { method: "POST" }
         );
+
         const json: any = await res.json().catch(() => ({}));
-        if (res.ok && json?.ok) {
-          return; // confirmado
-        }
-        // 202 = ainda a processar
+
+        if (res.ok && json?.ok) return;
+
         if (res.status === 202 || json?.status === "processing") {
           await wait(1500);
           continue;
         }
-        // erro “hard”
+
         setError(json?.error || "Could not confirm the payment.");
         break;
       } catch {
-        await wait(1200); // retry suave a erros de rede
+        await wait(1200);
       }
     }
   };
@@ -152,13 +174,11 @@ export default function SuccessClient() {
     setError(null);
 
     try {
-      // Tenta RESTful primeiro
       let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
         method: "GET",
         cache: "no-store",
       });
 
-      // Fallback para /api/orders?id=
       if (!res.ok) {
         res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, {
           method: "GET",
@@ -166,9 +186,7 @@ export default function SuccessClient() {
         });
       }
 
-      const json: ApiResponse = await res
-        .json()
-        .catch(() => ({} as ApiResponse));
+      const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
 
       if (!res.ok) {
         const msg =
@@ -177,25 +195,24 @@ export default function SuccessClient() {
         setError(msg);
         setOrder(null);
       } else {
-        const o: Order | undefined =
-          (json as any)?.order ?? (json as any)?.data?.order;
+        const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
+
         if (o && o.id) {
           setOrder(o);
 
-          // Se ainda não estiver final (ex.: webhooks lentos), faz um pequeno polling
           if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
             for (let i = 0; i < 2; i++) {
               await wait(1500);
-              const again = await fetch(
-                `/api/orders/${encodeURIComponent(oid)}`,
-                { cache: "no-store" }
-              ).then((r) => r.json().catch(() => ({})));
+              const again = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
+                cache: "no-store",
+              }).then((r) => r.json().catch(() => ({})));
+
               const updated: Order | undefined =
                 (again as any)?.order ?? (again as any)?.data?.order;
+
               if (updated?.id) {
                 setOrder(updated);
-                if (FINAL_STATUSES.has((updated.status || "").toLowerCase()))
-                  break;
+                if (FINAL_STATUSES.has((updated.status || "").toLowerCase())) break;
               }
             }
           }
@@ -213,7 +230,6 @@ export default function SuccessClient() {
     }
   };
 
-  // Fluxo: se Stripe + session_id → confirma; depois carrega a encomenda
   useEffect(() => {
     let alive = true;
 
@@ -237,7 +253,6 @@ export default function SuccessClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, provider, sessionId]);
 
-  // Total calculado
   const computedTotalCents = useMemo(() => {
     if (!order) return 0;
     if (typeof order.totalCents === "number") return order.totalCents;
@@ -245,6 +260,7 @@ export default function SuccessClient() {
 
     const itemsSum =
       order.items?.reduce((acc, it) => acc + (it.totalPrice || 0), 0) || 0;
+
     const shipping = order.shipping || 0;
     const tax = order.tax || 0;
     return itemsSum + shipping + tax;
@@ -327,9 +343,7 @@ export default function SuccessClient() {
 
           <div className="flex gap-2">
             <button
-              onClick={() =>
-                router.replace(`/orders/${encodeURIComponent(order.id)}`)
-              }
+              onClick={() => router.replace(`/orders/${encodeURIComponent(order.id)}`)}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               View order

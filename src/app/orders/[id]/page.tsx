@@ -1,8 +1,8 @@
 // src/app/orders/[id]/page.tsx
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import OrderItemThumb from "@/components/OrderItemThumb";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,14 +15,12 @@ function money(cents?: number | null, currency = "EUR") {
   return (n / 100).toLocaleString(undefined, { style: "currency", currency });
 }
 
-function isExternalUrl(u: string) {
-  return /^https?:\/\//i.test(u) || u.startsWith("//");
-}
 function normalizeUrl(u?: string | null) {
   if (!u) return "";
   if (u.startsWith("//")) return `https:${u}`;
   return u;
 }
+
 function resolveItemImage(it: any) {
   const direct = normalizeUrl(it.image);
   const fromProduct =
@@ -163,35 +161,15 @@ export default async function OrderPage({
               <ul className="divide-y">
                 {order.items.map((it: any) => {
                   const img = resolveItemImage(it);
-                  const external = isExternalUrl(img);
 
                   return (
                     <li key={it.id} className="flex items-center gap-4 p-4">
-                      <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0">
-                        {external ? (
-                          <img
-                            src={img}
-                            alt={it.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              const el = e.currentTarget;
-                              if (!el.src.endsWith("/placeholder.png")) {
-                                el.src = "/placeholder.png";
-                              }
-                            }}
-                          />
-                        ) : (
-                          <Image
-                            src={img}
-                            alt={it.name}
-                            fill
-                            className="object-cover"
-                            sizes="56px"
-                          />
-                        )}
-                      </div>
+                      <OrderItemThumb
+                        src={img}
+                        alt={it.name}
+                        className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0"
+                        size={56}
+                      />
 
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{it.name}</div>
@@ -314,9 +292,6 @@ export async function generateMetadata({
     select: { id: true, status: true },
   });
 
-  const title = order
-    ? `Order ${order.id} — ${order.status}`
-    : "Order details";
-
+  const title = order ? `Order ${order.id} — ${order.status}` : "Order details";
   return { title };
 }
