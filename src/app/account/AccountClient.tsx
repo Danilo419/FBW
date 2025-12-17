@@ -191,6 +191,13 @@ type OrderListItem = {
   itemsCount: number;
 };
 
+// ✅ helper: decide if order is "paid"
+function isPaidStatus(status: string) {
+  const s = String(status || '').trim().toLowerCase();
+  // Keep it robust in case your API returns "paid", "PAID", etc.
+  return s === 'paid';
+}
+
 function MyOrders() {
   const { status } = useSession();
   const [loading, setLoading] = useState(true);
@@ -207,8 +214,14 @@ function MyOrders() {
         const r = await fetch('/api/account/orders', { method: 'GET' });
         const j = await r.json();
         if (!r.ok) throw new Error(j?.error || 'Failed to load orders');
+
+        const raw: OrderListItem[] = Array.isArray(j?.orders) ? j.orders : [];
+
+        // ✅ only keep paid orders
+        const paidOnly = raw.filter((o) => isPaidStatus(o.status));
+
         if (!alive) return;
-        setOrders(Array.isArray(j?.orders) ? j.orders : []);
+        setOrders(paidOnly);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? 'Something went wrong');
@@ -231,7 +244,7 @@ function MyOrders() {
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <ReceiptText className="h-5 w-5" /> My Orders
           </h2>
-          <p className="text-sm text-gray-600 mt-1">See your full purchase history.</p>
+          <p className="text-sm text-gray-600 mt-1">Only paid orders are shown here.</p>
         </div>
       </div>
 
@@ -249,9 +262,9 @@ function MyOrders() {
         {!loading && !err && orders.length === 0 && (
           <div className="rounded-2xl border p-6 bg-white/70 text-center">
             <Package className="h-6 w-6 mx-auto text-gray-400" />
-            <div className="mt-2 font-semibold">No orders yet</div>
+            <div className="mt-2 font-semibold">No paid orders yet</div>
             <div className="mt-1 text-sm text-gray-600">
-              When you buy something, your orders will show up here.
+              When an order is marked as <span className="font-medium">paid</span>, it will show up here.
             </div>
           </div>
         )}
@@ -484,7 +497,15 @@ function SecurityForm() {
   );
 }
 
-function PasswordInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function PasswordInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <label className="block">
       <span className="text-sm text-gray-700">{label}</span>
