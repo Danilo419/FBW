@@ -8,12 +8,31 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/* --------------------------- small helpers --------------------------- */
+/* --------------------------- helpers --------------------------- */
 
 function money(cents?: number | null, currency = "EUR") {
   const n = typeof cents === "number" ? cents : 0;
   return (n / 100).toLocaleString(undefined, { style: "currency", currency });
 }
+
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+function normalizeUrl(u?: string | null) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+function resolveItemImage(it: any) {
+  const direct = normalizeUrl(it.image);
+  const fromProduct =
+    Array.isArray(it.product?.imageUrls) && it.product.imageUrls.length > 0
+      ? normalizeUrl(it.product.imageUrls[0])
+      : "";
+  return direct || fromProduct || "/placeholder.png";
+}
+
+/* ----------------------------- shipping ----------------------------- */
 
 type ShippingJson =
   | {
@@ -32,7 +51,6 @@ type ShippingJson =
   | null;
 
 function shippingFromOrder(order: any): ShippingJson {
-  // Prefer canonical columns if present
   const canonical = {
     name: order.shippingFullName ?? null,
     email: order.shippingEmail ?? null,
@@ -56,48 +74,46 @@ function shippingFromOrder(order: any): ShippingJson {
     canonical.address?.country;
 
   if (hasCanonical) return canonical;
-
-  // Fallback to JSON snapshot (set during checkout)
-  const snap = (order.shippingJson ?? null) as ShippingJson;
-  return snap ?? { name: null, email: null, phone: null, address: null };
+  return (order.shippingJson ?? null) as ShippingJson;
 }
 
 function computeTotalCents(order: any) {
   if (typeof order.totalCents === "number") return order.totalCents;
-  if (typeof order.total === "number") return Math.round(order.total * 100); // legacy float
+  if (typeof order.total === "number") return Math.round(order.total * 100);
   const itemsSum =
     (order.items || []).reduce(
       (acc: number, it: any) => acc + (Number(it.totalPrice) || 0),
       0
     ) || 0;
-  const shipping = Number(order.shipping) || 0;
-  const tax = Number(order.tax) || 0;
-  return itemsSum + shipping + tax;
+  return itemsSum + (order.shipping || 0) + (order.tax || 0);
 }
 
-/* ----------------------------- data load ---------------------------- */
+/* ----------------------------- data load ----------------------------- */
 
 async function loadOrder(id: string) {
-  // ⚠️ Your OrderItem model does NOT have createdAt; do not orderBy it.
-  const order = await prisma.order.findUnique({
+  return prisma.order.findUnique({
     where: { id },
     include: {
       items: {
+        orderBy: { id: "asc" },
         select: {
           id: true,
           name: true,
           qty: true,
           totalPrice: true,
           image: true,
+          product: {
+            select: {
+              imageUrls: true,
+            },
+          },
         },
-        orderBy: { id: "asc" }, // safe field to sort by
       },
     },
   });
-  return order;
 }
 
-/* -------------------------------- page ------------------------------ */
+/* ------------------------------ page ------------------------------ */
 
 export default async function OrderPage({
   params,
@@ -107,9 +123,7 @@ export default async function OrderPage({
   const { id } = await params;
   const order = await loadOrder(id);
 
-  if (!order) {
-    notFound();
-  }
+  if (!order) notFound();
 
   const ship = shippingFromOrder(order);
   const totalCents = computeTotalCents(order);
@@ -142,34 +156,56 @@ export default async function OrderPage({
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Main column */}
+          {/* Main */}
           <section className="md:col-span-2 space-y-4">
             <div className="rounded-xl border">
               <div className="border-b px-4 py-3 font-semibold">Items</div>
               <ul className="divide-y">
-                {order.items.map((it: any) => (
-                  <li key={it.id} className="flex items-center gap-4 p-4">
-                    <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden">
-                      <Image
-                        src={it.image || "/placeholder.png"}
-                        alt={it.name}
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                        priority={false}
-                      />
-                    </div>
+                {order.items.map((it: any) => {
+                  const img = resolveItemImage(it);
+                  const external = isExternalUrl(img);
 
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{it.name}</div>
-                      <div className="text-sm text-gray-600">Qty: {it.qty}</div>
-                    </div>
+                  return (
+                    <li key={it.id} className="flex items-center gap-4 p-4">
+                      <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0">
+                        {external ? (
+                          <img
+                            src={img}
+                            alt={it.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              const el = e.currentTarget;
+                              if (!el.src.endsWith("/placeholder.png")) {
+                                el.src = "/placeholder.png";
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Image
+                            src={img}
+                            alt={it.name}
+                            fill
+                            className="object-cover"
+                            sizes="56px"
+                          />
+                        )}
+                      </div>
 
-                    <div className="shrink-0 font-semibold">
-                      {money(it.totalPrice, currency)}
-                    </div>
-                  </li>
-                ))}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{it.name}</div>
+                        <div className="text-sm text-gray-600">
+                          Qty: {it.qty}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 font-semibold">
+                        {money(it.totalPrice, currency)}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
@@ -178,15 +214,15 @@ export default async function OrderPage({
               <div className="mt-3 space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>{money(order.subtotal ?? null, currency)}</span>
+                  <span>{money(order.subtotal, currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{money(order.shipping ?? 0, currency)}</span>
+                  <span>{money(order.shipping, currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax</span>
-                  <span>{money(order.tax ?? 0, currency)}</span>
+                  <span>{money(order.tax, currency)}</span>
                 </div>
                 <div className="mt-2 flex justify-between border-t pt-2 font-bold">
                   <span>Total</span>
@@ -209,18 +245,6 @@ export default async function OrderPage({
                   <span className="text-gray-500">Created:</span>{" "}
                   {new Date(order.createdAt).toLocaleString()}
                 </div>
-                {order.paidAt && (
-                  <div>
-                    <span className="text-gray-500">Paid at:</span>{" "}
-                    {new Date(order.paidAt).toLocaleString()}
-                  </div>
-                )}
-                {order.paymentStatus && (
-                  <div>
-                    <span className="text-gray-500">Payment:</span>{" "}
-                    {order.paymentStatus}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -289,6 +313,10 @@ export async function generateMetadata({
     where: { id },
     select: { id: true, status: true },
   });
-  const title = order ? `Order ${order.id} — ${order.status}` : "Order";
+
+  const title = order
+    ? `Order ${order.id} — ${order.status}`
+    : "Order details";
+
   return { title };
 }
