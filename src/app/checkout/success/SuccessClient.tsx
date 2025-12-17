@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 type OrderItem = {
   id: string;
@@ -39,6 +40,52 @@ function moneyCents(cents: number | null | undefined) {
 
 const FINAL_STATUSES = new Set(["paid", "shipped", "delivered"]);
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/* ------------------------------- image helpers ------------------------------- */
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+function normalizeUrl(u: string) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+function getItemImageUrl(it: OrderItem) {
+  const raw = typeof it.image === "string" ? it.image : "";
+  const u = normalizeUrl(raw.trim());
+  return u || "/placeholder.png";
+}
+
+function ItemThumb({ src, alt }: { src: string; alt: string }) {
+  const external = isExternalUrl(src);
+
+  // External URLs: use <img> to avoid next/image remotePatterns config issues
+  if (external) {
+    return (
+      <div className="relative h-14 w-14 overflow-hidden rounded-xl border bg-gray-50 shrink-0">
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            const el = e.currentTarget;
+            if (el.src.endsWith("/placeholder.png")) return;
+            el.src = "/placeholder.png";
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Local paths: next/image
+  return (
+    <div className="relative h-14 w-14 overflow-hidden rounded-xl border bg-gray-50 shrink-0">
+      <Image src={src} alt={alt} fill className="object-cover" sizes="56px" />
+    </div>
+  );
+}
 
 export default function SuccessClient() {
   const params = useSearchParams();
@@ -119,7 +166,9 @@ export default function SuccessClient() {
         });
       }
 
-      const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
+      const json: ApiResponse = await res
+        .json()
+        .catch(() => ({} as ApiResponse));
 
       if (!res.ok) {
         const msg =
@@ -145,7 +194,8 @@ export default function SuccessClient() {
                 (again as any)?.order ?? (again as any)?.data?.order;
               if (updated?.id) {
                 setOrder(updated);
-                if (FINAL_STATUSES.has((updated.status || "").toLowerCase())) break;
+                if (FINAL_STATUSES.has((updated.status || "").toLowerCase()))
+                  break;
               }
             }
           }
@@ -248,20 +298,27 @@ export default function SuccessClient() {
           </div>
 
           <ul className="divide-y rounded-xl border">
-            {order.items?.map((it) => (
-              <li
-                key={it.id}
-                className="p-4 flex items-center justify-between gap-4"
-              >
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{it.name}</div>
-                  <div className="text-sm opacity-70">Qty: {it.qty}</div>
-                </div>
-                <div className="font-semibold shrink-0">
-                  {moneyCents(it.totalPrice)}
-                </div>
-              </li>
-            ))}
+            {order.items?.map((it) => {
+              const img = getItemImageUrl(it);
+              return (
+                <li
+                  key={it.id}
+                  className="p-4 flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ItemThumb src={img} alt={it.name} />
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{it.name}</div>
+                      <div className="text-sm opacity-70">Qty: {it.qty}</div>
+                    </div>
+                  </div>
+
+                  <div className="font-semibold shrink-0">
+                    {moneyCents(it.totalPrice)}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="text-right font-bold">
