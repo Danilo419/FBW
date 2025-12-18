@@ -13,7 +13,6 @@ export const dynamic = "force-dynamic";
 
 /* ========================= IMPORTANT RULE =========================
  * ✅ MAX 2 FREE ITEMS PER ORDER (HARD CAP)
- * Mesmo que o cliente tenha qty 10, nunca pode receber > 2 produtos grátis.
  */
 const MAX_FREE_ITEMS_PER_ORDER = 2;
 
@@ -129,7 +128,6 @@ function optionsToRows(opts: Record<string, any> | null) {
   return Object.entries(opts)
     .filter(([k, v]) => {
       const key = k.toLowerCase();
-      // não repetimos name/number aqui (vamos mostrar em chips)
       if (key === "name" || key === "number") return false;
       if (key === "playername" || key === "playernumber") return false;
       if (key === "player_name" || key === "player_number") return false;
@@ -151,12 +149,13 @@ function pickPromo(totalQty: number): {
   groupSize: number;
   freePerGroup: number;
   shippingCents: number | null;
+  threshold: number; // minimum qty to be "in" that promo tier
 } {
   // Melhor tier primeiro
-  if (totalQty >= 5) return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0 };
-  if (totalQty >= 3) return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0 };
-  if (totalQty >= 2) return { kind: "B1G1", groupSize: 2, freePerGroup: 1, shippingCents: 500 };
-  return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null };
+  if (totalQty >= 5) return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0, threshold: 5 };
+  if (totalQty >= 3) return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0, threshold: 3 };
+  if (totalQty >= 2) return { kind: "B1G1", groupSize: 2, freePerGroup: 1, shippingCents: 500, threshold: 2 };
+  return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null, threshold: 0 };
 }
 
 function promoLabel(kind: PromoKind) {
@@ -164,6 +163,54 @@ function promoLabel(kind: PromoKind) {
   if (kind === "B2G3") return "Buy 2, Get 3";
   if (kind === "B3G5") return "Buy 3, Get 5";
   return null;
+}
+
+/** Mensagem do bloco de promoção (de acordo com o que pediste) */
+function promoBannerMessage(totalQty: number) {
+  // 0 ou 1 item: mostrar unlock do Buy 2 Get 3 (sem "(2+)")
+  if (totalQty <= 1) {
+    return {
+      title: "Promotion Preview",
+      message: `Add more items to unlock: Buy 2 Get 3`,
+      showPill: false,
+    };
+  }
+
+  // 2 itens: não mostrar buy1get1, mostrar mensagem "agora estás no buy2get3" e pedir para adicionar o grátis
+  if (totalQty === 2) {
+    return {
+      title: "Promotion Preview",
+      message:
+        "You are now in the Buy 2 Get 3 promotion and are eligible to receive 1 free product — add it to the cart!",
+      showPill: false,
+    };
+  }
+
+  // 3 itens: já está no buy2get3 (qualifica para 1 grátis) — podemos mostrar pill normal
+  if (totalQty === 3) {
+    return {
+      title: "Promotion Preview",
+      message: null as string | null,
+      showPill: true,
+    };
+  }
+
+  // 4 itens: não mostrar buy2get3, mostrar mensagem "agora estás no buy3get5" e falta mais 1 para ganhar +1 grátis
+  if (totalQty === 4) {
+    return {
+      title: "Promotion Preview",
+      message:
+        "You are now in the Buy 3 Get 5 promotion and are eligible to receive 1 more free product — add it to the cart!",
+      showPill: false,
+    };
+  }
+
+  // 5+ itens: pill normal (buy3get5)
+  return {
+    title: "Promotion Preview",
+    message: null as string | null,
+    showPill: true,
+  };
 }
 
 /* ------------------------------- types ------------------------------- */
@@ -265,10 +312,7 @@ export default async function CartPage() {
 
   const promo = pickPromo(totalQty);
 
-  // Quantos “grupos” existem pelo tier (apenas para mostrar info/ativar shipping)
   const promoGroupsRaw = promo.kind ? Math.floor(totalQty / promo.groupSize) : 0;
-
-  // Quantos itens grátis “teóricos” pelo tier
   const freeCountRaw = promo.kind ? promoGroupsRaw * promo.freePerGroup : 0;
 
   // ✅ HARD CAP: máximo 2 grátis por encomenda
@@ -287,20 +331,20 @@ export default async function CartPage() {
   const freeQtyByItemId = new Map<string, number>();
   let discountCents = 0;
 
-  // ✅ só aplicar até freeCount (já capado a 2)
   for (let i = 0; i < Math.min(freeCount, unitPool.length); i++) {
     const u = unitPool[i];
     discountCents += u.unitCents;
     freeQtyByItemId.set(u.itemId, (freeQtyByItemId.get(u.itemId) ?? 0) + 1);
   }
 
-  // Shipping: só aplicamos a regra se a promo estiver “ativa” (há pelo menos 1 grupo)
   const promoActive = promo.kind && promoGroupsRaw > 0;
   const shippingCents: number | null = promoActive ? promo.shippingCents : null;
 
   const totalPayableCents = subtotalCents - discountCents + (shippingCents ?? 0);
 
   const promoTitle = promoActive ? promoLabel(promo.kind) : null;
+
+  const banner = promoBannerMessage(totalQty);
 
   return (
     <div className="container-fw py-12">
@@ -310,14 +354,15 @@ export default async function CartPage() {
       <div className="mb-6 rounded-2xl border bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-semibold text-gray-900">Promotion Preview</div>
+            <div className="text-sm font-semibold text-gray-900">{banner.title}</div>
             <div className="text-sm text-gray-600">
               The free items are always the cheapest ones. Max{" "}
               <span className="font-semibold text-gray-900">{MAX_FREE_ITEMS_PER_ORDER}</span> free items per order.
             </div>
           </div>
 
-          {promoTitle ? (
+          {/* Mensagem custom (1 item / 2 itens / 4 itens) OU pill normal */}
+          {banner.showPill && promoTitle ? (
             <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
               <span className="font-semibold text-gray-900">{promoTitle}</span>
               <span className="text-gray-500">
@@ -339,8 +384,8 @@ export default async function CartPage() {
               </span>
             </div>
           ) : (
-            <div className="text-sm text-gray-500">
-              Add more items to unlock: <span className="font-semibold">Buy 1 Get 1</span> (2+)
+            <div className="text-sm text-gray-700 font-medium">
+              {banner.message ?? " "}
             </div>
           )}
         </div>
@@ -513,19 +558,18 @@ export default async function CartPage() {
               <span className="text-base font-extrabold">{formatMoney(totalPayableCents)}</span>
             </div>
 
+            {/* ✅ removido: "Promo groups in cart: X." */}
             {promoTitle ? (
               <div className="pt-3 text-xs text-gray-500">
                 Free items applied:{" "}
                 <span className="font-semibold text-gray-800">
                   {freeCount}/{MAX_FREE_ITEMS_PER_ORDER}
                 </span>{" "}
-                (always the cheapest ones). Promo groups in cart:{" "}
-                <span className="font-semibold text-gray-800">{promoGroupsRaw}</span>.
+                (always the cheapest ones).
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
-                Tip: Add 1 more item to unlock{" "}
-                <span className="font-semibold text-gray-800">Buy 1, Get 1</span>.
+                Add more items to unlock: <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
               </div>
             )}
           </div>
