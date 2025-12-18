@@ -142,12 +142,28 @@ function optionsToRows(opts: Record<string, any> | null) {
 
 type PromoKind = "B1G1" | "B2G3" | "B3G5" | null;
 
-function pickPromo(totalQty: number): { kind: PromoKind; groupSize: number; freePerGroup: number; shippingCents: number | null } {
-  // Aplicar o melhor tier possível (o "maior" primeiro)
+/**
+ * Regras finais:
+ * - 1 item: shipping €5 (500)
+ * - 2 itens (Buy 1 Get 1): shipping €5 (500)
+ * - 3+ itens (Buy 2 Get 3 / Buy 3 Get 5): shipping FREE (0)
+ */
+function pickPromo(totalQty: number): {
+  kind: PromoKind;
+  groupSize: number;
+  freePerGroup: number;
+  shippingCents: number;
+} {
+  // shipping base: €5 para 1 ou 2 itens
+  const baseShipping = totalQty >= 3 ? 0 : 500;
+
+  // aplicar o melhor tier possível (o "maior" primeiro)
   if (totalQty >= 5) return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0 };
   if (totalQty >= 3) return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0 };
   if (totalQty >= 2) return { kind: "B1G1", groupSize: 2, freePerGroup: 1, shippingCents: 500 };
-  return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null };
+
+  // 1 item (sem promo) mas shipping €5
+  return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: baseShipping };
 }
 
 function promoLabel(kind: PromoKind) {
@@ -281,10 +297,19 @@ export default async function CartPage() {
     freeQtyByItemId.set(u.itemId, (freeQtyByItemId.get(u.itemId) ?? 0) + 1);
   }
 
-  const shippingCents: number | null = promo.kind && promoGroups > 0 ? promo.shippingCents : null;
-  const totalPayableCents = subtotalCents - discountCents + (shippingCents ?? 0);
+  // ✅ Shipping agora é SEMPRE definido:
+  //  - 1 item: 500
+  //  - 2 itens: 500
+  //  - 3+ itens: 0
+  const shippingCents: number = promo.shippingCents;
+
+  const totalPayableCents = subtotalCents - discountCents + shippingCents;
 
   const promoTitle = promo.kind && promoGroups > 0 ? promoLabel(promo.kind) : null;
+
+  // Para UI: quando não há promo (1 item), ainda assim mostrar shipping €5
+  const showShippingLabel =
+    shippingCents === 0 ? "FREE" : formatMoney(shippingCents);
 
   return (
     <div className="container-fw py-12">
@@ -294,33 +319,34 @@ export default async function CartPage() {
       <div className="mb-6 rounded-2xl border bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-semibold text-gray-900">
-              Promotion Preview
-            </div>
-            <div className="text-sm text-gray-600">
-              The free items are always the cheapest ones.
-            </div>
+            <div className="text-sm font-semibold text-gray-900">Promotion Preview</div>
+            <div className="text-sm text-gray-600">The free items are always the cheapest ones.</div>
           </div>
 
           {promoTitle ? (
             <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
               <span className="font-semibold text-gray-900">{promoTitle}</span>
               <span className="text-gray-500">
-                • Free items: <span className="font-semibold text-gray-900">{freeCount}</span>
-                {promo.kind === "B1G1" ? (
+                • Free items:{" "}
+                <span className="font-semibold text-gray-900">{freeCount}</span>
+                {shippingCents === 0 ? (
                   <>
-                    {" "}• Shipping: <span className="font-semibold text-gray-900">€5</span>
+                    {" "}
+                    • Shipping: <span className="font-semibold text-gray-900">FREE</span>
                   </>
                 ) : (
                   <>
-                    {" "}• Shipping: <span className="font-semibold text-gray-900">FREE</span>
+                    {" "}
+                    • Shipping: <span className="font-semibold text-gray-900">€5</span>
                   </>
                 )}
               </span>
             </div>
           ) : (
             <div className="text-sm text-gray-500">
-              Add more items to unlock: <span className="font-semibold">Buy 1 Get 1</span> (2+)
+              Add 1 more item to unlock:{" "}
+              <span className="font-semibold">Buy 1 Get 1</span> (2+)
+              {" "}• Shipping: <span className="font-semibold text-gray-900">€5</span>
             </div>
           )}
         </div>
@@ -415,12 +441,10 @@ export default async function CartPage() {
                         Unit: {formatMoney(it.displayUnit)}
                       </div>
 
-                      {/* Total com promo */}
                       <div className="mt-0.5 text-base font-semibold">
                         {formatMoney(lineAfter)}
                       </div>
 
-                      {/* Antes (se mudou) */}
                       {freeQty > 0 && lineAfter !== lineBefore && (
                         <div className="mt-0.5 text-xs text-gray-500">
                           Before:{" "}
@@ -481,12 +505,10 @@ export default async function CartPage() {
 
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Shipping</span>
-              {shippingCents == null ? (
-                <span className="font-semibold text-gray-500">Calculated at checkout</span>
-              ) : shippingCents === 0 ? (
+              {shippingCents === 0 ? (
                 <span className="font-semibold text-green-700">FREE</span>
               ) : (
-                <span className="font-semibold">{formatMoney(shippingCents)}</span>
+                <span className="font-semibold">{showShippingLabel}</span>
               )}
             </div>
 
@@ -497,13 +519,14 @@ export default async function CartPage() {
 
             {promoTitle ? (
               <div className="pt-3 text-xs text-gray-500">
-                Free items applied: <span className="font-semibold text-gray-800">{freeCount}</span>{" "}
-                (always the cheapest ones). Groups:{" "}
+                Free items applied:{" "}
+                <span className="font-semibold text-gray-800">{freeCount}</span> (always the cheapest ones). Groups:{" "}
                 <span className="font-semibold text-gray-800">{promoGroups}</span>.
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
-                Tip: Add 1 more item to unlock <span className="font-semibold text-gray-800">Buy 1, Get 1</span>.
+                Tip: Add 1 more item to unlock{" "}
+                <span className="font-semibold text-gray-800">Buy 1, Get 1</span>. Shipping is €5 for 1–2 items.
               </div>
             )}
           </div>
