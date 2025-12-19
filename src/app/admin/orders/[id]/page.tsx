@@ -82,7 +82,8 @@ function extractShipping(order: any) {
 
     return {
       fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
-      email: g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
+      email:
+        g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
       phone: g("phone", "telephone", "ship_phone"),
       address1: g("address1", "addressLine1", "line1", "street", "ship_line1"),
       address2: g("address2", "addressLine2", "line2", "street2", "ship_line2"),
@@ -149,6 +150,73 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
+function normalizeStr(s: string | null) {
+  if (!s) return null;
+  const t = String(s).trim();
+  return t === "" ? null : t;
+}
+
+/**
+ * Try to extract personalization (name/number) from multiple possible places:
+ * - snapshotJson.personalization.{name,number}
+ * - snapshotJson fields (name/number/playerName/playerNumber/etc)
+ * - optionsJson / options fields (same)
+ */
+function extractPersonalization(snap: any, optionsObj: any) {
+  const snapObj = snap && typeof snap === "object" ? snap : {};
+  const optObj = optionsObj && typeof optionsObj === "object" ? optionsObj : {};
+
+  // 1) canonical structure
+  const p = snapObj?.personalization;
+  const fromCanonicalName =
+    p && typeof p === "object" ? normalizeStr(p?.name != null ? String(p?.name) : null) : null;
+  const fromCanonicalNumber =
+    p && typeof p === "object"
+      ? normalizeStr(p?.number != null ? String(p?.number) : null)
+      : null;
+
+  // 2) fallbacks in snapshot/options (common key variants)
+  const nameKeys = [
+    "personalizationName",
+    "personalisedName",
+    "customName",
+    "playerName",
+    "shirtName",
+    "printName",
+    "nameOnShirt",
+    "name_on_shirt",
+    "kitName",
+    "jerseyName",
+    "name",
+  ];
+  const numberKeys = [
+    "personalizationNumber",
+    "personalisedNumber",
+    "customNumber",
+    "playerNumber",
+    "shirtNumber",
+    "printNumber",
+    "numberOnShirt",
+    "number_on_shirt",
+    "kitNumber",
+    "jerseyNumber",
+    "number",
+  ];
+
+  const snapName = normalizeStr(pickStr(snapObj, nameKeys));
+  const snapNumber = normalizeStr(pickStr(snapObj, numberKeys));
+
+  const optName = normalizeStr(pickStr(optObj, nameKeys));
+  const optNumber = normalizeStr(pickStr(optObj, numberKeys));
+
+  const name = fromCanonicalName ?? snapName ?? optName ?? null;
+  const number = fromCanonicalNumber ?? snapNumber ?? optNumber ?? null;
+
+  if (!name && !number) return null;
+
+  return { name, number };
+}
+
 /* ========================= Data ========================= */
 
 async function fetchOrder(id: string) {
@@ -193,19 +261,8 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.selected) ||
         {};
 
-      const personalization =
-        snap?.personalization && typeof snap.personalization === "object"
-          ? {
-              name:
-                snap.personalization.name != null
-                  ? String(snap.personalization.name)
-                  : null,
-              number:
-                snap.personalization.number != null
-                  ? String(snap.personalization.number)
-                  : null,
-            }
-          : null;
+      // ✅ NEW: robust personalization extraction (name/number)
+      const personalization = extractPersonalization(snap, optionsObj);
 
       const size =
         (optionsObj as any).size ??
@@ -232,8 +289,36 @@ async function fetchOrder(id: string) {
         it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
       );
 
+      // We'll show name/number in its own "Personalization" row,
+      // so we avoid duplicating it in the generic options list.
+      const PERSONAL_OPTION_KEYS = new Set([
+        "personalizationName",
+        "personalisedName",
+        "customName",
+        "playerName",
+        "shirtName",
+        "printName",
+        "nameOnShirt",
+        "name_on_shirt",
+        "kitName",
+        "jerseyName",
+        "name",
+        "personalizationNumber",
+        "personalisedNumber",
+        "customNumber",
+        "playerNumber",
+        "shirtNumber",
+        "printNumber",
+        "numberOnShirt",
+        "number_on_shirt",
+        "kitNumber",
+        "jerseyNumber",
+        "number",
+      ]);
+
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
+        if (PERSONAL_OPTION_KEYS.has(k)) continue;
         if (v == null || v === "") continue;
         if (Array.isArray(v)) options[k] = v.join(", ");
         else if (typeof v === "object")
@@ -296,8 +381,7 @@ export default async function AdminOrderViewPage({
   const { id } = await params;
   const { order, error } = await fetchOrder(id);
 
-  const customerEmail =
-    order?.shipping?.email ?? order?.user?.email ?? null;
+  const customerEmail = order?.shipping?.email ?? order?.user?.email ?? null;
 
   return (
     <div className="space-y-6">
@@ -654,9 +738,7 @@ function ItemRow({
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-medium leading-tight truncate">
-              {item.name}
-            </div>
+            <div className="font-medium leading-tight truncate">{item.name}</div>
             <div className="text-xs text-gray-500">
               Size: {item.size || "—"} • Qty: {item.qty}
             </div>
