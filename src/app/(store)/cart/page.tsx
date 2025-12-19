@@ -26,6 +26,21 @@ function normalizeUrl(u: string) {
   return u;
 }
 
+/** ✅ keep your original formatMoney, only move "€" to the right in THIS FILE */
+function formatMoneyRight(cents: number) {
+  const s = formatMoney(cents);
+
+  // "-€12.34" -> "-12.34€"
+  let m = s.match(/^-€\s*(.+)$/);
+  if (m) return `-${m[1]}€`;
+
+  // "€12.34" -> "12.34€"
+  m = s.match(/^€\s*(.+)$/);
+  if (m) return `${m[1]}€`;
+
+  return s;
+}
+
 /**
  * imageUrls pode vir como:
  * - string URL
@@ -153,8 +168,10 @@ function pickPromo(totalQty: number): {
 } {
   // ✅ SEM "Buy 1 Get 1"
   // Melhor tier primeiro
-  if (totalQty >= 5) return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0, threshold: 5 };
-  if (totalQty >= 3) return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0, threshold: 3 };
+  if (totalQty >= 5)
+    return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0, threshold: 5 };
+  if (totalQty >= 3)
+    return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0, threshold: 3 };
   return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null, threshold: 0 };
 }
 
@@ -341,11 +358,9 @@ export default async function CartPage() {
   // - Com 1 produto no carrinho: aplicar €5 de shipping
   // - Com 2 produtos: NÃO há grátis (grátis é o 3º). Shipping mantém-se €5 até desbloquear (3+)
   // - Com 3+ (promo ativa): shipping FREE
-  const baseShippingCents =
-    totalQty === 1 || totalQty === 2 ? 500 : 0;
+  const baseShippingCents = totalQty === 1 || totalQty === 2 ? 500 : 0;
 
-  const shippingCents: number =
-    promoActive ? (promo.shippingCents ?? 0) : baseShippingCents;
+  const shippingCents: number = promoActive ? (promo.shippingCents ?? 0) : baseShippingCents;
 
   const totalPayableCents = subtotalCents - discountCents + shippingCents;
 
@@ -364,7 +379,10 @@ export default async function CartPage() {
             <div className="text-sm font-semibold text-gray-900">{banner.title}</div>
             <div className="text-sm text-gray-600">
               The free items are always the cheapest ones. Max{" "}
-              <span className="font-semibold text-gray-900">{MAX_FREE_ITEMS_PER_ORDER}</span> free items per order.
+              <span className="font-semibold text-gray-900">
+                {MAX_FREE_ITEMS_PER_ORDER}
+              </span>{" "}
+              free items per order.
             </div>
           </div>
 
@@ -376,20 +394,17 @@ export default async function CartPage() {
                 • Free items:{" "}
                 <span className="font-semibold text-gray-900">
                   {freeCount}/{MAX_FREE_ITEMS_PER_ORDER}
-                </span>
-                {" "}
+                </span>{" "}
                 • Shipping:{" "}
                 {shippingCents === 0 ? (
                   <span className="font-semibold text-gray-900">FREE</span>
                 ) : (
-                  <span className="font-semibold text-gray-900">€5</span>
+                  <span className="font-semibold text-gray-900">5€</span>
                 )}
               </span>
             </div>
           ) : (
-            <div className="text-sm text-gray-700 font-medium">
-              {banner.message ?? " "}
-            </div>
+            <div className="text-sm text-gray-700 font-medium">{banner.message ?? " "}</div>
           )}
         </div>
       </div>
@@ -438,9 +453,7 @@ export default async function CartPage() {
                       </h3>
 
                       {showTeam && (
-                        <div className="mt-0.5 text-sm text-gray-600">
-                          {it.product.team}
-                        </div>
+                        <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>
                       )}
 
                       {(it.name || it.number || freeQty > 0) && (
@@ -480,17 +493,17 @@ export default async function CartPage() {
 
                     <div className="shrink-0 text-right">
                       <div className="text-sm text-gray-500">
-                        Unit: {formatMoney(it.displayUnit)}
+                        Unit: {formatMoneyRight(it.displayUnit)}
                       </div>
 
                       <div className="mt-0.5 text-base font-semibold">
-                        {formatMoney(lineAfter)}
+                        {formatMoneyRight(lineAfter)}
                       </div>
 
                       {freeQty > 0 && lineAfter !== lineBefore && (
                         <div className="mt-0.5 text-xs text-gray-500">
                           Before:{" "}
-                          <span className="line-through">{formatMoney(lineBefore)}</span>
+                          <span className="line-through">{formatMoneyRight(lineBefore)}</span>
                         </div>
                       )}
                     </div>
@@ -533,15 +546,16 @@ export default async function CartPage() {
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Subtotal</span>
-              <span className="font-semibold">{formatMoney(subtotalCents)}</span>
+              <span className="font-semibold">{formatMoneyRight(subtotalCents)}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-gray-600">
-                Discount {promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
+                Discount{" "}
+                {promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
               </span>
               <span className={`font-semibold ${discountCents > 0 ? "text-green-700" : ""}`}>
-                -{formatMoney(discountCents)}
+                -{formatMoneyRight(discountCents)}
               </span>
             </div>
 
@@ -550,13 +564,15 @@ export default async function CartPage() {
               {shippingCents === 0 ? (
                 <span className="font-semibold text-green-700">FREE</span>
               ) : (
-                <span className="font-semibold">{formatMoney(shippingCents)}</span>
+                <span className="font-semibold">{formatMoneyRight(shippingCents)}</span>
               )}
             </div>
 
             <div className="pt-3 border-t flex items-center justify-between">
               <span className="text-base font-extrabold">Total</span>
-              <span className="text-base font-extrabold">{formatMoney(totalPayableCents)}</span>
+              <span className="text-base font-extrabold">
+                {formatMoneyRight(totalPayableCents)}
+              </span>
             </div>
 
             {promoTitle ? (
