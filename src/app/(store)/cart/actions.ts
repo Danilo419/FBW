@@ -34,6 +34,20 @@ function sameJson(a: unknown, b: unknown) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function sanitizeName(v: unknown) {
+  const s = (v == null ? '' : String(v)).trim();
+  if (!s) return null;
+  // igual ao teu UI: uppercase + max 14 (no UI tu cortas a 14)
+  const up = s.toUpperCase().slice(0, 14);
+  return up || null;
+}
+function sanitizeNumber(v: unknown) {
+  const s = (v == null ? '' : String(v)).trim();
+  if (!s) return null;
+  const only = s.replace(/\D/g, '').slice(0, 2);
+  return only || null;
+}
+
 async function getOrCreateCart() {
   const jar = await cookies(); // ✅ no teu setup é Promise<ReadonlyRequestCookies>
 
@@ -79,8 +93,31 @@ export async function addToCartAction(raw: AddToCartInput) {
     const cart = await getOrCreateCart();
 
     const unitPrice = await getBaseUnitPrice(input.productId);
+
+    // ✅ normalizar options
     const optionsJson = normalizeOptions(input.options ?? undefined);
-    const personalization = input.personalization ?? null;
+
+    // ✅ normalizar personalization
+    const inPers = input.personalization ?? null;
+    const cleanName = sanitizeName(inPers?.name);
+    const cleanNumber = sanitizeNumber(inPers?.number);
+    const personalization =
+      cleanName || cleanNumber || inPers?.playerId
+        ? {
+            name: cleanName,
+            number: cleanNumber,
+            playerId: inPers?.playerId ?? null,
+          }
+        : null;
+
+    /**
+     * ✅ IMPORTANTÍSSIMO:
+     * Guardar name/number também dentro de optionsJson (porque o teu DB estava só a guardar options).
+     * Assim, MESMO que o checkout copie só optionsJson para o OrderItem, o admin vai ver.
+     */
+    const optionsJsonWithPersonalization: Record<string, any> = { ...optionsJson };
+    if (cleanName) optionsJsonWithPersonalization.custName = cleanName;
+    if (cleanNumber) optionsJsonWithPersonalization.custNumber = cleanNumber;
 
     // procurar linhas iguais (mesmo produto + mesmas opções/personalização)
     const siblings = await prisma.cartItem.findMany({
@@ -88,7 +125,7 @@ export async function addToCartAction(raw: AddToCartInput) {
       select: {
         id: true,
         qty: true,
-        optionsJson: true,     // ajusta se no schema o nome for diferente
+        optionsJson: true, // ajusta se no schema o nome for diferente
         personalization: true, // idem
       },
       orderBy: { createdAt: 'asc' }, // garante ordem determinística
@@ -96,7 +133,7 @@ export async function addToCartAction(raw: AddToCartInput) {
 
     const existing = siblings.find(
       (it) =>
-        sameJson(it.optionsJson ?? {}, optionsJson) &&
+        sameJson(it.optionsJson ?? {}, optionsJsonWithPersonalization) &&
         sameJson(it.personalization ?? null, personalization)
     );
 
@@ -108,7 +145,7 @@ export async function addToCartAction(raw: AddToCartInput) {
           qty: newQty,
           unitPrice, // base
           totalPrice: unitPrice * newQty,
-          optionsJson: optionsJson as any,
+          optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
         },
       });
@@ -120,11 +157,13 @@ export async function addToCartAction(raw: AddToCartInput) {
           qty: input.qty,
           unitPrice, // base
           totalPrice: unitPrice * input.qty,
-          optionsJson: optionsJson as any,
+          optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
         },
       });
     }
+
+    revalidatePath('/cart');
 
     const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
     return {
@@ -203,7 +242,7 @@ export async function getCartSummary() {
 
   return {
     count: rawItems.length, // nº de linhas do carrinho (como antes)
-    ...totals,              // subtotal, discount, shipping, total, promotion
+    ...totals, // subtotal, discount, shipping, total, promotion
   };
 }
 
