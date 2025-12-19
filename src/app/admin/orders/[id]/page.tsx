@@ -51,12 +51,6 @@ function pickStr(o: any, keys: string[]): string | null {
   return null;
 }
 
-function normalizeStr(s: any) {
-  if (s == null) return null;
-  const t = String(s).trim();
-  return t === "" ? null : t;
-}
-
 function extractShipping(order: any) {
   try {
     const canonical = {
@@ -132,6 +126,8 @@ function extractTracking(order: any) {
   const trackingUrl =
     pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
 
+  // Your admin action uses Order.status as the shipping flow
+  // We map it back to the select values the form sends.
   const status = String(order?.status ?? "pending");
   const shippingStatus =
     status === "delivered"
@@ -154,106 +150,89 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
-/**
- * ✅ FIX REAL:
- * In your project, name/number might be saved in MANY places:
- * - item.snapshotJson.personalization (object OR JSON string)
- * - item.snapshotJson fields (playerName/playerNumber/etc)
- * - item.snapshotJson.optionsJson / options / selected
- * - item fields directly (it.playerName, it.customName, it.metaJson, etc.)
- * - item.optionsJson (if your schema has it)
- *
- * This function checks ALL of them.
- */
-function extractPersonalizationFromEverywhere(it: any, snapRaw: any, optionsObj: any) {
-  const nameKeys = [
-    "personalizationName",
-    "personalisedName",
-    "customName",
-    "playerName",
-    "shirtName",
-    "printName",
-    "nameOnShirt",
-    "name_on_shirt",
-    "kitName",
-    "jerseyName",
-    "name",
-  ];
-  const numberKeys = [
-    "personalizationNumber",
-    "personalisedNumber",
-    "customNumber",
-    "playerNumber",
-    "shirtNumber",
-    "printNumber",
-    "numberOnShirt",
-    "number_on_shirt",
-    "kitNumber",
-    "jerseyNumber",
-    "number",
-  ];
+/** --- Personalization extraction (robust) --- */
+function extractPersonalization(it: any, snap: any, optionsObj: any) {
+  // 1) direct fields on item (some schemas store these)
+  const directName =
+    pickStr(it, [
+      "personalizationName",
+      "playerName",
+      "custName",
+      "nameOnShirt",
+      "shirtName",
+      "customName",
+      "name",
+    ]) ?? null;
 
-  const snap = snapRaw && typeof snapRaw === "object" ? snapRaw : {};
+  const directNumber =
+    pickStr(it, [
+      "personalizationNumber",
+      "playerNumber",
+      "custNumber",
+      "numberOnShirt",
+      "shirtNumber",
+      "customNumber",
+      "number",
+    ]) ?? null;
 
-  // 1) canonical personalization (object or JSON string)
-  let p: any = snap?.personalization ?? snap?.personalisation ?? null;
-  if (typeof p === "string") {
-    const parsed = safeParseJSON(p);
-    p = Object.keys(parsed).length ? parsed : null;
-  }
-  const canonicalName =
-    p && typeof p === "object" ? normalizeStr(p?.name ?? p?.playerName ?? null) : null;
-  const canonicalNumber =
-    p && typeof p === "object"
-      ? normalizeStr(p?.number ?? p?.playerNumber ?? null)
-      : null;
-
-  // 2) snapshot direct fields
-  const snapName = normalizeStr(pickStr(snap, nameKeys));
-  const snapNumber = normalizeStr(pickStr(snap, numberKeys));
-
-  // 3) options object (already parsed from snapshot.optionsJson / options / selected)
-  const optName = normalizeStr(pickStr(optionsObj, nameKeys));
-  const optNumber = normalizeStr(pickStr(optionsObj, numberKeys));
-
-  // 4) item direct fields (very common when you store columns on OrderItem)
-  const itName = normalizeStr(pickStr(it, nameKeys));
-  const itNumber = normalizeStr(pickStr(it, numberKeys));
-
-  // 5) item meta JSON fields (if you store "metaJson", "dataJson", etc.)
-  const meta =
-    safeParseJSON(it?.metaJson) ||
-    safeParseJSON(it?.metadata) ||
-    safeParseJSON(it?.dataJson) ||
-    safeParseJSON(it?.json) ||
-    {};
-  const metaName = normalizeStr(pickStr(meta, nameKeys));
-  const metaNumber = normalizeStr(pickStr(meta, numberKeys));
-
-  // 6) item.optionsJson (if exists)
-  const itOptions = safeParseJSON(it?.optionsJson) || safeParseJSON(it?.options) || {};
-  const itOptName = normalizeStr(pickStr(itOptions, nameKeys));
-  const itOptNumber = normalizeStr(pickStr(itOptions, numberKeys));
-
-  const name =
-    canonicalName ??
-    snapName ??
-    optName ??
-    itName ??
-    metaName ??
-    itOptName ??
+  // 2) personalization JSON on item
+  const itPersJ = safeParseJSON(it?.personalizationJson);
+  const itPersName =
+    pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
+  const itPersNumber =
+    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
     null;
 
-  const number =
-    canonicalNumber ??
-    snapNumber ??
-    optNumber ??
-    itNumber ??
-    metaNumber ??
-    itOptNumber ??
+  // 3) snapshot.personalization / snapshot.personalizationJson / snapshot fields
+  const snapPers = snap?.personalization && typeof snap.personalization === "object"
+    ? snap.personalization
+    : null;
+  const snapPersJ = safeParseJSON(snap?.personalizationJson);
+
+  const snapName =
+    (snapPers ? pickStr(snapPers, ["name", "playerName", "customName"]) : null) ??
+    pickStr(snapPersJ, ["name", "playerName", "customName"]) ??
+    pickStr(snap, ["custName", "customerName", "playerName", "nameOnShirt"]) ??
     null;
+
+  const snapNumber =
+    (snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber"]) : null) ??
+    pickStr(snapPersJ, ["number", "playerNumber", "customNumber"]) ??
+    pickStr(snap, ["custNumber", "customerNumber", "playerNumber", "numberOnShirt"]) ??
+    null;
+
+  // 4) sometimes stored inside options (rare, but happens)
+  const optName =
+    pickStr(optionsObj, [
+      "name",
+      "custName",
+      "player_name",
+      "playerName",
+      "shirt_name",
+      "shirtName",
+      "nameOnShirt",
+    ]) ?? null;
+
+  const optNumber =
+    pickStr(optionsObj, [
+      "number",
+      "custNumber",
+      "player_number",
+      "playerNumber",
+      "shirt_number",
+      "shirtNumber",
+      "numberOnShirt",
+    ]) ?? null;
+
+  const name = (directName ?? itPersName ?? snapName ?? optName)?.trim() || null;
+
+  // keep only digits for number, and trim
+  const numRaw = (directNumber ?? itPersNumber ?? snapNumber ?? optNumber)?.trim() || "";
+  const onlyDigits = numRaw.replace(/\D/g, "");
+  const number = onlyDigits ? onlyDigits : null;
 
   if (!name && !number) return null;
+
   return { name, number };
 }
 
@@ -268,6 +247,7 @@ async function fetchOrder(id: string) {
         items: {
           orderBy: { id: "asc" },
           include: {
+            // ✅ schema uses imageUrls (not images)
             product: {
               select: { id: true, slug: true, imageUrls: true, name: true },
             },
@@ -298,13 +278,10 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.optionsJson) ||
         safeParseJSON(snap?.options) ||
         safeParseJSON(snap?.selected) ||
-        // ✅ also try item.optionsJson (some builds store it here, not in snapshot)
-        safeParseJSON(it?.optionsJson) ||
-        safeParseJSON(it?.options) ||
         {};
 
-      // ✅ FIX: read personalization from item + snapshot + options + metaJson
-      const personalization = extractPersonalizationFromEverywhere(it, snap, optionsObj);
+      // ✅ FIX: extract personalization from multiple possible places
+      const personalization = extractPersonalization(it, snap, optionsObj);
 
       const size =
         (optionsObj as any).size ??
@@ -331,36 +308,8 @@ async function fetchOrder(id: string) {
         it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
       );
 
-      // We'll show name/number in its own "Personalization" row,
-      // so we avoid duplicating it in the generic options list.
-      const PERSONAL_OPTION_KEYS = new Set([
-        "personalizationName",
-        "personalisedName",
-        "customName",
-        "playerName",
-        "shirtName",
-        "printName",
-        "nameOnShirt",
-        "name_on_shirt",
-        "kitName",
-        "jerseyName",
-        "name",
-        "personalizationNumber",
-        "personalisedNumber",
-        "customNumber",
-        "playerNumber",
-        "shirtNumber",
-        "printNumber",
-        "numberOnShirt",
-        "number_on_shirt",
-        "kitNumber",
-        "jerseyNumber",
-        "number",
-      ]);
-
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
-        if (PERSONAL_OPTION_KEYS.has(k)) continue;
         if (v == null || v === "") continue;
         if (Array.isArray(v)) options[k] = v.join(", ");
         else if (typeof v === "object")
@@ -417,6 +366,7 @@ async function fetchOrder(id: string) {
 export default async function AdminOrderViewPage({
   params,
 }: {
+  // ✅ Next 15: params is a Promise
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -714,6 +664,7 @@ function CustomerBlock({
   );
 }
 
+// ⬇️ Shipping address WITHOUT Name/Email/Phone
 function AddressBlock(props: {
   address1?: string | null;
   address2?: string | null;
@@ -775,13 +726,10 @@ function ItemRow({
           className="h-full w-full object-contain"
         />
       </div>
-
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-medium leading-tight truncate">
-              {item.name}
-            </div>
+            <div className="font-medium leading-tight truncate">{item.name}</div>
             <div className="text-xs text-gray-500">
               Size: {item.size || "—"} • Qty: {item.qty}
             </div>
