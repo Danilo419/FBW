@@ -142,7 +142,7 @@ function optionsToRows(opts: Record<string, any> | null) {
 
 /* -------------------------- promo (Buy X Get Y) -------------------------- */
 
-type PromoKind = "B1G1" | "B2G3" | "B3G5" | null;
+type PromoKind = "B2G3" | "B3G5" | null;
 
 function pickPromo(totalQty: number): {
   kind: PromoKind;
@@ -151,15 +151,14 @@ function pickPromo(totalQty: number): {
   shippingCents: number | null;
   threshold: number; // minimum qty to be "in" that promo tier
 } {
+  // ✅ SEM "Buy 1 Get 1"
   // Melhor tier primeiro
   if (totalQty >= 5) return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0, threshold: 5 };
   if (totalQty >= 3) return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0, threshold: 3 };
-  if (totalQty >= 2) return { kind: "B1G1", groupSize: 2, freePerGroup: 1, shippingCents: 500, threshold: 2 };
   return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null, threshold: 0 };
 }
 
 function promoLabel(kind: PromoKind) {
-  if (kind === "B1G1") return "Buy 1, Get 1";
   if (kind === "B2G3") return "Buy 2, Get 3";
   if (kind === "B3G5") return "Buy 3, Get 5";
   return null;
@@ -167,7 +166,7 @@ function promoLabel(kind: PromoKind) {
 
 /** Mensagem do bloco de promoção (de acordo com o que pediste) */
 function promoBannerMessage(totalQty: number) {
-  // 0 ou 1 item: mostrar unlock do Buy 2 Get 3 (sem "(2+)")
+  // 0 ou 1 item: mostrar unlock do Buy 2 Get 3
   if (totalQty <= 1) {
     return {
       title: "Promotion Preview",
@@ -176,12 +175,11 @@ function promoBannerMessage(totalQty: number) {
     };
   }
 
-  // 2 itens: não mostrar buy1get1, mostrar mensagem "agora estás no buy2get3" e pedir para adicionar o grátis
+  // ✅ 2 itens: NÃO há item grátis (grátis é o 3º). Logo: "falta 1" e NÃO "já és elegível".
   if (totalQty === 2) {
     return {
       title: "Promotion Preview",
-      message:
-        "You are now in the Buy 2 Get 3 promotion and are eligible to receive 1 free product — add it to the cart!",
+      message: "Add 1 more item to unlock Buy 2 Get 3 and receive 1 free product.",
       showPill: false,
     };
   }
@@ -195,12 +193,12 @@ function promoBannerMessage(totalQty: number) {
     };
   }
 
-  // 4 itens: não mostrar buy2get3, mostrar mensagem "agora estás no buy3get5" e falta mais 1 para ganhar +1 grátis
+  // 4 itens: mostrar preview do buy3get5 (falta 1 para ganhar +1 grátis)
   if (totalQty === 4) {
     return {
       title: "Promotion Preview",
       message:
-        "You are now in the Buy 3 Get 5 promotion and are eligible to receive 1 more free product — add it to the cart!",
+        "You are now in the Buy 3 Get 5 promotion and are eligible to receive 1 more free product — add 1 more item to the cart!",
       showPill: false,
     };
   }
@@ -337,10 +335,19 @@ export default async function CartPage() {
     freeQtyByItemId.set(u.itemId, (freeQtyByItemId.get(u.itemId) ?? 0) + 1);
   }
 
-  const promoActive = promo.kind && promoGroupsRaw > 0;
-  const shippingCents: number | null = promoActive ? promo.shippingCents : null;
+  const promoActive = !!(promo.kind && promoGroupsRaw > 0);
 
-  const totalPayableCents = subtotalCents - discountCents + (shippingCents ?? 0);
+  // ✅ Shipping rules (como pediste):
+  // - Com 1 produto no carrinho: aplicar €5 de shipping
+  // - Com 2 produtos: NÃO há grátis (grátis é o 3º). Shipping mantém-se €5 até desbloquear (3+)
+  // - Com 3+ (promo ativa): shipping FREE
+  const baseShippingCents =
+    totalQty === 1 || totalQty === 2 ? 500 : 0;
+
+  const shippingCents: number =
+    promoActive ? (promo.shippingCents ?? 0) : baseShippingCents;
+
+  const totalPayableCents = subtotalCents - discountCents + shippingCents;
 
   const promoTitle = promoActive ? promoLabel(promo.kind) : null;
 
@@ -370,16 +377,12 @@ export default async function CartPage() {
                 <span className="font-semibold text-gray-900">
                   {freeCount}/{MAX_FREE_ITEMS_PER_ORDER}
                 </span>
-                {promo.kind === "B1G1" ? (
-                  <>
-                    {" "}
-                    • Shipping: <span className="font-semibold text-gray-900">€5</span>
-                  </>
+                {" "}
+                • Shipping:{" "}
+                {shippingCents === 0 ? (
+                  <span className="font-semibold text-gray-900">FREE</span>
                 ) : (
-                  <>
-                    {" "}
-                    • Shipping: <span className="font-semibold text-gray-900">FREE</span>
-                  </>
+                  <span className="font-semibold text-gray-900">€5</span>
                 )}
               </span>
             </div>
@@ -544,9 +547,7 @@ export default async function CartPage() {
 
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Shipping</span>
-              {shippingCents == null ? (
-                <span className="font-semibold text-gray-500">Calculated at checkout</span>
-              ) : shippingCents === 0 ? (
+              {shippingCents === 0 ? (
                 <span className="font-semibold text-green-700">FREE</span>
               ) : (
                 <span className="font-semibold">{formatMoney(shippingCents)}</span>
@@ -558,7 +559,6 @@ export default async function CartPage() {
               <span className="text-base font-extrabold">{formatMoney(totalPayableCents)}</span>
             </div>
 
-            {/* ✅ removido: "Promo groups in cart: X." */}
             {promoTitle ? (
               <div className="pt-3 text-xs text-gray-500">
                 Free items applied:{" "}
@@ -569,7 +569,8 @@ export default async function CartPage() {
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
-                Add more items to unlock: <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
+                Add more items to unlock:{" "}
+                <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
               </div>
             )}
           </div>
