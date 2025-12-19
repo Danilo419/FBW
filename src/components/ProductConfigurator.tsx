@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
@@ -117,6 +117,26 @@ type FlyState = {
   to: FlyRect;
 };
 
+/* ====================== Unicode helpers ====================== */
+/**
+ * ✅ Mantém letras com acentos (Unicode), espaços e . ' -
+ * - remove números/símbolos (para o nome)
+ * - colapsa espaços
+ * - uppercase
+ * - corta a 14 (igual ao teu comportamento anterior)
+ */
+function sanitizeNameUnicode(input: string, maxLen = 14) {
+  return input
+    .trim()
+    .toUpperCase()
+    .replace(/[^\p{L} .'-]/gu, "") // ✅ letras Unicode (inclui Ç, Ã, Á, etc)
+    .replace(/\s+/g, " ")
+    .slice(0, maxLen);
+}
+function sanitizeNumber(input: string, maxLen = 2) {
+  return input.replace(/\D/g, "").slice(0, maxLen);
+}
+
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
@@ -229,7 +249,9 @@ export default function ProductConfigurator({ product }: Props) {
   }, [sizes, selectedSize]);
 
   /* ---------- Groups ---------- */
-  const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
+  const customizationGroupFromDb = product.optionGroups.find(
+    (g) => g.key === "customization"
+  );
 
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
@@ -270,7 +292,9 @@ export default function ProductConfigurator({ product }: Props) {
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
-      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+      : original.values.filter(
+          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
+        );
 
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
@@ -355,12 +379,9 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize ---------- */
-  const safeName = useMemo(
-    () => custName.toUpperCase().replace(/[^A-ZÀ-ÖØ-ÝĀ-ſ .'-]/g, "").slice(0, 14),
-    [custName]
-  );
-  const safeNumber = useMemo(() => custNumber.replace(/\D/g, "").slice(0, 2), [custNumber]);
+  /* ---------- Sanitize (✅ supports accents) ---------- */
+  const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
+  const safeNumber = useMemo(() => sanitizeNumber(custNumber, 2), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
@@ -425,12 +446,22 @@ export default function ProductConfigurator({ product }: Props) {
     // normalize //...
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
+    const from: FlyRect = {
+      left: start.left,
+      top: start.top,
+      width: start.width,
+      height: start.height,
+    };
     // target as a small "square" around cart center (looks nicer than shrinking into 0)
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
     const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height))); // 18–34px
-    const to: FlyRect = { left: endCx - targetSize / 2, top: endCy - targetSize / 2, width: targetSize, height: targetSize };
+    const to: FlyRect = {
+      left: endCx - targetSize / 2,
+      top: endCy - targetSize / 2,
+      width: targetSize,
+      height: targetSize,
+    };
 
     flyKeyRef.current += 1;
     setFly({ key: flyKeyRef.current, src, from, to });
@@ -447,7 +478,8 @@ export default function ProductConfigurator({ product }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images.length]);
 
   /* ---------- Add to cart ---------- */
   function addToCart() {
@@ -886,7 +918,9 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
                 <div className="text-sm">
                   <div className="font-semibold">Item added to cart</div>
-                  <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
+                  <div className="text-gray-600">
+                    You can keep shopping or proceed to checkout.
+                  </div>
                 </div>
                 <button
                   className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
