@@ -64,6 +64,20 @@ export type ShippedEmailData = {
   trackingUrl?: string;
 };
 
+/**
+ * ✅ NEW: generic fulfillment/tracking update (admin "Save" -> email customer)
+ * - send when shippingStatus or tracking changes
+ * - works even without trackingUrl
+ */
+export type FulfillmentUpdateEmailData = {
+  to: string;
+  orderId: string;
+  shippingStatus: string; // PROCESSING | SHIPPED | DELIVERED | ...
+  trackingCode?: string | null;
+  trackingUrl?: string | null;
+  customerName?: string | null;
+};
+
 /* =========================================================
    Helpers
 ========================================================= */
@@ -134,6 +148,15 @@ function wrapEmailHtml(title: string, bodyHtml: string) {
     </div>
   </div>
   `;
+}
+
+function prettyStatus(status: string) {
+  const s = (status || "").trim().toUpperCase();
+  if (!s) return "Updated";
+  if (s === "PROCESSING") return "Processing";
+  if (s === "SHIPPED") return "Shipped";
+  if (s === "DELIVERED") return "Delivered";
+  return status;
 }
 
 /* =========================================================
@@ -252,6 +275,79 @@ export async function sendOrderShippedEmail(data: ShippedEmailData) {
     from: EMAIL_FROM,
     to: data.to,
     subject: `${STORE_NAME} — Shipped (#${data.orderId})`,
+    html,
+  });
+
+  return { ok: true as const };
+}
+
+/**
+ * ✅ NEW: send a fulfillment/tracking update email (admin panel)
+ * Use this after you save "Shipping Status" / "Tracking Code" / "Tracking URL".
+ */
+export async function sendFulfillmentUpdateEmail(data: FulfillmentUpdateEmailData) {
+  const resend = await getResendClient();
+  if (!resend) return { ok: false, skipped: true as const };
+
+  const statusLabel = prettyStatus(data.shippingStatus);
+  const title = `Order update: ${statusLabel}`;
+  const greeting = `Hi ${escapeHtml(safeName(data.customerName))},`;
+
+  const codeBlock = data.trackingCode
+    ? `
+      <div style="margin-top:12px; padding:12px; border:1px solid #eee; border-radius:12px;">
+        <div style="font-weight:800;">Tracking code</div>
+        <div style="margin-top:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px;">
+          ${escapeHtml(data.trackingCode)}
+        </div>
+      </div>
+    `
+    : `
+      <div style="margin-top:12px; padding:12px; border:1px solid #eee; border-radius:12px; color:#666;">
+        <div style="font-weight:800; color:#111;">Tracking code</div>
+        <div style="margin-top:6px;">Not available yet.</div>
+      </div>
+    `;
+
+  const trackButton = data.trackingUrl
+    ? `
+      <div style="margin-top:12px;">
+        <a href="${escapeHtml(data.trackingUrl)}"
+           style="display:inline-block; background:#2998ff; color:#fff; text-decoration:none; padding:10px 14px; border-radius:12px; font-weight:800;">
+          Track your order
+        </a>
+      </div>
+    `
+    : "";
+
+  const body = `
+    <div style="font-size:14px; color:#111; line-height:1.6;">
+      <div style="font-size:16px; font-weight:700;">${greeting}</div>
+
+      <div style="margin-top:8px;">
+        Your order <strong>#${escapeHtml(data.orderId)}</strong> has been updated.
+      </div>
+
+      <div style="margin-top:14px; padding:12px; border:1px solid #eee; border-radius:12px;">
+        <div style="font-weight:800;">Current status</div>
+        <div style="margin-top:6px; font-weight:900;">${escapeHtml(statusLabel)}</div>
+      </div>
+
+      ${codeBlock}
+      ${trackButton}
+
+      <div style="margin-top:16px; color:#666; font-size:12px;">
+        This email was sent automatically after a fulfillment update in our system.
+      </div>
+    </div>
+  `;
+
+  const html = wrapEmailHtml(title, body);
+
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    to: data.to,
+    subject: `${STORE_NAME} — Order update (#${data.orderId}): ${statusLabel}`,
     html,
   });
 

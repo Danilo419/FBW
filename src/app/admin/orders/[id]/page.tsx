@@ -13,6 +13,7 @@ import {
   Package,
   AlertTriangle,
   Printer,
+  Mail,
 } from "lucide-react";
 import { PrintButton } from "@/components/admin/PrintButton"; // client component
 import { updateOrderTrackingAction } from "../actions";
@@ -160,7 +161,9 @@ async function fetchOrder(id: string) {
           orderBy: { id: "asc" },
           include: {
             // ✅ schema uses imageUrls (not images)
-            product: { select: { id: true, slug: true, imageUrls: true, name: true } },
+            product: {
+              select: { id: true, slug: true, imageUrls: true, name: true },
+            },
           },
         },
       },
@@ -253,6 +256,8 @@ async function fetchOrder(id: string) {
       };
     });
 
+    const shipping = extractShipping(order);
+
     return {
       order: {
         id: String(order.id),
@@ -264,7 +269,7 @@ async function fetchOrder(id: string) {
         taxCents,
         totalCents,
         user: order.user ?? null,
-        shipping: extractShipping(order),
+        shipping,
         tracking: extractTracking(order),
         stripeSessionId: order.stripeSessionId ?? null,
         stripePaymentIntentId: order.stripePaymentIntentId ?? null,
@@ -290,6 +295,9 @@ export default async function AdminOrderViewPage({
 }) {
   const { id } = await params;
   const { order, error } = await fetchOrder(id);
+
+  const customerEmail =
+    order?.shipping?.email ?? order?.user?.email ?? null;
 
   return (
     <div className="space-y-6">
@@ -378,7 +386,7 @@ export default async function AdminOrderViewPage({
               )}
             </section>
 
-            {/* ✅ Fulfillment / Tracking (NEW) */}
+            {/* ✅ Fulfillment / Tracking */}
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="font-semibold">Fulfillment / Tracking</div>
@@ -386,6 +394,24 @@ export default async function AdminOrderViewPage({
                   Stored in shippingJson
                 </span>
               </div>
+
+              {customerEmail ? (
+                <div className="mb-3 rounded-xl border bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    <span>
+                      When you click <strong>Save</strong>, the customer will be
+                      emailed automatically at{" "}
+                      <span className="font-semibold">{customerEmail}</span>.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-3 rounded-xl border bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Customer email not found — the update can be saved, but no
+                  email can be sent.
+                </div>
+              )}
 
               <form action={updateOrderTrackingAction} className="space-y-3">
                 <input type="hidden" name="orderId" value={order.id} />
