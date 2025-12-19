@@ -51,6 +51,12 @@ function pickStr(o: any, keys: string[]): string | null {
   return null;
 }
 
+function normalizeStr(s: any) {
+  if (s == null) return null;
+  const t = String(s).trim();
+  return t === "" ? null : t;
+}
+
 function extractShipping(order: any) {
   try {
     const canonical = {
@@ -126,8 +132,6 @@ function extractTracking(order: any) {
   const trackingUrl =
     pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
 
-  // Your admin action uses Order.status as the shipping flow
-  // We map it back to the select values the form sends.
   const status = String(order?.status ?? "pending");
   const shippingStatus =
     status === "delivered"
@@ -150,32 +154,18 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
-function normalizeStr(s: string | null) {
-  if (!s) return null;
-  const t = String(s).trim();
-  return t === "" ? null : t;
-}
-
 /**
- * Try to extract personalization (name/number) from multiple possible places:
- * - snapshotJson.personalization.{name,number}
- * - snapshotJson fields (name/number/playerName/playerNumber/etc)
- * - optionsJson / options fields (same)
+ * ✅ FIX REAL:
+ * In your project, name/number might be saved in MANY places:
+ * - item.snapshotJson.personalization (object OR JSON string)
+ * - item.snapshotJson fields (playerName/playerNumber/etc)
+ * - item.snapshotJson.optionsJson / options / selected
+ * - item fields directly (it.playerName, it.customName, it.metaJson, etc.)
+ * - item.optionsJson (if your schema has it)
+ *
+ * This function checks ALL of them.
  */
-function extractPersonalization(snap: any, optionsObj: any) {
-  const snapObj = snap && typeof snap === "object" ? snap : {};
-  const optObj = optionsObj && typeof optionsObj === "object" ? optionsObj : {};
-
-  // 1) canonical structure
-  const p = snapObj?.personalization;
-  const fromCanonicalName =
-    p && typeof p === "object" ? normalizeStr(p?.name != null ? String(p?.name) : null) : null;
-  const fromCanonicalNumber =
-    p && typeof p === "object"
-      ? normalizeStr(p?.number != null ? String(p?.number) : null)
-      : null;
-
-  // 2) fallbacks in snapshot/options (common key variants)
+function extractPersonalizationFromEverywhere(it: any, snapRaw: any, optionsObj: any) {
   const nameKeys = [
     "personalizationName",
     "personalisedName",
@@ -203,17 +193,67 @@ function extractPersonalization(snap: any, optionsObj: any) {
     "number",
   ];
 
-  const snapName = normalizeStr(pickStr(snapObj, nameKeys));
-  const snapNumber = normalizeStr(pickStr(snapObj, numberKeys));
+  const snap = snapRaw && typeof snapRaw === "object" ? snapRaw : {};
 
-  const optName = normalizeStr(pickStr(optObj, nameKeys));
-  const optNumber = normalizeStr(pickStr(optObj, numberKeys));
+  // 1) canonical personalization (object or JSON string)
+  let p: any = snap?.personalization ?? snap?.personalisation ?? null;
+  if (typeof p === "string") {
+    const parsed = safeParseJSON(p);
+    p = Object.keys(parsed).length ? parsed : null;
+  }
+  const canonicalName =
+    p && typeof p === "object" ? normalizeStr(p?.name ?? p?.playerName ?? null) : null;
+  const canonicalNumber =
+    p && typeof p === "object"
+      ? normalizeStr(p?.number ?? p?.playerNumber ?? null)
+      : null;
 
-  const name = fromCanonicalName ?? snapName ?? optName ?? null;
-  const number = fromCanonicalNumber ?? snapNumber ?? optNumber ?? null;
+  // 2) snapshot direct fields
+  const snapName = normalizeStr(pickStr(snap, nameKeys));
+  const snapNumber = normalizeStr(pickStr(snap, numberKeys));
+
+  // 3) options object (already parsed from snapshot.optionsJson / options / selected)
+  const optName = normalizeStr(pickStr(optionsObj, nameKeys));
+  const optNumber = normalizeStr(pickStr(optionsObj, numberKeys));
+
+  // 4) item direct fields (very common when you store columns on OrderItem)
+  const itName = normalizeStr(pickStr(it, nameKeys));
+  const itNumber = normalizeStr(pickStr(it, numberKeys));
+
+  // 5) item meta JSON fields (if you store "metaJson", "dataJson", etc.)
+  const meta =
+    safeParseJSON(it?.metaJson) ||
+    safeParseJSON(it?.metadata) ||
+    safeParseJSON(it?.dataJson) ||
+    safeParseJSON(it?.json) ||
+    {};
+  const metaName = normalizeStr(pickStr(meta, nameKeys));
+  const metaNumber = normalizeStr(pickStr(meta, numberKeys));
+
+  // 6) item.optionsJson (if exists)
+  const itOptions = safeParseJSON(it?.optionsJson) || safeParseJSON(it?.options) || {};
+  const itOptName = normalizeStr(pickStr(itOptions, nameKeys));
+  const itOptNumber = normalizeStr(pickStr(itOptions, numberKeys));
+
+  const name =
+    canonicalName ??
+    snapName ??
+    optName ??
+    itName ??
+    metaName ??
+    itOptName ??
+    null;
+
+  const number =
+    canonicalNumber ??
+    snapNumber ??
+    optNumber ??
+    itNumber ??
+    metaNumber ??
+    itOptNumber ??
+    null;
 
   if (!name && !number) return null;
-
   return { name, number };
 }
 
@@ -228,7 +268,6 @@ async function fetchOrder(id: string) {
         items: {
           orderBy: { id: "asc" },
           include: {
-            // ✅ schema uses imageUrls (not images)
             product: {
               select: { id: true, slug: true, imageUrls: true, name: true },
             },
@@ -259,10 +298,13 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.optionsJson) ||
         safeParseJSON(snap?.options) ||
         safeParseJSON(snap?.selected) ||
+        // ✅ also try item.optionsJson (some builds store it here, not in snapshot)
+        safeParseJSON(it?.optionsJson) ||
+        safeParseJSON(it?.options) ||
         {};
 
-      // ✅ NEW: robust personalization extraction (name/number)
-      const personalization = extractPersonalization(snap, optionsObj);
+      // ✅ FIX: read personalization from item + snapshot + options + metaJson
+      const personalization = extractPersonalizationFromEverywhere(it, snap, optionsObj);
 
       const size =
         (optionsObj as any).size ??
@@ -375,7 +417,6 @@ async function fetchOrder(id: string) {
 export default async function AdminOrderViewPage({
   params,
 }: {
-  // ✅ Next 15: params is a Promise
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -673,7 +714,6 @@ function CustomerBlock({
   );
 }
 
-// ⬇️ Shipping address WITHOUT Name/Email/Phone
 function AddressBlock(props: {
   address1?: string | null;
   address2?: string | null;
@@ -735,10 +775,13 @@ function ItemRow({
           className="h-full w-full object-contain"
         />
       </div>
+
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-medium leading-tight truncate">{item.name}</div>
+            <div className="font-medium leading-tight truncate">
+              {item.name}
+            </div>
             <div className="text-xs text-gray-500">
               Size: {item.size || "—"} • Qty: {item.qty}
             </div>
