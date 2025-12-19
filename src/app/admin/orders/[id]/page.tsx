@@ -82,8 +82,7 @@ function extractShipping(order: any) {
 
     return {
       fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
-      email:
-        g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
+      email: g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
       phone: g("phone", "telephone", "ship_phone"),
       address1: g("address1", "addressLine1", "line1", "street", "ship_line1"),
       address2: g("address2", "addressLine2", "line2", "street2", "ship_line2"),
@@ -121,13 +120,9 @@ function extractShipping(order: any) {
 
 function extractTracking(order: any) {
   const j = safeParseJSON(order?.shippingJson);
-  const trackingCode =
-    pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
-  const trackingUrl =
-    pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
+  const trackingCode = pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
+  const trackingUrl = pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
 
-  // Your admin action uses Order.status as the shipping flow
-  // We map it back to the select values the form sends.
   const status = String(order?.status ?? "pending");
   const shippingStatus =
     status === "delivered"
@@ -150,9 +145,40 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
-/** --- Personalization extraction (robust) --- */
+/* ========================= Personalization extraction (FIXED) =========================
+ * IMPORTANT:
+ * - NUNCA usar `it.name` como fallback (isso é o nome do produto).
+ * - Só aceitar chaves específicas de personalização
+ * - Prioridade: snapshot.personalization -> snapshot.personalizationJson -> item.personalizationJson -> campos diretos específicos -> options específicas
+ */
 function extractPersonalization(it: any, snap: any, optionsObj: any) {
-  // 1) direct fields on item (some schemas store these)
+  // 1) snapshot.personalization (o mais confiável)
+  const snapPers =
+    snap?.personalization && typeof snap.personalization === "object"
+      ? snap.personalization
+      : null;
+
+  const snapPersName =
+    snapPers ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"]) : null;
+
+  const snapPersNumber =
+    snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"]) : null;
+
+  // 2) snapshot.personalizationJson
+  const snapPersJ = safeParseJSON(snap?.personalizationJson);
+  const snapJName =
+    pickStr(snapPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
+  const snapJNumber =
+    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
+
+  // 3) item.personalizationJson (se existir)
+  const itPersJ = safeParseJSON(it?.personalizationJson);
+  const itJName =
+    pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
+  const itJNumber =
+    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
+
+  // 4) campos diretos ESPECÍFICOS no item (sem "name" genérico)
   const directName =
     pickStr(it, [
       "personalizationName",
@@ -161,7 +187,6 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
       "nameOnShirt",
       "shirtName",
       "customName",
-      "name",
     ]) ?? null;
 
   const directNumber =
@@ -172,67 +197,58 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
       "numberOnShirt",
       "shirtNumber",
       "customNumber",
-      "number",
     ]) ?? null;
 
-  // 2) personalization JSON on item
-  const itPersJ = safeParseJSON(it?.personalizationJson);
-  const itPersName =
-    pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
-  const itPersNumber =
-    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
+  // 5) alguns projetos guardam isto em snapshot root (custName/custNumber)
+  const snapRootName =
+    pickStr(snap, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ?? null;
+  const snapRootNumber =
+    pickStr(snap, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ??
     null;
 
-  // 3) snapshot.personalization / snapshot.personalizationJson / snapshot fields
-  const snapPers = snap?.personalization && typeof snap.personalization === "object"
-    ? snap.personalization
-    : null;
-  const snapPersJ = safeParseJSON(snap?.personalizationJson);
-
-  const snapName =
-    (snapPers ? pickStr(snapPers, ["name", "playerName", "customName"]) : null) ??
-    pickStr(snapPersJ, ["name", "playerName", "customName"]) ??
-    pickStr(snap, ["custName", "customerName", "playerName", "nameOnShirt"]) ??
-    null;
-
-  const snapNumber =
-    (snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber"]) : null) ??
-    pickStr(snapPersJ, ["number", "playerNumber", "customNumber"]) ??
-    pickStr(snap, ["custNumber", "customerNumber", "playerNumber", "numberOnShirt"]) ??
-    null;
-
-  // 4) sometimes stored inside options (rare, but happens)
+  // 6) optionsObj (NÃO usar "name"/"number" genéricos aqui também)
   const optName =
     pickStr(optionsObj, [
-      "name",
       "custName",
-      "player_name",
       "playerName",
-      "shirt_name",
+      "player_name",
       "shirtName",
+      "shirt_name",
       "nameOnShirt",
     ]) ?? null;
 
   const optNumber =
     pickStr(optionsObj, [
-      "number",
       "custNumber",
-      "player_number",
       "playerNumber",
-      "shirt_number",
+      "player_number",
       "shirtNumber",
+      "shirt_number",
       "numberOnShirt",
     ]) ?? null;
 
-  const name = (directName ?? itPersName ?? snapName ?? optName)?.trim() || null;
+  const name =
+    (snapPersName ??
+      snapJName ??
+      itJName ??
+      directName ??
+      snapRootName ??
+      optName ??
+      null)?.trim() || null;
 
-  // keep only digits for number, and trim
-  const numRaw = (directNumber ?? itPersNumber ?? snapNumber ?? optNumber)?.trim() || "";
-  const onlyDigits = numRaw.replace(/\D/g, "");
+  const numRaw =
+    (snapPersNumber ??
+      snapJNumber ??
+      itJNumber ??
+      directNumber ??
+      snapRootNumber ??
+      optNumber ??
+      null)?.trim() || "";
+
+  const onlyDigits = String(numRaw).replace(/\D/g, "");
   const number = onlyDigits ? onlyDigits : null;
 
   if (!name && !number) return null;
-
   return { name, number };
 }
 
@@ -247,7 +263,6 @@ async function fetchOrder(id: string) {
         items: {
           orderBy: { id: "asc" },
           include: {
-            // ✅ schema uses imageUrls (not images)
             product: {
               select: { id: true, slug: true, imageUrls: true, name: true },
             },
@@ -280,7 +295,7 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.selected) ||
         {};
 
-      // ✅ FIX: extract personalization from multiple possible places
+      // ✅ FIXED personalization
       const personalization = extractPersonalization(it, snap, optionsObj);
 
       const size =
@@ -295,6 +310,7 @@ async function fetchOrder(id: string) {
         snap?.badges ??
         (optionsObj as any)["competition_badge"] ??
         null;
+
       if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
       else if (rawBadges && typeof rawBadges === "object") {
         badges = Object.values(rawBadges).join(", ");
@@ -312,8 +328,7 @@ async function fetchOrder(id: string) {
       for (const [k, v] of Object.entries(optionsObj)) {
         if (v == null || v === "") continue;
         if (Array.isArray(v)) options[k] = v.join(", ");
-        else if (typeof v === "object")
-          options[k] = Object.values(v as any).join(", ");
+        else if (typeof v === "object") options[k] = Object.values(v as any).join(", ");
         else options[k] = String(v);
       }
       if (badges) options.badges = badges;
@@ -366,7 +381,6 @@ async function fetchOrder(id: string) {
 export default async function AdminOrderViewPage({
   params,
 }: {
-  // ✅ Next 15: params is a Promise
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -413,8 +427,7 @@ export default async function AdminOrderViewPage({
             <div>
               <div className="font-semibold">We couldn’t load some data</div>
               <div className="text-sm opacity-90">
-                The page is still displayed with what we could parse. Error:{" "}
-                {error}
+                The page is still displayed with what we could parse. Error: {error}
               </div>
             </div>
           </div>
@@ -433,12 +446,9 @@ export default async function AdminOrderViewPage({
 
               <div className="mt-3 text-xs text-gray-500">Payment</div>
               <div className="text-sm">
-                {order.paidAt ? (
-                  <span className="font-medium">Paid</span>
-                ) : (
-                  <span>Unpaid</span>
-                )}
+                {order.paidAt ? <span className="font-medium">Paid</span> : <span>Unpaid</span>}
               </div>
+
               {order.stripePaymentIntentId && (
                 <div className="text-xs text-gray-500 break-all">
                   Stripe PI: {order.stripePaymentIntentId}
@@ -465,9 +475,7 @@ export default async function AdminOrderViewPage({
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="font-semibold">Fulfillment / Tracking</div>
-                <span className="text-xs text-gray-500">
-                  Stored in shippingJson
-                </span>
+                <span className="text-xs text-gray-500">Stored in shippingJson</span>
               </div>
 
               {customerEmail ? (
@@ -475,16 +483,14 @@ export default async function AdminOrderViewPage({
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     <span>
-                      When you click <strong>Save</strong>, the customer will be
-                      emailed automatically at{" "}
+                      When you click <strong>Save</strong>, the customer will be emailed automatically at{" "}
                       <span className="font-semibold">{customerEmail}</span>.
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="mb-3 rounded-xl border bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  Customer email not found — the update can be saved, but no
-                  email can be sent.
+                  Customer email not found — the update can be saved, but no email can be sent.
                 </div>
               )}
 
@@ -543,11 +549,7 @@ export default async function AdminOrderViewPage({
                     </div>
                     {order.tracking.trackingUrl ? (
                       <div className="break-all">
-                        <a
-                          href={order.tracking.trackingUrl}
-                          target="_blank"
-                          className="underline"
-                        >
+                        <a href={order.tracking.trackingUrl} target="_blank" className="underline">
                           {order.tracking.trackingUrl}
                         </a>
                       </div>
@@ -664,7 +666,6 @@ function CustomerBlock({
   );
 }
 
-// ⬇️ Shipping address WITHOUT Name/Email/Phone
 function AddressBlock(props: {
   address1?: string | null;
   address2?: string | null;
@@ -678,9 +679,7 @@ function AddressBlock(props: {
   return (
     <div className="space-y-1">
       <LabeledRow label="Address" value={props.address1 ?? "—"} />
-      {props.address2 ? (
-        <LabeledRow label="Address 2" value={props.address2} />
-      ) : null}
+      {props.address2 ? <LabeledRow label="Address 2" value={props.address2} /> : null}
       <LabeledRow label="City / Region" value={cityRegion || "—"} />
       <LabeledRow label="Postal Code" value={props.postalCode ?? "—"} />
       <LabeledRow label="Country" value={props.country ?? "—"} />
@@ -713,8 +712,7 @@ function ItemRow({
       return [[k, String(raw).replace(/-/g, " ")] as const];
     });
 
-  const hasPersonalization =
-    !!item.personalization?.name || !!item.personalization?.number;
+  const hasPersonalization = !!item.personalization?.name || !!item.personalization?.number;
 
   return (
     <div className="grid grid-cols-[96px,1fr] gap-3 rounded-xl border p-3">
@@ -726,6 +724,7 @@ function ItemRow({
           className="h-full w-full object-contain"
         />
       </div>
+
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -734,11 +733,10 @@ function ItemRow({
               Size: {item.size || "—"} • Qty: {item.qty}
             </div>
           </div>
+
           <div className="text-right text-sm shrink-0">
             <div>{money(item.unitPriceCents, currency)}</div>
-            <div className="font-semibold">
-              {money(item.totalPriceCents, currency)}
-            </div>
+            <div className="font-semibold">{money(item.totalPriceCents, currency)}</div>
           </div>
         </div>
 
@@ -746,9 +744,7 @@ function ItemRow({
           {prettyOptions &&
             prettyOptions.map(([k, v]) => (
               <div key={k} className="break-words">
-                <span className="text-gray-500 capitalize">
-                  {k.replace(/_/g, " ")}:
-                </span>{" "}
+                <span className="text-gray-500 capitalize">{k.replace(/_/g, " ")}:</span>{" "}
                 {v}
                 {k === "badges" && (
                   <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
@@ -762,12 +758,8 @@ function ItemRow({
             <div className="break-words">
               <span className="text-gray-500">Personalization:</span>{" "}
               {[
-                item.personalization?.name
-                  ? `Name “${item.personalization.name}”`
-                  : null,
-                item.personalization?.number
-                  ? `Number ${item.personalization.number}`
-                  : null,
+                item.personalization?.name ? `Name “${item.personalization.name}”` : null,
+                item.personalization?.number ? `Number ${item.personalization.number}` : null,
               ]
                 .filter(Boolean)
                 .join(" • ")}
