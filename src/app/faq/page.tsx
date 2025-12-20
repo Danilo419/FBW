@@ -33,6 +33,11 @@ type FaqItem = {
   icon?: React.ReactNode;
 };
 
+const SUPPORT_EMAIL = "myfootballworldstore@gmail.com";
+
+// ✅ Página onde estão os pedidos (a do teu print)
+const MY_ORDERS_URL = "/account";
+
 const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[] }[] = [
   {
     section: "Orders",
@@ -175,9 +180,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Are the products original?",
         a: (
           <div className="space-y-2">
-            <p>
-              Yes. FootballWorld sells original football products.
-            </p>
+            <p>Yes. FootballWorld sells original football products.</p>
             <p className="text-sm text-gray-600">
               To keep your item in top condition, wash inside-out on a gentle cycle and avoid high heat.
             </p>
@@ -222,11 +225,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
     items: [
       {
         q: "What payment methods do you accept?",
-        a: (
-          <p>
-            The available payment methods are shown at checkout.
-          </p>
-        ),
+        a: <p>The available payment methods are shown at checkout.</p>,
         tags: ["payment"],
         icon: <CreditCard className="h-4 w-4" />,
       },
@@ -286,20 +285,22 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Contact support through our official contact email:{" "}
-              <a className="underline hover:text-blue-700" href="mailto:support@footballworld.com">
-                support@footballworld.com
+              Contact support through our official email:{" "}
+              <a className="underline hover:text-blue-700" href={`mailto:${SUPPORT_EMAIL}`}>
+                {SUPPORT_EMAIL}
               </a>
               . Please include your order number for faster help.
             </p>
             <div className="flex flex-wrap gap-2">
+              {/* ✅ CORRIGIDO: antes estava /orders, agora vai para /account */}
               <Link
-                href="/orders"
+                href={MY_ORDERS_URL}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
               >
                 <Package className="h-4 w-4" />
                 My orders
               </Link>
+
               <Link
                 href="/shipping-policy"
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -373,6 +374,15 @@ export default function FAQPage() {
               >
                 <Package className="h-4 w-4" />
                 Go to Cart
+              </Link>
+
+              {/* ✅ EXTRA: atalho direto para a página My Orders do print */}
+              <Link
+                href={MY_ORDERS_URL}
+                className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+              >
+                <Package className="h-4 w-4" />
+                My Orders
               </Link>
             </div>
           </div>
@@ -453,13 +463,15 @@ export default function FAQPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                {/* ✅ CORRIGIDO: antes era /orders */}
                 <Link
-                  href="/orders"
+                  href={MY_ORDERS_URL}
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-white"
                 >
                   <Package className="h-4 w-4" />
                   My orders
                 </Link>
+
                 <Link
                   href="/shipping-policy"
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
