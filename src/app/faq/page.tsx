@@ -17,6 +17,7 @@ import {
   Mail,
   AlertTriangle,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
 export const metadata = {
@@ -61,7 +62,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Will I receive an order confirmation?",
         a: (
           <p>
-            Yes — after payment you’ll see a confirmation screen and you should also receive an email
+            Yes — after payment you’ll see a confirmation screen and you will receive an email
             confirmation. If you don’t see it, check Spam/Promotions.
           </p>
         ),
@@ -73,11 +74,11 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              If you need changes (size, name/number, address), contact us as soon as possible. If the
-              order is already processed/shipped, changes may not be possible.
+              Contact us immediately after placing your order. If the order is already processed or
+              shipped, changes/cancellation may no longer be possible.
             </p>
             <p className="text-sm text-gray-600">
-              The fastest way is to message support with your order number.
+              Please include your order number and what you want to change.
             </p>
           </div>
         ),
@@ -117,7 +118,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
               </li>
             </ul>
             <p className="text-sm text-gray-600">
-              These are estimates and can vary due to customs, peak seasons, or local carrier delays.
+              Estimates can vary due to customs inspection, peak seasons, weather, and local carrier
+              delays.
             </p>
           </div>
         ),
@@ -128,8 +130,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Do you provide tracking?",
         a: (
           <p>
-            Yes. When available, you’ll receive a tracking code. If you already have tracking, you can
-            follow it on your local carrier site once it reaches your country.
+            Yes. After your order ships, tracking is provided and can be used to follow the shipment
+            until delivery.
           </p>
         ),
         tags: ["tracking"],
@@ -139,23 +141,23 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Do I have to pay customs or duties?",
         a: (
           <p>
-            Depending on your country, customs/VAT/import fees may apply and are usually paid by the
-            recipient. If you’re unsure, check your local customs rules.
+            Customs/VAT/import fees can apply depending on your country and are paid by the recipient.
           </p>
         ),
         tags: ["customs", "duties"],
         icon: <Globe2 className="h-4 w-4" />,
       },
       {
-        q: "What if the address is wrong or incomplete?",
+        q: "What if my address is wrong or incomplete?",
         a: (
           <div className="space-y-2">
             <p>
-              Please contact us immediately. If the parcel is returned or fails delivery due to an
-              incorrect address, reshipping may require an additional fee.
+              Contact support immediately with your order number and the correct address. If the parcel
+              is returned or fails delivery due to an incorrect address, reshipping may require an
+              additional fee.
             </p>
             <p className="text-sm text-gray-600">
-              Always double-check your postal code, city, and apartment number before paying.
+              Always double-check postal code, city, and apartment number before paying.
             </p>
           </div>
         ),
@@ -170,27 +172,30 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
     icon: <Shirt className="h-4 w-4" />,
     items: [
       {
-        q: "Are these original/official jerseys?",
+        q: "Are the products original?",
         a: (
-          <p>
-            FootballWorld focuses on high-quality football kits and fan gear. If a product is an
-            “official” item, it will be clearly stated on the product page. Otherwise, consider it fan
-            apparel.
-          </p>
+          <div className="space-y-2">
+            <p>
+              Yes. FootballWorld sells original football products.
+            </p>
+            <p className="text-sm text-gray-600">
+              To keep your item in top condition, wash inside-out on a gentle cycle and avoid high heat.
+            </p>
+          </div>
         ),
-        tags: ["quality", "official"],
-        icon: <ShieldCheck className="h-4 w-4" />,
+        tags: ["original", "quality"],
+        icon: <Sparkles className="h-4 w-4" />,
       },
       {
         q: "How do I choose the right size?",
         a: (
           <div className="space-y-2">
             <p>
-              Choose your usual size for a regular fit. If you prefer a looser fit, consider sizing up.
-              For “Player Version” (slim fit), sizing up is usually recommended.
+              Choose your usual size for a regular fit. For a looser fit, size up. “Player Version” is
+              a slimmer fit — sizing up is recommended.
             </p>
             <p className="text-sm text-gray-600">
-              If your product page includes a size chart, follow it first.
+              If you are between two sizes, choose the larger one.
             </p>
           </div>
         ),
@@ -201,8 +206,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Can I add name & number personalization?",
         a: (
           <p>
-            Yes — if the product supports customization, you can enter the name and number in the
-            configurator before adding to cart. Personalized items may have different return rules.
+            Yes — when the product supports customization, you can enter name and number in the
+            configurator before adding to cart.
           </p>
         ),
         tags: ["custom", "name", "number"],
@@ -219,8 +224,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "What payment methods do you accept?",
         a: (
           <p>
-            Available methods are shown at checkout. If you don’t see your preferred method, it may not
-            be available in your country/currency.
+            The available payment methods are shown at checkout.
           </p>
         ),
         tags: ["payment"],
@@ -230,8 +234,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Is checkout secure?",
         a: (
           <p>
-            Yes — payments are processed through secure providers. Your card details are not stored on
-            FootballWorld servers.
+            Yes — payments are processed through secure providers and your card details are not stored
+            on FootballWorld servers.
           </p>
         ),
         tags: ["secure"],
@@ -249,12 +253,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Returns depend on the product type and condition. Items must generally be unused and in
-              original packaging. Personalized items may not be eligible unless there’s a defect or an
-              error on our side.
-            </p>
-            <p className="text-sm text-gray-600">
-              If you already have a dedicated page, link it here too.
+              Returns are accepted for unused items in original packaging. Personalized items (name/number)
+              are not eligible for return, except in case of defect or an error in the customization.
             </p>
           </div>
         ),
@@ -262,12 +262,12 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         icon: <RefreshCcw className="h-4 w-4" />,
       },
       {
-        q: "My item arrived damaged / wrong — what now?",
+        q: "My item arrived damaged or wrong — what now?",
         a: (
           <div className="space-y-2">
             <p>
-              Contact support with your order number and photos of the issue (front/back + packaging).
-              We’ll review and help with a replacement or solution.
+              Contact support with your order number and clear photos of the issue (item + packaging).
+              We will review and provide a replacement or solution.
             </p>
           </div>
         ),
@@ -286,8 +286,11 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Use our contact channel and include your order number for faster help. You can also email
-              us if an email address is provided on the website.
+              Contact support through our official contact email:{" "}
+              <a className="underline hover:text-blue-700" href="mailto:support@footballworld.com">
+                support@footballworld.com
+              </a>
+              . Please include your order number for faster help.
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -307,7 +310,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
             </div>
             <p className="text-xs text-gray-500 flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Tip: add a “Contact” page later if you want.
+              We answer as fast as possible during business hours.
             </p>
           </div>
         ),
@@ -426,9 +429,7 @@ export default function FAQPage() {
                       </div>
                     </summary>
 
-                    <div className="mt-3 pl-11 text-sm text-gray-700 leading-relaxed">
-                      {it.a}
-                    </div>
+                    <div className="mt-3 pl-11 text-sm text-gray-700 leading-relaxed">{it.a}</div>
                   </details>
                 ))}
               </div>
@@ -447,7 +448,7 @@ export default function FAQPage() {
                   We’re here to help with your order.
                 </h3>
                 <p className="mt-1 text-sm text-gray-600">
-                  If your question isn’t answered here, contact support with your order number.
+                  Contact us with your order number and we’ll help you as fast as possible.
                 </p>
               </div>
 
