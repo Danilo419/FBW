@@ -38,7 +38,12 @@ const SUPPORT_EMAIL = "myfootballworldstore@gmail.com";
 // ✅ agora envia diretamente para a tab de Orders
 const MY_ORDERS_URL = "/account?tab=orders";
 
-const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[] }[] = [
+const FAQ: {
+  section: string;
+  id: string;
+  icon: React.ReactNode;
+  items: FaqItem[];
+}[] = [
   {
     section: "Orders",
     id: "orders",
@@ -55,9 +60,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
               </Link>{" "}
               and complete checkout.
             </p>
-            <p className="text-sm text-gray-600">
-              Tip: Use the search bar in the header to find a kit fast.
-            </p>
+            <p className="text-sm text-gray-600">Tip: Use the search bar in the header to find a kit fast.</p>
           </div>
         ),
         tags: ["order", "checkout"],
@@ -67,8 +70,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Will I receive an order confirmation?",
         a: (
           <p>
-            Yes — after payment you’ll see a confirmation screen and you will receive an email
-            confirmation. If you don’t see it, check Spam/Promotions.
+            Yes — after payment you’ll see a confirmation screen and you will receive an email confirmation. If you
+            don’t see it, check Spam/Promotions.
           </p>
         ),
         tags: ["email", "confirmation"],
@@ -79,12 +82,10 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Contact us immediately after placing your order. If the order is already processed or
-              shipped, changes/cancellation may no longer be possible.
+              Contact us immediately after placing your order. If the order is already processed or shipped,
+              changes/cancellation may no longer be possible.
             </p>
-            <p className="text-sm text-gray-600">
-              Please include your order number and what you want to change.
-            </p>
+            <p className="text-sm text-gray-600">Please include your order number and what you want to change.</p>
           </div>
         ),
         tags: ["cancel", "change"],
@@ -123,8 +124,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
               </li>
             </ul>
             <p className="text-sm text-gray-600">
-              Estimates can vary due to customs inspection, peak seasons, weather, and local carrier
-              delays.
+              Estimates can vary due to customs inspection, peak seasons, weather, and local carrier delays.
             </p>
           </div>
         ),
@@ -135,8 +135,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Do you provide tracking?",
         a: (
           <p>
-            Yes. After your order ships, tracking is provided and can be used to follow the shipment
-            until delivery.
+            Yes. After your order ships, tracking is provided and can be used to follow the shipment until delivery.
           </p>
         ),
         tags: ["tracking"],
@@ -144,11 +143,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
       },
       {
         q: "Do I have to pay customs or duties?",
-        a: (
-          <p>
-            Customs/VAT/import fees can apply depending on your country and are paid by the recipient.
-          </p>
-        ),
+        a: <p>Customs/VAT/import fees can apply depending on your country and are paid by the recipient.</p>,
         tags: ["customs", "duties"],
         icon: <Globe2 className="h-4 w-4" />,
       },
@@ -157,13 +152,10 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Contact support immediately with your order number and the correct address. If the parcel
-              is returned or fails delivery due to an incorrect address, reshipping may require an
-              additional fee.
+              Contact support immediately with your order number and the correct address. If the parcel is returned
+              or fails delivery due to an incorrect address, reshipping may require an additional fee.
             </p>
-            <p className="text-sm text-gray-600">
-              Always double-check postal code, city, and apartment number before paying.
-            </p>
+            <p className="text-sm text-gray-600">Always double-check postal code, city, and apartment number before paying.</p>
           </div>
         ),
         tags: ["address"],
@@ -194,12 +186,10 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Choose your usual size for a regular fit. For a looser fit, size up. “Player Version” is
-              a slimmer fit — sizing up is recommended.
+              Choose your usual size for a regular fit. For a looser fit, size up. “Player Version” is a slimmer fit —
+              sizing up is recommended.
             </p>
-            <p className="text-sm text-gray-600">
-              If you are between two sizes, choose the larger one.
-            </p>
+            <p className="text-sm text-gray-600">If you are between two sizes, choose the larger one.</p>
           </div>
         ),
         tags: ["size", "fit"],
@@ -209,8 +199,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         q: "Can I add name & number personalization?",
         a: (
           <p>
-            Yes — when the product supports customization, you can enter name and number in the
-            configurator before adding to cart.
+            Yes — when the product supports customization, you can enter name and number in the configurator before adding to cart.
           </p>
         ),
         tags: ["custom", "name", "number"],
@@ -225,16 +214,36 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
     items: [
       {
         q: "What payment methods do you accept?",
-        a: <p>The available payment methods are shown at checkout.</p>,
-        tags: ["payment"],
+        a: (
+          <div className="space-y-2">
+            <p>We accept the following payment methods:</p>
+
+            <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+              <li>Visa</li>
+              <li>Mastercard</li>
+              <li>American Express</li>
+              <li>PayPal</li>
+              <li>Amazon Pay</li>
+              <li>Multibanco (PT)</li>
+              <li>Revolut Pay</li>
+              <li>Klarna</li>
+              <li>Satispay</li>
+              <li>Link</li>
+            </ul>
+
+            <p className="text-sm text-gray-600">
+              All payments are processed securely via Stripe.
+            </p>
+          </div>
+        ),
+        tags: ["payment", "stripe", "visa", "paypal", "multibanco"],
         icon: <CreditCard className="h-4 w-4" />,
       },
       {
         q: "Is checkout secure?",
         a: (
           <p>
-            Yes — payments are processed through secure providers and your card details are not stored
-            on FootballWorld servers.
+            Yes — payments are processed through secure providers and your card details are not stored on FootballWorld servers.
           </p>
         ),
         tags: ["secure"],
@@ -252,8 +261,8 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Returns are accepted for unused items in original packaging. Personalized items (name/number)
-              are not eligible for return, except in case of defect or an error in the customization.
+              Returns are accepted for unused items in original packaging. Personalized items (name/number/badges) are
+              not eligible for return, except in case of defect or an error in the customization.
             </p>
           </div>
         ),
@@ -265,8 +274,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
         a: (
           <div className="space-y-2">
             <p>
-              Contact support with your order number and clear photos of the issue (item + packaging).
-              We will review and provide a replacement or solution.
+              Contact support with your order number and clear photos of the issue (item + packaging). We will review and provide a replacement or solution.
             </p>
           </div>
         ),
@@ -291,6 +299,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
               </a>
               . Please include your order number for faster help.
             </p>
+
             <div className="flex flex-wrap gap-2">
               <Link
                 href={MY_ORDERS_URL}
@@ -308,6 +317,7 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
                 Shipping policy
               </Link>
             </div>
+
             <p className="text-xs text-gray-500 flex items-center gap-2">
               <Mail className="h-4 w-4" />
               We answer as fast as possible during business hours.
@@ -338,9 +348,7 @@ export default function FAQPage() {
               Help Center
             </div>
 
-            <h1 className="mt-4 text-3xl md:text-5xl font-semibold tracking-tight">
-              Frequently Asked Questions
-            </h1>
+            <h1 className="mt-4 text-3xl md:text-5xl font-semibold tracking-tight">Frequently Asked Questions</h1>
             <p className="mt-3 text-gray-600 text-base md:text-lg">
               Quick answers about orders, shipping, tracking, sizing, payments, and returns.
             </p>
@@ -367,6 +375,7 @@ export default function FAQPage() {
                 <Truck className="h-4 w-4" />
                 Read Shipping Policy
               </Link>
+
               <Link
                 href="/cart"
                 className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50"
@@ -414,9 +423,7 @@ export default function FAQPage() {
 
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <div className="text-sm md:text-[15px] font-semibold text-gray-900">
-                              {it.q}
-                            </div>
+                            <div className="text-sm md:text-[15px] font-semibold text-gray-900">{it.q}</div>
                             <span className="ml-auto transition-transform duration-200 group-open:rotate-90 text-gray-400">
                               <ChevronRight className="h-4 w-4" />
                             </span>
@@ -453,9 +460,7 @@ export default function FAQPage() {
                   <ShieldCheck className="h-4 w-4 text-blue-700" />
                   Need more help?
                 </div>
-                <h3 className="mt-2 text-lg md:text-xl font-semibold">
-                  We’re here to help with your order.
-                </h3>
+                <h3 className="mt-2 text-lg md:text-xl font-semibold">We’re here to help with your order.</h3>
                 <p className="mt-1 text-sm text-gray-600">
                   Contact us with your order number and we’ll help you as fast as possible.
                 </p>
@@ -481,9 +486,7 @@ export default function FAQPage() {
             </div>
           </div>
 
-          <div className="text-xs text-gray-500">
-            Last update: {new Date().toLocaleDateString("pt-PT")}
-          </div>
+          <div className="text-xs text-gray-500">Last update: {new Date().toLocaleDateString("pt-PT")}</div>
         </div>
       </section>
     </main>
