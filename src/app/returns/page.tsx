@@ -100,7 +100,7 @@ export default function ReturnsPage() {
           <Header icon={<RotateCcw className="h-5 w-5 text-sky-600" />} title="How to start a return/exchange" />
           <ol className="mt-3 list-decimal pl-5 space-y-2 text-sm text-gray-700">
             <li>
-              Email us at <b>myfootballworldshop@gmail.com</b> or use the{" "}
+              Email us at <b>myfootballworldstore@gmail.com</b> or use the{" "}
               <Link href="/contact" className="text-blue-700 hover:underline">
                 contact form
               </Link>{" "}

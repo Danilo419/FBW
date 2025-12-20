@@ -174,8 +174,8 @@ export default function Footer() {
           <FooterCol title="Contact">
             <FooterContact
               icon={<Mail className="h-4 w-4" />}
-              text="myfootballworldshop@gmail.com"
-              href="mailto:myfootballworldshop@gmail.com"
+              text="myfootballworldstore@gmail.com"
+              href="mailto:myfootballworldstore@gmail.com"
             />
             <FooterContact
               icon={<MapPin className="h-4 w-4" />}

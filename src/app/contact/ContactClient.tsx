@@ -125,7 +125,7 @@ export default function ContactClient() {
   }
 
   function openMailApp() {
-    const to = "myfootballworldshop@gmail.com";
+    const to = "myfootballworldstore@gmail.com";
     const subject = encodeURIComponent(
       form.subject || `Support request from ${form.name || "customer"}`
     );
@@ -149,7 +149,7 @@ export default function ContactClient() {
 
   async function copyEmail() {
     try {
-      await navigator.clipboard.writeText("myfootballworldshop@gmail.com");
+      await navigator.clipboard.writeText("myfootballworldstore@gmail.com");
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch {}
@@ -456,7 +456,7 @@ export default function ContactClient() {
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <code className="rounded-xl border bg-white px-3 py-2 text-sm">
-                  myfootballworldshop@gmail.com
+                  myfootballworldstore@gmail.com
                 </code>
                 <button
                   type="button"

@@ -314,10 +314,10 @@ export default function PrivacyClient() {
               <p className="mt-2">
                 To exercise these rights, contact us at{" "}
                 <a
-                  href="mailto:myfootballworldshop@gmail.com"
+                  href="mailto:myfootballworldstore@gmail.com"
                   className="text-blue-700 underline"
                 >
-                  myfootballworldshop@gmail.com
+                  myfootballworldstore@gmail.com
                 </a>
                 .
               </p>
@@ -386,10 +386,10 @@ export default function PrivacyClient() {
               <p>
                 Questions about this policy or your data? Email{" "}
                 <a
-                  href="mailto:myfootballworldshop@gmail.com"
+                  href="mailto:myfootballworldstore@gmail.com"
                   className="text-blue-700 underline"
                 >
-                  myfootballworldshop@gmail.com
+                  myfootballworldstore@gmail.com
                 </a>
                 .
               </p>

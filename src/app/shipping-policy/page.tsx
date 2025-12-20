@@ -1,4 +1,5 @@
 // src/app/shipping-policy/page.tsx
+import React from "react";
 import Link from "next/link";
 import {
   Truck,
@@ -141,14 +142,17 @@ export default function ShippingPolicyPage() {
             <p className="text-gray-700">
               Typical transit ranges below. Remote areas may require extra time.
             </p>
+
+            {/* ✅ UPDATED DATA */}
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <StatCard region="Europe" days="4–9 business days" />
-              <StatCard region="North America" days="6–12 business days" />
-              <StatCard region="South America" days="8–15 business days" />
-              <StatCard region="Asia" days="6–12 business days" />
-              <StatCard region="Oceania" days="7–13 business days" />
-              <StatCard region="Middle East & Africa" days="8–16 business days" />
+              <StatCard region="Europe" days="7–9 business days" />
+              <StatCard region="North America" days="10–15 business days" />
+              <StatCard region="South America" days="15–20 business days" />
+              <StatCard region="Asia" days="10–12 business days" />
+              <StatCard region="Oceania" days="9–12 business days" />
+              <StatCard region="Middle East" days="7–15 business days" />
             </div>
+
             <Callout tone="info" icon={<Clock className="h-4 w-4" />}>
               Estimates exclude production/processing time. Customs inspections can extend delivery.
             </Callout>
@@ -244,8 +248,8 @@ export default function ShippingPolicyPage() {
                 Contact Support
               </Link>{" "}
               or email{" "}
-              <a href="mailto:myfootballworldshop@gmail.com" className="text-blue-700 underline">
-                myfootballworldshop@gmail.com
+              <a href="mailto:myfootballworldstore@gmail.com" className="text-blue-700 underline">
+                myfootballworldstore@gmail.com
               </a>
               .
             </p>

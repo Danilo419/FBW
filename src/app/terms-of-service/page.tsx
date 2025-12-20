@@ -281,8 +281,8 @@ export default function TermsOfServicePage() {
                 Contact
               </Link>{" "}
               or email{" "}
-              <a href="mailto:myfootballworldshop@gmail.com" className="text-blue-700 underline">
-                myfootballworldshop@gmail.com
+              <a href="mailto:myfootballworldstore@gmail.com" className="text-blue-700 underline">
+                myfootballworldstore@gmail.com
               </a>
               .
             </p>
