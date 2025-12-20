@@ -35,8 +35,8 @@ type FaqItem = {
 
 const SUPPORT_EMAIL = "myfootballworldstore@gmail.com";
 
-// ✅ Página onde estão os pedidos (a do teu print)
-const MY_ORDERS_URL = "/account";
+// ✅ agora envia diretamente para a tab de Orders
+const MY_ORDERS_URL = "/account?tab=orders";
 
 const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[] }[] = [
   {
@@ -292,7 +292,6 @@ const FAQ: { section: string; id: string; icon: React.ReactNode; items: FaqItem[
               . Please include your order number for faster help.
             </p>
             <div className="flex flex-wrap gap-2">
-              {/* ✅ CORRIGIDO: antes estava /orders, agora vai para /account */}
               <Link
                 href={MY_ORDERS_URL}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -376,7 +375,7 @@ export default function FAQPage() {
                 Go to Cart
               </Link>
 
-              {/* ✅ EXTRA: atalho direto para a página My Orders do print */}
+              {/* ✅ atalho direto para My Orders já na tab correta */}
               <Link
                 href={MY_ORDERS_URL}
                 className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50"
@@ -463,7 +462,6 @@ export default function FAQPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {/* ✅ CORRIGIDO: antes era /orders */}
                 <Link
                   href={MY_ORDERS_URL}
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-white"

@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   CalendarDays,
   Mail,
@@ -94,7 +95,20 @@ function fmtMoneyFromCents(cents: number, currency = 'eur') {
 
 /* ========= Componente principal ========= */
 export default function AccountClient(props: Props) {
+  const searchParams = useSearchParams();
+
   const [tab, setTab] = useState<'overview' | 'profile' | 'security' | 'orders'>('overview');
+
+  // ✅ Quando vem do FAQ: /account?tab=orders → abrir My Orders automaticamente
+  useEffect(() => {
+    const qtab = (searchParams.get('tab') || '').toLowerCase();
+
+    // Só aceitamos valores conhecidos (evita lixo no URL)
+    const allowed = new Set(['overview', 'profile', 'security', 'orders']);
+    if (!allowed.has(qtab)) return;
+
+    setTab(qtab as any);
+  }, [searchParams]);
 
   return (
     <div className="grid lg:grid-cols-[240px_1fr] gap-6">
@@ -194,7 +208,6 @@ type OrderListItem = {
 // ✅ helper: decide if order is "paid"
 function isPaidStatus(status: string) {
   const s = String(status || '').trim().toLowerCase();
-  // Keep it robust in case your API returns "paid", "PAID", etc.
   return s === 'paid';
 }
 
