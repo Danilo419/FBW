@@ -27,6 +27,18 @@ function parsePriceToCents(raw: string): number {
   return Math.round(n * 100);
 }
 
+/* ================== teamType (CLUB vs NATION) ================== */
+/**
+ * ✅ Não importamos TeamType do Prisma Client para evitar "no exported member"
+ * (caso o client esteja desatualizado). Gravamos diretamente "CLUB" | "NATION".
+ */
+type TeamTypeLocal = "CLUB" | "NATION";
+
+function parseTeamType(v: unknown): TeamTypeLocal {
+  const raw = String(v ?? "").trim().toUpperCase();
+  return raw === "NATION" ? "NATION" : "CLUB";
+}
+
 /** Catálogo de labels legíveis para as badges (mesmos "values" usados no admin) */
 const BADGE_LABELS = new Map<string, string>([
   // Europe (top 8)
@@ -74,6 +86,9 @@ export async function POST(req: Request) {
     const team = String(form.get("team") || "").trim();
     const priceStr = String(form.get("price") || "").trim();
 
+    // ✅ NOVO: teamType (vem do NewProductPage)
+    const teamType = parseTeamType(form.get("teamType"));
+
     if (!name || !team || !priceStr) {
       return NextResponse.json(
         { error: "Missing required fields: name, team or price." },
@@ -98,25 +113,23 @@ export async function POST(req: Request) {
     const season = (String(form.get("season") || "").trim() || null) as string | null;
     const description = (String(form.get("description") || "").trim() || null) as string | null;
 
-    const badges = getAllStrings(form.getAll("badges"));          // ex.: ["ucl-regular", ...]
-    const imageUrlsRaw = getAllStrings(form.getAll("imageUrls")); // URLs (Vercel Blob)
+    const badges = getAllStrings(form.getAll("badges")); // ex.: ["ucl-regular", ...]
+    const imageUrlsRaw = getAllStrings(form.getAll("imageUrls")); // URLs (Cloud/Blob)
 
     // Só aceita URLs http(s)
     const imageUrls = imageUrlsRaw.filter((u) => /^https?:\/\//i.test(u));
     if (imageUrls.length === 0) {
-      return NextResponse.json(
-        { error: "At least one image url is required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "At least one image url is required." }, { status: 400 });
     }
 
     // Sizes: apenas os selecionados no formulário
-    const sizeGroup = (String(form.get("sizeGroup") || "adult") as "adult" | "kid");
+    const sizeGroup = String(form.get("sizeGroup") || "adult") as "adult" | "kid";
     const sizes = getAllStrings(form.getAll("sizes"))
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean);
 
     // Slug único
+    // (Incluímos teamType no slug só indiretamente via team/name/season; mantém simples)
     const base = toSlug(`${team ? team + " " : ""}${name}${season ? " " + season : ""}`);
     let slug = base || toSlug(name) || `product-${Date.now()}`;
     let suffix = 1;
@@ -129,12 +142,13 @@ export async function POST(req: Request) {
       data: {
         name,
         team,
+        teamType, // ✅ NOVO
         season,
         description,
         slug,
-        basePrice,     // Int (cêntimos)
-        badges,        // String[]
-        imageUrls,     // String[] (text[])
+        basePrice, // Int (cêntimos)
+        badges, // String[]
+        imageUrls, // String[] (text[])
       },
       select: { id: true, slug: true },
     });
@@ -162,11 +176,11 @@ export async function POST(req: Request) {
     if (!disableCustomization) {
       const hasBadges = badges.length > 0;
       const valuesToCreate = [
-        { value: "none",        label: "No customization",                 priceDelta: 0 },
-        { value: "name-number", label: "Name & Number",                    priceDelta: 0 },
+        { value: "none", label: "No customization", priceDelta: 0 },
+        { value: "name-number", label: "Name & Number", priceDelta: 0 },
         ...(hasBadges
           ? [
-              { value: "badge",             label: "Competition Badge",                 priceDelta: 0 },
+              { value: "badge", label: "Competition Badge", priceDelta: 0 },
               { value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
             ]
           : []),
@@ -209,6 +223,7 @@ export async function POST(req: Request) {
         ok: true,
         id: created.id,
         slug: created.slug,
+        teamType, // ✅ NOVO
         sizeGroup,
         sizes,
         disableCustomization,

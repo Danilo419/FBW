@@ -1,4 +1,4 @@
-// src/app/clubs/[club]/page.tsx
+// src/app/nations/[slug]/page.tsx
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
@@ -78,27 +78,27 @@ function coverUrl(raw?: string | null): string {
 }
 
 /* =============================== PAGE =============================== */
-export default async function ClubProductsPage({
+export default async function NationProductsPage({
   params,
 }: {
-  params: Promise<{ club: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { club } = await params;
+  const { slug } = await params;
 
-  // Mapear slug -> nome real do clube (APENAS teamType CLUB)
+  // Mapear slug -> nome real da seleção (APENAS teamType NATION)
   const teams = await prisma.product.findMany({
-    where: { teamType: "CLUB" }, // ✅
+    where: { teamType: "NATION" }, // ✅
     select: { team: true },
     distinct: ["team"],
   });
 
-  const matchedTeam = teams.find((t) => slugify(t.team) === club)?.team ?? null;
-  const teamName = matchedTeam ?? titleFromSlug(club);
+  const matchedTeam = teams.find((t) => slugify(t.team) === slug)?.team ?? null;
+  const teamName = matchedTeam ?? titleFromSlug(slug);
 
-  // Produtos do clube (APENAS teamType CLUB)
+  // Produtos da seleção (APENAS teamType NATION)
   const products = await prisma.product.findMany({
     where: {
-      teamType: "CLUB", // ✅
+      teamType: "NATION", // ✅
       team: teamName,
     },
     orderBy: { name: "asc" },
@@ -138,10 +138,10 @@ export default async function ClubProductsPage({
           </h1>
 
           <Link
-            href="/clubs"
+            href="/nations"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-300/80 bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-slate-50 hover:border-sky-300 transition font-medium text-sm"
           >
-            <span>←</span> Back to all clubs
+            <span>←</span> Back to nations
           </Link>
         </div>
 
@@ -185,7 +185,7 @@ export default async function ClubProductsPage({
                         </div>
                       </div>
 
-                      {/* price chip (não é badge de produto, é o preço) */}
+                      {/* price chip */}
                       <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
                         {money(p.basePrice)}
                       </div>
@@ -205,7 +205,7 @@ export default async function ClubProductsPage({
                         fill="currentColor"
                         aria-hidden="true"
                       >
-                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 0 01-1.414 0z" />
                       </svg>
                     </div>
                   </div>

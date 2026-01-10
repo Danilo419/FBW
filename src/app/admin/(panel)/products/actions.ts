@@ -57,13 +57,40 @@ function slugify(s: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+/* ========================= teamType (CLUB vs NATION) ========================= */
+
+/**
+ * ✅ IMPORTANTE:
+ * - NÃO importamos TeamType do Prisma Client para evitar o erro "no exported member".
+ * - Usamos um tipo local e só gravamos "CLUB" | "NATION" no campo Product.teamType.
+ */
+type TeamTypeLocal = "CLUB" | "NATION";
+
+function parseTeamType(v: unknown): TeamTypeLocal {
+  const raw = String(v ?? "").trim().toUpperCase();
+  return raw === "NATION" ? "NATION" : "CLUB";
+}
+
 /** Revalida rotas públicas relacionadas com um produto */
-function revalidatePublicProduct(meta?: { slug?: string | null; team?: string | null; season?: string | null }) {
+function revalidatePublicProduct(meta?: {
+  slug?: string | null;
+  team?: string | null;
+  season?: string | null;
+  teamType?: TeamTypeLocal | string | null;
+}) {
   if (!meta) return;
 
   // ✅ página pública do produto (ajusta o caminho caso uses outra rota)
   if (meta.slug) {
     revalidatePath(`/products/${meta.slug}`);
+  }
+
+  // ✅ revalidar listagens corretas (CLUB vs NATION)
+  const t = String(meta.teamType ?? "CLUB").toUpperCase();
+  const base = t === "NATION" ? "/nations" : "/clubs";
+
+  if (meta.team) {
+    revalidatePath(`${base}/${slugify(meta.team)}`);
   }
 
   // (Opcional) listagens agregadas se existirem na tua app:
@@ -76,6 +103,10 @@ function revalidatePublicProduct(meta?: { slug?: string | null; team?: string | 
 
   // (Opcional) página de listagem geral
   revalidatePath("/products");
+
+  // (Opcional) páginas index de /clubs e /nations
+  revalidatePath("/clubs");
+  revalidatePath("/nations");
 }
 
 /** Garante que existe um OptionGroup "badges" para o produto. */
@@ -104,7 +135,7 @@ async function ensureBadgesGroup(productId: string) {
 /**
  * Atualiza campos principais do produto, incluindo imagens.
  * Espera no FormData:
- *  - id, name, team, season?, description?, price (em EUR)
+ *  - id, name, team, teamType, season?, description?, price (em EUR)
  *  - imagesText? (JSON, linhas ou vírgulas)
  */
 export async function updateProduct(formData: FormData) {
@@ -113,6 +144,10 @@ export async function updateProduct(formData: FormData) {
 
   const name = String(formData.get("name") || "").trim();
   const team = String(formData.get("team") || "").trim();
+
+  // ✅ NOVO: teamType vindo do <select name="teamType">
+  const teamType = parseTeamType(formData.get("teamType"));
+
   const season = toNullableString(formData.get("season"));
   const description = toNullableString(formData.get("description"));
   const basePrice = toCents(formData.get("price"));
@@ -124,12 +159,13 @@ export async function updateProduct(formData: FormData) {
     data: {
       name,
       team,
+      teamType, // ✅ NOVO
       season,
       description,
       basePrice,
       imageUrls,
     },
-    select: { id: true, slug: true, team: true, season: true },
+    select: { id: true, slug: true, team: true, season: true, teamType: true },
   });
 
   // Painel
@@ -227,11 +263,10 @@ export async function saveBadges(formData: FormData) {
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
-    // Público: se a tua página pública lê OptionGroups (e.g., mostra badges reais),
-    // também convém revalidar a página do produto
+    // Público
     const meta = await prisma.product.findUnique({
       where: { id: productId },
-      select: { slug: true, team: true, season: true },
+      select: { slug: true, team: true, season: true, teamType: true },
     });
     revalidatePublicProduct(meta || undefined);
 
@@ -261,7 +296,7 @@ export async function setSelectedBadges(formData: FormData) {
     const updated = await prisma.product.update({
       where: { id: productId },
       data: { badges: selected },
-      select: { slug: true, team: true, season: true },
+      select: { slug: true, team: true, season: true, teamType: true },
     });
 
     // Painel

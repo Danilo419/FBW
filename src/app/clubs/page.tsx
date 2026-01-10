@@ -30,6 +30,9 @@ type ClubCard = { name: string; image?: string | null; slug: string };
 
 export default async function ClubsPage() {
   const rows = await prisma.product.findMany({
+    where: {
+      teamType: "CLUB", // ✅ filtra só CLUBS
+    },
     select: { team: true, imageUrls: true },
     orderBy: { team: "asc" },
   });
@@ -65,7 +68,9 @@ export default async function ClubsPage() {
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-600 max-w-xl">
               Browse all clubs with{" "}
-              <span className="font-semibold text-emerald-600">FootballWorld</span>{" "}
+              <span className="font-semibold text-emerald-600">
+                FootballWorld
+              </span>{" "}
               products available.
             </p>
           </div>

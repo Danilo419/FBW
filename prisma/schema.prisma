@@ -98,14 +98,20 @@ model PasswordResetToken {
  * =============== Store / Products ========================
  * =========================================================
  */
+enum TeamType {
+  CLUB
+  NATION
+}
+
 model Product {
-  id          String  @id @default(cuid())
-  slug        String  @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
   team        String
-  season      String? // e.g. "25/26"
-  basePrice   Int     // cents
-  description String? // texto livre por produto
+  teamType    TeamType @default(CLUB) // ✅ ADDED: distingue Clube vs Seleção
+  season      String?  // e.g. "25/26"
+  basePrice   Int      // cents
+  description String?  // texto livre por produto
 
   // Imagens hospedadas (ex.: Vercel Blob/Cloud)
   imageUrls String[] @default([])
@@ -126,7 +132,9 @@ model Product {
   updatedAt DateTime @updatedAt
 
   @@index([team])
+  @@index([teamType])         // ✅ ADDED
   @@index([season])
+  @@index([teamType, team])   // ✅ ADDED (útil p/ lists por clubs/nations)
 }
 
 model SizeStock {
@@ -149,7 +157,7 @@ model OptionGroup {
   type      OptionType
   required  Boolean    @default(false)
 
-  product Product       @relation("ProductOptions", fields: [productId], references: [id])
+  product Product        @relation("ProductOptions", fields: [productId], references: [id])
   values  OptionValue[]
 
   @@index([productId])

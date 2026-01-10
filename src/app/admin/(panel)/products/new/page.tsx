@@ -3,9 +3,12 @@
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL"];
-const KID_SIZES = ["2-3y", "3-4y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"];
+const KID_SIZES = ["2-3y", "3-4y", "4-5y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"].filter(
+  (v, i, a) => a.indexOf(v) === i
+);
 
 /** ---- Badge catalog (values/labels in EN) ---- */
 type BadgeOption = { value: string; label: string };
@@ -80,12 +83,17 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]);
 const MAX_BYTES = 8 * 1024 * 1024;
 
+type TeamType = "CLUB" | "NATION";
+
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
   // ✅ Só mostramos os tamanhos escolhidos.
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
+
+  // ✅ NOVO: diferenciar clube vs seleção
+  const [teamType, setTeamType] = useState<TeamType>("CLUB");
 
   // NOVO: remover completamente o bloco "Customization" no produto
   const [disableCustomization, setDisableCustomization] = useState(false);
@@ -230,6 +238,9 @@ export default function NewProductPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
+    // ✅ Team type (NOVO)
+    formData.set("teamType", teamType);
+
     // Sizes – apenas os selecionados são enviados
     formData.append("sizeGroup", sizeGroup);
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
@@ -267,6 +278,7 @@ export default function NewProductPage() {
     setImageUrls([]);
     setBadgeQuery("");
     setDisableCustomization(false);
+    setTeamType("CLUB");
   }
 
   // ====== Componente reutilizável para gerir tamanhos ======
@@ -401,8 +413,28 @@ export default function NewProductPage() {
                 name="team"
                 required
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                placeholder="e.g., Real Madrid"
+                placeholder="e.g., Real Madrid / Portugal"
               />
+            </div>
+
+            {/* ✅ NOVO: Team Type */}
+            <div className="space-y-2">
+              <label htmlFor="teamType" className="text-sm font-medium">
+                Team Type
+              </label>
+              <select
+                id="teamType"
+                name="teamType"
+                value={teamType}
+                onChange={(e) => setTeamType(e.target.value as TeamType)}
+                className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+              >
+                <option value="CLUB">Club</option>
+                <option value="NATION">Nation</option>
+              </select>
+              <p className="text-xs text-gray-500">
+                Clubs appear in <strong>/clubs</strong>. Nations appear in <strong>/nations</strong>.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -464,7 +496,7 @@ export default function NewProductPage() {
             {imageUrls.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {imageUrls.map((u, i) => (
-                  <div
+                  <motion.div
                     key={u}
                     className="group relative rounded-xl border bg-white overflow-hidden"
                     draggable
@@ -475,6 +507,7 @@ export default function NewProductPage() {
                       setDragIndex(null);
                     }}
                     title={u}
+                    whileHover={{ y: -2 }}
                   >
                     <Image
                       src={u}
@@ -499,9 +532,7 @@ export default function NewProductPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            move(i, Math.min(imageUrls.length - 1, i + 1))
-                          }
+                          onClick={() => move(i, Math.min(imageUrls.length - 1, i + 1))}
                           className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
                           aria-label="Move right"
                           title="Move right"
@@ -524,7 +555,7 @@ export default function NewProductPage() {
                     <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 text-white text-[11px] px-1.5 py-0.5">
                       {i + 1}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -679,7 +710,7 @@ export default function NewProductPage() {
             <button
               type="submit"
               disabled={uploading}
-              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900"
+              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900 disabled:opacity-50"
             >
               {uploading ? "Uploading…" : "Create Product"}
             </button>

@@ -119,6 +119,9 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   },
 ];
 
+/* ✅ NOVO: TeamType local (não depende do Prisma Client) */
+type TeamTypeLocal = "CLUB" | "NATION";
+
 export default async function ProductEditPage({
   params,
 }: {
@@ -170,6 +173,9 @@ export default async function ProductEditPage({
   const ALL_BADGES = BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })));
   const BADGES_JSON = JSON.stringify(ALL_BADGES);
   const SELECTED_JSON = JSON.stringify(selectedInitial);
+
+  /* ✅ NOVO: valor atual do teamType para prefill */
+  const currentTeamType: TeamTypeLocal = ((product as any).teamType as TeamTypeLocal) ?? "CLUB";
 
   return (
     <div className="space-y-6" data-product-id={product.id}>
@@ -223,6 +229,22 @@ section .images-editor [placeholder*="Paste an image URL"] {
                 className="mt-1 w-full rounded-xl border px-3 py-2"
                 required
               />
+            </div>
+
+            {/* ✅ NOVO: Team Type (Clubs vs Nations) */}
+            <div>
+              <label className="text-xs font-medium text-gray-600">Team type</label>
+              <select
+                name="teamType"
+                defaultValue={currentTeamType}
+                className="mt-1 w-full rounded-xl border px-3 py-2"
+              >
+                <option value="CLUB">Club</option>
+                <option value="NATION">Nation</option>
+              </select>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Clubs appear in <strong>/clubs</strong>. Nations appear in <strong>/nations</strong>.
+              </p>
             </div>
 
             <div>
@@ -435,7 +457,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
     span.textContent = opt.label;
 
     const tag = document.createElement('span');
-    tag.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600';
+    tag.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text.gray-600';
     tag.textContent = opt.group.split(' – ')[0];
 
     label.appendChild(cb);
@@ -464,7 +486,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
     results.innerHTML = '';
     if (filtered.length === 0) {
       const div = document.createElement('div');
-      div.className = 'text-xs text-gray-500';
+      div.className = 'text-xs text.gray-500';
       div.textContent = 'No badges found.';
       results.appendChild(div);
       return;
