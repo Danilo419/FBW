@@ -46,15 +46,15 @@ export const leagueClubs: Record<LeagueKey, string[]> = {
     "mallorca","las-palmas","leganes","real-valladolid","espanyol",
   ],
   "serie-a": [
-    "inter","ac-milan","juventus","napoli","roma",
+    "inter-milan","milan","juventus","napoli","roma",
     "lazio","atalanta","fiorentina","bologna","torino",
     "genoa","cremonese","udinese","pisa","lecce",
     "cagliari","hellas-verona","como","sassuolo","parma"
   ],
   "bundesliga": [
-    "bayern-munich","borussia-dortmund","rb-leipzig","bayer-leverkusen","vfb-stuttgart",
-    "eintracht-frankfurt","sc-freiburg","union-berlin","wolfsburg","mainz-05",
-    "augsburg","borussia-monchengladbach","heidenheim","werder-bremen",
+    "bayern","dortmund","rb-leipzig","leverkusen","vfb-stuttgart",
+    "frankfurt","sc-freiburg","union-berlin","wolfsburg","mainz-05",
+    "augsburg","monchengladbach","heidenheim","werder-bremen",
     "hoffenheim","1-fc-koln","hamburger-sv","st-pauli",
   ],
   "ligue-1": [
