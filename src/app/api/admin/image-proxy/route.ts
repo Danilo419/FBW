@@ -16,7 +16,6 @@ export async function GET(req: Request) {
     return new NextResponse("Invalid url", { status: 400 });
   }
 
-  // proteção básica contra abuse
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
 
@@ -24,10 +23,7 @@ export async function GET(req: Request) {
     const res = await fetch(url, {
       signal: controller.signal,
       cache: "no-store",
-      headers: {
-        // alguns CDNs/hosts servem melhor com UA
-        "User-Agent": "Mozilla/5.0",
-      },
+      headers: { "User-Agent": "Mozilla/5.0" },
     });
 
     if (!res.ok) {
@@ -39,21 +35,16 @@ export async function GET(req: Request) {
       return new NextResponse("Not an image", { status: 415 });
     }
 
-    // Nota: para imagens grandes, isto carrega em memória.
-    // Para admin normalmente é ok; se quiseres, eu adapto para stream.
     const buf = await res.arrayBuffer();
 
-    const out = new NextResponse(buf, {
+    return new NextResponse(buf, {
       status: 200,
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "no-store",
-        // CORS (aqui é opcional porque já é same-origin, mas não faz mal)
         "Access-Control-Allow-Origin": "*",
       },
     });
-
-    return out;
   } catch {
     return new NextResponse("Proxy error", { status: 502 });
   } finally {
