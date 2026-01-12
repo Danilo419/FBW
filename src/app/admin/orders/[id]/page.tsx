@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PrintButton } from "@/components/admin/PrintButton"; // client component
 import { updateOrderTrackingAction } from "../actions";
+import SupplierCopyCard from "@/components/admin/SupplierCopyCard";
 
 /* ========================= Helpers ========================= */
 
@@ -446,7 +447,11 @@ export default async function AdminOrderViewPage({
 
               <div className="mt-3 text-xs text-gray-500">Payment</div>
               <div className="text-sm">
-                {order.paidAt ? <span className="font-medium">Paid</span> : <span>Unpaid</span>}
+                {order.paidAt ? (
+                  <span className="font-medium">Paid</span>
+                ) : (
+                  <span>Unpaid</span>
+                )}
               </div>
 
               {order.stripePaymentIntentId && (
@@ -607,8 +612,13 @@ export default async function AdminOrderViewPage({
           {/* RIGHT */}
           <div className="space-y-4 lg:col-span-3">
             <section className="rounded-2xl border bg-white p-4">
-              <div className="mb-2 flex items-center gap-2 font-semibold">
-                <Package className="h-4 w-4" /> Items
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Package className="h-4 w-4" /> Items (Copy for supplier)
+                </div>
+                <div className="text-xs text-gray-500">
+                  Click “Copy text + image” on each product
+                </div>
               </div>
 
               {order.items.length === 0 ? (
@@ -616,7 +626,7 @@ export default async function AdminOrderViewPage({
               ) : (
                 <div className="space-y-3">
                   {order.items.map((it) => (
-                    <ItemRow key={it.id} currency={order.currency} item={it} />
+                    <SupplierCopyCard key={it.id} item={it} />
                   ))}
                 </div>
               )}
@@ -683,93 +693,6 @@ function AddressBlock(props: {
       <LabeledRow label="City / Region" value={cityRegion || "—"} />
       <LabeledRow label="Postal Code" value={props.postalCode ?? "—"} />
       <LabeledRow label="Country" value={props.country ?? "—"} />
-    </div>
-  );
-}
-
-function ItemRow({
-  item,
-  currency,
-}: {
-  currency: Currency;
-  item: {
-    id: string;
-    name: string;
-    slug: string | null;
-    image?: string | null;
-    qty: number;
-    unitPriceCents: number;
-    totalPriceCents: number;
-    size?: string | null;
-    options?: Record<string, string>;
-    personalization?: { name?: string | null; number?: string | null } | null;
-  };
-}) {
-  const prettyOptions =
-    item.options &&
-    Object.entries(item.options).flatMap(([k, raw]) => {
-      if (raw == null || raw === "") return [];
-      return [[k, String(raw).replace(/-/g, " ")] as const];
-    });
-
-  const hasPersonalization = !!item.personalization?.name || !!item.personalization?.number;
-
-  return (
-    <div className="grid grid-cols-[96px,1fr] gap-3 rounded-xl border p-3">
-      <div className="h-24 w-24 overflow-hidden rounded-lg bg-gray-50 border">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={item.image || "/placeholder.png"}
-          alt={item.name}
-          className="h-full w-full object-contain"
-        />
-      </div>
-
-      <div className="min-w-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="font-medium leading-tight truncate">{item.name}</div>
-            <div className="text-xs text-gray-500">
-              Size: {item.size || "—"} • Qty: {item.qty}
-            </div>
-          </div>
-
-          <div className="text-right text-sm shrink-0">
-            <div>{money(item.unitPriceCents, currency)}</div>
-            <div className="font-semibold">{money(item.totalPriceCents, currency)}</div>
-          </div>
-        </div>
-
-        <div className="mt-2 space-y-1 text-xs text-gray-700">
-          {prettyOptions &&
-            prettyOptions.map(([k, v]) => (
-              <div key={k} className="break-words">
-                <span className="text-gray-500 capitalize">{k.replace(/_/g, " ")}:</span>{" "}
-                {v}
-                {k === "badges" && (
-                  <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
-                    FREE
-                  </span>
-                )}
-              </div>
-            ))}
-
-          {hasPersonalization && (
-            <div className="break-words">
-              <span className="text-gray-500">Personalization:</span>{" "}
-              {[
-                item.personalization?.name ? `Name “${item.personalization.name}”` : null,
-                item.personalization?.number ? `Number ${item.personalization.number}` : null,
-              ]
-                .filter(Boolean)
-                .join(" • ")}
-              <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
-                FREE
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
