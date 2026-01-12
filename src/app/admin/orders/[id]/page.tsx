@@ -83,7 +83,8 @@ function extractShipping(order: any) {
 
     return {
       fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
-      email: g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
+      email:
+        g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
       phone: g("phone", "telephone", "ship_phone"),
       address1: g("address1", "addressLine1", "line1", "street", "ship_line1"),
       address2: g("address2", "addressLine2", "line2", "street2", "ship_line2"),
@@ -121,8 +122,10 @@ function extractShipping(order: any) {
 
 function extractTracking(order: any) {
   const j = safeParseJSON(order?.shippingJson);
-  const trackingCode = pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
-  const trackingUrl = pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
+  const trackingCode =
+    pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
+  const trackingUrl =
+    pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
 
   const status = String(order?.status ?? "pending");
   const shippingStatus =
@@ -146,40 +149,37 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
-/* ========================= Personalization extraction (FIXED) =========================
- * IMPORTANT:
- * - NUNCA usar `it.name` como fallback (isso é o nome do produto).
- * - Só aceitar chaves específicas de personalização
- * - Prioridade: snapshot.personalization -> snapshot.personalizationJson -> item.personalizationJson -> campos diretos específicos -> options específicas
- */
+/* ========================= Personalization extraction (FIXED) ========================= */
 function extractPersonalization(it: any, snap: any, optionsObj: any) {
-  // 1) snapshot.personalization (o mais confiável)
   const snapPers =
     snap?.personalization && typeof snap.personalization === "object"
       ? snap.personalization
       : null;
 
   const snapPersName =
-    snapPers ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"]) : null;
+    snapPers
+      ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
+      : null;
 
   const snapPersNumber =
-    snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"]) : null;
+    snapPers
+      ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"])
+      : null;
 
-  // 2) snapshot.personalizationJson
   const snapPersJ = safeParseJSON(snap?.personalizationJson);
   const snapJName =
     pickStr(snapPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
   const snapJNumber =
-    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
+    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
+    null;
 
-  // 3) item.personalizationJson (se existir)
   const itPersJ = safeParseJSON(it?.personalizationJson);
   const itJName =
     pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
   const itJNumber =
-    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
+    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
+    null;
 
-  // 4) campos diretos ESPECÍFICOS no item (sem "name" genérico)
   const directName =
     pickStr(it, [
       "personalizationName",
@@ -200,14 +200,18 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
       "customNumber",
     ]) ?? null;
 
-  // 5) alguns projetos guardam isto em snapshot root (custName/custNumber)
   const snapRootName =
-    pickStr(snap, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ?? null;
-  const snapRootNumber =
-    pickStr(snap, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ??
+    pickStr(snap, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ??
     null;
+  const snapRootNumber =
+    pickStr(snap, [
+      "custNumber",
+      "customerNumber",
+      "numberOnShirt",
+      "shirtNumber",
+      "playerNumber",
+    ]) ?? null;
 
-  // 6) optionsObj (NÃO usar "name"/"number" genéricos aqui também)
   const optName =
     pickStr(optionsObj, [
       "custName",
@@ -296,7 +300,6 @@ async function fetchOrder(id: string) {
         safeParseJSON(snap?.selected) ||
         {};
 
-      // ✅ FIXED personalization
       const personalization = extractPersonalization(it, snap, optionsObj);
 
       const size =
@@ -447,11 +450,7 @@ export default async function AdminOrderViewPage({
 
               <div className="mt-3 text-xs text-gray-500">Payment</div>
               <div className="text-sm">
-                {order.paidAt ? (
-                  <span className="font-medium">Paid</span>
-                ) : (
-                  <span>Unpaid</span>
-                )}
+                {order.paidAt ? <span className="font-medium">Paid</span> : <span>Unpaid</span>}
               </div>
 
               {order.stripePaymentIntentId && (

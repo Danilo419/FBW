@@ -36,9 +36,12 @@ function toLowerClean(s: string) {
 }
 
 function deriveVersion(item: Item) {
+  // ✅ Pedido: se tiver "Player Version" no nome, deve ser "player"
+  const nameLc = toLowerClean(item.name);
+  if (nameLc.includes("player version")) return "player";
+
   const opt = item.options ?? {};
 
-  // tenta achar algo que seja "fan" / "player"
   const maybe =
     pickFirst(opt, ["version", "kitVersion", "edition", "type", "variant"]) ??
     pickFirst(opt, ["jerseyType", "shirtType", "model"]) ??
@@ -51,16 +54,13 @@ function deriveVersion(item: Item) {
     return maybe;
   }
 
-  // fallback: tenta pelo nome do produto
-  const nameLc = toLowerClean(item.name);
   if (nameLc.includes("player")) return "player";
   if (nameLc.includes("fan")) return "fan";
 
-  return null;
+  return "fan";
 }
 
 function buildSupplierText(item: Item) {
-  // ✅ exatamente no estilo das tuas prints
   const persName = norm(item.personalization?.name);
   const persNumber = norm(item.personalization?.number);
   const badges = norm(item.options?.badges);
@@ -68,28 +68,24 @@ function buildSupplierText(item: Item) {
   const version = deriveVersion(item);
 
   const lines: string[] = [];
-
   if (persName) lines.push(`Name : ${persName}`);
   if (persNumber) lines.push(`Number : ${persNumber}`);
-
   if (badges) lines.push(`Badges : ${badges}`);
 
-  if (version) lines.push(`${version}`);
-  else lines.push(`fan`); // fallback para não ficar vazio (podes trocar/remover se quiseres)
-
+  lines.push(version); // fan / player
   lines.push(`size : ${size ?? "—"}`);
-
-  // Se quiseres incluir qty:
-  // lines.push(`qty : ${String(item.qty)}`);
 
   return lines.join("\n");
 }
 
+function isRemoteUrl(u: string) {
+  return /^https?:\/\//i.test(u);
+}
+
 async function fetchAsBlob(url: string) {
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to fetch image");
-  const blob = await res.blob();
-  return blob;
+  if (!res.ok) throw new Error(`Failed to fetch image (${res.status})`);
+  return await res.blob();
 }
 
 export default function SupplierCopyCard({ item }: { item: Item }) {
@@ -97,47 +93,43 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
   const [copyError, setCopyError] = React.useState<string | null>(null);
 
   const imageUrl = item.image || "/placeholder.png";
+
+  // ✅ Usa proxy se for remoto (resolve CORS)
+  const proxiedUrl = isRemoteUrl(imageUrl)
+    ? `/api/admin/image-proxy?url=${encodeURIComponent(imageUrl)}`
+    : imageUrl;
+
   const text = React.useMemo(() => buildSupplierText(item), [item]);
 
   const doCopy = async () => {
     setCopyError(null);
 
-    // 1) tenta copiar imagem + texto para a clipboard
+    // precisa de HTTPS ou localhost (secure context)
+    if (!navigator.clipboard) {
+      setCopyError("Clipboard API not available in this browser/context.");
+      return;
+    }
+
     try {
-      // ClipboardItem precisa de HTTPS (ou localhost)
-      // e o browser pode bloquear se a imagem for cross-origin sem CORS.
-      const blob = await fetchAsBlob(imageUrl);
+      const blob = await fetchAsBlob(proxiedUrl);
 
-      const clipboardItems: ClipboardItem[] = [];
-
-      // imagem
       const imgType = blob.type || "image/png";
       const imgItem = new ClipboardItem({ [imgType]: blob });
 
-      // texto
       const textBlob = new Blob([text], { type: "text/plain" });
       const textItem = new ClipboardItem({ "text/plain": textBlob });
 
-      // Nota: alguns browsers aceitam múltiplos items; outros preferem 1 item.
-      // Aqui colocamos 2 items (imagem e texto).
-      clipboardItems.push(imgItem, textItem);
-
-      await navigator.clipboard.write(clipboardItems);
+      await navigator.clipboard.write([imgItem, textItem]);
 
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
-      return;
     } catch (e: any) {
-      // 2) fallback: copiar só o texto (funciona praticamente sempre)
+      // fallback: texto only
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1200);
-
-        setCopyError(
-          "Image copy blocked by browser/CORS — copied text only. (Open the image and send it manually.)"
-        );
-        return;
+        setCopyError("Couldn’t copy image — copied text only.");
       } catch (err: any) {
         setCopyError(String(err?.message || err || "Copy failed"));
       }
@@ -149,11 +141,7 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
       <div className="flex gap-3">
         <div className="h-24 w-24 overflow-hidden rounded-xl bg-gray-50 border shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl}
-            alt={item.name}
-            className="h-full w-full object-contain"
-          />
+          <img src={imageUrl} alt={item.name} className="h-full w-full object-contain" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -190,6 +178,7 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
             <pre className="whitespace-pre-wrap break-words text-sm leading-5 text-emerald-950 font-medium">
 {text}
             </pre>
+
             <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-900/70">
               <ImageIcon className="h-3.5 w-3.5" />
               Image:{" "}
@@ -204,9 +193,7 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
             </div>
 
             {copyError ? (
-              <div className="mt-2 text-[12px] text-amber-700">
-                {copyError}
-              </div>
+              <div className="mt-2 text-[12px] text-amber-700">{copyError}</div>
             ) : null}
           </div>
         </div>
