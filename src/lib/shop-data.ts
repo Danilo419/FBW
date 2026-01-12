@@ -203,6 +203,8 @@ const NAME_ALIASES: Record<string, string> = {
   "atlético": "atletico-madrid",
   "atletico": "atletico-madrid",
 
+  "vitória-de-guimarães": "vitoria-sc",
+
   // Barcelona sem FC
   "barcelona": "barcelona",
 
