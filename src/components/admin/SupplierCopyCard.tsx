@@ -3,12 +3,12 @@
 
 import React from "react";
 import {
+  ClipboardCopy,
   Copy,
   CheckCircle2,
   Image as ImageIcon,
   Download,
   ExternalLink,
-  ClipboardCopy,
 } from "lucide-react";
 
 type Item = {
@@ -24,60 +24,63 @@ type Item = {
   personalization?: { name?: string | null; number?: string | null } | null;
 };
 
-function norm(s?: string | null) {
-  const x = String(s ?? "").trim();
-  return x.length ? x : null;
+/* ================= utils ================= */
+
+function norm(v?: string | null) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : null;
 }
 
-function pickFirst(options: Record<string, string> | undefined, keys: string[]) {
-  if (!options) return null;
+function pickFirst(obj: Record<string, string> | undefined, keys: string[]) {
+  if (!obj) return null;
   for (const k of keys) {
-    const v = options[k];
-    if (v != null && String(v).trim() !== "") return String(v).trim();
+    const v = obj[k];
+    if (v && String(v).trim()) return String(v).trim();
   }
   return null;
 }
 
-function toLowerClean(s: string) {
+function lc(s: string) {
   return s.trim().toLowerCase();
 }
 
 function deriveVersion(item: Item) {
-  // ✅ Pedido: se tiver "Player Version" no nome, deve ser "player"
-  const nameLc = toLowerClean(item.name);
-  if (nameLc.includes("player version")) return "player";
+  // Regra pedida
+  if (lc(item.name).includes("player version")) return "player";
 
   const opt = item.options ?? {};
   const maybe =
     pickFirst(opt, ["version", "kitVersion", "edition", "type", "variant"]) ??
-    pickFirst(opt, ["jerseyType", "shirtType", "model"]) ??
-    null;
+    pickFirst(opt, ["jerseyType", "shirtType", "model"]);
 
   if (maybe) {
-    const lc = toLowerClean(maybe);
-    if (lc.includes("fan")) return "fan";
-    if (lc.includes("player")) return "player";
+    const m = lc(maybe);
+    if (m.includes("player")) return "player";
+    if (m.includes("fan")) return "fan";
     return maybe;
   }
 
-  if (nameLc.includes("player")) return "player";
-  if (nameLc.includes("fan")) return "fan";
+  if (lc(item.name).includes("player")) return "player";
+  if (lc(item.name).includes("fan")) return "fan";
+
   return "fan";
 }
 
 function buildSupplierText(item: Item) {
-  const persName = norm(item.personalization?.name);
-  const persNumber = norm(item.personalization?.number);
+  const lines: string[] = [];
+
+  const name = norm(item.personalization?.name);
+  const number = norm(item.personalization?.number);
   const badges = norm(item.options?.badges);
   const size = norm(item.size);
-  const version = deriveVersion(item);
 
-  const lines: string[] = [];
-  if (persName) lines.push(`Name : ${persName}`);
-  if (persNumber) lines.push(`Number : ${persNumber}`);
+  if (name) lines.push(`Name : ${name}`);
+  if (number) lines.push(`Number : ${number}`);
   if (badges) lines.push(`Badges : ${badges}`);
-  lines.push(version);
+
+  lines.push(deriveVersion(item));
   lines.push(`size : ${size ?? "—"}`);
+
   return lines.join("\n");
 }
 
@@ -91,25 +94,20 @@ async function fetchAsBlob(url: string) {
   return await res.blob();
 }
 
-// Firefox geralmente NÃO suporta copiar imagem com ClipboardItem
-function isFirefox() {
-  if (typeof navigator === "undefined") return false;
-  return /firefox/i.test(navigator.userAgent);
-}
-
 function supportsImageClipboard() {
   return (
     typeof window !== "undefined" &&
     !!(navigator as any)?.clipboard?.write &&
-    typeof (window as any).ClipboardItem !== "undefined" &&
-    !isFirefox()
+    typeof (window as any).ClipboardItem !== "undefined"
   );
 }
+
+/* ================= component ================= */
 
 export default function SupplierCopyCard({ item }: { item: Item }) {
   const [copiedText, setCopiedText] = React.useState(false);
   const [copiedImage, setCopiedImage] = React.useState(false);
-  const [copyError, setCopyError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
   const [downloading, setDownloading] = React.useState(false);
 
   const imageUrl = item.image || "/placeholder.png";
@@ -119,47 +117,40 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
 
   const text = React.useMemo(() => buildSupplierText(item), [item]);
 
-  const doCopyText = async () => {
-    setCopyError(null);
+  async function copyText() {
+    setError(null);
     try {
       await (navigator as any).clipboard.writeText(text);
       setCopiedText(true);
-      window.setTimeout(() => setCopiedText(false), 1200);
-    } catch (e: any) {
-      setCopyError(String(e?.message || e || "Couldn’t copy text."));
+      setTimeout(() => setCopiedText(false), 1200);
+    } catch {
+      setError("Failed to copy text.");
     }
-  };
+  }
 
-  const doCopyImage = async () => {
-    setCopyError(null);
+  async function copyImage() {
+    setError(null);
 
     if (!supportsImageClipboard()) {
-      setCopyError(
-        "Your browser can't copy images to clipboard (common on Firefox). Use Download/Open."
-      );
+      setError("Image clipboard not supported in this browser.");
       return;
     }
 
     try {
       const blob = await fetchAsBlob(proxiedUrl);
-      const imgType = blob.type || "image/png";
-      const imgItem = new (window as any).ClipboardItem({ [imgType]: blob });
-      await (navigator as any).clipboard.write([imgItem]);
+      const type = blob.type || "image/png";
+      const item = new (window as any).ClipboardItem({ [type]: blob });
+      await (navigator as any).clipboard.write([item]);
 
       setCopiedImage(true);
-      window.setTimeout(() => setCopiedImage(false), 1200);
-
-      // ✅ mensagem importante sobre WhatsApp
-      setCopyError(
-        "Image copied ✅ (Note: WhatsApp Web will paste only the image. Copy/paste the text separately.)"
-      );
+      setTimeout(() => setCopiedImage(false), 1200);
     } catch {
-      setCopyError("Couldn’t copy image — use Download/Open.");
+      setError("Failed to copy image.");
     }
-  };
+  }
 
-  const doDownload = async () => {
-    setCopyError(null);
+  async function downloadImage() {
+    setError(null);
     setDownloading(true);
     try {
       const blob = await fetchAsBlob(proxiedUrl);
@@ -168,97 +159,80 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
           ? blob.type.split("/")[1].replace("jpeg", "jpg")
           : "png";
 
-      const fileNameBase =
-        item.slug?.trim() ||
+      const base =
+        item.slug ||
         item.name
-          .trim()
           .slice(0, 40)
           .replace(/[^a-z0-9]+/gi, "-")
           .replace(/^-+|-+$/g, "") ||
         "product";
 
-      const fileName = `${fileNameBase}-${item.id.slice(-6)}.${ext}`;
-
-      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
+      a.href = URL.createObjectURL(blob);
+      a.download = `${base}-${item.id.slice(-6)}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e: any) {
-      setCopyError(String(e?.message || e || "Download failed"));
+      URL.revokeObjectURL(a.href);
+    } catch {
+      setError("Failed to download image.");
     } finally {
       setDownloading(false);
     }
-  };
+  }
 
   return (
-    <div className="rounded-2xl border p-3 bg-white">
+    <div className="rounded-2xl border bg-white p-3">
       <div className="flex gap-3">
-        <div className="h-24 w-24 overflow-hidden rounded-xl bg-gray-50 border shrink-0">
+        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border bg-gray-50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt={item.name} className="h-full w-full object-contain" />
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-semibold leading-tight truncate">{item.name}</div>
+              <div className="font-semibold truncate">{item.name}</div>
               <div className="text-xs text-gray-500">
                 Qty: {item.qty} • Size: {item.size || "—"}
               </div>
             </div>
 
-            <div className="shrink-0 flex flex-wrap items-center justify-end gap-2">
-              {/* ✅ Copy text */}
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                type="button"
-                onClick={doCopyText}
+                onClick={copyText}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                title="Copy text only (best for WhatsApp)"
               >
                 {copiedText ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Text copied
+                    <CheckCircle2 className="h-4 w-4" /> Text copied
                   </>
                 ) : (
                   <>
-                    <ClipboardCopy className="h-4 w-4" />
-                    Copy text
+                    <ClipboardCopy className="h-4 w-4" /> Copy text
                   </>
                 )}
               </button>
 
-              {/* ✅ Copy image */}
               <button
-                type="button"
-                onClick={doCopyImage}
+                onClick={copyImage}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                title="Copy image only"
               >
                 {copiedImage ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Image copied
+                    <CheckCircle2 className="h-4 w-4" /> Image copied
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4" />
-                    Copy image
+                    <Copy className="h-4 w-4" /> Copy image
                   </>
                 )}
               </button>
 
-              {/* ✅ Download image */}
               <button
-                type="button"
-                onClick={doDownload}
+                onClick={downloadImage}
                 disabled={downloading}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
-                title="Download image"
               >
                 <Download className="h-4 w-4" />
                 {downloading ? "Downloading..." : "Download"}
@@ -266,32 +240,26 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
             </div>
           </div>
 
-          {/* “Bolha” estilo WhatsApp */}
           <div className="mt-3 rounded-2xl border bg-emerald-50 p-3">
-            <pre className="whitespace-pre-wrap break-words text-sm leading-5 text-emerald-950 font-medium">
+            <pre className="whitespace-pre-wrap break-words text-sm font-medium text-emerald-950">
 {text}
             </pre>
 
             <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-900/70">
               <ImageIcon className="h-3.5 w-3.5" />
-              Image:
               <a
                 href={imageUrl}
                 target="_blank"
-                className="underline break-all inline-flex items-center gap-1"
                 rel="noreferrer"
+                className="inline-flex items-center gap-1 underline break-all"
               >
-                open <ExternalLink className="h-3 w-3" />
+                open image <ExternalLink className="h-3 w-3" />
               </a>
             </div>
 
-            {copyError ? (
-              <div className="mt-2 text-[12px] text-amber-700">{copyError}</div>
-            ) : null}
-
-            <div className="mt-2 text-[11px] text-emerald-900/60">
-              Tip (WhatsApp): paste the text first, then paste/attach the image.
-            </div>
+            {error && (
+              <div className="mt-2 text-[12px] text-amber-700">{error}</div>
+            )}
           </div>
         </div>
       </div>

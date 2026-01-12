@@ -18,6 +18,7 @@ import {
 import { PrintButton } from "@/components/admin/PrintButton"; // client component
 import { updateOrderTrackingAction } from "../actions";
 import SupplierCopyCard from "@/components/admin/SupplierCopyCard";
+import CustomerCopyCard from "@/components/admin/CustomerCopyCard";
 
 /* ========================= Helpers ========================= */
 
@@ -475,6 +476,9 @@ export default async function AdminOrderViewPage({
               )}
             </section>
 
+            {/* ✅ Customer copy block (new) */}
+            <CustomerCopyCard shipping={order.shipping} />
+
             {/* ✅ Fulfillment / Tracking */}
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
@@ -613,10 +617,10 @@ export default async function AdminOrderViewPage({
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 font-semibold">
-                  <Package className="h-4 w-4" /> Items (Copy for supplier)
+                  <Package className="h-4 w-4" /> Items (Copy)
                 </div>
                 <div className="text-xs text-gray-500">
-                  Click “Copy text + image” on each product
+                  Copy text / image individually
                 </div>
               </div>
 
