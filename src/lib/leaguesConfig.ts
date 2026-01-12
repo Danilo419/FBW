@@ -233,7 +233,7 @@ export const LEAGUES_CONFIG: LeagueConfig[] = [
       { slug: "santa-clara", name: "Santa Clara" },
       { slug: "sporting", name: "Sporting" },
       { slug: "tondela", name: "Tondela" },
-      { slug: "vitoria-guimaraes", name: "Vitória" },
+      { slug: "vitoria-guimaraes", name: "Vitória de Guimarães" },
     ],
   },
 
