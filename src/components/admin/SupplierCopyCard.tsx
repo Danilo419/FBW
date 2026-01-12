@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Download,
   ExternalLink,
+  ClipboardCopy,
 } from "lucide-react";
 
 type Item = {
@@ -47,7 +48,6 @@ function deriveVersion(item: Item) {
   if (nameLc.includes("player version")) return "player";
 
   const opt = item.options ?? {};
-
   const maybe =
     pickFirst(opt, ["version", "kitVersion", "edition", "type", "variant"]) ??
     pickFirst(opt, ["jerseyType", "shirtType", "model"]) ??
@@ -62,7 +62,6 @@ function deriveVersion(item: Item) {
 
   if (nameLc.includes("player")) return "player";
   if (nameLc.includes("fan")) return "fan";
-
   return "fan";
 }
 
@@ -77,9 +76,8 @@ function buildSupplierText(item: Item) {
   if (persName) lines.push(`Name : ${persName}`);
   if (persNumber) lines.push(`Number : ${persNumber}`);
   if (badges) lines.push(`Badges : ${badges}`);
-  lines.push(version); // fan / player
+  lines.push(version);
   lines.push(`size : ${size ?? "—"}`);
-
   return lines.join("\n");
 }
 
@@ -93,14 +91,13 @@ async function fetchAsBlob(url: string) {
   return await res.blob();
 }
 
-// Firefox geralmente não suporta image clipboard via ClipboardItem
+// Firefox geralmente NÃO suporta copiar imagem com ClipboardItem
 function isFirefox() {
   if (typeof navigator === "undefined") return false;
   return /firefox/i.test(navigator.userAgent);
 }
 
 function supportsImageClipboard() {
-  // heurística simples e segura
   return (
     typeof window !== "undefined" &&
     !!(navigator as any)?.clipboard?.write &&
@@ -110,42 +107,35 @@ function supportsImageClipboard() {
 }
 
 export default function SupplierCopyCard({ item }: { item: Item }) {
-  const [copied, setCopied] = React.useState(false);
+  const [copiedText, setCopiedText] = React.useState(false);
+  const [copiedImage, setCopiedImage] = React.useState(false);
   const [copyError, setCopyError] = React.useState<string | null>(null);
   const [downloading, setDownloading] = React.useState(false);
 
   const imageUrl = item.image || "/placeholder.png";
-
-  // ✅ Usa proxy se for remoto (resolve CORS)
   const proxiedUrl = isRemoteUrl(imageUrl)
     ? `/api/admin/image-proxy?url=${encodeURIComponent(imageUrl)}`
     : imageUrl;
 
   const text = React.useMemo(() => buildSupplierText(item), [item]);
 
-  const doCopy = async () => {
+  const doCopyText = async () => {
     setCopyError(null);
-
-    if (!(navigator as any).clipboard) {
-      setCopyError("Clipboard API not available in this browser/context.");
-      return;
-    }
-
-    // Sempre copia o texto (isso é o que tu MAIS precisas)
     try {
       await (navigator as any).clipboard.writeText(text);
+      setCopiedText(true);
+      window.setTimeout(() => setCopiedText(false), 1200);
     } catch (e: any) {
       setCopyError(String(e?.message || e || "Couldn’t copy text."));
-      return;
     }
+  };
 
-    // Depois tenta copiar a imagem SE suportado
+  const doCopyImage = async () => {
+    setCopyError(null);
+
     if (!supportsImageClipboard()) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-
       setCopyError(
-        "Your browser can’t copy images to clipboard (common on Firefox). Text copied ✅ Use Download/Open for the image."
+        "Your browser can't copy images to clipboard (common on Firefox). Use Download/Open."
       );
       return;
     }
@@ -154,16 +144,17 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
       const blob = await fetchAsBlob(proxiedUrl);
       const imgType = blob.type || "image/png";
       const imgItem = new (window as any).ClipboardItem({ [imgType]: blob });
-
-      // Copia imagem (texto já foi copiado)
       await (navigator as any).clipboard.write([imgItem]);
 
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      setCopiedImage(true);
+      window.setTimeout(() => setCopiedImage(false), 1200);
+
+      // ✅ mensagem importante sobre WhatsApp
+      setCopyError(
+        "Image copied ✅ (Note: WhatsApp Web will paste only the image. Copy/paste the text separately.)"
+      );
     } catch {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-      setCopyError("Text copied ✅ but couldn’t copy image. Use Download/Open.");
+      setCopyError("Couldn’t copy image — use Download/Open.");
     }
   };
 
@@ -172,13 +163,18 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
     setDownloading(true);
     try {
       const blob = await fetchAsBlob(proxiedUrl);
-      const ext = (blob.type && blob.type.includes("/"))
-        ? blob.type.split("/")[1].replace("jpeg", "jpg")
-        : "png";
+      const ext =
+        blob.type && blob.type.includes("/")
+          ? blob.type.split("/")[1].replace("jpeg", "jpg")
+          : "png";
 
       const fileNameBase =
         item.slug?.trim() ||
-        item.name.trim().slice(0, 40).replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") ||
+        item.name
+          .trim()
+          .slice(0, 40)
+          .replace(/[^a-z0-9]+/gi, "-")
+          .replace(/^-+|-+$/g, "") ||
         "product";
 
       const fileName = `${fileNameBase}-${item.id.slice(-6)}.${ext}`;
@@ -215,26 +211,48 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
               </div>
             </div>
 
-            <div className="shrink-0 flex items-center gap-2">
+            <div className="shrink-0 flex flex-wrap items-center justify-end gap-2">
+              {/* ✅ Copy text */}
               <button
                 type="button"
-                onClick={doCopy}
+                onClick={doCopyText}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                title="Copy (text always, image if supported)"
+                title="Copy text only (best for WhatsApp)"
               >
-                {copied ? (
+                {copiedText ? (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    Copied
+                    Text copied
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4" />
-                    Copy text {supportsImageClipboard() ? "+ image" : ""}
+                    <ClipboardCopy className="h-4 w-4" />
+                    Copy text
                   </>
                 )}
               </button>
 
+              {/* ✅ Copy image */}
+              <button
+                type="button"
+                onClick={doCopyImage}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+                title="Copy image only"
+              >
+                {copiedImage ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Image copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy image
+                  </>
+                )}
+              </button>
+
+              {/* ✅ Download image */}
               <button
                 type="button"
                 onClick={doDownload}
@@ -270,6 +288,10 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
             {copyError ? (
               <div className="mt-2 text-[12px] text-amber-700">{copyError}</div>
             ) : null}
+
+            <div className="mt-2 text-[11px] text-emerald-900/60">
+              Tip (WhatsApp): paste the text first, then paste/attach the image.
+            </div>
           </div>
         </div>
       </div>
