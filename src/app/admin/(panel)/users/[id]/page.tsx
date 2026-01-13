@@ -17,41 +17,95 @@ type AnyProduct = Record<string, any>;
 
 function isLikelyImageUrl(s: string): boolean {
   const v = s.trim().toLowerCase();
-  if (!v.startsWith("http")) return false;
+  if (!v) return false;
 
-  // common image extensions OR common CDNs (cloudinary, supabase, etc.)
+  // If it's already a normal http(s) URL, accept.
+  if (v.startsWith("http://") || v.startsWith("https://")) return true;
+
+  // Protocol-relative URL (//cdn...)
+  if (v.startsWith("//")) return true;
+
+  // Cloudinary without protocol
+  if (v.startsWith("res.cloudinary.com/")) return true;
+
+  // If it looks like a file path, we still accept and normalize later
   if (
-    v.includes("cloudinary.com") ||
-    v.includes("supabase.co") ||
-    v.includes("storage.googleapis") ||
-    v.includes("vercel-storage.com") ||
-    v.includes("blob.vercel") ||
-    v.includes("cdn") ||
     v.endsWith(".jpg") ||
     v.endsWith(".jpeg") ||
     v.endsWith(".png") ||
     v.endsWith(".webp") ||
-    v.endsWith(".gif")
+    v.endsWith(".gif") ||
+    v.includes(".jpg?") ||
+    v.includes(".png?") ||
+    v.includes(".webp?")
   ) {
     return true;
   }
 
-  // sometimes URLs have query params (e.g. .jpg?x=)
-  if (v.includes(".jpg?") || v.includes(".jpeg?") || v.includes(".png?") || v.includes(".webp?"))
-    return true;
-
   return false;
+}
+
+/**
+ * Normalizes a URL so the browser can actually load it.
+ * - Adds https:// when missing
+ * - Handles // URLs
+ * - Encodes spaces and unsafe chars safely
+ */
+function normalizeImageUrl(raw: string): string | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+
+  let url = s;
+
+  // Protocol-relative
+  if (url.startsWith("//")) url = `https:${url}`;
+
+  // Cloudinary without protocol
+  if (url.startsWith("res.cloudinary.com/")) url = `https://${url}`;
+
+  // If it's something like "cdn.site.com/img.png"
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    // If it looks like a domain/path, force https
+    if (url.includes(".") && !url.startsWith("/")) {
+      url = `https://${url}`;
+    }
+    // If it's a relative path "/uploads/..", keep it as-is (it might be served by your site)
+    // (No change)
+  }
+
+  // Encode spaces and a few unsafe chars, but keep URL structure
+  try {
+    // If it's a relative URL, URL() needs a base
+    const parsed = url.startsWith("http")
+      ? new URL(url)
+      : new URL(url, "https://example.com");
+
+    // encode only pathname parts safely
+    const encodedPath = parsed.pathname
+      .split("/")
+      .map((seg) => encodeURIComponent(seg))
+      .join("/");
+
+    const final =
+      (url.startsWith("http") ? `${parsed.protocol}//${parsed.host}` : "") +
+      encodedPath +
+      parsed.search +
+      parsed.hash;
+
+    return final;
+  } catch {
+    // fallback: simple replace spaces
+    return url.replace(/ /g, "%20");
+  }
 }
 
 function firstImageFromUnknownValue(val: any): string | null {
   if (!val) return null;
 
-  // direct string
   if (typeof val === "string") {
     return isLikelyImageUrl(val) ? val : null;
   }
 
-  // array
   if (Array.isArray(val)) {
     for (const item of val) {
       const got = firstImageFromUnknownValue(item);
@@ -60,14 +114,11 @@ function firstImageFromUnknownValue(val: any): string | null {
     return null;
   }
 
-  // object with url
   if (typeof val === "object") {
-    // common nested keys
     const nestedKeys = ["url", "src", "href", "secure_url", "publicUrl"];
     for (const k of nestedKeys) {
       if (typeof val[k] === "string" && isLikelyImageUrl(val[k])) return val[k];
     }
-    // search deeper shallowly
     for (const k of Object.keys(val)) {
       const got = firstImageFromUnknownValue(val[k]);
       if (got) return got;
@@ -77,10 +128,9 @@ function firstImageFromUnknownValue(val: any): string | null {
   return null;
 }
 
-function getPrimaryProductImage(p?: AnyProduct | null): string | null {
+function getPrimaryProductImageRaw(p?: AnyProduct | null): string | null {
   if (!p) return null;
 
-  // 1) Try a curated list of common image keys
   const commonKeys = [
     "mainImage",
     "mainImageUrl",
@@ -105,6 +155,8 @@ function getPrimaryProductImage(p?: AnyProduct | null): string | null {
     "gallery",
     "photos",
     "media",
+    "featuredImage",
+    "featuredImageUrl",
   ];
 
   for (const key of commonKeys) {
@@ -114,7 +166,7 @@ function getPrimaryProductImage(p?: AnyProduct | null): string | null {
     }
   }
 
-  // 2) Fallback: scan ALL product fields to find the first thing that looks like an image URL
+  // fallback scan all fields
   for (const key of Object.keys(p)) {
     const got = firstImageFromUnknownValue(p[key]);
     if (got) return got;
@@ -228,7 +280,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
               {user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={user.image}
+                  src={normalizeImageUrl(user.image) ?? user.image}
                   alt={user.name ? `${user.name} profile photo` : "User profile photo"}
                   className="h-full w-full object-cover"
                   referrerPolicy="no-referrer"
@@ -287,7 +339,8 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
           <div className="divide-y">
             {reviews.map((r) => {
               const p = r.productId ? productMap.get(r.productId) ?? null : null;
-              const productImg = getPrimaryProductImage(p);
+              const raw = getPrimaryProductImageRaw(p);
+              const productImg = raw ? normalizeImageUrl(raw) : null;
               const productName = getProductName(p);
 
               return (
@@ -305,7 +358,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
-                            No image found
+                            No product image
                           </div>
                         )}
                       </div>
@@ -329,6 +382,23 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                         <div className="mt-1 text-xs text-gray-600">
                           <b>Product ID:</b> {r.productId ?? "-"}
                         </div>
+
+                        {/* ✅ Debug line so you can SEE the exact URL being used */}
+                        <div className="mt-1 text-[11px] text-gray-500 break-all">
+                          <b>Product image URL:</b>{" "}
+                          {productImg ? (
+                            <a
+                              href={productImg}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline"
+                            >
+                              {productImg}
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -347,29 +417,31 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                     {r.comment ?? "[No comment]"}
                   </div>
 
-                  {/* OPTIONAL: show review images as clickable thumbnails (better than plain URLs) */}
                   <div className="mt-3">
                     <div className="text-xs font-semibold text-gray-600 mb-2">Review images</div>
                     {Array.isArray(r.imageUrls) && r.imageUrls.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {r.imageUrls.map((url, idx) => (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block"
-                            title="Open image"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={url}
-                              alt={`Review image ${idx + 1}`}
-                              className="h-16 w-16 rounded-md border object-cover bg-gray-50"
-                              referrerPolicy="no-referrer"
-                            />
-                          </a>
-                        ))}
+                        {r.imageUrls.map((url, idx) => {
+                          const u = normalizeImageUrl(url) ?? url;
+                          return (
+                            <a
+                              key={idx}
+                              href={u}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block"
+                              title="Open image"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={u}
+                                alt={`Review image ${idx + 1}`}
+                                className="h-16 w-16 rounded-md border object-cover bg-gray-50"
+                                referrerPolicy="no-referrer"
+                              />
+                            </a>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-xs text-gray-500">-</div>
