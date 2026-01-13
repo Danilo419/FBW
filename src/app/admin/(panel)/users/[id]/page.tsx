@@ -3,7 +3,6 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ArrowLeft, User2, MessageSquareText } from "lucide-react";
@@ -14,28 +13,31 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-type AnyProduct = {
-  id: string;
-  name?: string | null;
-  // We don't know your exact Product fields, so we read common ones safely:
-  image?: string | null;
-  mainImageUrl?: string | null;
-  thumbnailUrl?: string | null;
-  imageUrl?: string | null;
-  images?: string[] | null;
-  imageUrls?: string[] | null;
-};
+type AnyProduct = Record<string, any>;
+
+function safeFirstString(arr: any): string | null {
+  if (!Array.isArray(arr)) return null;
+  const first = arr.find((x) => typeof x === "string" && x.trim().length > 0);
+  return typeof first === "string" ? first : null;
+}
 
 function getPrimaryProductImage(p?: AnyProduct | null): string | null {
   if (!p) return null;
 
+  // Try common fields that stores product images
   const candidates: Array<string | null | undefined> = [
-    p.mainImageUrl,
-    p.thumbnailUrl,
-    p.imageUrl,
-    p.image,
-    Array.isArray(p.images) ? p.images[0] : null,
-    Array.isArray(p.imageUrls) ? p.imageUrls[0] : null,
+    // single string fields
+    typeof p.mainImageUrl === "string" ? p.mainImageUrl : null,
+    typeof p.thumbnailUrl === "string" ? p.thumbnailUrl : null,
+    typeof p.imageUrl === "string" ? p.imageUrl : null,
+    typeof p.image === "string" ? p.image : null,
+    typeof p.coverImage === "string" ? p.coverImage : null,
+
+    // arrays
+    safeFirstString(p.imageUrls),
+    safeFirstString(p.images),
+    safeFirstString(p.gallery),
+    safeFirstString(p.photos),
   ];
 
   for (const c of candidates) {
@@ -44,8 +46,22 @@ function getPrimaryProductImage(p?: AnyProduct | null): string | null {
   return null;
 }
 
+function getProductName(p?: AnyProduct | null): string {
+  if (!p) return "Unknown product";
+  const name =
+    (typeof p.name === "string" && p.name) ||
+    (typeof p.title === "string" && p.title) ||
+    (typeof p.productName === "string" && p.productName) ||
+    null;
+  return name ?? "Unknown product";
+}
+
 function Stars({ rating }: { rating: number | null }) {
-  const r = typeof rating === "number" ? Math.max(0, Math.min(5, rating)) : 0;
+  const r =
+    typeof rating === "number" && Number.isFinite(rating)
+      ? Math.max(0, Math.min(5, Math.round(rating)))
+      : 0;
+
   return (
     <div className="flex items-center gap-1" aria-label={`Rating ${r} out of 5`}>
       {Array.from({ length: 5 }).map((_, i) => {
@@ -92,34 +108,25 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
       comment: true,
       createdAt: true,
       imageUrls: true,
-      userId: true,
     },
   });
 
-  // Fetch products for the reviews (so we can show product image + name)
+  // Collect product IDs from reviews
   const productIds = Array.from(
     new Set(reviews.map((r) => r.productId).filter((x): x is string => !!x))
   );
 
+  // ✅ IMPORTANT: do NOT "select" unknown fields → fetch full product row
   const products = productIds.length
     ? await prisma.product.findMany({
         where: { id: { in: productIds } },
-        // We cast select as any to avoid TS errors if your Product fields differ.
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          mainImageUrl: true,
-          thumbnailUrl: true,
-          imageUrl: true,
-          images: true,
-          imageUrls: true,
-        } as any,
       })
     : [];
 
   const productMap = new Map<string, AnyProduct>();
-  for (const p of products as unknown as AnyProduct[]) productMap.set(p.id, p);
+  for (const p of products as unknown as AnyProduct[]) {
+    if (p?.id) productMap.set(String(p.id), p);
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6">
@@ -142,15 +149,15 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
       <div className="mb-6 rounded-xl border bg-white p-4">
         <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            {/* ✅ User profile photo */}
-            <div className="relative h-14 w-14 overflow-hidden rounded-full border bg-gray-50">
+            {/* ✅ User profile photo (use <img> to avoid next/image domain issues) */}
+            <div className="h-14 w-14 overflow-hidden rounded-full border bg-gray-50 shrink-0">
               {user.image ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={user.image}
                   alt={user.name ? `${user.name} profile photo` : "User profile photo"}
-                  fill
-                  sizes="56px"
-                  className="object-cover"
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
@@ -166,7 +173,9 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
               <div className="text-sm text-gray-600 truncate">
                 {user.email ?? "No email"}
               </div>
-              <div className="mt-1 text-xs text-gray-500 truncate">ID: {user.id}</div>
+              <div className="mt-1 text-xs text-gray-500 truncate">
+                ID: {user.id}
+              </div>
             </div>
           </div>
 
@@ -207,21 +216,21 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
             {reviews.map((r) => {
               const p = r.productId ? productMap.get(r.productId) ?? null : null;
               const productImg = getPrimaryProductImage(p);
-              const productName = p?.name ?? "Unknown product";
+              const productName = getProductName(p);
 
               return (
                 <div key={r.id} className="px-4 py-4">
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      {/* ✅ Product thumbnail */}
-                      <div className="relative h-14 w-14 overflow-hidden rounded-lg border bg-gray-50 shrink-0">
+                      {/* ✅ Product thumbnail (use <img> to avoid next/image domain issues) */}
+                      <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50 shrink-0">
                         {productImg ? (
-                          <Image
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
                             src={productImg}
                             alt={productName}
-                            fill
-                            sizes="56px"
-                            className="object-cover"
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
@@ -234,12 +243,15 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                         <div className="text-sm font-semibold text-gray-900 truncate">
                           {productName}
                         </div>
+
                         <div className="text-xs text-gray-500">
                           <b>Review ID:</b> {r.id} •{" "}
-                          {r.createdAt ? new Date(r.createdAt).toLocaleString("en-GB") : "-"}
+                          {r.createdAt
+                            ? new Date(r.createdAt).toLocaleString("en-GB")
+                            : "-"}
                         </div>
 
-                        {/* ✅ Stars instead of “Rating: number” */}
+                        {/* ✅ Stars */}
                         <div className="mt-1">
                           <Stars rating={typeof r.rating === "number" ? r.rating : null} />
                         </div>
@@ -265,7 +277,6 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                     {r.comment ?? "[No comment]"}
                   </div>
 
-                  {/* Review images (optional) */}
                   <div className="mt-2 text-xs text-gray-600">
                     <b>Review images:</b>{" "}
                     {Array.isArray(r.imageUrls) && r.imageUrls.length > 0 ? (
