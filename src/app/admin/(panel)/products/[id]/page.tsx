@@ -124,21 +124,12 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     ],
   },
 
-  /* ✅ NOVO: TODAS as competições de seleções (National Teams) */
+  /* ✅ National Teams (NO women / NO youth) */
   {
     title: "National Teams – FIFA",
     items: [
       { value: "fifa-world-cup-regular", label: "FIFA World Cup – Tournament Badge" },
       { value: "fifa-world-cup-winners", label: "FIFA World Cup – Winners Badge" },
-
-      { value: "fifa-womens-world-cup-regular", label: "FIFA Women's World Cup – Tournament Badge" },
-      { value: "fifa-womens-world-cup-winners", label: "FIFA Women's World Cup – Winners Badge" },
-
-      { value: "fifa-u20-world-cup-regular", label: "FIFA U-20 World Cup – Tournament Badge" },
-      { value: "fifa-u20-world-cup-winners", label: "FIFA U-20 World Cup – Winners Badge" },
-
-      { value: "fifa-u17-world-cup-regular", label: "FIFA U-17 World Cup – Tournament Badge" },
-      { value: "fifa-u17-world-cup-winners", label: "FIFA U-17 World Cup – Winners Badge" },
 
       { value: "olympic-football-regular", label: "Olympic Football – Tournament Badge" },
       { value: "olympic-football-winners", label: "Olympic Football – Winners Badge" },
@@ -149,9 +140,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "uefa-euro-regular", label: "UEFA EURO – Tournament Badge" },
       { value: "uefa-euro-winners", label: "UEFA EURO – Winners Badge" },
-
-      { value: "uefa-womens-euro-regular", label: "UEFA Women's EURO – Tournament Badge" },
-      { value: "uefa-womens-euro-winners", label: "UEFA Women's EURO – Winners Badge" },
 
       { value: "uefa-nations-league-regular", label: "UEFA Nations League – Tournament Badge" },
       { value: "uefa-nations-league-winners", label: "UEFA Nations League – Winners Badge" },
@@ -165,9 +153,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "copa-america-regular", label: "Copa América – Tournament Badge" },
       { value: "copa-america-winners", label: "Copa América – Winners Badge" },
-
-      { value: "copa-america-femenina-regular", label: "Copa América Femenina – Tournament Badge" },
-      { value: "copa-america-femenina-winners", label: "Copa América Femenina – Winners Badge" },
     ],
   },
   {
@@ -175,9 +160,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "afcon-regular", label: "AFCON (Africa Cup of Nations) – Tournament Badge" },
       { value: "afcon-winners", label: "AFCON (Africa Cup of Nations) – Winners Badge" },
-
-      { value: "wafcon-regular", label: "WAFCON (Women's AFCON) – Tournament Badge" },
-      { value: "wafcon-winners", label: "WAFCON (Women's AFCON) – Winners Badge" },
     ],
   },
   {
@@ -185,9 +167,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "afc-asian-cup-regular", label: "AFC Asian Cup – Tournament Badge" },
       { value: "afc-asian-cup-winners", label: "AFC Asian Cup – Winners Badge" },
-
-      { value: "afc-womens-asian-cup-regular", label: "AFC Women's Asian Cup – Tournament Badge" },
-      { value: "afc-womens-asian-cup-winners", label: "AFC Women's Asian Cup – Winners Badge" },
 
       { value: "afc-nations-league-regular", label: "AFC Nations League – Tournament Badge" },
       { value: "afc-nations-league-winners", label: "AFC Nations League – Winners Badge" },
@@ -198,9 +177,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "concacaf-gold-cup-regular", label: "CONCACAF Gold Cup – Tournament Badge" },
       { value: "concacaf-gold-cup-winners", label: "CONCACAF Gold Cup – Winners Badge" },
-
-      { value: "concacaf-w-gold-cup-regular", label: "CONCACAF W Gold Cup – Tournament Badge" },
-      { value: "concacaf-w-gold-cup-winners", label: "CONCACAF W Gold Cup – Winners Badge" },
 
       { value: "concacaf-nations-league-regular", label: "CONCACAF Nations League – Tournament Badge" },
       { value: "concacaf-nations-league-winners", label: "CONCACAF Nations League – Winners Badge" },
@@ -223,7 +199,7 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   },
 ];
 
-/* ✅ NOVO: TeamType local (não depende do Prisma Client) */
+/* ✅ TeamType local (não depende do Prisma Client) */
 type TeamTypeLocal = "CLUB" | "NATION";
 
 export default async function ProductEditPage({
@@ -278,7 +254,7 @@ export default async function ProductEditPage({
   const BADGES_JSON = JSON.stringify(ALL_BADGES);
   const SELECTED_JSON = JSON.stringify(selectedInitial);
 
-  /* ✅ NOVO: valor atual do teamType para prefill */
+  /* ✅ valor atual do teamType para prefill */
   const currentTeamType: TeamTypeLocal = ((product as any).teamType as TeamTypeLocal) ?? "CLUB";
 
   return (
@@ -335,7 +311,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
               />
             </div>
 
-            {/* ✅ NOVO: Team Type (Clubs vs Nations) */}
+            {/* ✅ Team Type (Clubs vs Nations) */}
             <div>
               <label className="text-xs font-medium text-gray-600">Team type</label>
               <select
@@ -392,7 +368,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
               <div className="flex items-center gap-2">
                 <span id="blob-images-status" className="text-[11px] text-gray-500"></span>
 
-                {/* Botão acessível via label (compatível com Firefox) */}
                 <label
                   htmlFor="blob-images-input"
                   className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 cursor-pointer"
@@ -401,7 +376,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
                   Add from computer
                 </label>
 
-                {/* Não usar display:none; usar sr-only */}
                 <input id="blob-images-input" type="file" accept="image/*" multiple className="sr-only" />
               </div>
             </div>
@@ -423,7 +397,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         </form>
 
-        {/* Script: esconder “Add” visualmente sem remover interação (escopado por produto) */}
+        {/* Script: esconder “Add” visualmente sem remover interação */}
         <Script
           id={`hide-add-button-${product.id}`}
           strategy="afterInteractive"
@@ -437,7 +411,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
       const t = (b.textContent || '').trim().toLowerCase();
       if (t === 'add') {
         b.classList.add('sr-only');
-        b.style.display = ''; // garantir que não fica display:none
+        b.style.display = '';
       }
     });
   }
@@ -479,7 +453,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
             <div id="badge-selected" className="flex flex-wrap gap-2" />
           </div>
 
-          {/* Aqui vão os hidden inputs com name="selectedBadges[]" */}
           <div id="badge-hidden-inputs" className="hidden" />
 
           <div className="pt-2">
@@ -492,7 +465,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         </form>
 
-        {/* Script: badges (escreve selectedBadges[] no form de badges) — escopado + id único */}
+        {/* Script: badges search */}
         <Script
           id={`badges-search-${product.id}`}
           strategy="afterInteractive"
@@ -617,9 +590,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
   const input = scope.querySelector('#blob-images-input');
   const status = scope.querySelector('#blob-images-status');
 
-  // Tem de corresponder ao prop "name" do <ImagesEditor />
   const EDITOR_NAME = "imagesText";
-
   const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/avif","image/gif"]);
   const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -628,13 +599,11 @@ section .images-editor [placeholder*="Paste an image URL"] {
   }
 
   function pushIntoEditor(urls) {
-    // 1) API do ImagesEditor (se existir)
     const apiRoot = (window).__imagesEditor && (window).__imagesEditor[EDITOR_NAME];
     if (apiRoot && typeof apiRoot.append === "function") {
       try { apiRoot.append(urls); return; } catch (_) {}
     }
 
-    // 2) Fallback: antiga UI "Paste URL + Add"
     const root = scope.querySelector('.images-editor');
     if (!root) return;
     const paste = root.querySelector('input[placeholder*="Paste"]');
@@ -649,7 +618,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
       return;
     }
 
-    // 3) Último recurso: atualizar diretamente o campo name="imagesText"
     const field = scope.querySelector('textarea[name="imagesText"], input[name="imagesText"]');
     if (field) {
       let current = [];
@@ -720,9 +688,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
       }
     }
 
-    if (urls.length) {
-      pushIntoEditor(urls);
-    }
+    if (urls.length) pushIntoEditor(urls);
 
     input.value = '';
     setStatus('Uploaded ' + urls.length + '/' + valid.length + '.');
@@ -788,8 +754,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Sizes shown are fixed to S–2XL. Entries marked as <strong>ghost</strong> don’t exist in the database yet;
-          create them (via seed/Studio) to enable the toggle.
+          Sizes shown are fixed to S–2XL. Entries marked as <strong>ghost</strong> don’t exist in the
+          database yet; create them (via seed/Studio) to enable the toggle.
         </p>
       </section>
     </div>

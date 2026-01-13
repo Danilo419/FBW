@@ -72,25 +72,13 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     ],
   },
 
-  /* ✅ NOVO: TODAS as competições de seleções (National Teams) */
+  /* ✅ National Teams (NO women / NO youth) */
   {
     title: "National Teams – FIFA",
     items: [
-      // FIFA World Cup (Men)
       { value: "fifa-world-cup-regular", label: "FIFA World Cup – Tournament Badge" },
       { value: "fifa-world-cup-winners", label: "FIFA World Cup – Winners Badge" },
 
-      // FIFA Women's World Cup
-      { value: "fifa-womens-world-cup-regular", label: "FIFA Women's World Cup – Tournament Badge" },
-      { value: "fifa-womens-world-cup-winners", label: "FIFA Women's World Cup – Winners Badge" },
-
-      // FIFA U-20 / U-17 World Cups (common on some kits / commemoratives)
-      { value: "fifa-u20-world-cup-regular", label: "FIFA U-20 World Cup – Tournament Badge" },
-      { value: "fifa-u20-world-cup-winners", label: "FIFA U-20 World Cup – Winners Badge" },
-      { value: "fifa-u17-world-cup-regular", label: "FIFA U-17 World Cup – Tournament Badge" },
-      { value: "fifa-u17-world-cup-winners", label: "FIFA U-17 World Cup – Winners Badge" },
-
-      // Olympics (football)
       { value: "olympic-football-regular", label: "Olympic Football – Tournament Badge" },
       { value: "olympic-football-winners", label: "Olympic Football – Winners Badge" },
     ],
@@ -98,19 +86,12 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   {
     title: "National Teams – Europe (UEFA)",
     items: [
-      // EURO (Men)
       { value: "uefa-euro-regular", label: "UEFA EURO – Tournament Badge" },
       { value: "uefa-euro-winners", label: "UEFA EURO – Winners Badge" },
 
-      // EURO (Women)
-      { value: "uefa-womens-euro-regular", label: "UEFA Women's EURO – Tournament Badge" },
-      { value: "uefa-womens-euro-winners", label: "UEFA Women's EURO – Winners Badge" },
-
-      // Nations League
       { value: "uefa-nations-league-regular", label: "UEFA Nations League – Tournament Badge" },
       { value: "uefa-nations-league-winners", label: "UEFA Nations League – Winners Badge" },
 
-      // Finalissima
       { value: "uefa-finalissima-regular", label: "Finalissima – Match Badge" },
       { value: "uefa-finalissima-winners", label: "Finalissima – Winners Badge" },
     ],
@@ -120,9 +101,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "copa-america-regular", label: "Copa América – Tournament Badge" },
       { value: "copa-america-winners", label: "Copa América – Winners Badge" },
-
-      { value: "copa-america-femenina-regular", label: "Copa América Femenina – Tournament Badge" },
-      { value: "copa-america-femenina-winners", label: "Copa América Femenina – Winners Badge" },
     ],
   },
   {
@@ -130,9 +108,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "afcon-regular", label: "AFCON (Africa Cup of Nations) – Tournament Badge" },
       { value: "afcon-winners", label: "AFCON (Africa Cup of Nations) – Winners Badge" },
-
-      { value: "wafcon-regular", label: "WAFCON (Women's AFCON) – Tournament Badge" },
-      { value: "wafcon-winners", label: "WAFCON (Women's AFCON) – Winners Badge" },
     ],
   },
   {
@@ -140,9 +115,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "afc-asian-cup-regular", label: "AFC Asian Cup – Tournament Badge" },
       { value: "afc-asian-cup-winners", label: "AFC Asian Cup – Winners Badge" },
-
-      { value: "afc-womens-asian-cup-regular", label: "AFC Women's Asian Cup – Tournament Badge" },
-      { value: "afc-womens-asian-cup-winners", label: "AFC Women's Asian Cup – Winners Badge" },
 
       { value: "afc-nations-league-regular", label: "AFC Nations League – Tournament Badge" },
       { value: "afc-nations-league-winners", label: "AFC Nations League – Winners Badge" },
@@ -153,9 +125,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "concacaf-gold-cup-regular", label: "CONCACAF Gold Cup – Tournament Badge" },
       { value: "concacaf-gold-cup-winners", label: "CONCACAF Gold Cup – Winners Badge" },
-
-      { value: "concacaf-w-gold-cup-regular", label: "CONCACAF W Gold Cup – Tournament Badge" },
-      { value: "concacaf-w-gold-cup-winners", label: "CONCACAF W Gold Cup – Winners Badge" },
 
       { value: "concacaf-nations-league-regular", label: "CONCACAF Nations League – Tournament Badge" },
       { value: "concacaf-nations-league-winners", label: "CONCACAF Nations League – Winners Badge" },
@@ -190,10 +159,10 @@ export default function NewProductPage() {
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
-  // ✅ NOVO: diferenciar clube vs seleção
+  // ✅ diferenciar clube vs seleção
   const [teamType, setTeamType] = useState<TeamType>("CLUB");
 
-  // NOVO: remover completamente o bloco "Customization" no produto
+  // remover completamente o bloco "Customization" no produto
   const [disableCustomization, setDisableCustomization] = useState(false);
 
   // Badges
@@ -336,7 +305,7 @@ export default function NewProductPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // ✅ Team type (NOVO)
+    // ✅ Team type
     formData.set("teamType", teamType);
 
     // Sizes – apenas os selecionados são enviados
@@ -344,7 +313,7 @@ export default function NewProductPage() {
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
 
-    // Personalization toggle (NOVO)
+    // Personalization toggle
     formData.append("disableCustomization", disableCustomization ? "true" : "false");
 
     // Badges
@@ -515,7 +484,7 @@ export default function NewProductPage() {
               />
             </div>
 
-            {/* ✅ NOVO: Team Type */}
+            {/* ✅ Team Type */}
             <div className="space-y-2">
               <label htmlFor="teamType" className="text-sm font-medium">
                 Team Type
@@ -678,8 +647,8 @@ export default function NewProductPage() {
                 <p className="text-xs text-gray-600 mt-1">
                   Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
                   This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
-                  <code>customization</code> option group with <strong>no values</strong>, and the product page will
-                  not render that block.
+                  <code>customization</code> option group with <strong>no values</strong>, and the product page will not
+                  render that block.
                 </p>
               </div>
             </div>
