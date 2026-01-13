@@ -9,12 +9,12 @@ import { ArrowLeft, User2, MessageSquareText } from "lucide-react";
 import DangerActionButton from "@/components/admin/DangerActionButton";
 import { deleteReviewAction, deleteUserAction } from "../actions";
 
-export default async function AdminUserDetailsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const userId = params.id;
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function AdminUserDetailsPage({ params }: PageProps) {
+  const { id: userId } = await params;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -150,14 +150,12 @@ export default async function AdminUserDetailsPage({
 
                 <div className="mt-2 grid grid-cols-1 gap-1 text-xs text-gray-600">
                   <div>
-                    <span className="font-semibold">Product ID:</span>{" "}
-                    {r.productId ?? "—"}
+                    <span className="font-semibold">Product ID:</span> {r.productId ?? "—"}
                   </div>
 
                   {Array.isArray(r.imageUrls) && r.imageUrls.length > 0 ? (
                     <div className="break-all">
-                      <span className="font-semibold">Images:</span>{" "}
-                      {r.imageUrls.join(", ")}
+                      <span className="font-semibold">Images:</span> {r.imageUrls.join(", ")}
                     </div>
                   ) : (
                     <div>
