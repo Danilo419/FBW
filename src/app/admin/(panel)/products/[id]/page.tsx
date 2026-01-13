@@ -64,24 +64,32 @@ function completeAdultsWithGhosts<T extends { id?: string; size: string; availab
 
 /* =============== Badge Catalog (EN) =============== */
 type BadgeOption = { value: string; label: string };
+
 const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   {
     title: "Domestic Leagues – Europe (Top 8)",
     items: [
       { value: "premier-league-regular", label: "Premier League – League Badge" },
       { value: "premier-league-champions", label: "Premier League – Champions (Gold)" },
+
       { value: "la-liga-regular", label: "La Liga – League Badge" },
       { value: "la-liga-champions", label: "La Liga – Champion" },
+
       { value: "serie-a-regular", label: "Serie A – League Badge" },
       { value: "serie-a-scudetto", label: "Italy – Scudetto (Serie A Champion)" },
+
       { value: "bundesliga-regular", label: "Bundesliga – League Badge" },
       { value: "bundesliga-champions", label: "Bundesliga – Champion (Meister Badge)" },
+
       { value: "ligue1-regular", label: "Ligue 1 – League Badge" },
       { value: "ligue1-champions", label: "Ligue 1 – Champion" },
+
       { value: "primeira-liga-regular", label: "Primeira Liga (Portugal) – League Badge" },
       { value: "primeira-liga-champions", label: "Primeira Liga – Champion" },
+
       { value: "eredivisie-regular", label: "Eredivisie – League Badge" },
       { value: "eredivisie-champions", label: "Eredivisie – Champion" },
+
       { value: "scottish-premiership-regular", label: "Scottish Premiership – League Badge" },
       { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
     ],
@@ -91,10 +99,13 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "mls-regular", label: "MLS – League Badge" },
       { value: "mls-champions", label: "MLS – Champions (MLS Cup Holders)" },
+
       { value: "brasileirao-regular", label: "Brazil – Brasileirão – League Badge" },
       { value: "brasileirao-champions", label: "Brazil – Brasileirão – Champion" },
+
       { value: "super-lig-regular", label: "Turkey – Süper Lig – League Badge" },
       { value: "super-lig-champions", label: "Turkey – Süper Lig – Champion (if applicable)" },
+
       { value: "spl-saudi-regular", label: "Saudi Pro League – League Badge" },
       { value: "spl-saudi-champions", label: "Saudi Pro League – Champion (if applicable)" },
     ],
@@ -104,12 +115,105 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     items: [
       { value: "ucl-regular", label: "UEFA Champions League – Starball Badge" },
       { value: "ucl-winners", label: "UEFA Champions League – Winners Badge" },
+
       { value: "uel-regular", label: "UEFA Europa League – Badge" },
       { value: "uel-winners", label: "UEFA Europa League – Winners Badge" },
+
       { value: "uecl-regular", label: "UEFA Europa Conference League – Badge" },
       { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
     ],
   },
+
+  /* ✅ NOVO: TODAS as competições de seleções (National Teams) */
+  {
+    title: "National Teams – FIFA",
+    items: [
+      { value: "fifa-world-cup-regular", label: "FIFA World Cup – Tournament Badge" },
+      { value: "fifa-world-cup-winners", label: "FIFA World Cup – Winners Badge" },
+
+      { value: "fifa-womens-world-cup-regular", label: "FIFA Women's World Cup – Tournament Badge" },
+      { value: "fifa-womens-world-cup-winners", label: "FIFA Women's World Cup – Winners Badge" },
+
+      { value: "fifa-u20-world-cup-regular", label: "FIFA U-20 World Cup – Tournament Badge" },
+      { value: "fifa-u20-world-cup-winners", label: "FIFA U-20 World Cup – Winners Badge" },
+
+      { value: "fifa-u17-world-cup-regular", label: "FIFA U-17 World Cup – Tournament Badge" },
+      { value: "fifa-u17-world-cup-winners", label: "FIFA U-17 World Cup – Winners Badge" },
+
+      { value: "olympic-football-regular", label: "Olympic Football – Tournament Badge" },
+      { value: "olympic-football-winners", label: "Olympic Football – Winners Badge" },
+    ],
+  },
+  {
+    title: "National Teams – Europe (UEFA)",
+    items: [
+      { value: "uefa-euro-regular", label: "UEFA EURO – Tournament Badge" },
+      { value: "uefa-euro-winners", label: "UEFA EURO – Winners Badge" },
+
+      { value: "uefa-womens-euro-regular", label: "UEFA Women's EURO – Tournament Badge" },
+      { value: "uefa-womens-euro-winners", label: "UEFA Women's EURO – Winners Badge" },
+
+      { value: "uefa-nations-league-regular", label: "UEFA Nations League – Tournament Badge" },
+      { value: "uefa-nations-league-winners", label: "UEFA Nations League – Winners Badge" },
+
+      { value: "uefa-finalissima-regular", label: "Finalissima – Match Badge" },
+      { value: "uefa-finalissima-winners", label: "Finalissima – Winners Badge" },
+    ],
+  },
+  {
+    title: "National Teams – South America (CONMEBOL)",
+    items: [
+      { value: "copa-america-regular", label: "Copa América – Tournament Badge" },
+      { value: "copa-america-winners", label: "Copa América – Winners Badge" },
+
+      { value: "copa-america-femenina-regular", label: "Copa América Femenina – Tournament Badge" },
+      { value: "copa-america-femenina-winners", label: "Copa América Femenina – Winners Badge" },
+    ],
+  },
+  {
+    title: "National Teams – Africa (CAF)",
+    items: [
+      { value: "afcon-regular", label: "AFCON (Africa Cup of Nations) – Tournament Badge" },
+      { value: "afcon-winners", label: "AFCON (Africa Cup of Nations) – Winners Badge" },
+
+      { value: "wafcon-regular", label: "WAFCON (Women's AFCON) – Tournament Badge" },
+      { value: "wafcon-winners", label: "WAFCON (Women's AFCON) – Winners Badge" },
+    ],
+  },
+  {
+    title: "National Teams – Asia (AFC)",
+    items: [
+      { value: "afc-asian-cup-regular", label: "AFC Asian Cup – Tournament Badge" },
+      { value: "afc-asian-cup-winners", label: "AFC Asian Cup – Winners Badge" },
+
+      { value: "afc-womens-asian-cup-regular", label: "AFC Women's Asian Cup – Tournament Badge" },
+      { value: "afc-womens-asian-cup-winners", label: "AFC Women's Asian Cup – Winners Badge" },
+
+      { value: "afc-nations-league-regular", label: "AFC Nations League – Tournament Badge" },
+      { value: "afc-nations-league-winners", label: "AFC Nations League – Winners Badge" },
+    ],
+  },
+  {
+    title: "National Teams – North/Central America & Caribbean (CONCACAF)",
+    items: [
+      { value: "concacaf-gold-cup-regular", label: "CONCACAF Gold Cup – Tournament Badge" },
+      { value: "concacaf-gold-cup-winners", label: "CONCACAF Gold Cup – Winners Badge" },
+
+      { value: "concacaf-w-gold-cup-regular", label: "CONCACAF W Gold Cup – Tournament Badge" },
+      { value: "concacaf-w-gold-cup-winners", label: "CONCACAF W Gold Cup – Winners Badge" },
+
+      { value: "concacaf-nations-league-regular", label: "CONCACAF Nations League – Tournament Badge" },
+      { value: "concacaf-nations-league-winners", label: "CONCACAF Nations League – Winners Badge" },
+    ],
+  },
+  {
+    title: "National Teams – Oceania (OFC)",
+    items: [
+      { value: "ofc-nations-cup-regular", label: "OFC Nations Cup – Tournament Badge" },
+      { value: "ofc-nations-cup-winners", label: "OFC Nations Cup – Winners Badge" },
+    ],
+  },
+
   {
     title: "International Club",
     items: [
@@ -457,7 +561,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
     span.textContent = opt.label;
 
     const tag = document.createElement('span');
-    tag.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text.gray-600';
+    tag.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600';
     tag.textContent = opt.group.split(' – ')[0];
 
     label.appendChild(cb);
@@ -486,7 +590,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
     results.innerHTML = '';
     if (filtered.length === 0) {
       const div = document.createElement('div');
-      div.className = 'text-xs text.gray-500';
+      div.className = 'text-xs text-gray-500';
       div.textContent = 'No badges found.';
       results.appendChild(div);
       return;
@@ -684,8 +788,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Sizes shown are fixed to S–2XL. Entries marked as <strong>ghost</strong> don’t exist in the
-          database yet; create them (via seed/Studio) to enable the toggle.
+          Sizes shown are fixed to S–2XL. Entries marked as <strong>ghost</strong> don’t exist in the database yet;
+          create them (via seed/Studio) to enable the toggle.
         </p>
       </section>
     </div>
