@@ -15,34 +15,111 @@ type PageProps = {
 
 type AnyProduct = Record<string, any>;
 
-function safeFirstString(arr: any): string | null {
-  if (!Array.isArray(arr)) return null;
-  const first = arr.find((x) => typeof x === "string" && x.trim().length > 0);
-  return typeof first === "string" ? first : null;
+function isLikelyImageUrl(s: string): boolean {
+  const v = s.trim().toLowerCase();
+  if (!v.startsWith("http")) return false;
+
+  // common image extensions OR common CDNs (cloudinary, supabase, etc.)
+  if (
+    v.includes("cloudinary.com") ||
+    v.includes("supabase.co") ||
+    v.includes("storage.googleapis") ||
+    v.includes("vercel-storage.com") ||
+    v.includes("blob.vercel") ||
+    v.includes("cdn") ||
+    v.endsWith(".jpg") ||
+    v.endsWith(".jpeg") ||
+    v.endsWith(".png") ||
+    v.endsWith(".webp") ||
+    v.endsWith(".gif")
+  ) {
+    return true;
+  }
+
+  // sometimes URLs have query params (e.g. .jpg?x=)
+  if (v.includes(".jpg?") || v.includes(".jpeg?") || v.includes(".png?") || v.includes(".webp?"))
+    return true;
+
+  return false;
+}
+
+function firstImageFromUnknownValue(val: any): string | null {
+  if (!val) return null;
+
+  // direct string
+  if (typeof val === "string") {
+    return isLikelyImageUrl(val) ? val : null;
+  }
+
+  // array
+  if (Array.isArray(val)) {
+    for (const item of val) {
+      const got = firstImageFromUnknownValue(item);
+      if (got) return got;
+    }
+    return null;
+  }
+
+  // object with url
+  if (typeof val === "object") {
+    // common nested keys
+    const nestedKeys = ["url", "src", "href", "secure_url", "publicUrl"];
+    for (const k of nestedKeys) {
+      if (typeof val[k] === "string" && isLikelyImageUrl(val[k])) return val[k];
+    }
+    // search deeper shallowly
+    for (const k of Object.keys(val)) {
+      const got = firstImageFromUnknownValue(val[k]);
+      if (got) return got;
+    }
+  }
+
+  return null;
 }
 
 function getPrimaryProductImage(p?: AnyProduct | null): string | null {
   if (!p) return null;
 
-  // Try common fields that stores product images
-  const candidates: Array<string | null | undefined> = [
-    // single string fields
-    typeof p.mainImageUrl === "string" ? p.mainImageUrl : null,
-    typeof p.thumbnailUrl === "string" ? p.thumbnailUrl : null,
-    typeof p.imageUrl === "string" ? p.imageUrl : null,
-    typeof p.image === "string" ? p.image : null,
-    typeof p.coverImage === "string" ? p.coverImage : null,
-
-    // arrays
-    safeFirstString(p.imageUrls),
-    safeFirstString(p.images),
-    safeFirstString(p.gallery),
-    safeFirstString(p.photos),
+  // 1) Try a curated list of common image keys
+  const commonKeys = [
+    "mainImage",
+    "mainImageUrl",
+    "primaryImage",
+    "primaryImageUrl",
+    "coverImage",
+    "coverImageUrl",
+    "thumbnail",
+    "thumbnailUrl",
+    "thumb",
+    "thumbUrl",
+    "image",
+    "imageUrl",
+    "img",
+    "imgUrl",
+    "photo",
+    "photoUrl",
+    "picture",
+    "pictureUrl",
+    "images",
+    "imageUrls",
+    "gallery",
+    "photos",
+    "media",
   ];
 
-  for (const c of candidates) {
-    if (typeof c === "string" && c.trim().length > 0) return c;
+  for (const key of commonKeys) {
+    if (key in p) {
+      const got = firstImageFromUnknownValue(p[key]);
+      if (got) return got;
+    }
   }
+
+  // 2) Fallback: scan ALL product fields to find the first thing that looks like an image URL
+  for (const key of Object.keys(p)) {
+    const got = firstImageFromUnknownValue(p[key]);
+    if (got) return got;
+  }
+
   return null;
 }
 
@@ -111,12 +188,10 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
     },
   });
 
-  // Collect product IDs from reviews
   const productIds = Array.from(
     new Set(reviews.map((r) => r.productId).filter((x): x is string => !!x))
   );
 
-  // ✅ IMPORTANT: do NOT "select" unknown fields → fetch full product row
   const products = productIds.length
     ? await prisma.product.findMany({
         where: { id: { in: productIds } },
@@ -149,7 +224,6 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
       <div className="mb-6 rounded-xl border bg-white p-4">
         <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            {/* ✅ User profile photo (use <img> to avoid next/image domain issues) */}
             <div className="h-14 w-14 overflow-hidden rounded-full border bg-gray-50 shrink-0">
               {user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -173,9 +247,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
               <div className="text-sm text-gray-600 truncate">
                 {user.email ?? "No email"}
               </div>
-              <div className="mt-1 text-xs text-gray-500 truncate">
-                ID: {user.id}
-              </div>
+              <div className="mt-1 text-xs text-gray-500 truncate">ID: {user.id}</div>
             </div>
           </div>
 
@@ -222,7 +294,6 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                 <div key={r.id} className="px-4 py-4">
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      {/* ✅ Product thumbnail (use <img> to avoid next/image domain issues) */}
                       <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50 shrink-0">
                         {productImg ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -234,7 +305,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
-                            No image
+                            No image found
                           </div>
                         )}
                       </div>
@@ -251,7 +322,6 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                             : "-"}
                         </div>
 
-                        {/* ✅ Stars */}
                         <div className="mt-1">
                           <Stars rating={typeof r.rating === "number" ? r.rating : null} />
                         </div>
@@ -277,12 +347,32 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                     {r.comment ?? "[No comment]"}
                   </div>
 
-                  <div className="mt-2 text-xs text-gray-600">
-                    <b>Review images:</b>{" "}
+                  {/* OPTIONAL: show review images as clickable thumbnails (better than plain URLs) */}
+                  <div className="mt-3">
+                    <div className="text-xs font-semibold text-gray-600 mb-2">Review images</div>
                     {Array.isArray(r.imageUrls) && r.imageUrls.length > 0 ? (
-                      <span className="break-all">{r.imageUrls.join(", ")}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {r.imageUrls.map((url, idx) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block"
+                            title="Open image"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`Review image ${idx + 1}`}
+                              className="h-16 w-16 rounded-md border object-cover bg-gray-50"
+                              referrerPolicy="no-referrer"
+                            />
+                          </a>
+                        ))}
+                      </div>
                     ) : (
-                      "-"
+                      <div className="text-xs text-gray-500">-</div>
                     )}
                   </div>
                 </div>
@@ -294,8 +384,6 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
     </div>
   );
 }
-
-/* ================= Helpers ================= */
 
 function InfoBox({
   label,
