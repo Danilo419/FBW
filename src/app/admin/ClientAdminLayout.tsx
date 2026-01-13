@@ -129,14 +129,17 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
           {collapsed && !peeking ? (
             // Clean rail: no text, just a central “grab” glyph
             <div className="flex-1 flex items-center justify-center select-none text-gray-400">
-              <span aria-hidden className="text-2xl leading-none">⠿</span>
+              <span aria-hidden className="text-2xl leading-none">
+                ⠿
+              </span>
             </div>
           ) : (
             <>
               <nav className="space-y-1">
                 <NavItem href="/admin" label="Dashboard" />
                 <NavItem href="/admin/orders" label="Orders" />
-                <NavItem href="/admin/products" label="Products" /> {/* ✅ enabled */}
+                <NavItem href="/admin/products" label="Products" />
+                <NavItem href="/admin/users" label="Users" /> {/* ✅ NEW */}
                 <NavItem href="/admin/analytics" label="Analytics" />
               </nav>
 
