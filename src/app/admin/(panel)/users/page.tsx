@@ -22,10 +22,10 @@ export default async function AdminUsersPage() {
     _count: { _all: true },
   });
 
-  const counts = new Map<string, number>();
+  const reviewCountByUser = new Map<string, number>();
   for (const g of grouped) {
-    if (!g.userId) continue; // ✅ evita string | null
-    counts.set(g.userId, g._count._all);
+    if (!g.userId) continue;
+    reviewCountByUser.set(g.userId, g._count._all);
   }
 
   return (
@@ -40,11 +40,13 @@ export default async function AdminUsersPage() {
           <div className="col-span-4">User</div>
           <div className="col-span-4">Email</div>
           <div className="col-span-2">Reviews</div>
-          <div className="col-span-2">Criado</div>
+          <div className="col-span-2">Created</div>
         </div>
 
         {users.length === 0 ? (
-          <div className="px-4 py-8 text-sm text-gray-600">Sem users.</div>
+          <div className="px-4 py-8 text-sm text-gray-600">
+            No users found.
+          </div>
         ) : (
           <div className="divide-y">
             {users.map((u) => (
@@ -55,22 +57,24 @@ export default async function AdminUsersPage() {
               >
                 <div className="col-span-4">
                   <div className="text-sm font-medium text-gray-900">
-                    {u.name ?? "Sem nome"}
+                    {u.name ?? "No name"}
                   </div>
                   <div className="text-xs text-gray-500">ID: {u.id}</div>
                 </div>
 
                 <div className="col-span-4 text-sm text-gray-800">
-                  {u.email ?? "Sem email"}
+                  {u.email ?? "No email"}
                 </div>
 
                 <div className="col-span-2 flex items-center gap-2 text-sm text-gray-800">
                   <MessageSquareText className="h-4 w-4" />
-                  {counts.get(u.id) ?? 0}
+                  {reviewCountByUser.get(u.id) ?? 0}
                 </div>
 
                 <div className="col-span-2 text-sm text-gray-800">
-                  {u.createdAt ? new Date(u.createdAt).toLocaleString("pt-PT") : "-"}
+                  {u.createdAt
+                    ? new Date(u.createdAt).toLocaleString("en-GB")
+                    : "-"}
                 </div>
               </Link>
             ))}
