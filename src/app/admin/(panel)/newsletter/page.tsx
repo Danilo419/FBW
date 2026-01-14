@@ -8,16 +8,30 @@ import NewsletterComposer from "./ui/NewsletterComposer";
 
 const PAGE_SIZE = 10;
 
+type SearchParams = {
+  page?: string;
+};
+
+type Row = {
+  id: string;
+  email: string;
+  createdAt: Date;
+};
+
 export default async function AdminNewsletterPage({
   searchParams,
 }: {
-  searchParams?: { page?: string };
+  searchParams?: Promise<SearchParams>;
 }) {
-  const page = Math.max(1, Number(searchParams?.page || 1) || 1);
+  // ✅ Next.js 15: searchParams é Promise
+  const sp = (await searchParams) ?? {};
+  const page = Math.max(1, Number(sp.page || 1) || 1);
   const skip = (page - 1) * PAGE_SIZE;
 
   const [total, rows] = await Promise.all([
-    prisma.newsletterSubscriber.count({ where: { unsubscribedAt: null } }),
+    prisma.newsletterSubscriber.count({
+      where: { unsubscribedAt: null },
+    }),
     prisma.newsletterSubscriber.findMany({
       where: { unsubscribedAt: null },
       orderBy: { createdAt: "desc" },
@@ -27,6 +41,7 @@ export default async function AdminNewsletterPage({
     }),
   ]);
 
+  const typedRows = rows as Row[];
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function PageLink({ p }: { p: number }) {
@@ -35,7 +50,9 @@ export default async function AdminNewsletterPage({
       <Link
         href={`/admin/newsletter?page=${p}`}
         className={`px-3 py-1.5 rounded-lg border text-sm ${
-          active ? "bg-black text-white border-black" : "bg-white hover:bg-gray-50"
+          active
+            ? "bg-black text-white border-black"
+            : "bg-white hover:bg-gray-50"
         }`}
       >
         {p}
@@ -48,6 +65,7 @@ export default async function AdminNewsletterPage({
   const add = (n: number) => {
     if (n >= 1 && n <= pages && !visible.includes(n)) visible.push(n);
   };
+
   add(1);
   add(2);
   add(pages);
@@ -55,6 +73,7 @@ export default async function AdminNewsletterPage({
   add(page - 1);
   add(page);
   add(page + 1);
+
   visible.sort((a, b) => a - b);
 
   const chunks: (number | "dots")[] = [];
@@ -75,25 +94,32 @@ export default async function AdminNewsletterPage({
           </p>
         </div>
         <div className="text-sm text-gray-600">
-          Active subscribers: <span className="font-semibold text-black">{total}</span>
+          Active subscribers:{" "}
+          <span className="font-semibold text-black">{total}</span>
         </div>
       </div>
 
+      {/* Composer */}
       <div className="rounded-2xl border bg-white p-4">
         <NewsletterComposer />
       </div>
 
+      {/* Subscribers list */}
       <div className="rounded-2xl border bg-white overflow-hidden">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="font-semibold">Subscribers</div>
           <div className="text-sm text-gray-600">
-            Showing {rows.length ? skip + 1 : 0}-{skip + rows.length} of {total}
+            Showing {typedRows.length ? skip + 1 : 0}–
+            {skip + typedRows.length} of {total}
           </div>
         </div>
 
         <div className="divide-y">
-          {rows.map((r) => (
-            <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-4">
+          {typedRows.map((r) => (
+            <div
+              key={r.id}
+              className="px-4 py-3 flex items-center justify-between gap-4"
+            >
               <div className="text-sm font-medium">{r.email}</div>
               <div className="text-xs text-gray-500">
                 {new Date(r.createdAt).toLocaleString()}
@@ -101,13 +127,14 @@ export default async function AdminNewsletterPage({
             </div>
           ))}
 
-          {!rows.length && (
+          {!typedRows.length && (
             <div className="px-4 py-10 text-center text-sm text-gray-600">
               No subscribers yet.
             </div>
           )}
         </div>
 
+        {/* Pagination */}
         <div className="px-4 py-4 border-t flex items-center justify-center gap-2">
           {chunks.map((x, idx) =>
             x === "dots" ? (
