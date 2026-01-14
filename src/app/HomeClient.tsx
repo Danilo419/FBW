@@ -1592,7 +1592,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NEWSLETTER */}
+      {/* NEWSLETTER (really cool) */}
       <section className="container-fw pb-24">
         <TiltCard>
           <div className="grid md:grid-cols-2 gap-6 items-center p-6 sm:p-8">
