@@ -425,3 +425,35 @@ model NewsletterSubscriber {
   unsubToken     String   @unique @default(cuid())
   unsubscribedAt DateTime?
 }
+
+model NewsletterCampaign {
+  id              String   @id @default(cuid())
+  subject         String
+  style           String   // "simple" | "pretty"
+  contentJson     String   // guarda o editor (blocos) em JSON
+  html            String
+  text            String
+  status          String   @default("DRAFT") // DRAFT | SENDING | SENT | FAILED
+  totalRecipients Int      @default(0)
+  sentCount       Int      @default(0)
+  failedCount     Int      @default(0)
+  createdAt       DateTime @default(now())
+  sentAt          DateTime?
+
+  logs            NewsletterSendLog[]
+}
+
+model NewsletterSendLog {
+  id          String   @id @default(cuid())
+  campaignId  String
+  email       String
+  status      String   // SENT | FAILED
+  providerId  String?
+  error       String?
+  createdAt   DateTime @default(now())
+
+  campaign    NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([email])
+}
