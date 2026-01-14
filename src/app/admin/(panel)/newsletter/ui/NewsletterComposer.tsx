@@ -1,18 +1,45 @@
+// src/app/admin/(panel)/newsletter/ui/NewsletterComposer.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 import { sendNewsletterEmailAction } from "../actions";
 
-type StyleMode = "simple" | "pretty";
+type StyleMode =
+  | "simple"
+  | "pretty"
+  | "minimal"
+  | "dark"
+  | "sale"
+  | "drop"
+  | "productGrid"
+  | "brandBold"
+  | "soccer";
 
 type EditorBlock =
   | { id: string; type: "text"; value: string }
   | { id: string; type: "image"; url: string; alt?: string; href?: string }
   | { id: string; type: "button"; label: string; href: string };
 
+type WireBlock =
+  | { type: "text"; value: string }
+  | { type: "image"; url: string; alt?: string; href?: string }
+  | { type: "button"; label: string; href: string };
+
 function uid() {
   return Math.random().toString(16).slice(2);
 }
+
+const STYLE_OPTIONS: Array<{ value: StyleMode; label: string; hint: string }> = [
+  { value: "pretty", label: "Pretty", hint: "Balanced card layout (default)" },
+  { value: "simple", label: "Simple", hint: "Basic text email" },
+  { value: "minimal", label: "Minimal", hint: "Clean + light, very readable" },
+  { value: "dark", label: "Dark", hint: "Dark theme (accent green)" },
+  { value: "sale", label: "Sale", hint: "Promo / discount vibe (red)" },
+  { value: "drop", label: "New Drop", hint: "Release / launch vibe (blue)" },
+  { value: "productGrid", label: "Product Grid", hint: "Featured layout for product blocks" },
+  { value: "brandBold", label: "Brand Bold", hint: "Premium bold header" },
+  { value: "soccer", label: "Soccer", hint: "Football-y, subtle green accents" },
+];
 
 export default function NewsletterComposer() {
   const [subject, setSubject] = useState("");
@@ -23,39 +50,195 @@ export default function NewsletterComposer() {
   ]);
 
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "err">("idle");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
 
-  const contentJson = useMemo(() => JSON.stringify(blocks.map(stripId)), [blocks]);
+  const contentJson = useMemo(() => {
+    const wire: WireBlock[] = blocks.map(stripId);
+    return JSON.stringify(wire);
+  }, [blocks]);
+
+  const styleHint = useMemo(
+    () => STYLE_OPTIONS.find((x) => x.value === style)?.hint || "",
+    [style]
+  );
 
   const previewHtml = useMemo(() => {
     const safeSubject = escapeHtml(subject || "Subject preview...");
     const body = blocksToPreview(blocks);
 
-    if (style === "simple") {
-      return `
-        <div style="font-family:Arial,sans-serif;line-height:1.5">
-          <h2 style="margin:0 0 10px 0">${safeSubject}</h2>
-          ${body}
-          <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
-          <p style="font-size:12px;color:#666">Unsubscribe link will be included.</p>
-        </div>
-      `;
-    }
-
-    return `
-      <div style="background:#f6f7fb;padding:18px">
-        <div style="background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden">
-          <div style="padding:14px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px">
-            <div style="font-weight:800;font-size:16px">FootballWorld</div>
-            <div style="margin-left:auto;font-size:12px;color:#666">Preview</div>
-          </div>
-          <div style="padding:16px">
-            <h1 style="margin:0 0 10px 0;font-size:18px">${safeSubject}</h1>
+    switch (style) {
+      case "simple":
+        return `
+          <div style="font-family:Arial,sans-serif;line-height:1.5">
+            <h2 style="margin:0 0 10px 0">${safeSubject}</h2>
             ${body}
+            <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
+            <p style="font-size:12px;color:#666">Unsubscribe link will be included.</p>
           </div>
-        </div>
-      </div>
-    `;
+        `;
+
+      case "minimal":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;padding:18px">
+            <div style="max-width:680px;margin:0 auto">
+              <div style="font-weight:900;font-size:16px;letter-spacing:0.2px">FootballWorld</div>
+              <div style="height:10px"></div>
+              <div style="border:1px solid #eee;border-radius:14px;padding:16px">
+                <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+                ${body}
+                <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "dark":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0B0B0D;padding:18px">
+            <div style="max-width:720px;margin:0 auto;background:#121217;border:1px solid #2A2A2A;border-radius:18px;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #2A2A2A;display:flex;align-items:center;gap:10px">
+                <div style="font-weight:900;font-size:16px;color:#fff">FootballWorld</div>
+                <div style="margin-left:auto;font-size:12px;color:#A7A7A7">Preview</div>
+              </div>
+              <div style="padding:16px;color:#EDEDED">
+                <h1 style="margin:0 0 10px 0;font-size:18px;color:#fff">${safeSubject}</h1>
+                <div style="color:#EDEDED">${body.replace(/color:#111/g, "color:#EDEDED")}</div>
+                <div style="margin-top:14px;font-size:12px;color:#A7A7A7">Unsubscribe link will be included.</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "sale":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff7f7;padding:18px">
+            <div style="max-width:740px;margin:0 auto;background:#fff;border:1px solid #fde2e2;border-radius:18px;overflow:hidden">
+              <div style="padding:14px 16px;background:#EF4444;color:#fff">
+                <div style="font-weight:900;font-size:16px;letter-spacing:0.2px">FootballWorld</div>
+                <div style="font-size:12px;opacity:0.9">Limited-time offers</div>
+              </div>
+              <div style="padding:16px">
+                <div style="display:inline-block;background:#111;color:#fff;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">SALE</div>
+                <h1 style="margin:10px 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+                ${body}
+                <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "drop":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6faff;padding:18px">
+            <div style="max-width:740px;margin:0 auto;background:#fff;border:1px solid #e6efff;border-radius:18px;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #e6efff;display:flex;align-items:center;gap:10px">
+                <div style="font-weight:900;font-size:16px;color:#111">FootballWorld</div>
+                <div style="margin-left:auto;font-size:12px;color:#5b6b88">New drop</div>
+              </div>
+              <div style="padding:16px">
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+                  <div style="width:10px;height:10px;border-radius:999px;background:#2563EB"></div>
+                  <div style="font-size:12px;color:#5b6b88;font-weight:700">Just released</div>
+                </div>
+                <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+                ${body}
+                <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "productGrid":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7fb;padding:18px">
+            <div style="max-width:780px;margin:0 auto;background:#fff;border:1px solid #eee;border-radius:18px;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px">
+                <div style="font-weight:900;font-size:16px">FootballWorld</div>
+                <div style="margin-left:auto;font-size:12px;color:#666">Featured</div>
+              </div>
+              <div style="padding:16px">
+                <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+                ${body}
+                <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <div style="border:1px solid #eee;border-radius:14px;padding:10px;background:#fafafa">
+                    <div style="font-size:12px;color:#666;font-weight:700">Tip</div>
+                    <div style="font-size:12px;color:#666;line-height:1.6">
+                      Use image + button blocks to simulate product cards.
+                    </div>
+                  </div>
+                  <div style="border:1px solid #eee;border-radius:14px;padding:10px;background:#fafafa">
+                    <div style="font-size:12px;color:#666;font-weight:700">Tip</div>
+                    <div style="font-size:12px;color:#666;line-height:1.6">
+                      Add multiple image/button pairs to create a grid feel.
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "brandBold":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#ffffff;padding:18px">
+            <div style="max-width:760px;margin:0 auto">
+              <div style="border-radius:18px;overflow:hidden;border:1px solid #e5e7eb">
+                <div style="background:linear-gradient(135deg,#111827,#000);padding:16px">
+                  <div style="color:#fff;font-weight:900;font-size:16px">FootballWorld</div>
+                  <div style="color:#cbd5e1;font-size:12px;margin-top:2px">Premium newsletter</div>
+                </div>
+                <div style="padding:16px">
+                  <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+                  ${body}
+                  <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "soccer":
+        return `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4fbf6;padding:18px">
+            <div style="max-width:760px;margin:0 auto;background:#fff;border:1px solid #dff3e6;border-radius:18px;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #eef7f1;display:flex;align-items:center;gap:10px">
+                <div style="width:12px;height:12px;border-radius:999px;background:#16A34A"></div>
+                <div style="font-weight:900;font-size:16px;color:#111">FootballWorld</div>
+                <div style="margin-left:auto;font-size:12px;color:#5f6f66">Matchday vibes</div>
+              </div>
+              <div style="padding:16px">
+                <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+                <div style="margin:0 0 12px 0;padding:12px;border:1px solid #e7f5ec;border-radius:14px;background:#f7fffa">
+                  <div style="font-size:12px;color:#2f4b3a;font-weight:800">Kick-off</div>
+                  <div style="font-size:12px;color:#2f4b3a;line-height:1.6">
+                    New kits, clean designs, fast drops.
+                  </div>
+                </div>
+                ${body}
+                <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      case "pretty":
+      default:
+        return `
+          <div style="background:#f6f7fb;padding:18px">
+            <div style="background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px">
+                <div style="font-weight:800;font-size:16px">FootballWorld</div>
+                <div style="margin-left:auto;font-size:12px;color:#666">Preview</div>
+              </div>
+              <div style="padding:16px">
+                <h1 style="margin:0 0 10px 0;font-size:18px">${safeSubject}</h1>
+                ${body}
+              </div>
+            </div>
+          </div>
+        `;
+    }
   }, [subject, style, blocks]);
 
   async function onSend() {
@@ -70,10 +253,11 @@ export default function NewsletterComposer() {
 
       const res = await sendNewsletterEmailAction(fd);
       setResult(res);
-      setStatus(res.ok ? "ok" : "err");
-    } catch (e: any) {
+      setStatus((res as any)?.ok ? "ok" : "err");
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message || "Failed.";
       setStatus("err");
-      setResult({ ok: false, error: e?.message || "Failed." });
+      setResult({ ok: false, error: msg });
     } finally {
       setTimeout(() => setStatus("idle"), 4000);
     }
@@ -122,26 +306,21 @@ export default function NewsletterComposer() {
 
           <div>
             <div className="text-sm font-semibold mb-1">Style</div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setStyle("simple")}
-                className={`px-3 py-2 rounded-xl border text-sm ${
-                  style === "simple" ? "bg-black text-white border-black" : "hover:bg-gray-50"
-                }`}
-              >
-                Simple
-              </button>
-              <button
-                type="button"
-                onClick={() => setStyle("pretty")}
-                className={`px-3 py-2 rounded-xl border text-sm ${
-                  style === "pretty" ? "bg-black text-white border-black" : "hover:bg-gray-50"
-                }`}
-              >
-                Pretty
-              </button>
-            </div>
+
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value as StyleMode)}
+              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              aria-label="Email style"
+            >
+              {STYLE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-1 text-xs text-gray-500">{styleHint}</div>
           </div>
         </div>
 
@@ -149,13 +328,25 @@ export default function NewsletterComposer() {
           <div className="flex items-center justify-between gap-2">
             <div className="font-semibold">Editor</div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={addText} className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50">
+              <button
+                type="button"
+                onClick={addText}
+                className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
+              >
                 + Text
               </button>
-              <button type="button" onClick={addImage} className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50">
+              <button
+                type="button"
+                onClick={addImage}
+                className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
+              >
                 + Image
               </button>
-              <button type="button" onClick={addButton} className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50">
+              <button
+                type="button"
+                onClick={addButton}
+                className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
+              >
                 + Button
               </button>
             </div>
@@ -169,13 +360,28 @@ export default function NewsletterComposer() {
                     {b.type.toUpperCase()} <span className="text-gray-400">•</span> #{idx + 1}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => move(b.id, -1)} className="px-2 py-1 rounded-lg border text-sm hover:bg-white">
+                    <button
+                      type="button"
+                      onClick={() => move(b.id, -1)}
+                      className="px-2 py-1 rounded-lg border text-sm hover:bg-white"
+                      aria-label="Move up"
+                    >
                       ↑
                     </button>
-                    <button type="button" onClick={() => move(b.id, 1)} className="px-2 py-1 rounded-lg border text-sm hover:bg-white">
+                    <button
+                      type="button"
+                      onClick={() => move(b.id, 1)}
+                      className="px-2 py-1 rounded-lg border text-sm hover:bg-white"
+                      aria-label="Move down"
+                    >
                       ↓
                     </button>
-                    <button type="button" onClick={() => removeBlock(b.id)} className="px-2 py-1 rounded-lg border text-sm hover:bg-white">
+                    <button
+                      type="button"
+                      onClick={() => removeBlock(b.id)}
+                      className="px-2 py-1 rounded-lg border text-sm hover:bg-white"
+                      aria-label="Remove block"
+                    >
                       ✕
                     </button>
                   </div>
@@ -185,7 +391,9 @@ export default function NewsletterComposer() {
                   <textarea
                     value={b.value}
                     onChange={(e) =>
-                      setBlocks((arr) => arr.map((x) => (x.id === b.id ? { ...x, value: e.target.value } : x)))
+                      setBlocks((arr) =>
+                        arr.map((x) => (x.id === b.id ? { ...x, value: e.target.value } : x))
+                      )
                     }
                     className="w-full min-h-[120px] rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     placeholder="Write text..."
@@ -195,7 +403,9 @@ export default function NewsletterComposer() {
                     <input
                       value={b.url}
                       onChange={(e) =>
-                        setBlocks((arr) => arr.map((x) => (x.id === b.id ? { ...x, url: e.target.value } : x)))
+                        setBlocks((arr) =>
+                          arr.map((x) => (x.id === b.id ? { ...x, url: e.target.value } : x))
+                        )
                       }
                       className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="Image URL (https://...)"
@@ -204,7 +414,9 @@ export default function NewsletterComposer() {
                       <input
                         value={b.alt || ""}
                         onChange={(e) =>
-                          setBlocks((arr) => arr.map((x) => (x.id === b.id ? { ...x, alt: e.target.value } : x)))
+                          setBlocks((arr) =>
+                            arr.map((x) => (x.id === b.id ? { ...x, alt: e.target.value } : x))
+                          )
                         }
                         className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                         placeholder="Alt text (optional)"
@@ -212,7 +424,9 @@ export default function NewsletterComposer() {
                       <input
                         value={b.href || ""}
                         onChange={(e) =>
-                          setBlocks((arr) => arr.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x)))
+                          setBlocks((arr) =>
+                            arr.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x))
+                          )
                         }
                         className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                         placeholder="Link URL (optional)"
@@ -229,7 +443,9 @@ export default function NewsletterComposer() {
                     <input
                       value={b.label}
                       onChange={(e) =>
-                        setBlocks((arr) => arr.map((x) => (x.id === b.id ? { ...x, label: e.target.value } : x)))
+                        setBlocks((arr) =>
+                          arr.map((x) => (x.id === b.id ? { ...x, label: e.target.value } : x))
+                        )
                       }
                       className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="Button label"
@@ -237,7 +453,9 @@ export default function NewsletterComposer() {
                     <input
                       value={b.href}
                       onChange={(e) =>
-                        setBlocks((arr) => arr.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x)))
+                        setBlocks((arr) =>
+                          arr.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x))
+                        )
                       }
                       className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="https://..."
@@ -258,28 +476,28 @@ export default function NewsletterComposer() {
               {status === "sending" ? "Sending…" : "Send to all subscribers"}
             </button>
 
-            {result?.ok === true ? (
+            {(result as any)?.ok === true ? (
               <div className="text-sm text-green-700">
-                Sent: {result.sent}/{result.total} (Failed: {result.failed})
+                Sent: {(result as any).sent}/{(result as any).total} (Failed: {(result as any).failed})
               </div>
             ) : null}
 
-            {result?.ok === false ? (
-              <div className="text-sm text-red-600">{result.error}</div>
+            {(result as any)?.ok === false ? (
+              <div className="text-sm text-red-600">{(result as any).error}</div>
             ) : null}
           </div>
 
-          {result?.ok === false && Array.isArray(result.details) && result.details.length ? (
+          {(result as any)?.ok === false &&
+          Array.isArray((result as any).details) &&
+          (result as any).details.length ? (
             <div className="text-xs text-red-600 space-y-1">
-              {result.details.map((d: string, i: number) => (
+              {(result as any).details.map((d: string, i: number) => (
                 <div key={i}>• {d}</div>
               ))}
             </div>
           ) : null}
 
-          <div className="text-xs text-gray-500">
-            Tip: use blocks. Images must be public URLs (hosted).
-          </div>
+          <div className="text-xs text-gray-500">Tip: use blocks. Images must be public URLs (hosted).</div>
 
           {/* hidden payload */}
           <input type="hidden" value={contentJson} readOnly />
@@ -302,9 +520,11 @@ export default function NewsletterComposer() {
   );
 }
 
-function stripId(b: EditorBlock): any {
-  const { id, ...rest } = b as any;
-  return rest;
+function stripId(b: EditorBlock): WireBlock {
+  // remove client-only id before sending to server
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, ...rest } = b;
+  return rest as WireBlock;
 }
 
 function escapeHtml(s: string) {
@@ -317,14 +537,18 @@ function blocksToPreview(blocks: EditorBlock[]) {
   for (const b of blocks) {
     if (b.type === "text") {
       const safe = escapeHtml(b.value || "").replace(/\n/g, "<br/>");
-      parts.push(`<div style="margin:0 0 12px 0;font-size:14px;line-height:1.7;color:#111">${safe}</div>`);
+      parts.push(
+        `<div style="margin:0 0 12px 0;font-size:14px;line-height:1.7;color:#111">${safe}</div>`
+      );
     }
     if (b.type === "image") {
       const url = (b.url || "").trim();
       if (!url) continue;
       const alt = escapeHtml(b.alt || "");
       const img = `<img src="${url}" alt="${alt}" style="max-width:100%;border-radius:12px;display:block;margin:10px 0" />`;
-      parts.push(b.href ? `<a href="${b.href}" target="_blank" rel="noopener noreferrer">${img}</a>` : img);
+      parts.push(
+        b.href ? `<a href="${b.href}" target="_blank" rel="noopener noreferrer">${img}</a>` : img
+      );
     }
     if (b.type === "button") {
       const label = escapeHtml(b.label || "Open");
