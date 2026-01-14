@@ -13,7 +13,7 @@ type StyleMode =
   | "drop"
   | "productGrid"
   | "brandBold"
-  | "soccer";
+  | "football";
 
 type EditorBlock =
   | { id: string; type: "text"; value: string }
@@ -38,7 +38,7 @@ const STYLE_OPTIONS: Array<{ value: StyleMode; label: string; hint: string }> = 
   { value: "drop", label: "New Drop", hint: "Release / launch vibe (blue)" },
   { value: "productGrid", label: "Product Grid", hint: "Featured layout for product blocks" },
   { value: "brandBold", label: "Brand Bold", hint: "Premium bold header" },
-  { value: "soccer", label: "Soccer", hint: "Football-y, subtle green accents" },
+  { value: "football", label: "Football", hint: "Football-y, subtle green accents" },
 ];
 
 export default function NewsletterComposer() {
@@ -198,7 +198,7 @@ export default function NewsletterComposer() {
           </div>
         `;
 
-      case "soccer":
+      case "football":
         return `
           <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4fbf6;padding:18px">
             <div style="max-width:760px;margin:0 auto;background:#fff;border:1px solid #dff3e6;border-radius:18px;overflow:hidden">
