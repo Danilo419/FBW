@@ -417,3 +417,11 @@ model Visit {
   @@index([createdAt])
   @@index([visitorId, createdAt])
 }
+
+model NewsletterSubscriber {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  createdAt      DateTime @default(now())
+  unsubToken     String   @unique @default(cuid())
+  unsubscribedAt DateTime?
+}

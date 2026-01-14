@@ -20,7 +20,11 @@ const COLLAPSED_WIDTH = 72; // rail width
 const WIDTH_KEY = "adminSidebarWidth";
 const COLLAPSED_KEY = "adminSidebarCollapsed";
 
-export default function ClientAdminLayout({ children }: { children: React.ReactNode }) {
+export default function ClientAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [collapsed, setCollapsed] = useState(false);
   const [peeking, setPeeking] = useState(false);
@@ -35,7 +39,10 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
     try {
       const w = localStorage.getItem(WIDTH_KEY);
       if (w) {
-        const parsed = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parseInt(w, 10)));
+        const parsed = Math.min(
+          MAX_WIDTH,
+          Math.max(MIN_WIDTH, parseInt(w, 10))
+        );
         if (!Number.isNaN(parsed)) setWidth(parsed);
       }
       const c = localStorage.getItem(COLLAPSED_KEY);
@@ -65,7 +72,10 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
     const onMove = (e: MouseEvent) => {
       if (!draggingRef.current || collapsed) return;
       const delta = e.clientX - startXRef.current;
-      const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidthRef.current + delta));
+      const next = Math.min(
+        MAX_WIDTH,
+        Math.max(MIN_WIDTH, startWidthRef.current + delta)
+      );
       setWidth(next);
     };
     const onUp = () => {
@@ -109,7 +119,10 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
             {collapsed && !peeking ? (
               <span className="sr-only">FootBallWorld • Admin</span>
             ) : (
-              <Link href="/" className="block text-lg md:text-xl font-extrabold truncate">
+              <Link
+                href="/"
+                className="block text-lg md:text-xl font-extrabold truncate"
+              >
                 FootBallWorld<span className="text-gray-400"> • Admin</span>
               </Link>
             )}
@@ -139,7 +152,9 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
                 <NavItem href="/admin" label="Dashboard" />
                 <NavItem href="/admin/orders" label="Orders" />
                 <NavItem href="/admin/products" label="Products" />
-                <NavItem href="/admin/users" label="Users" /> {/* ✅ NEW */}
+                <NavItem href="/admin/users" label="Users" />
+                <NavItem href="/admin/newsletter" label="Newsletter" />{" "}
+                {/* ✅ NEW */}
                 <NavItem href="/admin/analytics" label="Analytics" />
               </nav>
 
@@ -173,7 +188,10 @@ export default function ClientAdminLayout({ children }: { children: React.ReactN
       </aside>
 
       {/* Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-x-auto" style={{ transition: "padding 200ms ease" }}>
+      <main
+        className="flex-1 p-4 md:p-8 overflow-x-auto"
+        style={{ transition: "padding 200ms ease" }}
+      >
         {children}
       </main>
     </div>

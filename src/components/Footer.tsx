@@ -29,15 +29,29 @@ export default function Footer() {
 
   async function onSubscribe(e: React.FormEvent) {
     e.preventDefault();
-    if (!email) return;
+    const trimmed = email.trim();
+    if (!trimmed) return;
+
     try {
       setStatus("loading");
+
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: trimmed }),
       });
-      if (!res.ok && res.status !== 404) throw new Error("Failed");
+
+      // ✅ IMPORTANTE: não ignorar 404 (senão "finge" sucesso)
+      if (!res.ok) {
+        // tenta ler mensagem do backend se existir
+        let msg = "Failed";
+        try {
+          const data = await res.json();
+          if (data?.error) msg = String(data.error);
+        } catch {}
+        throw new Error(msg);
+      }
+
       setStatus("ok");
       setEmail("");
     } catch {
@@ -101,6 +115,7 @@ export default function Footer() {
             placeholder="Your email"
             className="flex-1 rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Email address"
+            autoComplete="email"
           />
           <button
             type="submit"
@@ -109,6 +124,7 @@ export default function Footer() {
           >
             {status === "loading" ? "Subscribing…" : "Subscribe"}
           </button>
+
           {status === "ok" && (
             <div className="text-green-700 text-sm self-center">
               Subscribed! 🎉
