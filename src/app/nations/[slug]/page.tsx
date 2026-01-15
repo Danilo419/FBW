@@ -1,15 +1,39 @@
 // src/app/nations/[slug]/page.tsx
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 
-/** Sempre runtime (sem cache/ISR) */
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+/* ============================ Config ============================ */
+export const revalidate = 60;
 
-/* ============================ utils ============================ */
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ page?: string }>;
+};
+
+const PAGE_SIZE = 12;
+
+/* ============================ Promo map ============================ */
+const SALE_MAP: Record<number, number> = {
+  2999: 7000,
+  3499: 10000,
+  3999: 12000,
+  4499: 15000,
+  4999: 16500,
+  5999: 20000,
+  6999: 23000,
+};
+
+function getCompareAt(basePriceCents: number) {
+  const compareAt = SALE_MAP[basePriceCents];
+  if (!compareAt) return null;
+  const pct = Math.round((1 - basePriceCents / compareAt) * 100);
+  return { compareAt, pct };
+}
+
+/* ============================ Utils ============================ */
 function slugify(s?: string | null) {
   const base = (s ?? "").trim();
   return base
@@ -20,14 +44,21 @@ function slugify(s?: string | null) {
     .replace(/^-+|-+$/g, "");
 }
 
-function titleFromSlug(slug: string) {
+function fallbackTitle(slug: string) {
   return slug
     .split("-")
-    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ""))
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
 }
 
-/** Extrai a primeira imagem válida de vários formatos */
+function moneyAfterEUR(cents: number) {
+  return (cents / 100).toLocaleString("pt-PT", {
+    style: "currency",
+    currency: "EUR",
+    currencyDisplay: "symbol",
+  });
+}
+
 function firstImageFrom(value: unknown): string | null {
   if (!value) return null;
   if (typeof value === "string") return value.trim() || null;
@@ -48,60 +79,75 @@ function firstImageFrom(value: unknown): string | null {
   return null;
 }
 
-/** Normaliza caminho local e aceita URLs externas */
-function normalizeLocalPath(p?: string | null): string | null {
-  if (!p) return null;
-  let s = p.trim();
-  if (!s) return null;
-
-  s = s.replace(/^public[\\/]/i, "").replace(/\\/g, "/");
-  if (/^https?:\/\//i.test(s)) return s;
-  if (!s.startsWith("/")) s = "/" + s;
-  return s;
-}
-
-/** Fallback elegante */
 function coverUrl(raw?: string | null): string {
   const fallback =
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
-        <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#f8fafc' offset='0'/><stop stop-color='#e0f2fe' offset='1'/></linearGradient></defs>
-        <rect width='100%' height='100%' fill='url(#g)'/>
+        <rect width='100%' height='100%' fill='#f3f4f6'/>
         <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#94a3b8'>No image</text>
+          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#9ca3af'>No image</text>
       </svg>`
     );
-
-  const n = normalizeLocalPath(raw);
-  return n || fallback;
+  if (!raw) return fallback;
+  const p = raw.trim();
+  if (p.startsWith("http")) return p;
+  return p.startsWith("/") ? p : `/${p}`;
 }
 
-/* =============================== PAGE =============================== */
-export default async function NationProductsPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
+/* ========= Construção do "chip" azul a partir do nome ========= */
+const YEAR_TAIL_RE = /(?:\b(19|20)\d{2}(?:\/\d{2})?|\b\d{2}\/\d{2})\s*$/i;
+const VARIANT_KIT_TAIL_RE =
+  /\b(?:home|away|third|fourth)\s+(?:jersey|shirt|kit)\b.*$/i;
 
-  // Mapear slug -> nome real da seleção (APENAS teamType NATION)
+function cleanSpaces(s: string) {
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+
+function labelFromName(name?: string | null): string | null {
+  if (!name) return null;
+  let s = name.trim();
+  s = s.replace(YEAR_TAIL_RE, "").trim();
+  s = s.replace(VARIANT_KIT_TAIL_RE, "").trim();
+  if (!s) s = name.replace(YEAR_TAIL_RE, "").trim();
+  return cleanSpaces(s) || null;
+}
+
+/* ============================ Page ============================ */
+export default async function NationProductsPage({ params, searchParams }: PageProps) {
+  const { slug } = await params;
+  const sp = (await searchParams) ?? {};
+  const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+
+  // descobrir o nome real da seleção a partir da BD (teamType NATION)
   const teams = await prisma.product.findMany({
-    where: { teamType: "NATION" }, // ✅
+    where: { teamType: "NATION" },
     select: { team: true },
     distinct: ["team"],
   });
 
   const matchedTeam = teams.find((t) => slugify(t.team) === slug)?.team ?? null;
-  const teamName = matchedTeam ?? titleFromSlug(slug);
+  const teamName = matchedTeam ?? fallbackTitle(slug);
 
-  // Produtos da seleção (APENAS teamType NATION)
+  const where: Prisma.ProductWhereInput = {
+    teamType: "NATION",
+    OR: [
+      { team: { equals: teamName } },
+      { team: { contains: teamName, mode: "insensitive" } },
+      { team: { contains: slug, mode: "insensitive" } },
+    ],
+  };
+
+  const totalCount = await prisma.product.count({ where });
+  if (!totalCount) notFound();
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const currentPage = Math.min(Math.max(1, requestedPage), totalPages);
+  const skip = (currentPage - 1) * PAGE_SIZE;
+
   const products = await prisma.product.findMany({
-    where: {
-      teamType: "NATION", // ✅
-      team: teamName,
-    },
-    orderBy: { name: "asc" },
+    where,
+    orderBy: { createdAt: "asc" },
     select: {
       id: true,
       slug: true,
@@ -110,111 +156,243 @@ export default async function NationProductsPage({
       basePrice: true,
       team: true,
     },
+    take: PAGE_SIZE,
+    skip,
   });
 
-  if (!products.length) notFound();
+  return (
+    <List
+      team={teamName}
+      items={products}
+      totalPages={totalPages}
+      currentPage={currentPage}
+      nationSlug={slug.toLowerCase()}
+    />
+  );
+}
 
-  const money = (cents: number) =>
-    (Math.round(cents) / 100).toLocaleString("en-GB", {
-      style: "currency",
-      currency: "EUR",
-    });
-
+/* ============================ UI ============================ */
+function List({
+  team,
+  items,
+  totalPages,
+  currentPage,
+  nationSlug,
+}: {
+  team: string;
+  items: {
+    slug: string;
+    name: string;
+    imageUrls?: unknown;
+    basePrice: number;
+    team?: string | null;
+  }[];
+  totalPages: number;
+  currentPage: number;
+  nationSlug: string;
+}) {
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* background “hero” com blobs suaves */}
+      {/* Fundo */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
-        <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-100/40 blur-3xl" />
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
+        <div className="absolute top-32 -right-20 h-64 w-64 rounded-full bg-indigo-200/30 blur-3xl" />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-700 via-indigo-700 to-sky-700 text-transparent bg-clip-text">
-            {teamName} — Products
-          </h1>
-
+      <div className="container-fw py-8 sm:py-10">
+        {/* Back (igual estilo “pill”) */}
+        <div className="mb-6">
           <Link
             href="/nations"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-300/80 bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-slate-50 hover:border-sky-300 transition font-medium text-sm"
+            className="inline-flex items-center gap-2 px-4 h-11 rounded-2xl border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700 shadow-sm transition"
           >
-            <span>←</span> Back to nations
+            &larr; Back to nations
           </Link>
         </div>
 
         {/* Grid de produtos */}
-        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {products.map((p) => {
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
+            const euros = Math.floor(p.basePrice / 100).toString();
+            const dec = (p.basePrice % 100).toString().padStart(2, "0");
+            const compare = getCompareAt(p.basePrice);
+
+            const preferredLabel =
+              (typeof p.team === "string" && p.team.trim()) ||
+              labelFromName(p.name) ||
+              team;
+
+            const chipText = preferredLabel.toUpperCase();
 
             return (
-              <Link
-                key={p.id}
+              <a
+                key={p.slug}
                 href={`/products/${p.slug}`}
-                aria-label={p.name}
-                className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
+                className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
               >
-                <div className="rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
-                  {/* imagem */}
+                {compare && (
+                  <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+                    -{compare.pct}%
+                  </div>
+                )}
+
+                <div className="flex flex-col h-full">
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={src}
                       alt={p.name}
-                      fill
-                      unoptimized
-                      sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
-                      className="object-contain p-6 sm:p-7 md:p-6 lg:p-6 transition-transform duration-300 group-hover:scale-110"
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
                     />
-
-                    {/* brilho muito suave no hover (sem badges) */}
-                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
                   </div>
 
-                  {/* info */}
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-                          {p.team ?? teamName}
-                        </div>
-                        <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
-                          {p.name}
-                        </div>
-                      </div>
+                  <div className="p-5 flex flex-col grow">
+                    <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                      {chipText}
+                    </div>
 
-                      {/* price chip */}
-                      <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
-                        {money(p.basePrice)}
+                    <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+                      {p.name}
+                    </div>
+
+                    {/* Preço */}
+                    <div className="mt-4 flex items-baseline gap-2">
+                      {compare && (
+                        <div className="text-[13px] text-slate-500 line-through">
+                          {moneyAfterEUR(compare.compareAt)}
+                        </div>
+                      )}
+
+                      <div className="flex items-end text-[#1c40b7]">
+                        <span className="text-2xl font-semibold tracking-tight leading-none">
+                          {euros}
+                        </span>
+                        <span className="text-[13px] font-medium translate-y-[1px]">
+                          ,{dec}
+                        </span>
+                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                          €
+                        </span>
                       </div>
                     </div>
 
-                    {/* linha separadora minimal */}
-                    <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-                    {/* CTA minimalista */}
-                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <span className="transition group-hover:translate-x-0.5">
-                        View product
-                      </span>
-                      <svg
-                        className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 0 01-1.414 0z" />
-                      </svg>
+                    <div className="mt-auto">
+                      <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                      <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <span className="transition group-hover:translate-x-0.5">
+                          View product
+                        </span>
+                        <svg
+                          className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </Link>
+              </a>
             );
           })}
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <nav
+            className="mt-14 flex justify-center"
+            role="navigation"
+            aria-label="Paginação de produtos"
+          >
+            <ul className="flex items-center gap-3 flex-wrap justify-center">
+              <li>
+                <PaginationPill
+                  href={currentPage > 1 ? `/nations/${nationSlug}?page=1` : undefined}
+                  label="Primeira página"
+                >
+                  &laquo;
+                </PaginationPill>
+              </li>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <li key={n}>
+                  <PaginationPill
+                    href={n === currentPage ? undefined : `/nations/${nationSlug}?page=${n}`}
+                    active={n === currentPage}
+                    label={`Página ${n}`}
+                  >
+                    {n}
+                  </PaginationPill>
+                </li>
+              ))}
+
+              <li>
+                <PaginationPill
+                  href={
+                    currentPage < totalPages
+                      ? `/nations/${nationSlug}?page=${totalPages}`
+                      : undefined
+                  }
+                  label="Última página"
+                >
+                  &raquo;
+                </PaginationPill>
+              </li>
+            </ul>
+          </nav>
+        )}
       </div>
     </div>
+  );
+}
+
+/* ============================ Pagination Pill ============================ */
+function PaginationPill({
+  href,
+  active = false,
+  children,
+  label,
+}: {
+  href?: string;
+  active?: boolean;
+  children: ReactNode;
+  label: string;
+}) {
+  const base =
+    "h-11 min-w-11 px-4 inline-flex items-center justify-center rounded-2xl border shadow-sm transition";
+  const activeCls = "border-sky-600 bg-sky-600 text-white shadow-md";
+  const idleCls =
+    "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700";
+  const disabledCls = "border-slate-200 bg-white text-slate-300 pointer-events-none";
+
+  if (!href) {
+    return (
+      <span
+        aria-label={label}
+        aria-disabled="true"
+        className={`${base} ${active ? activeCls : disabledCls}`}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  if (active) {
+    return (
+      <span aria-current="page" aria-label={label} className={`${base} ${activeCls}`}>
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <a href={href} aria-label={label} className={`${base} ${idleCls}`}>
+      {children}
+    </a>
   );
 }
