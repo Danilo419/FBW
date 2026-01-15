@@ -1592,33 +1592,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NEWSLETTER (really cool) */}
-      <section className="container-fw pb-24">
-        <TiltCard>
-          <div className="grid md:grid-cols-2 gap-6 items-center p-6 sm:p-8">
-            <div>
-              <h3 className="text-2xl font-bold">Get launches & news</h3>
-              <p className="mt-2 text-gray-600">
-                Occasional discounts, pre-sales and special drops.
-              </p>
-            </div>
-            <form
-              className="flex w-full flex-col gap-3 sm:flex-row"
-              onSubmit={(e) => e.preventDefault()}
-            >
-              <input
-                type="email"
-                required
-                placeholder="Your email"
-                className="w-full rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button className="btn-primary w-full sm:w-auto whitespace-nowrap">
-                Subscribe
-              </button>
-            </form>
-          </div>
-        </TiltCard>
-      </section>
+      
     </div>
   )
 }

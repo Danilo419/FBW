@@ -202,14 +202,7 @@ function List({
 
       <div className="container-fw py-8 sm:py-10">
         {/* Back (igual estilo “pill”) */}
-        <div className="mb-6">
-          <Link
-            href="/nations"
-            className="inline-flex items-center gap-2 px-4 h-11 rounded-2xl border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700 shadow-sm transition"
-          >
-            &larr; Back to nations
-          </Link>
-        </div>
+        
 
         {/* Grid de produtos */}
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
