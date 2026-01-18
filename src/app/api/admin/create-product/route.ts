@@ -41,40 +41,100 @@ function parseTeamType(v: unknown): TeamTypeLocal {
 
 /** Catálogo de labels legíveis para as badges (mesmos "values" usados no admin) */
 const BADGE_LABELS = new Map<string, string>([
-  // Europe (top 8)
+  /* ================== Domestic Leagues – Europe (Top 8) ================== */
   ["premier-league-regular", "Premier League – League Badge"],
   ["premier-league-champions", "Premier League – Champions (Gold)"],
+
   ["la-liga-regular", "La Liga – League Badge"],
   ["la-liga-champions", "La Liga – Champion"],
+
   ["serie-a-regular", "Serie A – League Badge"],
   ["serie-a-scudetto", "Italy – Scudetto (Serie A Champion)"],
+
   ["bundesliga-regular", "Bundesliga – League Badge"],
   ["bundesliga-champions", "Bundesliga – Champion (Meister Badge)"],
+
   ["ligue1-regular", "Ligue 1 – League Badge"],
   ["ligue1-champions", "Ligue 1 – Champion"],
-  ["primeira-liga-regular", "Primeira Liga – League Badge"],
+
+  ["primeira-liga-regular", "Primeira Liga (Portugal) – League Badge"],
   ["primeira-liga-champions", "Primeira Liga – Champion"],
+
   ["eredivisie-regular", "Eredivisie – League Badge"],
   ["eredivisie-champions", "Eredivisie – Champion"],
+
   ["scottish-premiership-regular", "Scottish Premiership – League Badge"],
   ["scottish-premiership-champions", "Scottish Premiership – Champion"],
-  // Others mentioned
+
+  /* ================== Domestic Leagues – Others mentioned ================== */
   ["mls-regular", "MLS – League Badge"],
   ["mls-champions", "MLS – Champions (MLS Cup Holders)"],
+
   ["brasileirao-regular", "Brazil – Brasileirão – League Badge"],
   ["brasileirao-champions", "Brazil – Brasileirão – Champion"],
+
   ["super-lig-regular", "Turkey – Süper Lig – League Badge"],
-  ["super-lig-champions", "Turkey – Süper Lig – Champion"],
+  ["super-lig-champions", "Turkey – Süper Lig – Champion (if applicable)"],
+
   ["spl-saudi-regular", "Saudi Pro League – League Badge"],
-  ["spl-saudi-champions", "Saudi Pro League – Champion"],
-  // UEFA / FIFA
+  ["spl-saudi-champions", "Saudi Pro League – Champion (if applicable)"],
+
+  /* ================== UEFA Competitions ================== */
   ["ucl-regular", "UEFA Champions League – Starball Badge"],
   ["ucl-winners", "UEFA Champions League – Winners Badge"],
+
   ["uel-regular", "UEFA Europa League – Badge"],
   ["uel-winners", "UEFA Europa League – Winners Badge"],
+
   ["uecl-regular", "UEFA Europa Conference League – Badge"],
   ["uecl-winners", "UEFA Europa Conference League – Winners Badge"],
+
+  /* ================== National Teams – FIFA ================== */
+  ["fifa-world-cup-regular", "FIFA World Cup – Tournament Badge"],
+  ["fifa-world-cup-winners", "FIFA World Cup – Winners Badge"],
+
+  ["olympic-football-regular", "Olympic Football – Tournament Badge"],
+  ["olympic-football-winners", "Olympic Football – Winners Badge"],
+
+  /* ================== National Teams – Europe (UEFA) ================== */
+  ["uefa-euro-regular", "UEFA EURO – Tournament Badge"],
+  ["uefa-euro-winners", "UEFA EURO – Winners Badge"],
+
+  ["uefa-nations-league-regular", "UEFA Nations League – Tournament Badge"],
+  ["uefa-nations-league-winners", "UEFA Nations League – Winners Badge"],
+
+  ["uefa-finalissima-regular", "Finalissima – Match Badge"],
+  ["uefa-finalissima-winners", "Finalissima – Winners Badge"],
+
+  /* ================== National Teams – South America (CONMEBOL) ================== */
+  ["copa-america-regular", "Copa América – Tournament Badge"],
+  ["copa-america-winners", "Copa América – Winners Badge"],
+
+  /* ================== National Teams – Africa (CAF) ================== */
+  ["afcon-regular", "AFCON (Africa Cup of Nations) – Tournament Badge"],
+  ["afcon-winners", "AFCON (Africa Cup of Nations) – Winners Badge"],
+
+  /* ================== National Teams – Asia (AFC) ================== */
+  ["afc-asian-cup-regular", "AFC Asian Cup – Tournament Badge"],
+  ["afc-asian-cup-winners", "AFC Asian Cup – Winners Badge"],
+
+  ["afc-nations-league-regular", "AFC Nations League – Tournament Badge"],
+  ["afc-nations-league-winners", "AFC Nations League – Winners Badge"],
+
+  /* ================== National Teams – CONCACAF ================== */
+  ["concacaf-gold-cup-regular", "CONCACAF Gold Cup – Tournament Badge"],
+  ["concacaf-gold-cup-winners", "CONCACAF Gold Cup – Winners Badge"],
+
+  ["concacaf-nations-league-regular", "CONCACAF Nations League – Tournament Badge"],
+  ["concacaf-nations-league-winners", "CONCACAF Nations League – Winners Badge"],
+
+  /* ================== National Teams – Oceania (OFC) ================== */
+  ["ofc-nations-cup-regular", "OFC Nations Cup – Tournament Badge"],
+  ["ofc-nations-cup-winners", "OFC Nations Cup – Winners Badge"],
+
+  /* ================== International Club ================== */
   ["club-world-cup-champions", "Club World Cup – Champions Badge"],
+  ["intercontinental-cup-champions", "FIFA Intercontinental Cup – Champions Badge"],
 ]);
 
 /* ================== Handler ================== */
@@ -86,7 +146,7 @@ export async function POST(req: Request) {
     const team = String(form.get("team") || "").trim();
     const priceStr = String(form.get("price") || "").trim();
 
-    // ✅ NOVO: teamType (vem do NewProductPage)
+    // ✅ teamType (vem do NewProductPage)
     const teamType = parseTeamType(form.get("teamType"));
 
     if (!name || !team || !priceStr) {
@@ -129,7 +189,6 @@ export async function POST(req: Request) {
       .filter(Boolean);
 
     // Slug único
-    // (Incluímos teamType no slug só indiretamente via team/name/season; mantém simples)
     const base = toSlug(`${team ? team + " " : ""}${name}${season ? " " + season : ""}`);
     let slug = base || toSlug(name) || `product-${Date.now()}`;
     let suffix = 1;
@@ -142,7 +201,7 @@ export async function POST(req: Request) {
       data: {
         name,
         team,
-        teamType, // ✅ NOVO
+        teamType,
         season,
         description,
         slug,
@@ -223,7 +282,7 @@ export async function POST(req: Request) {
         ok: true,
         id: created.id,
         slug: created.slug,
-        teamType, // ✅ NOVO
+        teamType,
         sizeGroup,
         sizes,
         disableCustomization,
