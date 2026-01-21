@@ -53,7 +53,10 @@ function Spotlight({
     setPos({ x: e.clientX - r.left, y: e.clientY - r.top })
   }, [])
   return (
-    <div onMouseMove={onMouseMove} className={`relative overflow-hidden ${className}`}>
+    <div
+      onMouseMove={onMouseMove}
+      className={`relative overflow-hidden ${className}`}
+    >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -137,7 +140,9 @@ function TiltCard({
     <motion.div
       onMouseMove={onMouseMove}
       onMouseLeave={() => setT({ rx: 0, ry: 0 })}
-      style={{ transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)` }}
+      style={{
+        transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)`,
+      }}
       className={`card ${className}`}
     >
       <div
@@ -168,12 +173,30 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal11.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png', alt: 'Atlético Madrid jersey' },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png',
+    alt: 'Atlético Madrid jersey',
+  },
   { src: '/images/players/Barcelona/Barcelona1.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona2.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona3.png', alt: 'Barcelona jersey' },
@@ -253,18 +276,54 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSG/PSG6.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG7.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG8.png', alt: 'PSG jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid4.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid5.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid6.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid7.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid8.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid9.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'Real Madrid jersey' },
+  {
+    src: '/images/players/RealMadrid/RealMadrid1.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid2.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid3.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid4.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid5.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid6.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid7.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid8.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid9.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid10.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid11.png',
+    alt: 'Real Madrid jersey',
+  },
+  {
+    src: '/images/players/RealMadrid/RealMadrid12.png',
+    alt: 'Real Madrid jersey',
+  },
   { src: '/images/players/Tottenham/Tottenham1.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham2.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham3.png', alt: 'Tottenham jersey' },
@@ -358,14 +417,38 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Dortmund/Dortmund9.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund10.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund11.png', alt: 'Dortmund jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen1.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen2.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen3.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen4.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen5.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen6.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen7.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen8.png', alt: 'Leverkusen jersey' },
+  {
+    src: '/images/players/Leverkusen/Leverkusen1.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen2.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen3.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen4.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen5.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen6.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen7.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen8.png',
+    alt: 'Leverkusen jersey',
+  },
   { src: '/images/players/Ajax/Ajax1.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax2.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax3.png', alt: 'Ajax jersey' },
@@ -421,9 +504,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const timerRef = useRef<number | null>(null)
 
   const firstIndex = orderRef.current[0]
-  const initialSrc =
-    heroImages[firstIndex]?.src ??
-    FALLBACK_IMG
+  const initialSrc = heroImages[firstIndex]?.src ?? FALLBACK_IMG
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -861,7 +942,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
   )
 }
 
-/* ---------- Marquee com animação infinita suave ---------- */
+/* ---------- Marquee com animação infinita suave (ATUALIZADO) ---------- */
 
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
@@ -873,20 +954,42 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
   const x = useMotionValue(0)
   const lastXRef = useRef(0)
 
+  // ✅ aplica offset aleatório só 1x por montagem (não mostrar sempre os mesmos 6)
+  const didInitOffsetRef = useRef(false)
+
+  const rand01 = () => {
+    try {
+      const u = new Uint32Array(1)
+      crypto.getRandomValues(u)
+      return u[0] / 0xffffffff
+    } catch {
+      return Math.random()
+    }
+  }
+
   useEffect(() => {
     const el = trackRef.current
     if (!el) return
 
     const measure = () => {
       const full = el.scrollWidth
-      baseWidthRef.current = full / 2
+      const base = full / 2
+      baseWidthRef.current = base
+
+      // ✅ offset inicial aleatório (entre -base e 0)
+      if (!didInitOffsetRef.current && base > 0) {
+        const offset = -Math.floor(rand01() * base)
+        lastXRef.current = offset
+        x.set(offset)
+        didInitOffsetRef.current = true
+      }
     }
 
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [duplicated])
+  }, [duplicated, x])
 
   useAnimationFrame((_, delta) => {
     const base = baseWidthRef.current
@@ -1003,6 +1106,7 @@ export default function Home() {
       return true
     }
 
+    // (mantive a tua lógica) — o “fix” principal é o offset aleatório no marquee
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
@@ -1010,8 +1114,12 @@ export default function Home() {
         (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
       jerseys: mk(filterJerseys),
-      longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
-      playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
+      longSleeve: mk(
+        (p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
+      ),
+      playerVersion: mk(
+        (p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
+      ),
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
@@ -1263,7 +1371,7 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE – mobile: 1687x1024, desktop: 3689x1024, mobile usa home-promo2, desktop home-promo */}
+        {/* PROMO IMAGE */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
@@ -1271,12 +1379,10 @@ export default function Home() {
             </p>
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
-                {/* mobile (até 767px) */}
                 <source
                   srcSet="/images/promos/home-promo2.png"
                   media="(max-width: 767px)"
                 />
-                {/* desktop/tablet (768px+) */}
                 <source
                   srcSet="/images/promos/home-promo.png"
                   media="(min-width: 768px)"
@@ -1301,7 +1407,9 @@ export default function Home() {
       {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Highlights</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Highlights
+          </h2>
         </div>
 
         <ImageSpaces />
@@ -1591,8 +1699,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      
     </div>
   )
 }
