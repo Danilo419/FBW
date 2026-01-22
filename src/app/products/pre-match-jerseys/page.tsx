@@ -1,4 +1,3 @@
-// src/app/products/pre-match-jerseys/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -11,7 +10,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -117,7 +116,6 @@ function isPreMatchJersey(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // termos típicos de pre-match / warm-up
   const isPreMatch =
     n.includes("PRE-MATCH") ||
     n.includes("PRE MATCH") ||
@@ -128,7 +126,6 @@ function isPreMatchJersey(p: UIProduct): boolean {
 
   if (!isPreMatch) return false;
 
-  // excluir itens óbvios que não sejam camisola/top
   if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
   if (n.includes("CROP TOP")) return false;
@@ -136,11 +133,18 @@ function isPreMatchJersey(p: UIProduct): boolean {
   if (n.includes("BALL")) return false;
   if (n.includes("POSTER")) return false;
 
-  // excluir kits infantis / completos
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-  if (n.includes(" KIT")) return false; // kit completo
+
+  if (n.includes("FULL KIT")) return false;
+  if (n.includes("KIT SET")) return false;
+  if (n.includes("JERSEY + SHORTS")) return false;
+  if (n.includes("WITH SHORTS")) return false;
+
+  if (n.includes(" KIT") && !(n.includes("JERSEY") || n.includes("TOP"))) {
+    return false;
+  }
 
   return true;
 }
@@ -262,17 +266,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -281,8 +279,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Pre-Match Jerseys
-   - Busca via /api/search?q=jersey
-   - Filtra apenas pre-match / warm-up tops
+   - Agora busca via /api/pre-match-jerseys (catálogo completo)
 ============================================================ */
 
 export default function PreMatchJerseysPage() {
@@ -297,15 +294,14 @@ export default function PreMatchJerseysPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/pre-match-jerseys`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -318,7 +314,7 @@ export default function PreMatchJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -331,7 +327,6 @@ export default function PreMatchJerseysPage() {
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isPreMatchJersey);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -341,7 +336,6 @@ export default function PreMatchJerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -363,14 +357,11 @@ export default function PreMatchJerseysPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -426,7 +417,6 @@ export default function PreMatchJerseysPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw px-4 sm:px-6 section-gap">
-        {/* Filtros + info */}
         <div className="mb-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -471,7 +461,6 @@ export default function PreMatchJerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -492,10 +481,8 @@ export default function PreMatchJerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600 text-sm">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
@@ -512,7 +499,6 @@ export default function PreMatchJerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 flex items-center justify-center gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -523,7 +509,6 @@ export default function PreMatchJerseysPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -557,12 +542,9 @@ export default function PreMatchJerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-2.5 sm:px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Próxima página"
