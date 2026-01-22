@@ -99,6 +99,9 @@ function toTitleCaseSmart(input: string) {
 // ⚠️ BUG ORIGINAL: "real madrid|madrid" fazia Atlético de Madrid virar Real Madrid.
 // ✅ FIX: Real Madrid só com "real madrid".
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
+  // Inglaterra (adicionado para evitar "ARSENAL TRICOLOR" etc.)
+  [/\barsenal\b/i, "Arsenal"],
+
   // Espanha
   [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
@@ -146,6 +149,30 @@ const COLOR_WORDS = new Set(
     "LIME",
     "AQUA",
     "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+/**
+ * Palavras “descritoras” que NÃO fazem parte do nome do clube/seleção,
+ * e que aparecem MUITO no campo team (ex.: "ARSENAL TRICOLOR").
+ * ✅ Isto garante que nunca aparece "ARSENAL TRICOLOR", só "ARSENAL".
+ */
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
   ].map((x) => x.toUpperCase())
 );
 
@@ -209,7 +236,7 @@ function cleanTeamValue(v?: string | null): string {
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing words tipo PRIMARY / RED / BLACK / CUP / etc.
+  // remove trailing words tipo PRIMARY / RED / BLACK / TRICOLOR / CUP / etc.
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -226,10 +253,20 @@ function cleanTeamValue(v?: string | null): string {
       out.pop();
       continue;
     }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
     break;
   }
 
-  return normalizeStr(out.join(" "));
+  // ✅ Segurança extra: se “TRICOLOR” aparecer no fim por causa de caracteres,
+  // removemos de novo (sem afetar "Manchester City", "Real Betis", etc.)
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(/\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi, "");
+  joined = normalizeStr(joined);
+
+  return joined;
 }
 
 function clubFromString(input?: string | null): string | null {
@@ -261,20 +298,20 @@ function inferClubFromName(name?: string | null): string {
     cut.replace(/\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi, "")
   );
 
-  // aplica a mesma limpeza usada no team (tira PRIMARY/cores/CUP/etc.)
+  // aplica a mesma limpeza usada no team (tira PRIMARY/cores/TRICOLOR/CUP/etc.)
   return cleanTeamValue(cleaned);
 }
 
 /** ✅ label final: tenta team -> patterns -> infer pelo nome; nunca devolve "Club" */
 function getClubLabel(p: UIProduct): string {
-  // 1) usa team se existir, mas limpando "PRIMARY", cores, etc.
+  // 1) usa team se existir, mas limpando "PRIMARY", cores, TRICOLOR, etc.
   const teamClean = cleanTeamValue(p.team ?? null);
   if (teamClean) {
     const byTeamPattern = clubFromString(teamClean);
     return byTeamPattern ?? toTitleCaseSmart(teamClean);
   }
 
-  // 2) tenta patterns no nome (Real Madrid, Atlético, etc.)
+  // 2) tenta patterns no nome (Real Madrid, Atlético, Arsenal, etc.)
   const byNamePattern = clubFromString(p.name);
   if (byNamePattern) return byNamePattern;
 
@@ -429,7 +466,7 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir (assim nunca aparece "CLUB", nem "ARGENTINA PRIMARY") */}
+          {/* ✅ só mostra se existir */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
