@@ -7,7 +7,6 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { usePathname } from 'next/navigation'
 import {
   motion,
   useMotionValue,
@@ -54,10 +53,7 @@ function Spotlight({
     setPos({ x: e.clientX - r.left, y: e.clientY - r.top })
   }, [])
   return (
-    <div
-      onMouseMove={onMouseMove}
-      className={`relative overflow-hidden ${className}`}
-    >
+    <div onMouseMove={onMouseMove} className={`relative overflow-hidden ${className}`}>
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -141,9 +137,7 @@ function TiltCard({
     <motion.div
       onMouseMove={onMouseMove}
       onMouseLeave={() => setT({ rx: 0, ry: 0 })}
-      style={{
-        transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)`,
-      }}
+      style={{ transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)` }}
       className={`card ${className}`}
     >
       <div
@@ -174,30 +168,12 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal11.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
-  {
-    src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
-    alt: 'Atlético Madrid jersey',
-  },
-  {
-    src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png',
-    alt: 'Atlético Madrid jersey',
-  },
-  {
-    src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png',
-    alt: 'Atlético Madrid jersey',
-  },
-  {
-    src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png',
-    alt: 'Atlético Madrid jersey',
-  },
-  {
-    src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png',
-    alt: 'Atlético Madrid jersey',
-  },
-  {
-    src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png',
-    alt: 'Atlético Madrid jersey',
-  },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png', alt: 'Atlético Madrid jersey' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png', alt: 'Atlético Madrid jersey' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png', alt: 'Atlético Madrid jersey' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png', alt: 'Atlético Madrid jersey' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png', alt: 'Atlético Madrid jersey' },
+  { src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png', alt: 'Atlético Madrid jersey' },
   { src: '/images/players/Barcelona/Barcelona1.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona2.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona3.png', alt: 'Barcelona jersey' },
@@ -382,38 +358,14 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Dortmund/Dortmund9.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund10.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund11.png', alt: 'Dortmund jersey' },
-  {
-    src: '/images/players/Leverkusen/Leverkusen1.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen2.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen3.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen4.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen5.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen6.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen7.png',
-    alt: 'Leverkusen jersey',
-  },
-  {
-    src: '/images/players/Leverkusen/Leverkusen8.png',
-    alt: 'Leverkusen jersey',
-  },
+  { src: '/images/players/Leverkusen/Leverkusen1.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen2.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen3.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen4.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen5.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen6.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen7.png', alt: 'Leverkusen jersey' },
+  { src: '/images/players/Leverkusen/Leverkusen8.png', alt: 'Leverkusen jersey' },
   { src: '/images/players/Ajax/Ajax1.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax2.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax3.png', alt: 'Ajax jersey' },
@@ -469,7 +421,9 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const timerRef = useRef<number | null>(null)
 
   const firstIndex = orderRef.current[0]
-  const initialSrc = heroImages[firstIndex]?.src ?? FALLBACK_IMG
+  const initialSrc =
+    heroImages[firstIndex]?.src ??
+    FALLBACK_IMG
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -505,6 +459,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
 
     back.src = nextSrc
     back.style.transitionDuration = `${fade}ms`
+    // forçar reflow
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
     back.classList.add('is-visible')
@@ -547,6 +502,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
+      {/* camada A já começa visível com imagem aleatória */}
       <img
         ref={aRef}
         className="hero-layer is-visible"
@@ -561,6 +517,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         }}
       />
 
+      {/* camada B começa vazia e entra nas trocas seguintes */}
       <img
         ref={bRef}
         className="hero-layer"
@@ -616,7 +573,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'adult',
     label: 'Adult',
-    href: '/products/adult',
+    href: '/products/adult', // <<--- página Adult
     img: '/images/spaces/adult.png',
     alt: 'Adult Collection',
     subtitle: 'Sizes S–2XL',
@@ -624,7 +581,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'kids',
     label: 'Kids',
-    href: '/products/kids',
+    href: '/products/kids', // <<--- página Kids
     img: '/images/spaces/kids.png',
     alt: 'Kids Collection',
     subtitle: 'Ages 2–13',
@@ -632,7 +589,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'retro',
     label: 'Retro',
-    href: '/products/retro',
+    href: '/products/retro', // <<--- página Retro
     img: '/images/spaces/retro.png',
     alt: 'Retro Collection',
     subtitle: 'Timeless classics',
@@ -640,7 +597,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'concept',
     label: 'Concept Kits',
-    href: '/products/concept-kits',
+    href: '/products/concept-kits', // <<--- página Concept Kits
     img: '/images/spaces/concept.png',
     alt: 'Concept Kits',
     subtitle: 'Original designs',
@@ -904,16 +861,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
   )
 }
 
-/* ---------- Marquee com animação infinita suave (FIX REAL) ---------- */
-/**
- * O teu problema NÃO era só “shuffle”.
- * No App Router, quando sais e voltas à Home, muitas vezes a página NÃO desmonta,
- * então o marquee fica com o MESMO “x inicial” e parece sempre os mesmos 6.
- *
- * Aqui fazemos 2 coisas:
- * 1) Offset inicial aleatório SEMPRE que a lista muda (duplicated muda) OU o componente remonta.
- * 2) O Home força remount do ProductMarquee via key (ver em baixo).
- */
+/* ---------- Marquee com animação infinita suave ---------- */
 
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
@@ -925,46 +873,20 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
   const x = useMotionValue(0)
   const lastXRef = useRef(0)
 
-  const didInitOffsetRef = useRef(false)
-
-  const rand01 = () => {
-    try {
-      const u = new Uint32Array(1)
-      crypto.getRandomValues(u)
-      return u[0] / 0xffffffff
-    } catch {
-      return Math.random()
-    }
-  }
-
-  // ✅ sempre que a lista muda, voltamos a permitir offset novo
-  useEffect(() => {
-    didInitOffsetRef.current = false
-  }, [duplicated])
-
   useEffect(() => {
     const el = trackRef.current
     if (!el) return
 
     const measure = () => {
       const full = el.scrollWidth
-      const base = full / 2
-      baseWidthRef.current = base
-
-      if (!didInitOffsetRef.current && base > 0) {
-        // offset aleatório entre [-base, 0)
-        const offset = -Math.floor(rand01() * base)
-        lastXRef.current = offset
-        x.set(offset)
-        didInitOffsetRef.current = true
-      }
+      baseWidthRef.current = full / 2
     }
 
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [duplicated, x])
+  }, [duplicated])
 
   useAnimationFrame((_, delta) => {
     const base = baseWidthRef.current
@@ -1000,33 +922,6 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
 ====================================================================================== */
 
 export default function Home() {
-  const pathname = usePathname()
-
-  /**
-   * ✅ FIX PRINCIPAL:
-   * Forçamos “reshuffle + remount” quando:
-   * - a página é visitada (pathname muda para "/")
-   * - o utilizador volta ao separador (tab) / foco (visibilidade)
-   *
-   * Isto elimina o efeito de “sempre os mesmos 6” causado por cache do App Router.
-   */
-  const [shuffleSeed, setShuffleSeed] = useState(0)
-
-  useEffect(() => {
-    // sempre que o pathname muda, gera nova seed
-    setShuffleSeed((s) => s + 1)
-  }, [pathname])
-
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === 'visible') {
-        setShuffleSeed((s) => s + 1)
-      }
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [])
-
   const { scrollY } = useScroll()
   const START = 420
   const SPAN = 560
@@ -1092,7 +987,6 @@ export default function Home() {
   const categories = useMemo(() => {
     if (!homeProducts.length) return null
 
-    // ✅ shuffleSeed força recálculo (nova ordem) sempre que muda
     const base = shuffle(homeProducts)
 
     const filterJerseys = (p: HomeProduct) => {
@@ -1122,7 +1016,9 @@ export default function Home() {
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
       retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
-      retroLongSleeve: mk((p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)),
+      retroLongSleeve: mk(
+        (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
+      ),
       conceptKits: mk(
         (p) => hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
@@ -1141,10 +1037,14 @@ export default function Home() {
           !isRetro(p) &&
           !isPlayerVersion(p)
       ),
-      kidsKits: mk((p) => hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)),
-      cropTops: mk((p) => hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)),
+      kidsKits: mk(
+        (p) => hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
+      ),
+      cropTops: mk(
+        (p) => hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
+      ),
     }
-  }, [homeProducts, shuffleSeed])
+  }, [homeProducts])
 
   type CategoryKey = keyof NonNullable<typeof categories>
 
@@ -1155,6 +1055,7 @@ export default function Home() {
     href: string
     group: string
   }[] = [
+    // Jerseys
     {
       key: 'currentSeason',
       title: 'Current season 25/26',
@@ -1190,6 +1091,8 @@ export default function Home() {
       href: '/products/player-version-long-sleeve-jerseys',
       group: 'Jerseys',
     },
+
+    // Retro
     {
       key: 'retro',
       title: 'Retro Jerseys',
@@ -1204,6 +1107,8 @@ export default function Home() {
       href: '/products/retro-long-sleeve-jerseys',
       group: 'Retro',
     },
+
+    // Concept & Special
     {
       key: 'conceptKits',
       title: 'Concept Kits',
@@ -1218,6 +1123,8 @@ export default function Home() {
       href: '/products/pre-match-jerseys',
       group: 'Concept & Special',
     },
+
+    // Training
     {
       key: 'trainingSleeveless',
       title: 'Training Sleeveless Sets',
@@ -1232,6 +1139,8 @@ export default function Home() {
       href: '/products/training-tracksuits',
       group: 'Training',
     },
+
+    // Kids & Woman
     {
       key: 'kidsKits',
       title: 'Kids Kits',
@@ -1354,7 +1263,7 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE */}
+        {/* PROMO IMAGE – mobile: 1687x1024, desktop: 3689x1024, mobile usa home-promo2, desktop home-promo */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
@@ -1362,10 +1271,12 @@ export default function Home() {
             </p>
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
+                {/* mobile (até 767px) */}
                 <source
                   srcSet="/images/promos/home-promo2.png"
                   media="(max-width: 767px)"
                 />
+                {/* desktop/tablet (768px+) */}
                 <source
                   srcSet="/images/promos/home-promo.png"
                   media="(min-width: 768px)"
@@ -1390,9 +1301,7 @@ export default function Home() {
       {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Highlights
-          </h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Highlights</h2>
         </div>
 
         <ImageSpaces />
@@ -1491,11 +1400,7 @@ export default function Home() {
                                 </a>
                               </div>
 
-                              {/* ✅ key força remount e novo offset/ordem */}
-                              <ProductMarquee
-                                key={`${shuffleSeed}-${key}`}
-                                products={list}
-                              />
+                              <ProductMarquee products={list} />
                             </div>
                           )
                         })}
@@ -1686,6 +1591,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      
     </div>
   )
 }
