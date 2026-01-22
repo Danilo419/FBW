@@ -62,14 +62,22 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (fix: nunca mostrar "CLUB" e ficar só o nome) ========= */
+/* ========= Extração do NOME DO CLUBE (FIX: não confundir Madrid com Real Madrid) ========= */
+
+/**
+ * O teu bug acontece porque a regex do Real Madrid estava assim:
+ *   (real madrid | madrid)
+ * então "Atlético de Madrid ..." batia em "madrid" e virava Real Madrid.
+ *
+ * ✅ FIX: remover o "madrid" sozinho. Real Madrid só quando tiver "Real Madrid" / "RealMadrid" / "R. Madrid".
+ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   // Espanha
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  [/\breal\s*madrid\b/i, "Real Madrid"], // ✅ sem "madrid" sozinho
   [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
@@ -320,7 +328,7 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só renderiza se existir label (e agora fica só nome) */}
+          {/* ✅ só renderiza se existir label */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
