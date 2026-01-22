@@ -402,8 +402,7 @@ export default function FifaWorldCup2026JerseysPage() {
                 FIFA World Cup 2026 Jerseys
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
-                Only products that contain <strong>“World Cup”</strong> and{" "}
-                <strong>“2026”</strong> in the name.
+                Exclusive selection of World Cup 2026 jerseys.
               </p>
             </div>
 
