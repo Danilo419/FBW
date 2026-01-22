@@ -14,7 +14,7 @@ function normalizeStr(s?: string | null) {
 }
 
 function pickImageUrl(p: any): string | undefined {
-  // tenta vários nomes comuns sem assumir schema
+  // campos diretos comuns
   const direct =
     p?.img ??
     p?.image ??
@@ -28,20 +28,24 @@ function pickImageUrl(p: any): string | undefined {
 
   const imgs = p?.images;
 
-  // se "images" for um array/json (não relação), tenta tirar o primeiro
+  // se vier relação (array de objetos)
   if (Array.isArray(imgs) && imgs.length > 0) {
     const first = imgs[0];
+
     if (typeof first === "string" && first) return first;
+
     if (first && typeof first === "object") {
       if (typeof first.url === "string" && first.url) return first.url;
       if (typeof first.src === "string" && first.src) return first.src;
       if (typeof first.path === "string" && first.path) return first.path;
       if (typeof first.imageUrl === "string" && first.imageUrl)
         return first.imageUrl;
+      if (typeof first.secureUrl === "string" && first.secureUrl)
+        return first.secureUrl;
     }
   }
 
-  // se for string json (às vezes guardam assim)
+  // se guardas json/string
   if (typeof imgs === "string" && imgs) return imgs;
 
   return undefined;
@@ -57,10 +61,8 @@ function isPlayerVersionLongSleeveName(name: string) {
     n.includes("LONG-SLEEVE") ||
     /\bL\/S\b/.test(n) ||
     /\bLS\b/.test(n);
-
   if (!isLongSleeve) return false;
 
-  // exclusões
   const EXCLUDE = [
     "RETRO",
     "SET",
@@ -85,8 +87,6 @@ function isPlayerVersionLongSleeveName(name: string) {
 
 /* ============================================================
    GET
-   /api/player-version-long-sleeve-jerseys
-   Opcional: ?q=chelsea (filtra por nome/equipa)
 ============================================================ */
 
 export async function GET(req: Request) {
@@ -94,7 +94,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = normalizeStr(searchParams.get("q"));
 
-    // Base WHERE (só usa "name", que sabemos que existe)
     const baseWhere: any = {
       AND: [
         { name: { contains: "Player Version", mode: "insensitive" } },
@@ -118,7 +117,6 @@ export async function GET(req: Request) {
       ],
     };
 
-    // Primeiro tenta filtrar por nome + team (se team existir)
     let whereWithQ: any = baseWhere;
 
     if (q) {
@@ -128,22 +126,24 @@ export async function GET(req: Request) {
           {
             OR: [
               { name: { contains: q, mode: "insensitive" } },
-              { team: { contains: q, mode: "insensitive" } },
+              { team: { contains: q, mode: "insensitive" } }, // pode não existir
             ],
           },
         ],
       };
     }
 
-    // 1) Tenta query com team
     let productsRaw: any[] = [];
+
+    // 1) tenta trazer imagens via relação "images"
     try {
       productsRaw = await (prisma as any).product.findMany({
         where: whereWithQ,
         take: 5000,
+        include: { images: true }, // ✅ isto é o que faltava para as imagens virem
       });
     } catch {
-      // 2) Se falhar (ex.: "team" não existe), tenta só por name
+      // 2) se falhar (team não existe ou images não é relação), tenta sem team e/ou sem include
       const whereNameOnly =
         q
           ? {
@@ -154,22 +154,33 @@ export async function GET(req: Request) {
             }
           : baseWhere;
 
-      productsRaw = await (prisma as any).product.findMany({
-        where: whereNameOnly,
-        take: 5000,
-      });
+      try {
+        productsRaw = await (prisma as any).product.findMany({
+          where: whereNameOnly,
+          take: 5000,
+          include: { images: true },
+        });
+      } catch {
+        // 3) último fallback: sem include (pelo menos não dá 500)
+        productsRaw = await (prisma as any).product.findMany({
+          where: whereNameOnly,
+          take: 5000,
+        });
+      }
     }
 
-    // filtro final (garante que cumpre TODOS os requisitos)
     const filtered = (Array.isArray(productsRaw) ? productsRaw : [])
-      .filter((p: any) => typeof p?.name === "string" && isPlayerVersionLongSleeveName(p.name))
+      .filter(
+        (p: any) =>
+          typeof p?.name === "string" && isPlayerVersionLongSleeveName(p.name)
+      )
       .map((p: any) => ({
         id: p.id,
         name: p.name,
         slug: p.slug ?? undefined,
         price: typeof p.price === "number" ? p.price : undefined,
         team: p.team ?? null,
-        img: pickImageUrl(p),
+        img: pickImageUrl(p), // ✅ agora vai conseguir apanhar images[0].url
       }));
 
     return NextResponse.json({ products: filtered });
