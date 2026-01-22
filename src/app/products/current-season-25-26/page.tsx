@@ -62,16 +62,19 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (fix: nunca mostrar "CLUB") ========= */
+/* ========= Extração do NOME DO CLUBE (fix: nunca mostrar "CLUB" e remover cores) ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
+  // Espanha
   [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
-  [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"], // se quiseres "FC Barcelona", troca aqui
+  [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\b(real\s*)?betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -92,6 +95,65 @@ function cleanTeamValue(v?: string | null): string {
   return s;
 }
 
+/** Remove descritores de cor do fim: "Arsenal Red & Black" => "Arsenal" */
+function stripColorDescriptors(input: string): string {
+  let s = normalizeStr(input);
+  if (!s) return "";
+
+  // se tiver " & " e a parte direita parece cor, fica com a esquerda
+  // ex: "Arsenal Red & Black" -> "Arsenal Red"
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) {
+    s = normalizeStr(amp[0]);
+  }
+
+  const colorWords = [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ];
+
+  const tokens = s.split(/\s+/);
+  // corta no primeiro token que seja cor (ou parte de cor)
+  let cutIndex = tokens.length;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].toUpperCase().replace(/[^A-Z-]/g, "");
+    const t2 = t.replace(/-/g, "");
+    if (colorWords.includes(t) || colorWords.includes(t2)) {
+      cutIndex = i;
+      break;
+    }
+  }
+
+  const out = normalizeStr(tokens.slice(0, cutIndex).join(" "));
+  return out || s;
+}
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
@@ -104,13 +166,13 @@ function clubFromString(input?: string | null): string | null {
 /**
  * Inferir clube pelo nome do produto:
  * "Juventus Away Jersey 25/26" -> "Juventus"
- * "Leverkusen Away Jersey 25/26" -> "Leverkusen"
+ * "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal" (com stripColorDescriptors)
  */
 function inferClubFromName(name?: string | null): string | null {
   const s = normalizeStr(name);
   if (!s) return null;
 
-  // corta quando aparecer uma keyword típica do resto do nome
+  // corta quando aparecer keyword típica
   const cut = s.split(
     /\s+(Home|Away|Third|Fourth|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept)\b/i
   )[0];
@@ -120,7 +182,10 @@ function inferClubFromName(name?: string | null): string | null {
   );
 
   if (!cleaned) return null;
-  return cleaned;
+
+  // ✅ FIX PRINCIPAL: remove cores/descritores
+  const stripped = stripColorDescriptors(cleaned);
+  return stripped || cleaned;
 }
 
 /** Obtém label do clube (NUNCA devolve "Club") */
@@ -135,7 +200,7 @@ function getClubLabel(p: UIProduct): string {
   const byNamePattern = clubFromString(p.name);
   if (byNamePattern) return byNamePattern;
 
-  // 3) fallback: inferir pela primeira palavra/segmento do nome
+  // 3) fallback: inferir pela primeira parte do nome (agora limpando cores)
   const inferred = inferClubFromName(p.name);
   return inferred ?? "";
 }
@@ -143,7 +208,6 @@ function getClubLabel(p: UIProduct): string {
 /* ============================ Helpers de filtro ============================ */
 
 function normName(p: UIProduct) {
-  // robusto: remove acentos e normaliza (não muda o visual, só melhora o filtro)
   return (p.name ?? "")
     .toUpperCase()
     .normalize("NFD")
@@ -162,11 +226,6 @@ function isRetro(p: UIProduct) {
   return hasTerm(p, "RETRO");
 }
 
-/** Mesma lógica que o "currentSeason" da Home:
- *  - nome contém "25/26"
- *  - NÃO é player version
- *  - NÃO é retro
- */
 function isCurrentSeasonProduct(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
@@ -218,7 +277,7 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ FIX: só renderiza se existir label (nunca mostra CLUB) */}
+          {/* ✅ só renderiza se existir label */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -229,7 +288,6 @@ function ProductCard({ p }: { p: UIProduct }) {
             {p.name}
           </div>
 
-          {/* ✅ PREÇOS + DESCONTO (igual ao que tinhas) */}
           <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
@@ -276,7 +334,7 @@ function ProductCard({ p }: { p: UIProduct }) {
   );
 }
 
-/* ============================ Paginação com ... (como Jerseys avançada) ============================ */
+/* ============================ Paginação com ... ============================ */
 
 function buildPaginationRange(
   current: number,
@@ -296,17 +354,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -328,7 +380,6 @@ export default function CurrentSeasonPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // ✅ Mantém a versão "catálogo completo" (não remove nada do visual: preços/descontos ficam iguais)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -365,7 +416,6 @@ export default function CurrentSeasonPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -375,7 +425,6 @@ export default function CurrentSeasonPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -397,14 +446,11 @@ export default function CurrentSeasonPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -433,7 +479,6 @@ export default function CurrentSeasonPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER (mobile-first) */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -461,9 +506,7 @@ export default function CurrentSeasonPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO (barra de info + filtros) */}
       <section className="container-fw section-gap pb-10">
-        {/* Filtros + info */}
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -508,7 +551,6 @@ export default function CurrentSeasonPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -529,12 +571,10 @@ export default function CurrentSeasonPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && (
           <p className="text-red-600 text-sm sm:text-base mt-2">{error}</p>
         )}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
@@ -551,7 +591,6 @@ export default function CurrentSeasonPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -562,7 +601,6 @@ export default function CurrentSeasonPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -596,7 +634,6 @@ export default function CurrentSeasonPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
