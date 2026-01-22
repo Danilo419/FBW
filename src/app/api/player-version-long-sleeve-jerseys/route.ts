@@ -48,136 +48,228 @@ function isPlayerVersionLongSleeveName(name: string) {
   return true;
 }
 
-function pickImageUrlFromProductRow(p: any): string | undefined {
-  // tenta campos diretos comuns (se existirem no teu schema)
-  const direct =
-    p?.img ??
-    p?.image ??
-    p?.imageUrl ??
-    p?.thumbnail ??
-    p?.thumb ??
-    p?.photo ??
-    p?.photoUrl ??
-    p?.cover ??
-    p?.coverUrl;
+function isProbablyUrl(v: any) {
+  return (
+    typeof v === "string" &&
+    v.length > 6 &&
+    (v.startsWith("http://") ||
+      v.startsWith("https://") ||
+      v.startsWith("/") ||
+      v.startsWith("data:image/"))
+  );
+}
 
-  if (typeof direct === "string" && direct) return direct;
+function findFirstUrlDeep(obj: any, depth = 0): string | null {
+  if (!obj || depth > 4) return null;
 
-  // se for um campo JSON/string com array de imagens
-  const imgs = p?.images ?? p?.gallery ?? p?.photos;
-  if (Array.isArray(imgs) && imgs.length > 0) {
-    const first = imgs[0];
-    if (typeof first === "string" && first) return first;
-    if (first && typeof first === "object") {
-      return (
-        first.url ||
-        first.src ||
-        first.path ||
-        first.imageUrl ||
-        first.secureUrl ||
-        undefined
-      );
+  // string direta
+  if (isProbablyUrl(obj)) return obj;
+
+  // array
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const u = findFirstUrlDeep(item, depth + 1);
+      if (u) return u;
+    }
+    return null;
+  }
+
+  // objeto
+  if (typeof obj === "object") {
+    // chaves comuns primeiro (mais rápidas)
+    const commonKeys = [
+      "url",
+      "src",
+      "path",
+      "imageUrl",
+      "secureUrl",
+      "publicUrl",
+      "link",
+      "href",
+      "thumbnail",
+      "thumb",
+    ];
+
+    for (const k of commonKeys) {
+      if (isProbablyUrl((obj as any)[k])) return (obj as any)[k];
+    }
+
+    // depois varre tudo
+    for (const k of Object.keys(obj)) {
+      const v = (obj as any)[k];
+      const u = findFirstUrlDeep(v, depth + 1);
+      if (u) return u;
     }
   }
-  if (typeof imgs === "string" && imgs) return imgs;
 
-  return undefined;
-}
-
-function pickUrlFromImageRow(imgRow: any): string | undefined {
-  if (!imgRow) return undefined;
-  const url =
-    imgRow.url ??
-    imgRow.src ??
-    imgRow.path ??
-    imgRow.imageUrl ??
-    imgRow.secureUrl ??
-    imgRow.publicUrl ??
-    imgRow.link ??
-    imgRow.href;
-
-  return typeof url === "string" && url ? url : undefined;
-}
-
-function getAnyPrismaModel(name: string) {
-  const client: any = prisma as any;
-  const m = client?.[name];
-  if (m && typeof m.findMany === "function") return m;
   return null;
 }
 
-/* ============================================================
-   Busca imagens por productId tentando vários models/campos
-============================================================ */
+function pickImageFromProduct(p: any): string | null {
+  if (!p) return null;
 
-async function getFirstImagesByProductId(productIds: Array<string | number>) {
-  const ids = productIds
-    .map((x) => (typeof x === "number" ? x : String(x)))
-    .filter(Boolean);
-
-  const result = new Map<string, string>();
-
-  if (ids.length === 0) return result;
-
-  // possíveis nomes de models onde guardas imagens
-  const modelCandidates = [
-    "productImage",
-    "productImages",
+  // campos diretos comuns
+  const directCandidates = [
+    "img",
     "image",
-    "images",
-    "productPhoto",
-    "productPhotos",
+    "imageUrl",
     "photo",
-    "photos",
-    "galleryImage",
-    "galleryImages",
+    "photoUrl",
+    "cover",
+    "coverUrl",
+    "thumbnail",
+    "thumb",
   ];
 
-  // possíveis nomes do campo FK para produto
-  const fkCandidates = ["productId", "product_id", "productID", "product"];
+  for (const key of directCandidates) {
+    const v = p?.[key];
+    if (isProbablyUrl(v)) return v;
+  }
 
-  // tenta um model de cada vez até um funcionar
-  for (const modelName of modelCandidates) {
-    const model = getAnyPrismaModel(modelName);
-    if (!model) continue;
+  // relações/arrays comuns
+  const relCandidates = [
+    "images",
+    "productImages",
+    "gallery",
+    "galleryImages",
+    "photos",
+    "media",
+    "productMedia",
+    "assets",
+    "files",
+  ];
 
-    for (const fk of fkCandidates) {
+  for (const key of relCandidates) {
+    const v = p?.[key];
+    const u = findFirstUrlDeep(v, 0);
+    if (u) return u;
+  }
+
+  // último fallback: tenta achar qualquer url em qualquer lugar do objeto
+  const any = findFirstUrlDeep(p, 0);
+  return any;
+}
+
+function toNumberMaybe(v: any): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (v && typeof v === "object") {
+    // Prisma Decimal às vezes tem toNumber()
+    if (typeof v.toNumber === "function") {
       try {
-        // tenta fazer query com where IN e ordenação básica
-        const rows = await model.findMany({
-          where: { [fk]: { in: ids } },
-          take: 5000,
-        });
+        const n = v.toNumber();
+        if (typeof n === "number" && Number.isFinite(n)) return n;
+      } catch {}
+    }
+    // ou toString()
+    if (typeof v.toString === "function") {
+      const s = String(v.toString());
+      const n = Number(s);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
-        if (!Array.isArray(rows) || rows.length === 0) continue;
+function pickPriceFromProduct(p: any): number | null {
+  if (!p) return null;
 
-        // construir mapa (primeira imagem por produto)
-        for (const r of rows) {
-          const pid = r?.[fk];
-          const key =
-            typeof pid === "number" ? String(pid) : typeof pid === "string" ? pid : null;
+  // tenta nomes comuns primeiro
+  const directKeys = [
+    "price",
+    "priceEur",
+    "priceEUR",
+    "price_eur",
+    "amount",
+    "amountEur",
+    "amountEUR",
+  ];
 
-          if (!key) continue;
-          if (result.has(key)) continue;
+  for (const k of directKeys) {
+    const n = toNumberMaybe(p?.[k]);
+    if (n != null) return n;
+  }
 
-          const url = pickUrlFromImageRow(r);
-          if (url) result.set(key, url);
+  // cents -> euros
+  const centsKeys = ["priceCents", "price_cents", "amountCents", "amount_cents"];
+  for (const k of centsKeys) {
+    const n = toNumberMaybe(p?.[k]);
+    if (n != null) return Math.round(n) / 100;
+  }
+
+  // se tiver variants/variantOptions, tenta procurar um preço lá dentro
+  const deep = findFirstNumberWithKey(p, 0);
+  return deep;
+}
+
+function findFirstNumberWithKey(obj: any, depth = 0): number | null {
+  if (!obj || depth > 4) return null;
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const n = findFirstNumberWithKey(item, depth + 1);
+      if (n != null) return n;
+    }
+    return null;
+  }
+
+  if (typeof obj === "object") {
+    for (const k of Object.keys(obj)) {
+      const v = (obj as any)[k];
+      // procura campos que contenham "price" ou "amount"
+      if (/price|amount/i.test(k)) {
+        const n = toNumberMaybe(v);
+        if (n != null) {
+          // se parecer cents (muito grande), converte
+          if (n >= 1000) return Math.round(n) / 100;
+          return n;
         }
-
-        // se já apanhou alguma, devolve logo (model certo)
-        if (result.size > 0) return result;
-      } catch {
-        // falhou neste fk/model -> tenta próximo
       }
+      const nested = findFirstNumberWithKey(v, depth + 1);
+      if (nested != null) return nested;
     }
   }
 
-  return result;
+  return null;
+}
+
+async function findManyWithBestInclude(where: any) {
+  const includeCandidates: any[] = [
+    { images: true },
+    { productImages: true },
+    { gallery: true },
+    { galleryImages: true },
+    { photos: true },
+    { media: true },
+    { productMedia: true },
+    { assets: true },
+    { files: true },
+    // combinações (às vezes existe images + variants)
+    { images: true, variants: true },
+    { productImages: true, variants: true },
+    { variants: true },
+    // sem include
+    null,
+  ];
+
+  for (const inc of includeCandidates) {
+    try {
+      const res = await (prisma as any).product.findMany({
+        where,
+        take: 5000,
+        ...(inc ? { include: inc } : {}),
+      });
+      return Array.isArray(res) ? res : [];
+    } catch {
+      // tenta o próximo include
+    }
+  }
+
+  return [];
 }
 
 /* ============================================================
    GET
-   /api/player-version-long-sleeve-jerseys
 ============================================================ */
 
 export async function GET(req: Request) {
@@ -208,68 +300,64 @@ export async function GET(req: Request) {
       ],
     };
 
-    const whereFinal: any = q
-      ? {
-          AND: [
-            ...baseWhere.AND,
-            {
-              OR: [
-                { name: { contains: q, mode: "insensitive" } },
-                // team pode não existir -> se der erro, apanhamos no catch e refazemos
-                { team: { contains: q, mode: "insensitive" } },
-              ],
-            },
-          ],
-        }
-      : baseWhere;
+    // tenta incluir team na pesquisa (se existir); se der erro, fazemos fallback
+    let whereFinal: any = baseWhere;
+
+    if (q) {
+      whereFinal = {
+        AND: [
+          ...baseWhere.AND,
+          {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { team: { contains: q, mode: "insensitive" } },
+            ],
+          },
+        ],
+      };
+    }
 
     let productsRaw: any[] = [];
 
-    // 1) tenta com team (se existir)
-    try {
-      productsRaw = await (prisma as any).product.findMany({
-        where: whereFinal,
-        take: 5000,
-      });
-    } catch {
-      // 2) fallback sem team (só name)
+    // 1) tenta com team
+    productsRaw = await findManyWithBestInclude(whereFinal);
+
+    // 2) fallback sem team (se tiver vindo vazio por causa de erro/coluna inexistente)
+    if (productsRaw.length === 0) {
       const whereNameOnly = q
-        ? { AND: [...baseWhere.AND, { name: { contains: q, mode: "insensitive" } }] }
+        ? {
+            AND: [
+              ...baseWhere.AND,
+              { name: { contains: q, mode: "insensitive" } },
+            ],
+          }
         : baseWhere;
 
-      productsRaw = await (prisma as any).product.findMany({
-        where: whereNameOnly,
-        take: 5000,
-      });
+      productsRaw = await findManyWithBestInclude(whereNameOnly);
     }
 
-    // filtro final no servidor (garante 100%)
-    const products = (Array.isArray(productsRaw) ? productsRaw : []).filter(
-      (p: any) => typeof p?.name === "string" && isPlayerVersionLongSleeveName(p.name)
-    );
+    const filtered = (Array.isArray(productsRaw) ? productsRaw : [])
+      .filter(
+        (p: any) =>
+          typeof p?.name === "string" &&
+          isPlayerVersionLongSleeveName(p.name)
+      )
+      .map((p: any) => {
+        const img = pickImageFromProduct(p);
+        const price = pickPriceFromProduct(p);
 
-    // tenta extrair imagens diretamente do produto (se tiver campo)
-    const ids = products.map((p: any) => p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          slug: p.slug ?? undefined,
+          team: p.team ?? null,
+          price: typeof price === "number" ? price : undefined,
+          // IMPORTANT: usar null em vez de undefined para conseguires ver no JSON
+          img: img ?? null,
+        };
+      });
 
-    // tenta buscar por um model de imagens separado (ProductImage etc.)
-    const imageMap = await getFirstImagesByProductId(ids);
-
-    const payload = products.map((p: any) => {
-      const idKey = typeof p.id === "number" ? String(p.id) : String(p.id);
-      const imgDirect = pickImageUrlFromProductRow(p);
-      const imgFromMap = imageMap.get(idKey);
-
-      return {
-        id: p.id,
-        name: p.name,
-        slug: p.slug ?? undefined,
-        price: typeof p.price === "number" ? p.price : undefined,
-        team: p.team ?? null,
-        img: imgDirect || imgFromMap || undefined,
-      };
-    });
-
-    return NextResponse.json({ products: payload });
+    return NextResponse.json({ products: filtered });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || "Failed to load products" },
