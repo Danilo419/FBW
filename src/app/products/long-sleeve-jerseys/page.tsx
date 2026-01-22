@@ -1,4 +1,3 @@
-// src/app/products/long-sleeve-jerseys/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -10,7 +9,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -69,7 +68,7 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\b(real\s*)?betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
-  [/\breal\s*sociedad\b/i, "Real Sociedad"],
+  [/\breal\sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
@@ -250,19 +249,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
-  if (left > 2) {
-    pages.push("dots");
-  }
-
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
-
-  if (right < total - 1) {
-    pages.push("dots");
-  }
-
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
   pages.push(last);
 
   return pages;
@@ -283,22 +272,21 @@ export default function LongSleeveJerseysPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // fetch via search (q=jersey) e depois filtramos long sleeve
+  // ✅ agora busca via API dedicada (catálogo completo)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    const qParam = `?q=${encodeURIComponent("jersey")}`;
-
-    fetch(`/api/search${qParam}`, { cache: "no-store" })
+    fetch(`/api/long-sleeve-jerseys`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
           : [];
 
+        // segurança extra: ainda filtramos aqui
         const filtered = arr.filter(isLongSleeveNonPlayer);
 
         if (!cancelled) {
@@ -309,7 +297,7 @@ export default function LongSleeveJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -322,7 +310,6 @@ export default function LongSleeveJerseysPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -332,7 +319,6 @@ export default function LongSleeveJerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -354,14 +340,11 @@ export default function LongSleeveJerseysPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -390,7 +373,6 @@ export default function LongSleeveJerseysPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-0">
@@ -402,7 +384,7 @@ export default function LongSleeveJerseysPage() {
                 Long sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-base text-gray-600">
-                Non-player long-sleeve jerseys.
+                Long-sleeve jerseys (excluding Player Version and Retro).
               </p>
             </div>
 
@@ -415,9 +397,7 @@ export default function LongSleeveJerseysPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO */}
       <section className="container-fw section-gap px-3 sm:px-0">
-        {/* Filtros + info */}
         <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -462,7 +442,6 @@ export default function LongSleeveJerseysPage() {
           </div>
         </div>
 
-        {/* LOADING – 2 produtos por linha no mobile */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -483,15 +462,12 @@ export default function LongSleeveJerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && (
           <p className="mt-2 text-red-600 text-sm sm:text-base">{error}</p>
         )}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            {/* 2 produtos por linha no mobile */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm sm:text-base col-span-full text-center py-6">
@@ -506,7 +482,6 @@ export default function LongSleeveJerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -517,7 +492,6 @@ export default function LongSleeveJerseysPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -551,7 +525,6 @@ export default function LongSleeveJerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
