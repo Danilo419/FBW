@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
+import { usePathname } from 'next/navigation'
 import {
   motion,
   useMotionValue,
@@ -276,54 +277,18 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSG/PSG6.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG7.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG8.png', alt: 'PSG jersey' },
-  {
-    src: '/images/players/RealMadrid/RealMadrid1.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid2.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid3.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid4.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid5.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid6.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid7.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid8.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid9.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid10.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid11.png',
-    alt: 'Real Madrid jersey',
-  },
-  {
-    src: '/images/players/RealMadrid/RealMadrid12.png',
-    alt: 'Real Madrid jersey',
-  },
+  { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid4.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid5.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid6.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid7.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid8.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid9.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'Real Madrid jersey' },
   { src: '/images/players/Tottenham/Tottenham1.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham2.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham3.png', alt: 'Tottenham jersey' },
@@ -540,7 +505,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
 
     back.src = nextSrc
     back.style.transitionDuration = `${fade}ms`
-    // forçar reflow
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
     back.classList.add('is-visible')
@@ -583,7 +547,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {/* camada A já começa visível com imagem aleatória */}
       <img
         ref={aRef}
         className="hero-layer is-visible"
@@ -598,7 +561,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         }}
       />
 
-      {/* camada B começa vazia e entra nas trocas seguintes */}
       <img
         ref={bRef}
         className="hero-layer"
@@ -654,7 +616,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'adult',
     label: 'Adult',
-    href: '/products/adult', // <<--- página Adult
+    href: '/products/adult',
     img: '/images/spaces/adult.png',
     alt: 'Adult Collection',
     subtitle: 'Sizes S–2XL',
@@ -662,7 +624,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'kids',
     label: 'Kids',
-    href: '/products/kids', // <<--- página Kids
+    href: '/products/kids',
     img: '/images/spaces/kids.png',
     alt: 'Kids Collection',
     subtitle: 'Ages 2–13',
@@ -670,7 +632,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'retro',
     label: 'Retro',
-    href: '/products/retro', // <<--- página Retro
+    href: '/products/retro',
     img: '/images/spaces/retro.png',
     alt: 'Retro Collection',
     subtitle: 'Timeless classics',
@@ -678,7 +640,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'concept',
     label: 'Concept Kits',
-    href: '/products/concept-kits', // <<--- página Concept Kits
+    href: '/products/concept-kits',
     img: '/images/spaces/concept.png',
     alt: 'Concept Kits',
     subtitle: 'Original designs',
@@ -942,7 +904,16 @@ function ProductCard({ product }: { product: HomeProduct }) {
   )
 }
 
-/* ---------- Marquee com animação infinita suave (ATUALIZADO) ---------- */
+/* ---------- Marquee com animação infinita suave (FIX REAL) ---------- */
+/**
+ * O teu problema NÃO era só “shuffle”.
+ * No App Router, quando sais e voltas à Home, muitas vezes a página NÃO desmonta,
+ * então o marquee fica com o MESMO “x inicial” e parece sempre os mesmos 6.
+ *
+ * Aqui fazemos 2 coisas:
+ * 1) Offset inicial aleatório SEMPRE que a lista muda (duplicated muda) OU o componente remonta.
+ * 2) O Home força remount do ProductMarquee via key (ver em baixo).
+ */
 
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
@@ -954,7 +925,6 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
   const x = useMotionValue(0)
   const lastXRef = useRef(0)
 
-  // ✅ aplica offset aleatório só 1x por montagem (não mostrar sempre os mesmos 6)
   const didInitOffsetRef = useRef(false)
 
   const rand01 = () => {
@@ -967,6 +937,11 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
     }
   }
 
+  // ✅ sempre que a lista muda, voltamos a permitir offset novo
+  useEffect(() => {
+    didInitOffsetRef.current = false
+  }, [duplicated])
+
   useEffect(() => {
     const el = trackRef.current
     if (!el) return
@@ -976,8 +951,8 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
       const base = full / 2
       baseWidthRef.current = base
 
-      // ✅ offset inicial aleatório (entre -base e 0)
       if (!didInitOffsetRef.current && base > 0) {
+        // offset aleatório entre [-base, 0)
         const offset = -Math.floor(rand01() * base)
         lastXRef.current = offset
         x.set(offset)
@@ -1025,6 +1000,33 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
 ====================================================================================== */
 
 export default function Home() {
+  const pathname = usePathname()
+
+  /**
+   * ✅ FIX PRINCIPAL:
+   * Forçamos “reshuffle + remount” quando:
+   * - a página é visitada (pathname muda para "/")
+   * - o utilizador volta ao separador (tab) / foco (visibilidade)
+   *
+   * Isto elimina o efeito de “sempre os mesmos 6” causado por cache do App Router.
+   */
+  const [shuffleSeed, setShuffleSeed] = useState(0)
+
+  useEffect(() => {
+    // sempre que o pathname muda, gera nova seed
+    setShuffleSeed((s) => s + 1)
+  }, [pathname])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        setShuffleSeed((s) => s + 1)
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+
   const { scrollY } = useScroll()
   const START = 420
   const SPAN = 560
@@ -1090,6 +1092,7 @@ export default function Home() {
   const categories = useMemo(() => {
     if (!homeProducts.length) return null
 
+    // ✅ shuffleSeed força recálculo (nova ordem) sempre que muda
     const base = shuffle(homeProducts)
 
     const filterJerseys = (p: HomeProduct) => {
@@ -1106,7 +1109,6 @@ export default function Home() {
       return true
     }
 
-    // (mantive a tua lógica) — o “fix” principal é o offset aleatório no marquee
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
@@ -1114,19 +1116,13 @@ export default function Home() {
         (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
       jerseys: mk(filterJerseys),
-      longSleeve: mk(
-        (p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
-      ),
-      playerVersion: mk(
-        (p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
-      ),
+      longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
+      playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
       retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
-      retroLongSleeve: mk(
-        (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
-      ),
+      retroLongSleeve: mk((p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)),
       conceptKits: mk(
         (p) => hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
       ),
@@ -1145,14 +1141,10 @@ export default function Home() {
           !isRetro(p) &&
           !isPlayerVersion(p)
       ),
-      kidsKits: mk(
-        (p) => hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
-      ),
-      cropTops: mk(
-        (p) => hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
-      ),
+      kidsKits: mk((p) => hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)),
+      cropTops: mk((p) => hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)),
     }
-  }, [homeProducts])
+  }, [homeProducts, shuffleSeed])
 
   type CategoryKey = keyof NonNullable<typeof categories>
 
@@ -1163,7 +1155,6 @@ export default function Home() {
     href: string
     group: string
   }[] = [
-    // Jerseys
     {
       key: 'currentSeason',
       title: 'Current season 25/26',
@@ -1199,8 +1190,6 @@ export default function Home() {
       href: '/products/player-version-long-sleeve-jerseys',
       group: 'Jerseys',
     },
-
-    // Retro
     {
       key: 'retro',
       title: 'Retro Jerseys',
@@ -1215,8 +1204,6 @@ export default function Home() {
       href: '/products/retro-long-sleeve-jerseys',
       group: 'Retro',
     },
-
-    // Concept & Special
     {
       key: 'conceptKits',
       title: 'Concept Kits',
@@ -1231,8 +1218,6 @@ export default function Home() {
       href: '/products/pre-match-jerseys',
       group: 'Concept & Special',
     },
-
-    // Training
     {
       key: 'trainingSleeveless',
       title: 'Training Sleeveless Sets',
@@ -1247,8 +1232,6 @@ export default function Home() {
       href: '/products/training-tracksuits',
       group: 'Training',
     },
-
-    // Kids & Woman
     {
       key: 'kidsKits',
       title: 'Kids Kits',
@@ -1508,7 +1491,11 @@ export default function Home() {
                                 </a>
                               </div>
 
-                              <ProductMarquee products={list} />
+                              {/* ✅ key força remount e novo offset/ordem */}
+                              <ProductMarquee
+                                key={`${shuffleSeed}-${key}`}
+                                products={list}
+                              />
                             </div>
                           )
                         })}
