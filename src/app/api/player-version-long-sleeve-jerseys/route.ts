@@ -14,19 +14,24 @@ function normalizeStr(s?: string | null) {
 }
 
 function pickImageUrl(p: any): string | undefined {
-  // tenta vários formatos comuns (sem rebentar o build)
-  if (typeof p?.img === "string" && p.img) return p.img;
-  if (typeof p?.image === "string" && p.image) return p.image;
-  if (typeof p?.imageUrl === "string" && p.imageUrl) return p.imageUrl;
+  // tenta vários nomes comuns sem assumir schema
+  const direct =
+    p?.img ??
+    p?.image ??
+    p?.imageUrl ??
+    p?.thumbnail ??
+    p?.thumb ??
+    p?.photo ??
+    p?.photoUrl;
+
+  if (typeof direct === "string" && direct) return direct;
 
   const imgs = p?.images;
 
-  // relação prisma (array de objetos)
+  // se "images" for um array/json (não relação), tenta tirar o primeiro
   if (Array.isArray(imgs) && imgs.length > 0) {
     const first = imgs[0];
-
-    if (typeof first === "string") return first;
-
+    if (typeof first === "string" && first) return first;
     if (first && typeof first === "object") {
       if (typeof first.url === "string" && first.url) return first.url;
       if (typeof first.src === "string" && first.src) return first.src;
@@ -36,7 +41,7 @@ function pickImageUrl(p: any): string | undefined {
     }
   }
 
-  // json/string único
+  // se for string json (às vezes guardam assim)
   if (typeof imgs === "string" && imgs) return imgs;
 
   return undefined;
@@ -45,7 +50,6 @@ function pickImageUrl(p: any): string | undefined {
 function isPlayerVersionLongSleeveName(name: string) {
   const n = name.toUpperCase();
 
-  // requisitos
   if (!n.includes("PLAYER VERSION")) return false;
 
   const isLongSleeve =
@@ -82,7 +86,7 @@ function isPlayerVersionLongSleeveName(name: string) {
 /* ============================================================
    GET
    /api/player-version-long-sleeve-jerseys
-   Opcional: ?q=chelsea  (filtra por nome/equipa)
+   Opcional: ?q=chelsea (filtra por nome/equipa)
 ============================================================ */
 
 export async function GET(req: Request) {
@@ -90,60 +94,73 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = normalizeStr(searchParams.get("q"));
 
-    // Prisma typed pode variar no teu projeto (images, img, etc),
-    // por isso usamos (prisma as any) para incluir imagens sem dar erro TS.
-    const productsRaw = await (prisma as any).product.findMany({
-      where: {
+    // Base WHERE (só usa "name", que sabemos que existe)
+    const baseWhere: any = {
+      AND: [
+        { name: { contains: "Player Version", mode: "insensitive" } },
+        {
+          OR: [
+            { name: { contains: "Long Sleeve", mode: "insensitive" } },
+            { name: { contains: "Long-Sleeve", mode: "insensitive" } },
+          ],
+        },
+        {
+          NOT: [
+            { name: { contains: "Retro", mode: "insensitive" } },
+            { name: { contains: "Tracksuit", mode: "insensitive" } },
+            { name: { contains: "Shorts", mode: "insensitive" } },
+            { name: { contains: "Set", mode: "insensitive" } },
+            { name: { contains: "Kids Kit", mode: "insensitive" } },
+            { name: { contains: "Baby", mode: "insensitive" } },
+            { name: { contains: "Infant", mode: "insensitive" } },
+          ],
+        },
+      ],
+    };
+
+    // Primeiro tenta filtrar por nome + team (se team existir)
+    let whereWithQ: any = baseWhere;
+
+    if (q) {
+      whereWithQ = {
         AND: [
-          // já reduz bastante no DB
-          { name: { contains: "Player Version", mode: "insensitive" } },
-          // long sleeve (no DB) — as variações LS/L-S apanhamos no filtro JS
+          ...baseWhere.AND,
           {
             OR: [
-              { name: { contains: "Long Sleeve", mode: "insensitive" } },
-              { name: { contains: "Long-Sleeve", mode: "insensitive" } },
+              { name: { contains: q, mode: "insensitive" } },
+              { team: { contains: q, mode: "insensitive" } },
             ],
           },
-
-          // exclusões principais no DB (para performance)
-          {
-            NOT: [
-              { name: { contains: "Retro", mode: "insensitive" } },
-              { name: { contains: "Tracksuit", mode: "insensitive" } },
-              { name: { contains: "Shorts", mode: "insensitive" } },
-              { name: { contains: "Set", mode: "insensitive" } },
-              { name: { contains: "Kids Kit", mode: "insensitive" } },
-              { name: { contains: "Baby", mode: "insensitive" } },
-              { name: { contains: "Infant", mode: "insensitive" } },
-            ],
-          },
-
-          // pesquisa opcional por nome/equipa
-          ...(q
-            ? [
-                {
-                  OR: [
-                    { name: { contains: q, mode: "insensitive" } },
-                    { team: { contains: q, mode: "insensitive" } },
-                  ],
-                },
-              ]
-            : []),
         ],
-      },
+      };
+    }
 
-      // tenta trazer imagens sem depender do schema exato
-      include: {
-        images: true,
-      },
+    // 1) Tenta query com team
+    let productsRaw: any[] = [];
+    try {
+      productsRaw = await (prisma as any).product.findMany({
+        where: whereWithQ,
+        take: 5000,
+      });
+    } catch {
+      // 2) Se falhar (ex.: "team" não existe), tenta só por name
+      const whereNameOnly =
+        q
+          ? {
+              AND: [
+                ...baseWhere.AND,
+                { name: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : baseWhere;
 
-      // segurança: não rebenta com milhares sem querer
-      take: 5000,
+      productsRaw = await (prisma as any).product.findMany({
+        where: whereNameOnly,
+        take: 5000,
+      });
+    }
 
-      orderBy: { createdAt: "desc" },
-    });
-
-    // filtro final (garante que só sai o que cumpre TODOS os requisitos)
+    // filtro final (garante que cumpre TODOS os requisitos)
     const filtered = (Array.isArray(productsRaw) ? productsRaw : [])
       .filter((p: any) => typeof p?.name === "string" && isPlayerVersionLongSleeveName(p.name))
       .map((p: any) => ({
