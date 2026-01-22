@@ -1061,7 +1061,11 @@ export default function Home() {
 
   const y1 = useTransform(scrollY, [0, START + SPAN], [0, -80])
   const y2 = useTransform(scrollY, [0, START + SPAN], [0, -140])
-  const opacityHero = useTransform(scrollY, [0, START, START + SPAN], [1, 1, 0.18])
+  const opacityHero = useTransform(
+    scrollY,
+    [0, START, START + SPAN],
+    [1, 1, 0.18]
+  )
 
   const velocity = useVelocity(scrollY)
   const showShadow = useTransform(velocity, [0, 100], [0, 1])
@@ -1151,17 +1155,27 @@ export default function Home() {
         (p) => hasTermRaw(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
       jerseys: mk(filterJerseys),
-      longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
-      playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
+      longSleeve: mk(
+        (p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
+      ),
+      playerVersion: mk(
+        (p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
+      ),
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
-      retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
+      retro: mk(
+        (p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
+      ),
       retroLongSleeve: mk(
         (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
       ),
-      conceptKits: mk((p) => isConceptKit(p) && !isRetro(p) && !isPlayerVersion(p)),
-      preMatch: mk((p) => isPreMatch(p) && !isRetro(p) && !isPlayerVersion(p)),
+      conceptKits: mk(
+        (p) => isConceptKit(p) && !isRetro(p) && !isPlayerVersion(p)
+      ),
+      preMatch: mk(
+        (p) => isPreMatch(p) && !isRetro(p) && !isPlayerVersion(p)
+      ),
       trainingSleeveless: mk(
         (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
@@ -1259,6 +1273,16 @@ export default function Home() {
       group: 'Concept & Special',
     },
 
+    // ✅ AQUI ESTÁ O QUE PEDISTE:
+    // "Tracksuits for Casual Wear" dentro de "Concept & Special" em baixo de "Pre-Match Jerseys"
+    {
+      key: 'tracksuits',
+      title: 'Tracksuits',
+      subtitle: 'Tracksuits for Casual Wear',
+      href: '/products/tracksuits',
+      group: 'Concept & Special',
+    },
+
     // Training
     {
       key: 'trainingSleeveless',
@@ -1272,15 +1296,6 @@ export default function Home() {
       title: 'Training Tracksuits',
       subtitle: 'Full training sets (top & pants)',
       href: '/products/training-tracksuits',
-      group: 'Training',
-    },
-
-    // ✅ NOVO espaço (logo abaixo do Training Tracksuits)
-    {
-      key: 'tracksuits',
-      title: 'Tracksuits',
-      subtitle: 'Tracksuits for Casual Wear',
-      href: '/products/tracksuits',
       group: 'Training',
     },
 
