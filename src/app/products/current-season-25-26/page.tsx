@@ -11,7 +11,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string | null;
+  img?: string;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -106,11 +106,7 @@ function getClubLabel(p: UIProduct): string {
 /* ============================ Helpers de filtro ============================ */
 
 function normName(p: UIProduct) {
-  // robusto: remove acentos e normaliza (não muda o visual, só melhora o filtro)
-  return (p.name ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return (p.name ?? "").toUpperCase();
 }
 
 function hasTerm(p: UIProduct, term: string) {
@@ -282,20 +278,21 @@ export default function CurrentSeasonPage() {
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<
-    "team" | "price-asc" | "price-desc" | "random"
-  >("team");
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
+    "team"
+  );
 
-  // ✅ CORREÇÃO: em vez do /api/search?q=25/26 (que pode vir limitado),
-  // usa a API dedicada com catálogo completo.
+  // fetch FIXO: q=25/26
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/current-season-25-26`, { cache: "no-store" })
+    const qParam = `?q=${encodeURIComponent("25/26")}`;
+
+    fetch(`/api/search${qParam}`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
+        if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -312,7 +309,7 @@ export default function CurrentSeasonPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || "Search error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
