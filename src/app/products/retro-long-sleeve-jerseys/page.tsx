@@ -1,4 +1,3 @@
-// src/app/products/retro-long-sleeve-jerseys/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -11,7 +10,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -120,8 +119,13 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
   // tem de ser RETRO
   if (!n.includes("RETRO")) return false;
 
-  // tem de ser manga comprida
-  if (!n.includes("LONG SLEEVE")) return false;
+  // tem de ser manga comprida (aceita variações)
+  const isLongSleeve =
+    n.includes("LONG SLEEVE") ||
+    n.includes("LONG-SLEEVE") ||
+    /\bL\/S\b/.test(n) ||
+    /\bLS\b/.test(n);
+  if (!isLongSleeve) return false;
 
   // excluir kits / conjuntos / outros itens
   if (n.includes("SET")) return false;
@@ -253,17 +257,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -272,8 +270,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Retro Long Sleeve Jerseys
-   - Busca via /api/search?q=jersey
-   - Filtra apenas RETRO + LONG SLEEVE, exclui kits/sets
+   - Agora usa: /api/retro-long-sleeve-jerseys
 ============================================================ */
 
 export default function RetroLongSleeveJerseysPage() {
@@ -288,15 +285,14 @@ export default function RetroLongSleeveJerseysPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/retro-long-sleeve-jerseys`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -309,7 +305,7 @@ export default function RetroLongSleeveJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -322,7 +318,6 @@ export default function RetroLongSleeveJerseysPage() {
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isRetroLongSleeveJersey);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -332,7 +327,6 @@ export default function RetroLongSleeveJerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -354,14 +348,11 @@ export default function RetroLongSleeveJerseysPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -392,13 +383,13 @@ export default function RetroLongSleeveJerseysPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6">
+        <div className="container-fw py-6 px-4 sm:px-6">
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Retro Jerseys
               </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
                 Retro long-sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm text-gray-600">
@@ -417,8 +408,7 @@ export default function RetroLongSleeveJerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap">
-        {/* Filtros + info */}
+      <section className="container-fw section-gap px-4 sm:px-6">
         <div className="mb-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -465,9 +455,8 @@ export default function RetroLongSleeveJerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -486,13 +475,11 @@ export default function RetroLongSleeveJerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
                   Nenhum retro long-sleeve jersey encontrado.
@@ -506,7 +493,6 @@ export default function RetroLongSleeveJerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 flex items-center justify-center gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -517,7 +503,6 @@ export default function RetroLongSleeveJerseysPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -551,12 +536,9 @@ export default function RetroLongSleeveJerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
                   aria-label="Próxima página"
