@@ -278,107 +278,16 @@ function buildPaginationRange(
 }
 
 /* ============================================================
-   Fetch robusto: tenta buscar "tudo" mesmo se a API estiver
-   a devolver só um lote pequeno (o problema dos "mesmos 6").
-   - Tenta limit/take/perPage
-   - Tenta paginação (page + limit) e para quando não vierem
-     novos ids/slugs.
+   Fetch: usa o novo endpoint que vai à DB e devolve TUDO
+   /api/player-version-long-sleeve-jerseys
 ============================================================ */
-
-function dedupeProducts(list: UIProduct[]) {
-  const map = new Map<string, UIProduct>();
-  for (const p of list) {
-    const key =
-      (p.slug ? `slug:${p.slug}` : null) ??
-      (p.id != null ? `id:${String(p.id)}` : null) ??
-      `name:${(p.name ?? "").toUpperCase()}`;
-    if (!map.has(key)) map.set(key, p);
-  }
-  return Array.from(map.values());
-}
 
 async function fetchProductsOnce(url: string): Promise<UIProduct[]> {
   const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`Search failed (${r.status})`);
+  if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
   const json = await r.json();
   const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
   return arr;
-}
-
-async function fetchAllSearchProducts(): Promise<UIProduct[]> {
-  // 1) tenta "limit alto" (se o backend suportar, resolve logo)
-  const candidates = [
-    `/api/search?q=jersey&limit=5000`,
-    `/api/search?q=jersey&take=5000`,
-    `/api/search?q=jersey&perPage=5000`,
-  ];
-
-  for (const url of candidates) {
-    try {
-      const arr = await fetchProductsOnce(url);
-      // se vier um número "grande", assumimos que já trouxe tudo
-      if (arr.length >= 100) return dedupeProducts(arr);
-      // mesmo que seja pequeno, guardamos e seguimos para tentar paginação
-    } catch {
-      // ignora e continua para a próxima estratégia
-    }
-  }
-
-  // 2) paginação defensiva: se a API ignorar page/limit, vai repetir
-  // o mesmo lote e nós paramos quando não surgirem novos itens.
-  const LIMIT = 200;
-  const MAX_PAGES = 80; // 80*200 = 16k (com stop automático por repetição)
-  let all: UIProduct[] = [];
-  let prevKeys = new Set<string>();
-
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const url = `/api/search?q=jersey&page=${page}&limit=${LIMIT}`;
-    let arr: UIProduct[] = [];
-    try {
-      arr = await fetchProductsOnce(url);
-    } catch {
-      // se falhar aqui, paramos e devolvemos o que já temos
-      break;
-    }
-
-    if (arr.length === 0) break;
-
-    const merged = dedupeProducts(all.concat(arr));
-
-    // deteta se realmente entrou algo novo
-    const keysNow = new Set(
-      merged.map((p) =>
-        p.slug
-          ? `slug:${p.slug}`
-          : p.id != null
-          ? `id:${String(p.id)}`
-          : `name:${(p.name ?? "").toUpperCase()}`
-      )
-    );
-
-    let grew = false;
-    if (keysNow.size > prevKeys.size) grew = true;
-
-    all = merged;
-    prevKeys = keysNow;
-
-    // se não cresceu, a API está a devolver sempre o mesmo lote → parar
-    if (!grew) break;
-
-    // se vier menos que o LIMIT, normalmente acabou
-    if (arr.length < LIMIT) break;
-  }
-
-  // fallback final: pelo menos tenta o endpoint base
-  if (all.length === 0) {
-    try {
-      all = await fetchProductsOnce(`/api/search?q=jersey`);
-    } catch {
-      all = [];
-    }
-  }
-
-  return dedupeProducts(all);
 }
 
 /* ============================================================
@@ -405,7 +314,11 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       setError(null);
 
       try {
-        const arr = await fetchAllSearchProducts();
+        // ✅ agora busca ao endpoint específico (não depende do /api/search)
+        const arr = await fetchProductsOnce(
+          `/api/player-version-long-sleeve-jerseys`
+        );
+
         if (!cancelled) {
           setResults(arr);
           setPage(1);
@@ -413,7 +326,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       } finally {
         if (!cancelled) setLoading(false);
