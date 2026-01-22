@@ -62,11 +62,11 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE ========= */
+/* ========= Extração do NOME DO CLUBE (FIX: remover "CLUB" e remover cores) ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
-  [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
+  [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\b(real\s*)?betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
@@ -83,6 +83,70 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+function cleanTeamValue(v?: string | null): string {
+  const s = normalizeStr(v);
+  if (!s) return "";
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+  return s;
+}
+
+/** Remove descritores de cor do fim: "Arsenal Red & Black" => "Arsenal" */
+function stripColorDescriptors(input: string): string {
+  let s = normalizeStr(input);
+  if (!s) return "";
+
+  // Se tiver "&" e a parte direita for “cor”, deixa só a parte esquerda
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  const colorWords = [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ];
+
+  const tokens = s.split(/\s+/);
+  let cutIndex = tokens.length;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].toUpperCase().replace(/[^A-Z-]/g, "");
+    const t2 = t.replace(/-/g, "");
+    if (colorWords.includes(t) || colorWords.includes(t2)) {
+      cutIndex = i;
+      break;
+    }
+  }
+
+  const out = normalizeStr(tokens.slice(0, cutIndex).join(" "));
+  return out || s;
+}
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
@@ -92,15 +156,42 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
-/** Só o nome do clube (capitalização normal) */
+/**
+ * Inferir clube pelo nome do produto:
+ * "Juventus Away Jersey 25/26" -> "Juventus"
+ * "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal"
+ */
+function inferClubFromName(name?: string | null): string | null {
+  const s = normalizeStr(name);
+  if (!s) return null;
+
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(/\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23)\b/gi, "")
+  );
+
+  if (!cleaned) return null;
+
+  // ✅ fix: remover cores
+  const stripped = stripColorDescriptors(cleaned);
+  return stripped || cleaned;
+}
+
+/** Só o nome do clube (nunca devolve "Club") */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
+  const teamClean = cleanTeamValue(p.team ?? null);
+
+  const byTeam = clubFromString(teamClean);
   if (byTeam) return byTeam;
 
   const byName = clubFromString(p.name);
   if (byName) return byName;
 
-  return "Club";
+  const inferred = inferClubFromName(p.name);
+  return inferred ?? "";
 }
 
 /* ============================ Helpers de filtro ============================ */
@@ -117,7 +208,7 @@ function normName(p: UIProduct) {
 function isAdultProduct(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
-  if (n.includes("KID")) return false; // apanha "KID", "KIDS", "KIDS KIT", etc.
+  if (n.includes("KID")) return false;
   if (n.includes("CROP TOP")) return false;
   return true;
 }
@@ -162,7 +253,6 @@ function getPriceEurFromApi(raw: any): number | undefined {
   if (typeof raw.price === "number") return raw.price;
   if (typeof raw.currentPrice === "number") return raw.currentPrice;
 
-  // basePrice / priceCents em cêntimos
   if (typeof raw.basePrice === "number") {
     const v = raw.basePrice;
     if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
@@ -211,6 +301,7 @@ function ProductCard({ p }: { p: UIProduct }) {
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
+
   const teamLabel = getClubLabel(p);
 
   return (
@@ -245,9 +336,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir (assim nunca aparece "CLUB") */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-sm sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
@@ -319,17 +413,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -340,7 +428,6 @@ function buildPaginationRange(
 
 const PAGE_SIZE = 12;
 
-// queries largas para puxar praticamente o catálogo todo
 const SEARCH_QUERIES = [
   "a",
   "e",
@@ -366,11 +453,10 @@ export default function AdultPage() {
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
-    "team"
-  );
+  const [sort, setSort] = useState<
+    "team" | "price-asc" | "price-desc" | "random"
+  >("team");
 
-  // Agora usamos /api/search com várias queries para trazer o catálogo completo
   useEffect(() => {
     let cancelled = false;
 
@@ -386,18 +472,20 @@ export default function AdultPage() {
             cache: "no-store",
           });
           if (!res.ok) continue;
+
           const json = await res.json();
           const list: any[] = Array.isArray(json?.products)
             ? json.products
             : Array.isArray(json)
             ? json
             : [];
+
           allRaw.push(...list);
         }
 
-        // remover duplicados (id / slug / name)
         const seen = new Set<string>();
         const uniqueRaw: any[] = [];
+
         for (const p of allRaw) {
           const key = String(p.id ?? p.slug ?? p.name ?? Math.random());
           if (seen.has(key)) continue;
@@ -431,7 +519,6 @@ export default function AdultPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -441,7 +528,6 @@ export default function AdultPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -463,14 +549,11 @@ export default function AdultPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -499,7 +582,6 @@ export default function AdultPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER (mobile-first) */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -510,7 +592,6 @@ export default function AdultPage() {
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
                 Adult
               </h1>
-              {/* descrição removida a pedido */}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mt-2 sm:mt-0">
@@ -525,9 +606,7 @@ export default function AdultPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO (barra de info + filtros) */}
       <section className="container-fw section-gap pb-10">
-        {/* Filtros + info */}
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -572,7 +651,6 @@ export default function AdultPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -593,12 +671,10 @@ export default function AdultPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && (
           <p className="text-red-600 text-sm sm:text-base mt-2">{error}</p>
         )}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
@@ -616,7 +692,6 @@ export default function AdultPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -627,7 +702,6 @@ export default function AdultPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -661,12 +735,9 @@ export default function AdultPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
                   aria-label="Next page"
