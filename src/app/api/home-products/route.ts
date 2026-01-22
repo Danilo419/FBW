@@ -1,72 +1,127 @@
 // src/app/api/home-products/route.ts
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
+function parseLimit(raw: string | null): number | "all" {
+  if (!raw) return 120; // default razoável
+  const v = raw.trim().toLowerCase();
+  if (v === "all" || v === "infinite" || v === "infinity") return "all";
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return 120;
+  return Math.floor(n);
+}
+
+// (opcional) baralhar em memória — para "all" pode ser pesado, então deixei desligado por default
 function shuffle<T>(arr: T[]): T[] {
-  const a = arr.slice()
+  const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return a
+  return a;
 }
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = new URL(req.url);
 
-    /**
-     * Quantos produtos devolver ao client.
-     * A Home depois filtra por categorias.
-     */
-    const rawLimit = searchParams.get('limit')
-    const limit = Math.min(Math.max(parseInt(rawLimit || '200', 10), 1), 300)
+    const limitRaw = searchParams.get("limit");
+    const limit = parseLimit(limitRaw);
 
-    /**
-     * Para não devolver sempre os mesmos:
-     * - buscamos uma janela maior (pool)
-     * - escolhendo um "skip" aleatório dentro do total
-     * - depois baralhamos e cortamos para "limit"
-     */
-    const total = await prisma.product.count()
+    // cursor opcional (paginação)
+    const cursor = searchParams.get("cursor");
 
-    if (!total) {
-      return NextResponse.json(
-        { products: [] },
-        { headers: { 'Cache-Control': 'no-store, max-age=0' } }
-      )
+    // se quiseres baralhar no servidor, manda ?shuffle=1
+    const shuffleParam = searchParams.get("shuffle");
+    const shouldShuffle = shuffleParam === "1" || shuffleParam === "true";
+
+    // Seleciona só o que a Home precisa (reduz payload e acelera MUITO)
+    const select = {
+      id: true,
+      slug: true,
+      name: true,
+      team: true,
+      club: true,
+      clubName: true,
+
+      basePrice: true,
+      priceCents: true,
+      price: true,
+      compareAtPriceCents: true,
+      compareAtPrice: true,
+
+      imageUrls: true,
+      mainImage: true,
+      mainImageUrl: true,
+      mainImageURL: true,
+      image: true,
+      imageUrl: true,
+      imageURL: true,
+
+      createdAt: true,
+    };
+
+    // ============================
+    // MODO "ALL" → devolve tudo
+    // ============================
+    if (limit === "all") {
+      const products = await prisma.product.findMany({
+        orderBy: { createdAt: "desc" },
+        select,
+      });
+
+      const out = shouldShuffle ? shuffle(products) : products;
+
+      return NextResponse.json({
+        products: out,
+        pageInfo: {
+          mode: "all",
+          count: out.length,
+          nextCursor: null,
+        },
+      });
     }
 
-    // quantos vamos buscar antes de baralhar (pool)
-    const pool = Math.min(Math.max(limit * 8, limit), 2000)
+    // ============================
+    // MODO "PAGINADO"
+    // ============================
+    const take = Math.max(1, limit);
 
-    // escolher um ponto aleatório do catálogo para variar de verdade
-    const maxSkip = Math.max(total - pool, 0)
-    const skip = maxSkip > 0 ? Math.floor(Math.random() * (maxSkip + 1)) : 0
-
-    // orderBy por id para termos ordem estável (não interessa porque vamos baralhar)
     const products = await prisma.product.findMany({
-      skip,
-      take: pool,
-      orderBy: { id: 'desc' },
-    })
+      take: take + 1, // +1 para saber se há "next page"
+      ...(cursor
+        ? {
+            cursor: { id: cursor },
+            skip: 1,
+          }
+        : {}),
+      orderBy: { createdAt: "desc" },
+      select,
+    });
 
-    const selected = shuffle(products).slice(0, limit)
+    const hasMore = products.length > take;
+    const pageItems = hasMore ? products.slice(0, take) : products;
 
-    return NextResponse.json(
-      { products: selected },
-      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
-    )
+    const out = shouldShuffle ? shuffle(pageItems) : pageItems;
+    const nextCursor = hasMore ? pageItems[pageItems.length - 1]?.id ?? null : null;
+
+    return NextResponse.json({
+      products: out,
+      pageInfo: {
+        mode: "paged",
+        limit: take,
+        count: out.length,
+        nextCursor,
+      },
+    });
   } catch (err) {
-    console.error('Error in /api/home-products:', err)
-
-    // aqui eu devolvo 500 para tu veres o erro no Network tab
+    console.error("Error in /api/home-products:", err);
     return NextResponse.json(
-      { products: [], error: 'Failed to load products' },
-      { status: 500, headers: { 'Cache-Control': 'no-store, max-age=0' } }
-    )
+      { products: [], error: "Failed to load products" },
+      { status: 500 }
+    );
   }
 }

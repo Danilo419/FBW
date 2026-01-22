@@ -421,9 +421,7 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const timerRef = useRef<number | null>(null)
 
   const firstIndex = orderRef.current[0]
-  const initialSrc =
-    heroImages[firstIndex]?.src ??
-    FALLBACK_IMG
+  const initialSrc = heroImages[firstIndex]?.src ?? FALLBACK_IMG
 
   const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
     if (!img) return
@@ -573,7 +571,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'adult',
     label: 'Adult',
-    href: '/products/adult', // <<--- página Adult
+    href: '/products/adult',
     img: '/images/spaces/adult.png',
     alt: 'Adult Collection',
     subtitle: 'Sizes S–2XL',
@@ -581,7 +579,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'kids',
     label: 'Kids',
-    href: '/products/kids', // <<--- página Kids
+    href: '/products/kids',
     img: '/images/spaces/kids.png',
     alt: 'Kids Collection',
     subtitle: 'Ages 2–13',
@@ -589,7 +587,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'retro',
     label: 'Retro',
-    href: '/products/retro', // <<--- página Retro
+    href: '/products/retro',
     img: '/images/spaces/retro.png',
     alt: 'Retro Collection',
     subtitle: 'Timeless classics',
@@ -597,7 +595,7 @@ const highlightSpaces: HighlightSpace[] = [
   {
     key: 'concept',
     label: 'Concept Kits',
-    href: '/products/concept-kits', // <<--- página Concept Kits
+    href: '/products/concept-kits',
     img: '/images/spaces/concept.png',
     alt: 'Concept Kits',
     subtitle: 'Original designs',
@@ -774,24 +772,81 @@ function getProductPricing(p: HomeProduct) {
   return { priceCents, compareAtCents, hasDiscount, discountPercent }
 }
 
-function normalizeName(p: HomeProduct): string {
-  return ((p.name ?? '') as string).toUpperCase()
+/* ======================================================================================
+   ✅ ROBUST NAME MATCHING (FIX PARA NÃO APANHAR SÓ 1/2 PRODUTOS)
+====================================================================================== */
+
+function normalizeUpper(s: string) {
+  return (s ?? '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^A-Z0-9]+/g, ' ')     // troca hífens/underscores/etc por espaço
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-function hasTerm(p: HomeProduct, term: string): boolean {
-  return normalizeName(p).includes(term.toUpperCase())
+function nameU(p: HomeProduct): string {
+  return normalizeUpper((p?.name ?? '') as string)
+}
+
+/** garante que TODAS as palavras existem (em qualquer ordem) */
+function hasWords(p: HomeProduct, words: string[]) {
+  const n = nameU(p)
+  return words.every((w) => n.includes(normalizeUpper(w)))
+}
+
+/** aceita várias opções (OR) */
+function hasAnyWords(p: HomeProduct, listOfWordSets: string[][]) {
+  return listOfWordSets.some((ws) => hasWords(p, ws))
+}
+
+/** ainda útil para coisas tipo "25/26" que têm "/" */
+function hasTermRaw(p: HomeProduct, term: string): boolean {
+  const raw = ((p?.name ?? '') as string).toUpperCase()
+  return raw.includes(term.toUpperCase())
 }
 
 function isPlayerVersion(p: HomeProduct): boolean {
-  return hasTerm(p, 'PLAYER VERSION')
+  return hasAnyWords(p, [['PLAYER', 'VERSION']])
 }
 
 function isLongSleeve(p: HomeProduct): boolean {
-  return hasTerm(p, 'LONG SLEEVE')
+  return hasAnyWords(p, [['LONG', 'SLEEVE']])
 }
 
 function isRetro(p: HomeProduct): boolean {
-  return hasTerm(p, 'RETRO')
+  return hasAnyWords(p, [['RETRO']])
+}
+
+function isConceptKit(p: HomeProduct): boolean {
+  // apanha: "Concept Kit", "Concept Kit Jersey", até "Concept Jersey"
+  return hasAnyWords(p, [
+    ['CONCEPT', 'KIT'],
+    ['CONCEPT', 'JERSEY'],
+    ['CONCEPT'],
+  ])
+}
+
+function isPreMatch(p: HomeProduct): boolean {
+  return hasAnyWords(p, [['PRE', 'MATCH'], ['PREMATCH']])
+}
+
+function isKidsKit(p: HomeProduct): boolean {
+  return hasAnyWords(p, [['KIDS', 'KIT'], ['KID', 'KIT']])
+}
+
+function isCropTop(p: HomeProduct): boolean {
+  return hasAnyWords(p, [['CROP', 'TOP']])
+}
+
+function isTrainingSleevelessSet(p: HomeProduct): boolean {
+  // apanha variações: "Training Sleeveless Set", "Sleeveless Training Set", etc.
+  return hasWords(p, ['TRAINING', 'SLEEVELESS']) && hasAnyWords(p, [['SET'], ['SHORTS']])
+}
+
+function isTrainingTracksuit(p: HomeProduct): boolean {
+  return hasAnyWords(p, [['TRAINING', 'TRACKSUIT'], ['TRACKSUIT']]) && hasAnyWords(p, [['TRAINING'], ['TRACK']])
 }
 
 /* ---------- Product Card ---------- */
@@ -958,16 +1013,17 @@ export default function Home() {
 
     const loadProducts = async () => {
       try {
-        const res = await fetch('/api/home-products?limit=120', {
+        // ✅ IMPORTANT: agora puxa TUDO para nunca faltar pool às categorias
+        const res = await fetch('/api/home-products?limit=all', {
           cache: 'no-store',
         })
         if (!res.ok) throw new Error('Failed to load home products')
         const data = await res.json()
-        const list = Array.isArray(data?.products)
-          ? data.products
-          : Array.isArray(data)
-          ? data
-          : []
+
+        const list =
+          Array.isArray(data?.products) ? data.products :
+          Array.isArray(data) ? data :
+          []
 
         if (!cancelled) setHomeProducts(list)
       } catch (err) {
@@ -987,19 +1043,28 @@ export default function Home() {
   const categories = useMemo(() => {
     if (!homeProducts.length) return null
 
+    // baralhar base só para a ordem ser diferente, mas sem perder itens
     const base = shuffle(homeProducts)
 
     const filterJerseys = (p: HomeProduct) => {
-      const n = normalizeName(p)
-      if (!n) return false
+      // Jerseys "normais" (short sleeve, non-player, non-retro, non-long-sleeve, non-kits/sets)
       if (isPlayerVersion(p)) return false
       if (isLongSleeve(p)) return false
       if (isRetro(p)) return false
+      if (isConceptKit(p)) return false
+      if (isPreMatch(p)) return false
+      if (isTrainingSleevelessSet(p)) return false
+      if (isTrainingTracksuit(p)) return false
+      if (isKidsKit(p)) return false
+      if (isCropTop(p)) return false
+
+      // excluir coisas que não são camisolas "normais"
+      const n = nameU(p)
+      if (!n) return false
       if (n.includes('SET')) return false
       if (n.includes('SHORTS')) return false
       if (n.includes('TRACKSUIT')) return false
-      if (n.includes('CROP TOP')) return false
-      if (n.includes('KIT')) return false
+
       return true
     }
 
@@ -1007,42 +1072,44 @@ export default function Home() {
 
     return {
       currentSeason: mk(
-        (p) => hasTerm(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
+        (p) => hasTermRaw(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
+
       jerseys: mk(filterJerseys),
+
       longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
+
       playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
+
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
+
       retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
+
       retroLongSleeve: mk(
         (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
       ),
-      conceptKits: mk(
-        (p) => hasTerm(p, 'CONCEPT KIT') && !isRetro(p) && !isPlayerVersion(p)
-      ),
-      preMatch: mk(
-        (p) => hasTerm(p, 'PRE-MATCH') && !isRetro(p) && !isPlayerVersion(p)
-      ),
+
+      // ✅ FIX: deixa de depender de "CONCEPT KIT" exato
+      conceptKits: mk((p) => isConceptKit(p) && !isRetro(p) && !isPlayerVersion(p)),
+
+      // ✅ FIX: pre-match também robusto
+      preMatch: mk((p) => isPreMatch(p) && !isRetro(p) && !isPlayerVersion(p)),
+
+      // ✅ FIX: training robusto
       trainingSleeveless: mk(
-        (p) =>
-          hasTerm(p, 'TRAINING SLEEVELESS SET') &&
-          !isRetro(p) &&
-          !isPlayerVersion(p)
+        (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
+
       trainingTracksuit: mk(
-        (p) =>
-          hasTerm(p, 'TRAINING TRACKSUIT') &&
-          !isRetro(p) &&
-          !isPlayerVersion(p)
+        (p) => isTrainingTracksuit(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
-      kidsKits: mk(
-        (p) => hasTerm(p, 'KIDS KIT') && !isRetro(p) && !isPlayerVersion(p)
-      ),
-      cropTops: mk(
-        (p) => hasTerm(p, 'CROP TOP') && !isRetro(p) && !isPlayerVersion(p)
-      ),
+
+      // ✅ kids/crop robustos
+      kidsKits: mk((p) => isKidsKit(p) && !isRetro(p) && !isPlayerVersion(p)),
+
+      cropTops: mk((p) => isCropTop(p) && !isRetro(p) && !isPlayerVersion(p)),
     }
   }, [homeProducts])
 
@@ -1263,7 +1330,7 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE – mobile: 1687x1024, desktop: 3689x1024, mobile usa home-promo2, desktop home-promo */}
+        {/* PROMO IMAGE */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
@@ -1271,12 +1338,10 @@ export default function Home() {
             </p>
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
-                {/* mobile (até 767px) */}
                 <source
                   srcSet="/images/promos/home-promo2.png"
                   media="(max-width: 767px)"
                 />
-                {/* desktop/tablet (768px+) */}
                 <source
                   srcSet="/images/promos/home-promo.png"
                   media="(min-width: 768px)"
@@ -1591,8 +1656,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      
     </div>
   )
 }
