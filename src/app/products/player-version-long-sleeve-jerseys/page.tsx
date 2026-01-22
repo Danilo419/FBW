@@ -120,8 +120,13 @@ function isPlayerVersionLongSleeveJersey(p: UIProduct): boolean {
   // tem de ser player version
   if (!n.includes("PLAYER VERSION")) return false;
 
-  // tem de ser manga comprida
-  if (!n.includes("LONG SLEEVE")) return false;
+  // tem de ser manga comprida (aceita variações)
+  const isLongSleeve =
+    n.includes("LONG SLEEVE") ||
+    n.includes("LONG-SLEEVE") ||
+    /\bL\/S\b/.test(n) ||
+    /\bLS\b/.test(n);
+  if (!isLongSleeve) return false;
 
   // excluir RETRO
   if (n.includes("RETRO")) return false;
@@ -134,7 +139,12 @@ function isPlayerVersionLongSleeveJersey(p: UIProduct): boolean {
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-  if (n.includes(" KIT")) return false; // kit completo
+
+  // (mantém a exclusão de "kit completo" mas sem matar nomes normais)
+  if (n.includes("FULL KIT")) return false;
+  if (n.includes("KIT SET")) return false;
+  if (n.includes("JERSEY + SHORTS")) return false;
+  if (n.includes("WITH SHORTS")) return false;
 
   return true;
 }
@@ -256,17 +266,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -274,9 +278,111 @@ function buildPaginationRange(
 }
 
 /* ============================================================
+   Fetch robusto: tenta buscar "tudo" mesmo se a API estiver
+   a devolver só um lote pequeno (o problema dos "mesmos 6").
+   - Tenta limit/take/perPage
+   - Tenta paginação (page + limit) e para quando não vierem
+     novos ids/slugs.
+============================================================ */
+
+function dedupeProducts(list: UIProduct[]) {
+  const map = new Map<string, UIProduct>();
+  for (const p of list) {
+    const key =
+      (p.slug ? `slug:${p.slug}` : null) ??
+      (p.id != null ? `id:${String(p.id)}` : null) ??
+      `name:${(p.name ?? "").toUpperCase()}`;
+    if (!map.has(key)) map.set(key, p);
+  }
+  return Array.from(map.values());
+}
+
+async function fetchProductsOnce(url: string): Promise<UIProduct[]> {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Search failed (${r.status})`);
+  const json = await r.json();
+  const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+  return arr;
+}
+
+async function fetchAllSearchProducts(): Promise<UIProduct[]> {
+  // 1) tenta "limit alto" (se o backend suportar, resolve logo)
+  const candidates = [
+    `/api/search?q=jersey&limit=5000`,
+    `/api/search?q=jersey&take=5000`,
+    `/api/search?q=jersey&perPage=5000`,
+  ];
+
+  for (const url of candidates) {
+    try {
+      const arr = await fetchProductsOnce(url);
+      // se vier um número "grande", assumimos que já trouxe tudo
+      if (arr.length >= 100) return dedupeProducts(arr);
+      // mesmo que seja pequeno, guardamos e seguimos para tentar paginação
+    } catch {
+      // ignora e continua para a próxima estratégia
+    }
+  }
+
+  // 2) paginação defensiva: se a API ignorar page/limit, vai repetir
+  // o mesmo lote e nós paramos quando não surgirem novos itens.
+  const LIMIT = 200;
+  const MAX_PAGES = 80; // 80*200 = 16k (com stop automático por repetição)
+  let all: UIProduct[] = [];
+  let prevKeys = new Set<string>();
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const url = `/api/search?q=jersey&page=${page}&limit=${LIMIT}`;
+    let arr: UIProduct[] = [];
+    try {
+      arr = await fetchProductsOnce(url);
+    } catch {
+      // se falhar aqui, paramos e devolvemos o que já temos
+      break;
+    }
+
+    if (arr.length === 0) break;
+
+    const merged = dedupeProducts(all.concat(arr));
+
+    // deteta se realmente entrou algo novo
+    const keysNow = new Set(
+      merged.map((p) =>
+        p.slug
+          ? `slug:${p.slug}`
+          : p.id != null
+          ? `id:${String(p.id)}`
+          : `name:${(p.name ?? "").toUpperCase()}`
+      )
+    );
+
+    let grew = false;
+    if (keysNow.size > prevKeys.size) grew = true;
+
+    all = merged;
+    prevKeys = keysNow;
+
+    // se não cresceu, a API está a devolver sempre o mesmo lote → parar
+    if (!grew) break;
+
+    // se vier menos que o LIMIT, normalmente acabou
+    if (arr.length < LIMIT) break;
+  }
+
+  // fallback final: pelo menos tenta o endpoint base
+  if (all.length === 0) {
+    try {
+      all = await fetchProductsOnce(`/api/search?q=jersey`);
+    } catch {
+      all = [];
+    }
+  }
+
+  return dedupeProducts(all);
+}
+
+/* ============================================================
    Página Player Version Long Sleeve Jerseys
-   - Busca via /api/search?q=jersey
-   - Filtra apenas PLAYER VERSION, long sleeve, exclui RETRO
 ============================================================ */
 
 export default function PlayerVersionLongSleeveJerseysPage() {
@@ -284,7 +390,6 @@ export default function PlayerVersionLongSleeveJerseysPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Continua a paginar normalmente, mas com grelha mobile em 2 colunas
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -292,31 +397,28 @@ export default function PlayerVersionLongSleeveJerseysPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
-        const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products)
-          ? json.products
-          : [];
+    (async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const arr = await fetchAllSearchProducts();
         if (!cancelled) {
           setResults(arr);
           setPage(1);
         }
-      })
-      .catch((e) => {
+      } catch (e: any) {
         if (!cancelled) {
           setResults([]);
           setError(e?.message || "Search error");
         }
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -559,9 +661,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                 {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
                   aria-label="Próxima página"

@@ -402,8 +402,7 @@ export default function CurrentSeasonPage() {
                 Current season 25/26
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                All non-player, non-retro items whose name contains{" "}
-                <strong>&quot;25/26&quot;</strong>.
+                Latest club & national-team drops (non-player version)
               </p>
             </div>
 
