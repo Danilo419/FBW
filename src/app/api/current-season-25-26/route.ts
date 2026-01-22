@@ -16,6 +16,18 @@ function centsToEur(v?: number | null) {
   return Math.round(v) / 100;
 }
 
+/** Remove valores lixo tipo "club", "team", etc */
+function cleanTeamLabel(v: any): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+
+  const upper = s.toUpperCase();
+  if (upper === "CLUB" || upper === "TEAM" || upper === "UNKNOWN") return null;
+
+  return s;
+}
+
 /* ================= Filter (server-side) ================= */
 
 function isCurrentSeasonName(name: string) {
@@ -33,7 +45,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = normalizeStr(searchParams.get("q"));
 
-    // Base: tem de conter "25/26" e não pode ser player/retro
+    // Base: 25/26 + não player/retro
     const baseWhere: any = {
       AND: [
         { name: { contains: "25/26", mode: "insensitive" as const } },
@@ -42,7 +54,6 @@ export async function GET(req: Request) {
       ],
     };
 
-    // Pesquisa adicional (opcional) por name OU team
     let whereFinal: any = baseWhere;
 
     if (q) {
@@ -59,7 +70,7 @@ export async function GET(req: Request) {
       };
     }
 
-    // ✅ Seleciona campos REAIS (iguais ao /api/search)
+    // ✅ Mesma seleção do /api/search
     let rows = await prisma.product.findMany({
       where: whereFinal,
       take: 5000,
@@ -69,18 +80,20 @@ export async function GET(req: Request) {
         slug: true,
         name: true,
         team: true,
-        basePrice: true,     // ✅ cents
-        imageUrls: true,     // ✅ array
+        basePrice: true,   // cents
+        imageUrls: true,   // string[]
         updatedAt: true,
       },
     });
 
-    // Fallback caso "team" não exista no schema
-    // (mantive a tua lógica, mas agora usando prisma direto)
+    // Fallback sem team
     if (q && rows.length === 0) {
       rows = await prisma.product.findMany({
         where: {
-          AND: [baseWhere, { name: { contains: q, mode: "insensitive" as const } }],
+          AND: [
+            baseWhere,
+            { name: { contains: q, mode: "insensitive" as const } },
+          ],
         },
         take: 5000,
         orderBy: { updatedAt: "desc" },
@@ -96,22 +109,26 @@ export async function GET(req: Request) {
       });
     }
 
-    // Segurança extra: garante que cumpre a regra 25/26 + não player/retro
-    const filtered = (rows ?? []).filter((p) => typeof p?.name === "string" && isCurrentSeasonName(p.name));
+    // Segurança final
+    const filtered = rows.filter(
+      (p) => typeof p?.name === "string" && isCurrentSeasonName(p.name)
+    );
 
     const payload = filtered.map((p) => ({
       id: p.id,
       name: p.name,
       slug: p.slug ?? undefined,
-      team: (p as any).team ?? null,
-      // ✅ preço igual ao search: euros vindo de basePrice (cents)
-      price: centsToEur((p as any).basePrice),
-      // ✅ imagem igual ao search: primeira do array
-      img: Array.isArray((p as any).imageUrls) ? (p as any).imageUrls[0] : null,
+      // ✅ NUNCA mais devolve "club"
+      team: cleanTeamLabel(p.team),
+      // ✅ preço consistente
+      price: centsToEur(p.basePrice),
+      // ✅ imagem consistente
+      img: Array.isArray(p.imageUrls) ? p.imageUrls[0] : null,
     }));
 
     return NextResponse.json({ products: payload });
   } catch (err: any) {
+    console.error("current-season-25-26 error:", err);
     return NextResponse.json(
       { error: err?.message || "Failed to load current season products" },
       { status: 500 }
