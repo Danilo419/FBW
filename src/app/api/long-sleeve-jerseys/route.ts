@@ -1,3 +1,4 @@
+// src/app/api/long-sleeve-jerseys/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -10,161 +11,9 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
-function isProbablyUrl(v: any) {
-  return (
-    typeof v === "string" &&
-    v.length > 6 &&
-    (v.startsWith("http://") ||
-      v.startsWith("https://") ||
-      v.startsWith("/") ||
-      v.startsWith("data:image/"))
-  );
-}
-
-function findFirstUrlDeep(obj: any, depth = 0): string | null {
-  if (!obj || depth > 4) return null;
-
-  if (isProbablyUrl(obj)) return obj;
-
-  if (Array.isArray(obj)) {
-    for (const item of obj) {
-      const u = findFirstUrlDeep(item, depth + 1);
-      if (u) return u;
-    }
-    return null;
-  }
-
-  if (typeof obj === "object") {
-    const commonKeys = [
-      "url",
-      "src",
-      "path",
-      "imageUrl",
-      "secureUrl",
-      "publicUrl",
-      "link",
-      "href",
-      "thumbnail",
-      "thumb",
-    ];
-
-    for (const k of commonKeys) {
-      if (isProbablyUrl((obj as any)[k])) return (obj as any)[k];
-    }
-
-    for (const k of Object.keys(obj)) {
-      const u = findFirstUrlDeep((obj as any)[k], depth + 1);
-      if (u) return u;
-    }
-  }
-
-  return null;
-}
-
-function pickImageFromProduct(p: any): string | null {
-  if (!p) return null;
-
-  const directCandidates = [
-    "img",
-    "image",
-    "imageUrl",
-    "photo",
-    "photoUrl",
-    "cover",
-    "coverUrl",
-    "thumbnail",
-    "thumb",
-  ];
-
-  for (const key of directCandidates) {
-    const v = p?.[key];
-    if (isProbablyUrl(v)) return v;
-  }
-
-  const relCandidates = [
-    "images",
-    "productImages",
-    "gallery",
-    "galleryImages",
-    "photos",
-    "media",
-    "productMedia",
-    "assets",
-    "files",
-  ];
-
-  for (const key of relCandidates) {
-    const u = findFirstUrlDeep(p?.[key], 0);
-    if (u) return u;
-  }
-
-  return findFirstUrlDeep(p, 0);
-}
-
-function toNumberMaybe(v: any): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-
-  if (v && typeof v === "object") {
-    if (typeof v.toNumber === "function") {
-      try {
-        const n = v.toNumber();
-        if (typeof n === "number" && Number.isFinite(n)) return n;
-      } catch {}
-    }
-    if (typeof v.toString === "function") {
-      const n = Number(String(v.toString()));
-      if (Number.isFinite(n)) return n;
-    }
-  }
-
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-function pickPriceFromProduct(p: any): number | null {
-  if (!p) return null;
-
-  const directKeys = ["price", "priceEur", "priceEUR", "price_eur", "amount"];
-  for (const k of directKeys) {
-    const n = toNumberMaybe(p?.[k]);
-    if (n != null) return n;
-  }
-
-  const centsKeys = ["priceCents", "price_cents", "amountCents", "amount_cents"];
-  for (const k of centsKeys) {
-    const n = toNumberMaybe(p?.[k]);
-    if (n != null) return Math.round(n) / 100;
-  }
-
-  return null;
-}
-
-async function findManyWithBestInclude(where: any) {
-  const includeCandidates: any[] = [
-    { images: true },
-    { productImages: true },
-    { gallery: true },
-    { galleryImages: true },
-    { photos: true },
-    { media: true },
-    { productMedia: true },
-    { assets: true },
-    { files: true },
-    null,
-  ];
-
-  for (const inc of includeCandidates) {
-    try {
-      const res = await (prisma as any).product.findMany({
-        where,
-        take: 5000,
-        ...(inc ? { include: inc } : {}),
-      });
-      return Array.isArray(res) ? res : [];
-    } catch {}
-  }
-
-  return [];
+function centsToEur(v?: number | null) {
+  if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
+  return Math.round(v) / 100;
 }
 
 /* ================= Filter ================= */
@@ -191,9 +40,13 @@ export async function GET(req: Request) {
 
     const baseWhere: any = {
       AND: [
-        { name: { contains: "long sleeve", mode: "insensitive" } },
-        { NOT: { name: { contains: "player version", mode: "insensitive" } } },
-        { NOT: { name: { contains: "retro", mode: "insensitive" } } },
+        { name: { contains: "long sleeve", mode: "insensitive" as const } },
+        {
+          NOT: {
+            name: { contains: "player version", mode: "insensitive" as const },
+          },
+        },
+        { NOT: { name: { contains: "retro", mode: "insensitive" as const } } },
       ],
     };
 
@@ -205,38 +58,67 @@ export async function GET(req: Request) {
           baseWhere,
           {
             OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { team: { contains: q, mode: "insensitive" } },
+              { name: { contains: q, mode: "insensitive" as const } },
+              { team: { contains: q, mode: "insensitive" as const } },
             ],
           },
         ],
       };
     }
 
-    let productsRaw = await findManyWithBestInclude(whereFinal);
+    // ✅ Buscar com SELECT explícito (igual ao /api/search)
+    let rows = await prisma.product.findMany({
+      where: whereFinal,
+      take: 5000,
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        team: true,
+        basePrice: true, // ✅ cents
+        imageUrls: true, // ✅ array
+        updatedAt: true,
+      },
+    });
 
     // fallback se "team" não existir
-    if (q && productsRaw.length === 0) {
-      const whereNameOnly = {
-        AND: [
-          baseWhere,
-          { name: { contains: q, mode: "insensitive" } },
-        ],
-      };
-      productsRaw = await findManyWithBestInclude(whereNameOnly);
+    if (q && rows.length === 0) {
+      rows = await prisma.product.findMany({
+        where: {
+          AND: [
+            baseWhere,
+            { name: { contains: q, mode: "insensitive" as const } },
+          ],
+        },
+        take: 5000,
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          team: true,
+          basePrice: true,
+          imageUrls: true,
+          updatedAt: true,
+        },
+      });
     }
 
-    const products = (productsRaw ?? []).filter(
-      (p: any) => typeof p?.name === "string" && isLongSleeveNonPlayerName(p.name)
+    const filtered = (rows ?? []).filter(
+      (p) =>
+        typeof p?.name === "string" && isLongSleeveNonPlayerName((p as any).name)
     );
 
-    const payload = products.map((p: any) => ({
+    const payload = filtered.map((p: any) => ({
       id: p.id,
       name: p.name,
       slug: p.slug ?? undefined,
       team: p.team ?? null,
-      price: pickPriceFromProduct(p) ?? undefined,
-      img: pickImageFromProduct(p) ?? null,
+      // ✅ preço correto (EUR) vindo de basePrice (cents)
+      price: centsToEur(p.basePrice),
+      // ✅ imagem correta (primeira do array)
+      img: Array.isArray(p.imageUrls) ? p.imageUrls[0] : null,
     }));
 
     return NextResponse.json({ products: payload });
