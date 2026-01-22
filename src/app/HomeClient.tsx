@@ -53,7 +53,10 @@ function Spotlight({
     setPos({ x: e.clientX - r.left, y: e.clientY - r.top })
   }, [])
   return (
-    <div onMouseMove={onMouseMove} className={`relative overflow-hidden ${className}`}>
+    <div
+      onMouseMove={onMouseMove}
+      className={`relative overflow-hidden ${className}`}
+    >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -137,7 +140,9 @@ function TiltCard({
     <motion.div
       onMouseMove={onMouseMove}
       onMouseLeave={() => setT({ rx: 0, ry: 0 })}
-      style={{ transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)` }}
+      style={{
+        transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)`,
+      }}
       className={`card ${className}`}
     >
       <div
@@ -168,12 +173,30 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal11.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png', alt: 'Atlético Madrid jersey' },
-  { src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png', alt: 'Atlético Madrid jersey' },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid2.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid3.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid4.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid5.png',
+    alt: 'Atlético Madrid jersey',
+  },
+  {
+    src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png',
+    alt: 'Atlético Madrid jersey',
+  },
   { src: '/images/players/Barcelona/Barcelona1.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona2.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona3.png', alt: 'Barcelona jersey' },
@@ -218,15 +241,42 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/ManCity/ManCity6.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity7.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity8.png', alt: 'Man City jersey' },
-  { src: '/images/players/ManUnited/ManUnited1.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited2.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited3.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited4.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited5.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited6.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited7.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited8.png', alt: 'Man United jersey' },
-  { src: '/images/players/ManUnited/ManUnited9.png', alt: 'Man United jersey' },
+  {
+    src: '/images/players/ManUnited/ManUnited1.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited2.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited3.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited4.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited5.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited6.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited7.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited8.png',
+    alt: 'Man United jersey',
+  },
+  {
+    src: '/images/players/ManUnited/ManUnited9.png',
+    alt: 'Man United jersey',
+  },
   { src: '/images/players/Marselha/Marselha1.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha2.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha3.png', alt: 'Marseille jersey' },
@@ -253,18 +303,18 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSG/PSG6.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG7.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG8.png', alt: 'PSG jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid4.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid5.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid6.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid7.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid8.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid9.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'Real Madrid jersey' },
-  { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'Real Madrid jersey' },
+  { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid4.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid5.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid6.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid7.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid8.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid9.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'Real Madrid' },
+  { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'Real Madrid' },
   { src: '/images/players/Tottenham/Tottenham1.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham2.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham3.png', alt: 'Tottenham jersey' },
@@ -358,14 +408,38 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Dortmund/Dortmund9.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund10.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund11.png', alt: 'Dortmund jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen1.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen2.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen3.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen4.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen5.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen6.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen7.png', alt: 'Leverkusen jersey' },
-  { src: '/images/players/Leverkusen/Leverkusen8.png', alt: 'Leverkusen jersey' },
+  {
+    src: '/images/players/Leverkusen/Leverkusen1.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen2.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen3.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen4.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen5.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen6.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen7.png',
+    alt: 'Leverkusen jersey',
+  },
+  {
+    src: '/images/players/Leverkusen/Leverkusen8.png',
+    alt: 'Leverkusen jersey',
+  },
   { src: '/images/players/Ajax/Ajax1.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax2.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax3.png', alt: 'Ajax jersey' },
@@ -408,7 +482,6 @@ function shuffle<T>(arr: T[]) {
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const fade = 800
 
-  // ordem aleatória estável por montagem
   const orderRef = useRef<number[]>([])
   if (!orderRef.current.length) {
     orderRef.current = shuffle([...Array(heroImages.length).keys()])
@@ -457,7 +530,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
 
     back.src = nextSrc
     back.style.transitionDuration = `${fade}ms`
-    // forçar reflow
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
     back.classList.add('is-visible')
@@ -500,7 +572,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      {/* camada A já começa visível com imagem aleatória */}
       <img
         ref={aRef}
         className="hero-layer is-visible"
@@ -515,7 +586,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         }}
       />
 
-      {/* camada B começa vazia e entra nas trocas seguintes */}
       <img
         ref={bRef}
         className="hero-layer"
@@ -773,7 +843,7 @@ function getProductPricing(p: HomeProduct) {
 }
 
 /* ======================================================================================
-   ✅ ROBUST NAME MATCHING (FIX PARA NÃO APANHAR SÓ 1/2 PRODUTOS)
+   ✅ ROBUST NAME MATCHING
 ====================================================================================== */
 
 function normalizeUpper(s: string) {
@@ -781,7 +851,7 @@ function normalizeUpper(s: string) {
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .replace(/[^A-Z0-9]+/g, ' ')     // troca hífens/underscores/etc por espaço
+    .replace(/[^A-Z0-9]+/g, ' ') // troca hífens/underscores/etc por espaço
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -801,7 +871,7 @@ function hasAnyWords(p: HomeProduct, listOfWordSets: string[][]) {
   return listOfWordSets.some((ws) => hasWords(p, ws))
 }
 
-/** ainda útil para coisas tipo "25/26" que têm "/" */
+/** útil para coisas tipo "25/26" que têm "/" */
 function hasTermRaw(p: HomeProduct, term: string): boolean {
   const raw = ((p?.name ?? '') as string).toUpperCase()
   return raw.includes(term.toUpperCase())
@@ -820,12 +890,7 @@ function isRetro(p: HomeProduct): boolean {
 }
 
 function isConceptKit(p: HomeProduct): boolean {
-  // apanha: "Concept Kit", "Concept Kit Jersey", até "Concept Jersey"
-  return hasAnyWords(p, [
-    ['CONCEPT', 'KIT'],
-    ['CONCEPT', 'JERSEY'],
-    ['CONCEPT'],
-  ])
+  return hasAnyWords(p, [['CONCEPT', 'KIT'], ['CONCEPT', 'JERSEY'], ['CONCEPT']])
 }
 
 function isPreMatch(p: HomeProduct): boolean {
@@ -841,12 +906,25 @@ function isCropTop(p: HomeProduct): boolean {
 }
 
 function isTrainingSleevelessSet(p: HomeProduct): boolean {
-  // apanha variações: "Training Sleeveless Set", "Sleeveless Training Set", etc.
-  return hasWords(p, ['TRAINING', 'SLEEVELESS']) && hasAnyWords(p, [['SET'], ['SHORTS']])
+  return (
+    hasWords(p, ['TRAINING', 'SLEEVELESS']) &&
+    hasAnyWords(p, [['SET'], ['SHORTS']])
+  )
 }
 
+/* ======================================================================================
+   ✅ MUDANÇA 1: Training Tracksuits = só "Training Tracksuit" no nome
+   ✅ MUDANÇA 2: Tracksuits = "Tracksuit" mas NÃO "Training Tracksuit"
+====================================================================================== */
+
 function isTrainingTracksuit(p: HomeProduct): boolean {
-  return hasAnyWords(p, [['TRAINING', 'TRACKSUIT'], ['TRACKSUIT']]) && hasAnyWords(p, [['TRAINING'], ['TRACK']])
+  // só entra se tiver exatamente TRAINING + TRACKSUIT (independente de order/pontuação)
+  return hasWords(p, ['TRAINING', 'TRACKSUIT'])
+}
+
+function isTracksuitNonTraining(p: HomeProduct): boolean {
+  // tem TRACKSUIT, mas não tem TRAINING TRACKSUIT
+  return hasWords(p, ['TRACKSUIT']) && !isTrainingTracksuit(p)
 }
 
 /* ---------- Product Card ---------- */
@@ -1013,17 +1091,17 @@ export default function Home() {
 
     const loadProducts = async () => {
       try {
-        // ✅ IMPORTANT: agora puxa TUDO para nunca faltar pool às categorias
         const res = await fetch('/api/home-products?limit=all', {
           cache: 'no-store',
         })
         if (!res.ok) throw new Error('Failed to load home products')
         const data = await res.json()
 
-        const list =
-          Array.isArray(data?.products) ? data.products :
-          Array.isArray(data) ? data :
-          []
+        const list = Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data)
+          ? data
+          : []
 
         if (!cancelled) setHomeProducts(list)
       } catch (err) {
@@ -1043,11 +1121,9 @@ export default function Home() {
   const categories = useMemo(() => {
     if (!homeProducts.length) return null
 
-    // baralhar base só para a ordem ser diferente, mas sem perder itens
     const base = shuffle(homeProducts)
 
     const filterJerseys = (p: HomeProduct) => {
-      // Jerseys "normais" (short sleeve, non-player, non-retro, non-long-sleeve, non-kits/sets)
       if (isPlayerVersion(p)) return false
       if (isLongSleeve(p)) return false
       if (isRetro(p)) return false
@@ -1055,10 +1131,10 @@ export default function Home() {
       if (isPreMatch(p)) return false
       if (isTrainingSleevelessSet(p)) return false
       if (isTrainingTracksuit(p)) return false
+      if (isTracksuitNonTraining(p)) return false
       if (isKidsKit(p)) return false
       if (isCropTop(p)) return false
 
-      // excluir coisas que não são camisolas "normais"
       const n = nameU(p)
       if (!n) return false
       if (n.includes('SET')) return false
@@ -1074,41 +1150,33 @@ export default function Home() {
       currentSeason: mk(
         (p) => hasTermRaw(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
-
       jerseys: mk(filterJerseys),
-
       longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
-
       playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
-
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
-
       retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
-
       retroLongSleeve: mk(
         (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
       ),
-
-      // ✅ FIX: deixa de depender de "CONCEPT KIT" exato
       conceptKits: mk((p) => isConceptKit(p) && !isRetro(p) && !isPlayerVersion(p)),
-
-      // ✅ FIX: pre-match também robusto
       preMatch: mk((p) => isPreMatch(p) && !isRetro(p) && !isPlayerVersion(p)),
-
-      // ✅ FIX: training robusto
       trainingSleeveless: mk(
         (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
 
+      // ✅ MUDANÇA 1
       trainingTracksuit: mk(
         (p) => isTrainingTracksuit(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
 
-      // ✅ kids/crop robustos
-      kidsKits: mk((p) => isKidsKit(p) && !isRetro(p) && !isPlayerVersion(p)),
+      // ✅ MUDANÇA 2 (novo)
+      tracksuits: mk(
+        (p) => isTracksuitNonTraining(p) && !isRetro(p) && !isPlayerVersion(p)
+      ),
 
+      kidsKits: mk((p) => isKidsKit(p) && !isRetro(p) && !isPlayerVersion(p)),
       cropTops: mk((p) => isCropTop(p) && !isRetro(p) && !isPlayerVersion(p)),
     }
   }, [homeProducts])
@@ -1204,6 +1272,15 @@ export default function Home() {
       title: 'Training Tracksuits',
       subtitle: 'Full training sets (top & pants)',
       href: '/products/training-tracksuits',
+      group: 'Training',
+    },
+
+    // ✅ NOVO espaço (logo abaixo do Training Tracksuits)
+    {
+      key: 'tracksuits',
+      title: 'Tracksuits',
+      subtitle: 'Tracksuits (excluding Training Tracksuits)',
+      href: '/products/tracksuits',
       group: 'Training',
     },
 
@@ -1318,7 +1395,6 @@ export default function Home() {
             .marquee-track {
               animation: marquee-x 26s linear infinite;
             }
-
             @keyframes marquee-x {
               0% {
                 transform: translateX(0%);
