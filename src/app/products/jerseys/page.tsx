@@ -1,4 +1,3 @@
-// src/app/products/jerseys/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -11,7 +10,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -106,7 +105,7 @@ function getClubLabel(p: UIProduct): string {
 }
 
 /* ============================================================
-   Filtro: standard short-sleeve (AGORA EXCLUI RETRO)
+   Filtro: standard short-sleeve (EXCLUI RETRO)
 ============================================================ */
 
 function normName(p: UIProduct) {
@@ -119,8 +118,6 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
 
   if (n.includes("PLAYER VERSION")) return false;
   if (n.includes("LONG SLEEVE")) return false;
-
-  // ❗ Agora RETRO é excluído
   if (n.includes("RETRO")) return false;
 
   if (n.includes("SET")) return false;
@@ -130,7 +127,7 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-  if (n.includes(" KIT")) return false; // kit completo
+  if (n.includes(" KIT")) return false;
 
   return true;
 }
@@ -232,7 +229,6 @@ function ProductCard({ p }: { p: UIProduct }) {
 
 /* ============================================================
    Helper de paginação com "..."
-   Ex.: « 1 2 3 ... 8 »
 ============================================================ */
 
 function buildPaginationRange(
@@ -252,19 +248,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
-  if (left > 2) {
-    pages.push("dots");
-  }
-
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
-
-  if (right < total - 1) {
-    pages.push("dots");
-  }
-
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
   pages.push(last);
 
   return pages;
@@ -272,7 +258,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Jerseys (mobile-first)
-   - Busca via /api/search?q=jersey (como ResultsClient)
+   - ✅ Busca via /api/jerseys (catálogo completo)
    - EXCLUI retro (RETRO não aparece)
 ============================================================ */
 
@@ -288,15 +274,15 @@ export default function JerseysPage() {
     "team"
   );
 
-  // 👉 Usa a mesma API que a search, mas com query fixa "jersey"
+  // ✅ agora usa API dedicada
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/jerseys`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -309,7 +295,7 @@ export default function JerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -322,7 +308,6 @@ export default function JerseysPage() {
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isStandardShortSleeveJersey);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -332,7 +317,6 @@ export default function JerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -354,14 +338,11 @@ export default function JerseysPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -402,7 +383,7 @@ export default function JerseysPage() {
                 Standard short-sleeve jerseys
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-base text-gray-600">
-                Standard short-sleeve jerseys (non-player version).
+                Standard short-sleeve jerseys (excluding Player Version, Long Sleeve and Retro).
               </p>
             </div>
 
@@ -420,7 +401,6 @@ export default function JerseysPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap px-4 sm:px-0">
-        {/* Filtros + info */}
         <div className="mb-5 sm:mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -465,7 +445,6 @@ export default function JerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -486,10 +465,8 @@ export default function JerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600 text-sm">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
@@ -506,7 +483,6 @@ export default function JerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -517,7 +493,6 @@ export default function JerseysPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -551,7 +526,6 @@ export default function JerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
