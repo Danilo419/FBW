@@ -11,7 +11,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -130,7 +130,8 @@ function isRetroJersey(p: UIProduct): boolean {
   if (n.includes("INFANT")) return false;
   if (n.includes(" KIT")) return false; // kit completo
 
-  // *** NOVO: excluir jerseys "Long Sleeve" ***
+  // *** mantém a tua regra atual: excluir retro "Long Sleeve" ***
+  // Se quiseres mostrar também Retro Long Sleeve, apaga estas 2 linhas:
   if (n.includes("LONG SLEEVE")) return false;
 
   return true;
@@ -138,8 +139,6 @@ function isRetroJersey(p: UIProduct): boolean {
 
 /* ============================================================
    Card de produto (igual look & feel do search)
-   - Mobile com paddings / fontes ligeiramente menores
-   - Desktop (sm+) mantém o que tinhas
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
@@ -255,17 +254,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -274,6 +267,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Retro Jerseys
+   - Agora usa o endpoint dedicado: /api/retro-jerseys
 ============================================================ */
 
 export default function RetroJerseysPage() {
@@ -288,15 +282,14 @@ export default function RetroJerseysPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/retro-jerseys`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -309,7 +302,7 @@ export default function RetroJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -359,11 +352,10 @@ export default function RetroJerseysPage() {
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
+
     return copy;
   }, [results, searchTerm, sort]);
 
@@ -504,7 +496,6 @@ export default function RetroJerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -515,7 +506,6 @@ export default function RetroJerseysPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -549,7 +539,6 @@ export default function RetroJerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
