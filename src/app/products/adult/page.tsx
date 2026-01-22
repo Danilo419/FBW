@@ -62,16 +62,53 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (FIX: remover "CLUB" e remover cores) ========= */
+/* ========= NOME DO CLUBE/SELEÇÃO (FIX TOTAL: nunca “CLUB”, nunca cores/PRIMARY, e sem bugs Madrid) ========= */
 
+function normalizeStr(s?: string | null) {
+  return (s ?? "").replace(/\s{2,}/g, " ").trim();
+}
+
+function toTitleCaseSmart(input: string) {
+  const s = normalizeStr(input);
+  if (!s) return "";
+  const lowerKeep = new Set(["de", "da", "do", "dos", "das", "of", "and", "the"]);
+  return s
+    .split(/\s+/)
+    .map((w) => {
+      const raw = w.replace(/\s+/g, "");
+      if (!raw) return raw;
+
+      // mantém siglas curtas em CAPS (FC, SC, CF, AC, PSG, etc.)
+      const onlyLetters = raw.replace(/[^A-Za-z]/g, "");
+      if (
+        onlyLetters.length > 0 &&
+        onlyLetters.length <= 4 &&
+        raw.toUpperCase() === raw
+      ) {
+        return raw;
+      }
+
+      const lw = raw.toLowerCase();
+      if (lowerKeep.has(lw)) return lw;
+
+      return lw.charAt(0).toUpperCase() + lw.slice(1);
+    })
+    .join(" ");
+}
+
+// ⚠️ BUG ORIGINAL: "real madrid|madrid" fazia Atlético de Madrid virar Real Madrid.
+// ✅ FIX: Real Madrid só com "real madrid".
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  // Espanha
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -79,28 +116,8 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
 ];
 
-function normalizeStr(s?: string | null) {
-  return (s ?? "").replace(/\s{2,}/g, " ").trim();
-}
-
-function cleanTeamValue(v?: string | null): string {
-  const s = normalizeStr(v);
-  if (!s) return "";
-  const up = s.toUpperCase();
-  if (up === "CLUB" || up === "TEAM") return "";
-  return s;
-}
-
-/** Remove descritores de cor do fim: "Arsenal Red & Black" => "Arsenal" */
-function stripColorDescriptors(input: string): string {
-  let s = normalizeStr(input);
-  if (!s) return "";
-
-  // Se tiver "&" e a parte direita for “cor”, deixa só a parte esquerda
-  const amp = s.split(/\s*&\s*/);
-  if (amp.length > 1) s = normalizeStr(amp[0]);
-
-  const colorWords = [
+const COLOR_WORDS = new Set(
+  [
     "RED",
     "BLACK",
     "WHITE",
@@ -129,22 +146,90 @@ function stripColorDescriptors(input: string): string {
     "LIME",
     "AQUA",
     "CYAN",
-  ];
+  ].map((x) => x.toUpperCase())
+);
 
+const VARIANT_WORDS = new Set(
+  [
+    // variantes típicas (o teu caso: "ARGENTINA PRIMARY")
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    // lixo comum que aparece no campo team/label
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    // às vezes vem misturado
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "CUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+  ].map((x) => x.toUpperCase())
+);
+
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  // remove chars estranhos e espaços
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // se vier "X & Y" (cores), mantemos só a esquerda
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing words tipo PRIMARY / RED / BLACK / CUP / etc.
   const tokens = s.split(/\s+/);
-  let cutIndex = tokens.length;
+  let out = tokens.slice();
 
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i].toUpperCase().replace(/[^A-Z-]/g, "");
-    const t2 = t.replace(/-/g, "");
-    if (colorWords.includes(t) || colorWords.includes(t2)) {
-      cutIndex = i;
-      break;
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
     }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
   }
 
-  const out = normalizeStr(tokens.slice(0, cutIndex).join(" "));
-  return out || s;
+  return normalizeStr(out.join(" "));
 }
 
 function clubFromString(input?: string | null): string | null {
@@ -157,41 +242,48 @@ function clubFromString(input?: string | null): string | null {
 }
 
 /**
- * Inferir clube pelo nome do produto:
- * "Juventus Away Jersey 25/26" -> "Juventus"
- * "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal"
+ * Inferir nome (clube/seleção) pelo nome do produto:
+ * - "Argentina Primary Goalkeeper Jersey 2026 – World Cup" -> "Argentina"
+ * - "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal"
+ * - "Dortmund Cup Jersey 25/26" -> "Dortmund"
  */
-function inferClubFromName(name?: string | null): string | null {
+function inferClubFromName(name?: string | null): string {
   const s = normalizeStr(name);
-  if (!s) return null;
+  if (!s) return "";
 
+  // corta no primeiro keyword de produto
   const cut = s.split(
-    /\s+(Home|Away|Third|Fourth|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept)\b/i
+    /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept|World\s*Cup)\b/i
   )[0];
 
+  // remove épocas
   const cleaned = normalizeStr(
-    cut.replace(/\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23)\b/gi, "")
+    cut.replace(/\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi, "")
   );
 
-  if (!cleaned) return null;
-
-  // ✅ fix: remover cores
-  const stripped = stripColorDescriptors(cleaned);
-  return stripped || cleaned;
+  // aplica a mesma limpeza usada no team (tira PRIMARY/cores/CUP/etc.)
+  return cleanTeamValue(cleaned);
 }
 
-/** Só o nome do clube (nunca devolve "Club") */
+/** ✅ label final: tenta team -> patterns -> infer pelo nome; nunca devolve "Club" */
 function getClubLabel(p: UIProduct): string {
+  // 1) usa team se existir, mas limpando "PRIMARY", cores, etc.
   const teamClean = cleanTeamValue(p.team ?? null);
+  if (teamClean) {
+    const byTeamPattern = clubFromString(teamClean);
+    return byTeamPattern ?? toTitleCaseSmart(teamClean);
+  }
 
-  const byTeam = clubFromString(teamClean);
-  if (byTeam) return byTeam;
+  // 2) tenta patterns no nome (Real Madrid, Atlético, etc.)
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
-
+  // 3) infer pelo nome do produto e normaliza casing
   const inferred = inferClubFromName(p.name);
-  return inferred ?? "";
+  if (inferred) return toTitleCaseSmart(inferred);
+
+  // último fallback (nunca “Club”)
+  return "";
 }
 
 /* ============================ Helpers de filtro ============================ */
@@ -253,6 +345,7 @@ function getPriceEurFromApi(raw: any): number | undefined {
   if (typeof raw.price === "number") return raw.price;
   if (typeof raw.currentPrice === "number") return raw.currentPrice;
 
+  // basePrice / priceCents em cêntimos
   if (typeof raw.basePrice === "number") {
     const v = raw.basePrice;
     if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
@@ -336,7 +429,7 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir (assim nunca aparece "CLUB") */}
+          {/* ✅ só mostra se existir (assim nunca aparece "CLUB", nem "ARGENTINA PRIMARY") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -428,6 +521,7 @@ function buildPaginationRange(
 
 const PAGE_SIZE = 12;
 
+// queries largas para puxar praticamente o catálogo todo
 const SEARCH_QUERIES = [
   "a",
   "e",
@@ -457,6 +551,7 @@ export default function AdultPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
+  // Agora usamos /api/search com várias queries para trazer o catálogo completo
   useEffect(() => {
     let cancelled = false;
 
@@ -472,20 +567,18 @@ export default function AdultPage() {
             cache: "no-store",
           });
           if (!res.ok) continue;
-
           const json = await res.json();
           const list: any[] = Array.isArray(json?.products)
             ? json.products
             : Array.isArray(json)
             ? json
             : [];
-
           allRaw.push(...list);
         }
 
+        // remover duplicados (id / slug / name)
         const seen = new Set<string>();
         const uniqueRaw: any[] = [];
-
         for (const p of allRaw) {
           const key = String(p.id ?? p.slug ?? p.name ?? Math.random());
           if (seen.has(key)) continue;
@@ -519,6 +612,7 @@ export default function AdultPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
+    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -528,6 +622,7 @@ export default function AdultPage() {
       });
     }
 
+    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -549,6 +644,7 @@ export default function AdultPage() {
       return copy;
     }
 
+    // default: ordenar por teamLabel + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
@@ -582,6 +678,7 @@ export default function AdultPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* HEADER (mobile-first) */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -606,6 +703,7 @@ export default function AdultPage() {
         </div>
       </section>
 
+      {/* CONTEÚDO (barra de info + filtros) */}
       <section className="container-fw section-gap pb-10">
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
