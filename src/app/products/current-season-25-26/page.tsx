@@ -1,4 +1,3 @@
-// src/app/products/current-season-25-26/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +10,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -230,7 +229,7 @@ function ProductCard({ p }: { p: UIProduct }) {
   );
 }
 
-/* ============================ Paginação com ... (como Jerseys avançada) ============================ */
+/* ============================ Paginação com ... ============================ */
 
 function buildPaginationRange(
   current: number,
@@ -249,19 +248,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
-  if (left > 2) {
-    pages.push("dots");
-  }
-
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
-
-  if (right < total - 1) {
-    pages.push("dots");
-  }
-
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
   pages.push(last);
 
   return pages;
@@ -278,27 +267,25 @@ export default function CurrentSeasonPage() {
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
-    "team"
-  );
+  const [sort, setSort] = useState<
+    "team" | "price-asc" | "price-desc" | "random"
+  >("team");
 
-  // fetch FIXO: q=25/26
+  // ✅ Agora usa API dedicada (catálogo completo)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    const qParam = `?q=${encodeURIComponent("25/26")}`;
-
-    fetch(`/api/search${qParam}`, { cache: "no-store" })
+    fetch(`/api/current-season-25-26`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
           : [];
 
-        // igual à Home: só 25/26 não-player e não-retro
+        // Mantém a mesma regra da Home por segurança
         const filtered = arr.filter(isCurrentSeasonProduct);
 
         if (!cancelled) {
@@ -309,7 +296,7 @@ export default function CurrentSeasonPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -322,7 +309,6 @@ export default function CurrentSeasonPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -332,7 +318,6 @@ export default function CurrentSeasonPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -354,14 +339,11 @@ export default function CurrentSeasonPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -390,7 +372,7 @@ export default function CurrentSeasonPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER (mobile-first) */}
+      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -402,7 +384,7 @@ export default function CurrentSeasonPage() {
                 Current season 25/26
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Latest club & national-team drops (non-player version)
+                Latest club & national-team drops (excluding Player Version and Retro).
               </p>
             </div>
 
@@ -418,9 +400,8 @@ export default function CurrentSeasonPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO (barra de info + filtros) */}
+      {/* CONTEÚDO */}
       <section className="container-fw section-gap pb-10">
-        {/* Filtros + info */}
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -465,7 +446,6 @@ export default function CurrentSeasonPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -486,12 +466,10 @@ export default function CurrentSeasonPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && (
           <p className="text-red-600 text-sm sm:text-base mt-2">{error}</p>
         )}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
@@ -508,7 +486,6 @@ export default function CurrentSeasonPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -519,7 +496,6 @@ export default function CurrentSeasonPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -553,7 +529,6 @@ export default function CurrentSeasonPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
