@@ -1,4 +1,3 @@
-// src/app/products/concept-kits/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -11,7 +10,7 @@ type UIProduct = {
   id: string | number;
   name: string;
   slug?: string;
-  img?: string;
+  img?: string | null;
   price?: number; // EUR (ex.: 34.99)
   team?: string | null;
 };
@@ -117,10 +116,8 @@ function isConceptKit(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // Tem de ser um concept design
   if (!n.includes("CONCEPT")) return false;
 
-  // Excluir itens óbvios que não sejam kit/camisa
   if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
   if (n.includes("CROP TOP")) return false;
@@ -128,13 +125,9 @@ function isConceptKit(p: UIProduct): boolean {
   if (n.includes("BALL")) return false;
   if (n.includes("POSTER")) return false;
 
-  // Continuamos a excluir kits infantis específicos
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-
-  // NOTA: aqui **não** excluímos " KIT" genérico
-  // para permitir "CONCEPT KIT" / "CONCEPT HOME KIT"
 
   return true;
 }
@@ -256,17 +249,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
 
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
+  for (let i = left; i <= right; i++) pages.push(i);
 
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
 
@@ -275,8 +262,7 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Concept Kits
-   - Busca via /api/search?q=jersey
-   - Filtra apenas concept designs (CONCEPT)
+   - Agora busca via /api/concept-kits (catálogo completo)
 ============================================================ */
 
 export default function ConceptKitsPage() {
@@ -291,15 +277,14 @@ export default function ConceptKitsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query fixa "jersey"
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+    fetch(`/api/concept-kits`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -312,7 +297,7 @@ export default function ConceptKitsPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Fetch error");
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -325,7 +310,6 @@ export default function ConceptKitsPage() {
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isConceptKit);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -335,7 +319,6 @@ export default function ConceptKitsPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -357,14 +340,11 @@ export default function ConceptKitsPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -421,7 +401,6 @@ export default function ConceptKitsPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        {/* Filtros + info */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -466,7 +445,6 @@ export default function ConceptKitsPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -487,10 +465,8 @@ export default function ConceptKitsPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
@@ -507,7 +483,6 @@ export default function ConceptKitsPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-10 flex items-center justify-center gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -518,7 +493,6 @@ export default function ConceptKitsPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -552,7 +526,6 @@ export default function ConceptKitsPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
