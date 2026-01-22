@@ -62,11 +62,11 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (mesmo código do search) ========= */
+/* ========= Extração do NOME DO CLUBE (fix: nunca mostrar "CLUB") ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
-  [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
+  [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"], // se quiseres "FC Barcelona", troca aqui
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\b(real\s*)?betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
@@ -83,6 +83,15 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+function cleanTeamValue(v?: string | null): string {
+  const s = normalizeStr(v);
+  if (!s) return "";
+  const up = s.toUpperCase();
+  // valores lixo
+  if (up === "CLUB" || up === "TEAM") return "";
+  return s;
+}
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
@@ -92,15 +101,43 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
-/** Obtém SEMPRE só o nome do clube (capitalização normal) */
+/**
+ * Inferir clube pelo nome do produto:
+ * "Juventus Away Jersey 25/26" -> "Juventus"
+ * "Leverkusen Away Jersey 25/26" -> "Leverkusen"
+ */
+function inferClubFromName(name?: string | null): string | null {
+  const s = normalizeStr(name);
+  if (!s) return null;
+
+  // corta quando aparecer uma keyword típica do resto do nome
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(/\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23)\b/gi, "")
+  );
+
+  if (!cleaned) return null;
+  return cleaned;
+}
+
+/** Obtém label do clube (NUNCA devolve "Club") */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
+  const teamClean = cleanTeamValue(p.team ?? null);
+
+  // 1) tenta pelo campo team (se for válido)
+  const byTeam = clubFromString(teamClean);
   if (byTeam) return byTeam;
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  // 2) tenta pelo nome com patterns (Real Madrid etc.)
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Club";
+  // 3) fallback: inferir pela primeira palavra/segmento do nome
+  const inferred = inferClubFromName(p.name);
+  return inferred ?? "";
 }
 
 /* ============================ Helpers de filtro ============================ */
@@ -146,6 +183,7 @@ function ProductCard({ p }: { p: UIProduct }) {
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
+
   const teamLabel = getClubLabel(p);
 
   return (
@@ -180,9 +218,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-            {teamLabel}
-          </div>
+          {/* ✅ FIX: só renderiza se existir label (nunca mostra CLUB) */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-sm sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
