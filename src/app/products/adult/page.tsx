@@ -62,7 +62,7 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= NOME DO CLUBE/SELEÇÃO (FIX TOTAL: nunca “CLUB”, nunca cores/PRIMARY, e sem bugs Madrid) ========= */
+/* ========= NOME DO CLUBE/SELEÇÃO (FIX TOTAL: nunca “CLUB”, nunca cores/PRIMARY, etc.) ========= */
 
 function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
@@ -78,7 +78,6 @@ function toTitleCaseSmart(input: string) {
       const raw = w.replace(/\s+/g, "");
       if (!raw) return raw;
 
-      // mantém siglas curtas em CAPS (FC, SC, CF, AC, PSG, etc.)
       const onlyLetters = raw.replace(/[^A-Za-z]/g, "");
       if (
         onlyLetters.length > 0 &&
@@ -96,12 +95,8 @@ function toTitleCaseSmart(input: string) {
     .join(" ");
 }
 
-// ⚠️ BUG ORIGINAL: "real madrid|madrid" fazia Atlético de Madrid virar Real Madrid.
-// ✅ FIX: Real Madrid só com "real madrid".
+// ✅ FIX Madrid (Real Madrid só com "real madrid")
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  // Inglaterra (adicionado para evitar "ARSENAL TRICOLOR" etc.)
-  [/\barsenal\b/i, "Arsenal"],
-
   // Espanha
   [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
@@ -152,33 +147,9 @@ const COLOR_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
-/**
- * Palavras “descritoras” que NÃO fazem parte do nome do clube/seleção,
- * e que aparecem MUITO no campo team (ex.: "ARSENAL TRICOLOR").
- * ✅ Isto garante que nunca aparece "ARSENAL TRICOLOR", só "ARSENAL".
- */
-const DESCRIPTOR_WORDS = new Set(
-  [
-    "TRICOLOR",
-    "TRI-COLOR",
-    "TRICOLOUR",
-    "TRI-COLOUR",
-    "BICOLOR",
-    "BI-COLOR",
-    "BICOLOUR",
-    "BI-COLOUR",
-    "MULTICOLOR",
-    "MULTI-COLOR",
-    "MULTICOLOUR",
-    "MULTI-COLOUR",
-    "COLORWAY",
-    "COLOURWAY",
-  ].map((x) => x.toUpperCase())
-);
-
+// palavras “lixo” comuns
 const VARIANT_WORDS = new Set(
   [
-    // variantes típicas (o teu caso: "ARGENTINA PRIMARY")
     "PRIMARY",
     "HOME",
     "AWAY",
@@ -191,7 +162,6 @@ const VARIANT_WORDS = new Set(
     "FIRST",
     "SECOND",
 
-    // lixo comum que aparece no campo team/label
     "CLUB",
     "TEAM",
     "MEN",
@@ -200,7 +170,6 @@ const VARIANT_WORDS = new Set(
     "KIDS",
     "YOUTH",
 
-    // às vezes vem misturado
     "GOALKEEPER",
     "GK",
     "JERSEY",
@@ -221,11 +190,83 @@ const VARIANT_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
+// descritores/coleções que NÃO podem ficar no label do clube
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    // ✅ exemplos do teu problema (genérico)
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+    "SPECIAL",
+    "LIMITED",
+  ].map((x) => x.toUpperCase())
+);
+
+/**
+ * ✅ Lista de “começos” que normalmente fazem parte de nomes multi-palavra
+ * (para NÃO cortar "Real Madrid", "Manchester City", "South Korea", etc.)
+ */
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function cleanTeamValue(v?: string | null): string {
   let s = normalizeStr(v);
   if (!s) return "";
 
-  // remove chars estranhos e espaços
   s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
   if (!s) return "";
 
@@ -236,7 +277,7 @@ function cleanTeamValue(v?: string | null): string {
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing words tipo PRIMARY / RED / BLACK / TRICOLOR / CUP / etc.
+  // remove trailing lixo
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -260,10 +301,13 @@ function cleanTeamValue(v?: string | null): string {
     break;
   }
 
-  // ✅ Segurança extra: se “TRICOLOR” aparecer no fim por causa de caracteres,
-  // removemos de novo (sem afetar "Manchester City", "Real Betis", etc.)
   let joined = normalizeStr(out.join(" "));
-  joined = joined.replace(/\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi, "");
+
+  // fallback extra (variações com hífen / spelling)
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
   joined = normalizeStr(joined);
 
   return joined;
@@ -279,47 +323,85 @@ function clubFromString(input?: string | null): string | null {
 }
 
 /**
+ * ✅ REGRA FINAL (a que estava a faltar):
+ * Se depois de limpar ainda vier "Chelsea Shadow" / "Japan Samurai",
+ * cortamos para só o clube (primeira palavra), EXCETO em casos multi-palavra.
+ */
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  // se bater nos patterns, devolve exatamente o “canon”
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) {
+    // mantém como veio (já limpo), porque provavelmente é multi-palavra legítimo
+    return s;
+  }
+
+  // se a 2ª palavra for descriptor (Shadow/Samurai/etc), corta
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  // ✅ regra “garantia”: se for 2+ palavras e NÃO for multiword starter,
+  // e o teu objetivo é “NUNCA aparecer apelido”, então corta sempre no 1º token.
+  // (isto é o que garante que "Chelsea Shadow" vira "Chelsea" SEM lista infinita)
+  return parts[0];
+}
+
+/**
  * Inferir nome (clube/seleção) pelo nome do produto:
  * - "Argentina Primary Goalkeeper Jersey 2026 – World Cup" -> "Argentina"
  * - "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal"
- * - "Dortmund Cup Jersey 25/26" -> "Dortmund"
+ * - "Chelsea Shadow Training Sleeveless Set 24/25" -> "Chelsea"
  */
 function inferClubFromName(name?: string | null): string {
   const s = normalizeStr(name);
   if (!s) return "";
 
-  // corta no primeiro keyword de produto
   const cut = s.split(
     /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept|World\s*Cup)\b/i
   )[0];
 
-  // remove épocas
   const cleaned = normalizeStr(
-    cut.replace(/\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi, "")
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
   );
 
-  // aplica a mesma limpeza usada no team (tira PRIMARY/cores/TRICOLOR/CUP/etc.)
-  return cleanTeamValue(cleaned);
+  // limpa lixo e depois aplica clamp final
+  return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ label final: tenta team -> patterns -> infer pelo nome; nunca devolve "Club" */
+/** ✅ label final: team -> patterns -> infer; SEMPRE passa pelo clamp final */
 function getClubLabel(p: UIProduct): string {
-  // 1) usa team se existir, mas limpando "PRIMARY", cores, TRICOLOR, etc.
+  // 1) team
   const teamClean = cleanTeamValue(p.team ?? null);
   if (teamClean) {
-    const byTeamPattern = clubFromString(teamClean);
-    return byTeamPattern ?? toTitleCaseSmart(teamClean);
+    const clamped = hardClampClubName(teamClean);
+    const byTeamPattern = clubFromString(clamped);
+    return byTeamPattern ?? toTitleCaseSmart(clamped);
   }
 
-  // 2) tenta patterns no nome (Real Madrid, Atlético, Arsenal, etc.)
+  // 2) patterns no nome
   const byNamePattern = clubFromString(p.name);
   if (byNamePattern) return byNamePattern;
 
-  // 3) infer pelo nome do produto e normaliza casing
+  // 3) infer pelo nome
   const inferred = inferClubFromName(p.name);
   if (inferred) return toTitleCaseSmart(inferred);
 
-  // último fallback (nunca “Club”)
   return "";
 }
 
@@ -329,11 +411,6 @@ function normName(p: UIProduct) {
   return (p.name ?? "").toUpperCase();
 }
 
-/** Adult:
- *  - EXCLUI nome com "Kid" / "Kids"
- *  - EXCLUI nome com "Crop Top"
- *  - Mostra tudo o resto
- */
 function isAdultProduct(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
@@ -382,7 +459,6 @@ function getPriceEurFromApi(raw: any): number | undefined {
   if (typeof raw.price === "number") return raw.price;
   if (typeof raw.currentPrice === "number") return raw.currentPrice;
 
-  // basePrice / priceCents em cêntimos
   if (typeof raw.basePrice === "number") {
     const v = raw.basePrice;
     if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
@@ -466,7 +542,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -558,24 +633,7 @@ function buildPaginationRange(
 
 const PAGE_SIZE = 12;
 
-// queries largas para puxar praticamente o catálogo todo
-const SEARCH_QUERIES = [
-  "a",
-  "e",
-  "i",
-  "o",
-  "u",
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-];
+const SEARCH_QUERIES = ["a", "e", "i", "o", "u", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 export default function AdultPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
@@ -584,11 +642,8 @@ export default function AdultPage() {
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<
-    "team" | "price-asc" | "price-desc" | "random"
-  >("team");
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">("team");
 
-  // Agora usamos /api/search com várias queries para trazer o catálogo completo
   useEffect(() => {
     let cancelled = false;
 
@@ -613,7 +668,6 @@ export default function AdultPage() {
           allRaw.push(...list);
         }
 
-        // remover duplicados (id / slug / name)
         const seen = new Set<string>();
         const uniqueRaw: any[] = [];
         for (const p of allRaw) {
@@ -649,7 +703,6 @@ export default function AdultPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -659,7 +712,6 @@ export default function AdultPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -672,16 +724,13 @@ export default function AdultPage() {
     if (sort === "price-asc" || sort === "price-desc") {
       const copy = base.slice();
       copy.sort((a, b) => {
-        const pa =
-          typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
-        const pb =
-          typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        const pa = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const pb = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
         return sort === "price-asc" ? pa - pb : pb - pa;
       });
       return copy;
     }
 
-    // default: ordenar por teamLabel + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
@@ -715,7 +764,6 @@ export default function AdultPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER (mobile-first) */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -740,7 +788,6 @@ export default function AdultPage() {
         </div>
       </section>
 
-      {/* CONTEÚDO (barra de info + filtros) */}
       <section className="container-fw section-gap pb-10">
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
@@ -815,8 +862,7 @@ export default function AdultPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm col-span-full">
-                  No adult products were found (they might all be Kids or Crop
-                  Top items).
+                  No adult products were found (they might all be Kids or Crop Top items).
                 </p>
               )}
 
