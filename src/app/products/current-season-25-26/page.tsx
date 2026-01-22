@@ -62,7 +62,7 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (fix: nunca mostrar "CLUB" e remover cores) ========= */
+/* ========= Extração do NOME DO CLUBE (fix: nunca mostrar "CLUB" e ficar só o nome) ========= */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   // Espanha
@@ -90,22 +90,18 @@ function cleanTeamValue(v?: string | null): string {
   const s = normalizeStr(v);
   if (!s) return "";
   const up = s.toUpperCase();
-  // valores lixo
   if (up === "CLUB" || up === "TEAM") return "";
   return s;
 }
 
-/** Remove descritores de cor do fim: "Arsenal Red & Black" => "Arsenal" */
+/** Remove descritores de cor: "Arsenal Red & Black" => "Arsenal" */
 function stripColorDescriptors(input: string): string {
   let s = normalizeStr(input);
   if (!s) return "";
 
-  // se tiver " & " e a parte direita parece cor, fica com a esquerda
-  // ex: "Arsenal Red & Black" -> "Arsenal Red"
+  // "Arsenal Red & Black" -> "Arsenal Red"
   const amp = s.split(/\s*&\s*/);
-  if (amp.length > 1) {
-    s = normalizeStr(amp[0]);
-  }
+  if (amp.length > 1) s = normalizeStr(amp[0]);
 
   const colorWords = [
     "RED",
@@ -139,8 +135,8 @@ function stripColorDescriptors(input: string): string {
   ];
 
   const tokens = s.split(/\s+/);
-  // corta no primeiro token que seja cor (ou parte de cor)
   let cutIndex = tokens.length;
+
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i].toUpperCase().replace(/[^A-Z-]/g, "");
     const t2 = t.replace(/-/g, "");
@@ -152,6 +148,48 @@ function stripColorDescriptors(input: string): string {
 
   const out = normalizeStr(tokens.slice(0, cutIndex).join(" "));
   return out || s;
+}
+
+/** Remove “lixo” do fim: "Dortmund Cup" => "Dortmund" */
+function stripSuffixNoise(input: string): string {
+  let s = normalizeStr(input);
+  if (!s) return "";
+
+  const noise = new Set([
+    "CUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+    "SHADOW",
+    "CLASSIC",
+    "LEGEND",
+    "ICON",
+    "ICONS",
+    "HERITAGE",
+    "PREMATCH",
+    "PRE-MATCH",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+  ]);
+
+  let tokens = s.split(/\s+/);
+
+  while (tokens.length > 1) {
+    const last = tokens[tokens.length - 1]
+      .toUpperCase()
+      .replace(/[^A-Z-]/g, "");
+    const last2 = last.replace(/-/g, "");
+    if (noise.has(last) || noise.has(last2)) {
+      tokens = tokens.slice(0, -1);
+      continue;
+    }
+    break;
+  }
+
+  return normalizeStr(tokens.join(" ")) || s;
 }
 
 function clubFromString(input?: string | null): string | null {
@@ -166,7 +204,8 @@ function clubFromString(input?: string | null): string | null {
 /**
  * Inferir clube pelo nome do produto:
  * "Juventus Away Jersey 25/26" -> "Juventus"
- * "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal" (com stripColorDescriptors)
+ * "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal"
+ * "Dortmund Cup Jersey 25/26" -> "Dortmund"
  */
 function inferClubFromName(name?: string | null): string | null {
   const s = normalizeStr(name);
@@ -183,9 +222,13 @@ function inferClubFromName(name?: string | null): string | null {
 
   if (!cleaned) return null;
 
-  // ✅ FIX PRINCIPAL: remove cores/descritores
-  const stripped = stripColorDescriptors(cleaned);
-  return stripped || cleaned;
+  // 1) remove cores
+  const noColors = stripColorDescriptors(cleaned);
+
+  // 2) remove “palavras extra” no fim (Cup, Edition, etc.)
+  const onlyName = stripSuffixNoise(noColors);
+
+  return onlyName || noColors || cleaned;
 }
 
 /** Obtém label do clube (NUNCA devolve "Club") */
@@ -200,7 +243,7 @@ function getClubLabel(p: UIProduct): string {
   const byNamePattern = clubFromString(p.name);
   if (byNamePattern) return byNamePattern;
 
-  // 3) fallback: inferir pela primeira parte do nome (agora limpando cores)
+  // 3) fallback: inferir pela primeira parte do nome (limpa cores + “Cup” etc.)
   const inferred = inferClubFromName(p.name);
   return inferred ?? "";
 }
@@ -277,7 +320,7 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só renderiza se existir label */}
+          {/* ✅ só renderiza se existir label (e agora fica só nome) */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
