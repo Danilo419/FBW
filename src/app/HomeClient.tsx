@@ -1279,7 +1279,7 @@ export default function Home() {
     {
       key: 'tracksuits',
       title: 'Tracksuits',
-      subtitle: 'Tracksuits (excluding Training Tracksuits)',
+      subtitle: 'Tracksuits for Casual Wear',
       href: '/products/tracksuits',
       group: 'Training',
     },
