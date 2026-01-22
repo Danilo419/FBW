@@ -1,127 +1,74 @@
 // src/app/api/home-products/route.ts
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-function parseLimit(raw: string | null): number | "all" {
-  if (!raw) return 120; // default razoável
-  const v = raw.trim().toLowerCase();
-  if (v === "all" || v === "infinite" || v === "infinity") return "all";
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 120;
-  return Math.floor(n);
-}
-
-// (opcional) baralhar em memória — para "all" pode ser pesado, então deixei desligado por default
 function shuffle<T>(arr: T[]): T[] {
-  const a = arr.slice();
+  const a = arr.slice()
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
   }
-  return a;
+  return a
 }
+
+const ABS_MAX_TAKE = 50000 // “quase infinito” mas com proteção (podes aumentar se quiseres)
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(req.url)
+    const limitParamRaw = (searchParams.get('limit') ?? '').trim()
 
-    const limitRaw = searchParams.get("limit");
-    const limit = parseLimit(limitRaw);
+    const wantsAll =
+      limitParamRaw.toLowerCase() === 'all' ||
+      limitParamRaw.toLowerCase() === 'infinite' ||
+      limitParamRaw.toLowerCase() === 'infinity'
 
-    // cursor opcional (paginação)
-    const cursor = searchParams.get("cursor");
+    let take: number | undefined
 
-    // se quiseres baralhar no servidor, manda ?shuffle=1
-    const shuffleParam = searchParams.get("shuffle");
-    const shouldShuffle = shuffleParam === "1" || shuffleParam === "true";
-
-    // Seleciona só o que a Home precisa (reduz payload e acelera MUITO)
-    const select = {
-      id: true,
-      slug: true,
-      name: true,
-      team: true,
-      club: true,
-      clubName: true,
-
-      basePrice: true,
-      priceCents: true,
-      price: true,
-      compareAtPriceCents: true,
-      compareAtPrice: true,
-
-      imageUrls: true,
-      mainImage: true,
-      mainImageUrl: true,
-      mainImageURL: true,
-      image: true,
-      imageUrl: true,
-      imageURL: true,
-
-      createdAt: true,
-    };
-
-    // ============================
-    // MODO "ALL" → devolve tudo
-    // ============================
-    if (limit === "all") {
-      const products = await prisma.product.findMany({
-        orderBy: { createdAt: "desc" },
-        select,
-      });
-
-      const out = shouldShuffle ? shuffle(products) : products;
-
-      return NextResponse.json({
-        products: out,
-        pageInfo: {
-          mode: "all",
-          count: out.length,
-          nextCursor: null,
-        },
-      });
+    if (wantsAll) {
+      // conta e busca tudo (com um teto de segurança)
+      const total = await prisma.product.count()
+      take = Math.min(total, ABS_MAX_TAKE)
+    } else {
+      const n = Number(limitParamRaw || '40')
+      const safe = Number.isFinite(n) ? Math.floor(n) : 40
+      // aqui NÃO há limite 80/120 — só um teto gigante de segurança
+      take = Math.min(Math.max(safe, 1), ABS_MAX_TAKE)
     }
 
-    // ============================
-    // MODO "PAGINADO"
-    // ============================
-    const take = Math.max(1, limit);
+    // Tenta com orderBy createdAt (se existir); se não existir, faz fallback sem orderBy
+    let products: any[] = []
+    try {
+      products = await prisma.product.findMany({
+        take,
+        orderBy: { createdAt: 'desc' as any },
+      })
+    } catch {
+      products = await prisma.product.findMany({
+        take,
+      })
+    }
 
-    const products = await prisma.product.findMany({
-      take: take + 1, // +1 para saber se há "next page"
-      ...(cursor
-        ? {
-            cursor: { id: cursor },
-            skip: 1,
-          }
-        : {}),
-      orderBy: { createdAt: "desc" },
-      select,
-    });
+    // Se pediu "all", devolve TODOS (baralhados)
+    // Se pediu número, devolve esse número (baralhado), mas sem “pegar só 2” por causa de pool curta
+    const shuffled = shuffle(products)
 
-    const hasMore = products.length > take;
-    const pageItems = hasMore ? products.slice(0, take) : products;
+    if (wantsAll) {
+      return NextResponse.json({ products: shuffled })
+    }
 
-    const out = shouldShuffle ? shuffle(pageItems) : pageItems;
-    const nextCursor = hasMore ? pageItems[pageItems.length - 1]?.id ?? null : null;
+    const limit = Math.min(take ?? 40, shuffled.length)
+    const selected = shuffled.slice(0, limit)
 
-    return NextResponse.json({
-      products: out,
-      pageInfo: {
-        mode: "paged",
-        limit: take,
-        count: out.length,
-        nextCursor,
-      },
-    });
+    return NextResponse.json({ products: selected })
   } catch (err) {
-    console.error("Error in /api/home-products:", err);
+    console.error('Error in /api/home-products:', err)
     return NextResponse.json(
-      { products: [], error: "Failed to load products" },
+      { products: [], error: 'Failed to load products' },
       { status: 500 }
-    );
+    )
   }
 }
