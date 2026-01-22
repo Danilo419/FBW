@@ -927,6 +927,31 @@ function isTracksuitNonTraining(p: HomeProduct): boolean {
   return hasWords(p, ['TRACKSUIT']) && !isTrainingTracksuit(p)
 }
 
+/* ======================================================================================
+   ✅ NOVO: FIFA World Cup 2026 Jerseys (name contains "World Cup" + "2026")
+====================================================================================== */
+
+function isWorldCup2026(p: HomeProduct): boolean {
+  return hasWords(p, ['WORLD', 'CUP', '2026'])
+}
+
+// "jersey-like" (para não puxar sets/shorts/tracksuits/crop tops/kids kits)
+function isJerseyLikeProduct(p: HomeProduct): boolean {
+  if (isTrainingSleevelessSet(p)) return false
+  if (isTrainingTracksuit(p)) return false
+  if (isTracksuitNonTraining(p)) return false
+  if (isCropTop(p)) return false
+  if (isKidsKit(p)) return false
+
+  const n = nameU(p)
+  if (!n) return false
+  if (n.includes('SET')) return false
+  if (n.includes('SHORTS')) return false
+  if (n.includes('TRACKSUIT')) return false
+
+  return true
+}
+
 /* ---------- Product Card ---------- */
 
 function ProductCard({ product }: { product: HomeProduct }) {
@@ -1151,6 +1176,9 @@ export default function Home() {
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
+      // ✅ NOVO (para aparecer logo em primeiro, vamos renderizar fora dos grupos)
+      worldCup2026: mk((p) => isWorldCup2026(p) && isJerseyLikeProduct(p)),
+
       currentSeason: mk(
         (p) => hasTermRaw(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
@@ -1324,6 +1352,9 @@ export default function Home() {
     'Kids & Woman',
   ]
 
+  // ✅ link reservado para quando pedires a página
+  const WORLD_CUP_2026_HREF = '/products/fifa-world-cup-2026-jerseys'
+
   return (
     <div className="min-h-screen">
       {/* HERO */}
@@ -1348,9 +1379,9 @@ export default function Home() {
                   Authentic &amp; Concept Football Jerseys
                 </h1>
                 <p className="mt-4 text-gray-600 max-w-prose">
-                  We sell existing club and national-team jerseys, as well as original
-                  concept jerseys, made to order with reliable worldwide tracked
-                  shipping.
+                  We sell existing club and national-team jerseys, as well as
+                  original concept jerseys, made to order with reliable worldwide
+                  tracked shipping.
                 </p>
                 <div className="mt-6 flex items-center gap-3">
                   <MagneticButton href="/products">
@@ -1457,7 +1488,9 @@ export default function Home() {
       {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Highlights</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Highlights
+          </h2>
         </div>
 
         <ImageSpaces />
@@ -1476,8 +1509,8 @@ export default function Home() {
                   Some of our products
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
-                  Horizontally-scrolling selections for each product type. Everything
-                  appears in a fully random order on every page load.
+                  Horizontally-scrolling selections for each product type.
+                  Everything appears in a fully random order on every page load.
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
@@ -1512,6 +1545,30 @@ export default function Home() {
 
             {!loadingHomeProducts && categories && (
               <div className="space-y-10">
+                {/* ✅ NOVO: logo em primeiro */}
+                {categories.worldCup2026 && categories.worldCup2026.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div>
+                        <h4 className="text-lg sm:text-xl font-semibold tracking-tight">
+                          FIFA World Cup 2026 Jerseys
+                        </h4>
+                        <p className="text-xs sm:text-sm text-gray-500">
+                          Only products that include “World Cup” + “2026” in the name.
+                        </p>
+                      </div>
+                      <a
+                        href={WORLD_CUP_2026_HREF}
+                        className="text-xs sm:text-sm text-blue-700 hover:underline"
+                      >
+                        View all →
+                      </a>
+                    </div>
+
+                    <ProductMarquee products={categories.worldCup2026} />
+                  </div>
+                )}
+
                 {GROUP_ORDER.map((groupLabel) => {
                   const groupItems = CATEGORY_UI.filter(
                     (c) =>
@@ -1638,8 +1695,8 @@ export default function Home() {
                 Choose your next jersey with confidence
               </h3>
               <p className="mt-2 text-gray-600">
-                Discover authentic club and national-team kits alongside our original
-                concept designs, then pick your next favorite.
+                Discover authentic club and national-team kits alongside our
+                original concept designs, then pick your next favorite.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
@@ -1647,8 +1704,8 @@ export default function Home() {
                   personalization
                 </li>
                 <li className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-blue-600" /> Secure payments via
-                  Stripe
+                  <ShieldCheck className="h-4 w-4 text-blue-600" /> Secure payments
+                  via Stripe
                 </li>
                 <li className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-amber-600" /> Economy shipping with
