@@ -1554,7 +1554,7 @@ export default function Home() {
                           FIFA World Cup 2026 Jerseys
                         </h4>
                         <p className="text-xs sm:text-sm text-gray-500">
-                          Only products that include “World Cup” + “2026” in the name.
+                          Exclusive selection of World Cup 2026 jerseys.
                         </p>
                       </div>
                       <a
