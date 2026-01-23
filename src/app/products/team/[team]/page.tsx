@@ -135,7 +135,10 @@ function labelFromName(name?: string | null): string | null {
 }
 
 /* ============================ Page ============================ */
-export default async function TeamProductsPage({ params, searchParams }: PageProps) {
+export default async function TeamProductsPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { team } = await params;
   const slug = team.toLowerCase();
   const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
@@ -214,8 +217,8 @@ function List({
       </div>
 
       <div className="container-fw py-8 sm:py-10">
-        {/* Grid de produtos */}
-        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {/* Grid de produtos (2 por linha no mobile) */}
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
             const euros = Math.floor(p.basePrice / 100).toString();
@@ -232,49 +235,50 @@ function List({
               <a
                 key={p.slug}
                 href={`/products/${p.slug}`}
-                className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden"
+                className="group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200"
               >
                 {compare && (
-                  <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+                  <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 px-2.5 py-1 text-xs font-extrabold text-white shadow-md ring-1 ring-red-700/40">
                     -{compare.pct}%
                   </div>
                 )}
 
-                <div className="flex flex-col h-full">
+                <div className="flex h-full flex-col">
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={src}
                       alt={p.name}
                       loading="lazy"
-                      className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                      className="absolute inset-0 h-full w-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
 
-                  <div className="p-5 flex flex-col grow">
-                    <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                  <div className="flex grow flex-col p-4 sm:p-5">
+                    <div className="text-[11px] font-semibold/relaxed uppercase tracking-wide text-sky-600">
                       {chipText}
                     </div>
-                    <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+
+                    <div className="mt-1 line-clamp-2 text-[13px] sm:text-base font-semibold leading-tight text-slate-900">
                       {p.name}
                     </div>
 
                     {/* Preço */}
-                    <div className="mt-4 flex items-baseline gap-2">
+                    <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
                       {compare && (
-                        <div className="text-[13px] text-slate-500 line-through">
+                        <div className="text-[12px] sm:text-[13px] text-slate-500 line-through">
                           {moneyAfterEUR(compare.compareAt)}
                         </div>
                       )}
 
                       <div className="flex items-end text-[#1c40b7]">
-                        <span className="text-2xl font-semibold tracking-tight leading-none">
+                        <span className="text-[20px] sm:text-2xl font-semibold tracking-tight leading-none">
                           {euros}
                         </span>
-                        <span className="text-[13px] font-medium translate-y-[1px]">
+                        <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
                           ,{dec}
                         </span>
-                        <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                        <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                           €
                         </span>
                       </div>
@@ -282,12 +286,12 @@ function List({
 
                     <div className="mt-auto">
                       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                      <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <div className="h-11 sm:h-12 flex items-center gap-2 text-[13px] sm:text-sm font-medium text-slate-700">
                         <span className="transition group-hover:translate-x-0.5">
                           View product
                         </span>
                         <svg
-                          className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                          className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                           aria-hidden="true"
@@ -313,7 +317,9 @@ function List({
             <ul className="flex items-center gap-3">
               <li>
                 <PaginationPill
-                  href={currentPage > 1 ? `/products/team/${teamSlug}?page=1` : undefined}
+                  href={
+                    currentPage > 1 ? `/products/team/${teamSlug}?page=1` : undefined
+                  }
                   label="Primeira página"
                 >
                   &laquo;
@@ -389,7 +395,11 @@ function PaginationPill({
 
   if (active) {
     return (
-      <span aria-current="page" aria-label={label} className={`${base} ${activeCls}`}>
+      <span
+        aria-current="page"
+        aria-label={label}
+        className={`${base} ${activeCls}`}
+      >
         {children}
       </span>
     );

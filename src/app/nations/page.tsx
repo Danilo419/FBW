@@ -64,7 +64,7 @@ export default async function NationsPage() {
     <main className="min-h-screen bg-white py-6 md:py-10">
       <div className="container-fw mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6 md:mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 md:mb-8 flex flex-col gap-4 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900">
               Nations
@@ -94,7 +94,6 @@ export default async function NationsPage() {
               href={`/nations/${nation.slug}`}
               className="group block touch-manipulation"
             >
-              {/* ⬆️ CARD AINDA MAIS ALTO */}
               <div className="relative aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
                 {nation.image ? (
                   <img
