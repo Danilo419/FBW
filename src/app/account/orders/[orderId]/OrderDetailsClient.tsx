@@ -1,77 +1,109 @@
-'use client';
+'use client'
 
-import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Loader2 } from 'lucide-react'
 
 function money(cents?: number | null, currency = 'EUR') {
-  const n = typeof cents === 'number' ? cents : 0;
-  return (n / 100).toLocaleString(undefined, { style: 'currency', currency });
+  const n = typeof cents === 'number' ? cents : 0
+  return (n / 100).toLocaleString(undefined, { style: 'currency', currency })
 }
+
+/* ========================= Types ========================= */
 
 type ShippingJson =
   | {
-      name?: string | null;
-      email?: string | null;
-      phone?: string | null;
+      name?: string | null
+      email?: string | null
+      phone?: string | null
       address?: {
-        line1?: string | null;
-        line2?: string | null;
-        city?: string | null;
-        state?: string | null;
-        postal_code?: string | null;
-        country?: string | null;
-      } | null;
+        line1?: string | null
+        line2?: string | null
+        city?: string | null
+        state?: string | null
+        postal_code?: string | null
+        country?: string | null
+      } | null
     }
-  | null;
+  | null
 
 type OrderItemDTO = {
-  id: string;
-  qty: number;
-  unitPrice: number; // cents
-  totalPrice: number; // cents
-  name: string;
-  image?: string | null;
-  snapshotJson?: any;
+  id: string
+  qty: number
+  unitPrice: number // cents
+  totalPrice: number // cents
+  name: string
+  image?: string | null
+  snapshotJson?: any
+  personalizationJson?: any
   product: {
-    id: string;
-    name: string;
-    imageUrls: string[];
-    badges: string[];
-  };
-};
+    id: string
+    name: string
+    slug?: string | null
+    imageUrls: string[]
+    badges: string[]
+  }
+}
 
 type OrderDetailsDTO = {
-  id: string;
-  createdAt: string;
-  paidAt?: string | null;
-  status: string;
-  paymentStatus?: string | null;
+  id: string
+  createdAt: string
+  paidAt?: string | null
+  status: string
+  paymentStatus?: string | null
 
-  currency: string;
-  subtotal?: number | null; // cents
-  shipping?: number | null; // cents
-  tax?: number | null; // cents
-  totalCents?: number | null; // cents (preferred)
-  total?: number | null; // legacy float
+  currency: string
+  subtotal?: number | null // cents
+  shipping?: number | null // cents
+  tax?: number | null // cents
+  totalCents?: number | null // cents (preferred)
+  total?: number | null // legacy float
 
   // shipping canonical (if your API returns these)
-  shippingFullName?: string | null;
-  shippingEmail?: string | null;
-  shippingPhone?: string | null;
-  shippingAddress1?: string | null;
-  shippingAddress2?: string | null;
-  shippingCity?: string | null;
-  shippingRegion?: string | null;
-  shippingPostalCode?: string | null;
-  shippingCountry?: string | null;
+  shippingFullName?: string | null
+  shippingEmail?: string | null
+  shippingPhone?: string | null
+  shippingAddress1?: string | null
+  shippingAddress2?: string | null
+  shippingCity?: string | null
+  shippingRegion?: string | null
+  shippingPostalCode?: string | null
+  shippingCountry?: string | null
 
   // or snapshot JSON (if your API returns this)
-  shippingJson?: ShippingJson;
+  shippingJson?: ShippingJson
 
-  items: OrderItemDTO[];
-};
+  items: OrderItemDTO[]
+}
+
+/* ========================= Helpers ========================= */
+
+function safeParseJSON(input: any): Record<string, any> {
+  if (!input) return {}
+  if (typeof input === 'string') {
+    try {
+      return JSON.parse(input)
+    } catch {
+      return {}
+    }
+  }
+  if (typeof input === 'object') return input as Record<string, any>
+  return {}
+}
+
+function pickStr(o: any, keys: string[]): string | null {
+  if (!o || typeof o !== 'object') return null
+  for (const k of keys) {
+    const v = (o as any)?.[k]
+    if (v != null && String(v).trim() !== '') return String(v)
+  }
+  return null
+}
+
+function ensureArray<T>(v: any): T[] {
+  return Array.isArray(v) ? v : []
+}
 
 function shippingFromOrder(order: any): ShippingJson {
   const canonical: ShippingJson = {
@@ -86,7 +118,7 @@ function shippingFromOrder(order: any): ShippingJson {
       postal_code: order?.shippingPostalCode ?? null,
       country: order?.shippingCountry ?? null,
     },
-  };
+  }
 
   const hasCanonical =
     canonical?.name ||
@@ -94,80 +126,235 @@ function shippingFromOrder(order: any): ShippingJson {
     canonical?.phone ||
     canonical?.address?.line1 ||
     canonical?.address?.city ||
-    canonical?.address?.country;
+    canonical?.address?.country
 
-  if (hasCanonical) return canonical;
+  if (hasCanonical) return canonical
 
-  const snap = (order?.shippingJson ?? null) as ShippingJson;
-  return snap ?? { name: null, email: null, phone: null, address: null };
+  const snap = (order?.shippingJson ?? null) as ShippingJson
+  return snap ?? { name: null, email: null, phone: null, address: null }
 }
 
 function computeTotalCents(order: any) {
-  if (typeof order?.totalCents === 'number') return order.totalCents;
-  if (typeof order?.total === 'number') return Math.round(order.total * 100); // legacy float
+  if (typeof order?.totalCents === 'number') return order.totalCents
+  if (typeof order?.total === 'number') return Math.round(order.total * 100) // legacy float
 
   const itemsSum =
-    (order?.items || []).reduce(
-      (acc: number, it: any) => acc + (Number(it?.totalPrice) || 0),
-      0
-    ) || 0;
+    (order?.items || []).reduce((acc: number, it: any) => acc + (Number(it?.totalPrice) || 0), 0) || 0
 
-  const shipping = Number(order?.shipping) || 0;
-  const tax = Number(order?.tax) || 0;
-  return itemsSum + shipping + tax;
+  const shipping = Number(order?.shipping) || 0
+  const tax = Number(order?.tax) || 0
+  return itemsSum + shipping + tax
 }
 
+/* ========================= Item detail extraction (like admin) ========================= */
+
+function extractPersonalization(it: any, snap: any, optionsObj: any) {
+  const snapPers =
+    snap?.personalization && typeof snap.personalization === 'object' ? snap.personalization : null
+
+  const snapPersName = snapPers
+    ? pickStr(snapPers, ['name', 'playerName', 'customName', 'shirtName'])
+    : null
+
+  const snapPersNumber = snapPers
+    ? pickStr(snapPers, ['number', 'playerNumber', 'customNumber', 'shirtNumber'])
+    : null
+
+  const snapPersJ = safeParseJSON(snap?.personalizationJson)
+  const snapJName = pickStr(snapPersJ, ['name', 'playerName', 'customName', 'shirtName']) ?? null
+  const snapJNumber = pickStr(snapPersJ, ['number', 'playerNumber', 'customNumber', 'shirtNumber']) ?? null
+
+  const itPersJ = safeParseJSON(it?.personalizationJson)
+  const itJName = pickStr(itPersJ, ['name', 'playerName', 'customName', 'shirtName']) ?? null
+  const itJNumber = pickStr(itPersJ, ['number', 'playerNumber', 'customNumber', 'shirtNumber']) ?? null
+
+  const directName =
+    pickStr(it, [
+      'personalizationName',
+      'playerName',
+      'custName',
+      'nameOnShirt',
+      'shirtName',
+      'customName',
+    ]) ?? null
+
+  const directNumber =
+    pickStr(it, [
+      'personalizationNumber',
+      'playerNumber',
+      'custNumber',
+      'numberOnShirt',
+      'shirtNumber',
+      'customNumber',
+    ]) ?? null
+
+  const snapRootName =
+    pickStr(snap, ['custName', 'customerName', 'nameOnShirt', 'shirtName', 'playerName']) ?? null
+  const snapRootNumber =
+    pickStr(snap, ['custNumber', 'customerNumber', 'numberOnShirt', 'shirtNumber', 'playerNumber']) ??
+    null
+
+  const optName =
+    pickStr(optionsObj, ['custName', 'playerName', 'player_name', 'shirtName', 'shirt_name', 'nameOnShirt']) ??
+    null
+
+  const optNumber =
+    pickStr(optionsObj, [
+      'custNumber',
+      'playerNumber',
+      'player_number',
+      'shirtNumber',
+      'shirt_number',
+      'numberOnShirt',
+    ]) ?? null
+
+  const name =
+    (snapPersName ?? snapJName ?? itJName ?? directName ?? snapRootName ?? optName ?? null)?.trim() || null
+
+  const numRaw =
+    (snapPersNumber ?? snapJNumber ?? itJNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() ||
+    ''
+
+  const onlyDigits = String(numRaw).replace(/\D/g, '')
+  const number = onlyDigits ? onlyDigits : null
+
+  if (!name && !number) return null
+  return { name, number }
+}
+
+function normalizeBadges(rawBadges: any): string[] {
+  if (!rawBadges) return []
+  if (Array.isArray(rawBadges)) return rawBadges.map(String).filter(Boolean)
+  if (typeof rawBadges === 'object') return Object.values(rawBadges).map(String).filter(Boolean)
+  return [String(rawBadges)].filter(Boolean)
+}
+
+function deriveItemDetails(it: OrderItemDTO) {
+  const snap = safeParseJSON(it?.snapshotJson)
+
+  const optionsObj =
+    safeParseJSON(snap?.optionsJson) ||
+    safeParseJSON(snap?.options) ||
+    safeParseJSON(snap?.selected) ||
+    {}
+
+  const personalization = extractPersonalization(it, snap, optionsObj)
+
+  const size =
+    (optionsObj as any).size ??
+    snap?.size ??
+    pickStr(snap, ['sizeLabel', 'variant', 'skuSize']) ??
+    null
+
+  const rawBadges =
+    (optionsObj as any).badges ??
+    snap?.badges ??
+    (optionsObj as any)['competition_badge'] ??
+    null
+
+  const badgesFromSnap = normalizeBadges(rawBadges)
+
+  // Keep product badges too (some APIs store them here)
+  const badgesFromProduct = ensureArray<string>(it?.product?.badges).map(String).filter(Boolean)
+
+  // Merge + de-dupe
+  const allBadges = Array.from(new Set([...badgesFromSnap, ...badgesFromProduct])).filter(Boolean)
+
+  // Options: show clean key/value list (excluding noisy blobs)
+  const optionsPairs: Array<{ k: string; v: string }> = []
+  for (const [k, v] of Object.entries(optionsObj)) {
+    if (v == null || v === '') continue
+    // avoid dumping huge objects
+    if (k.toLowerCase().includes('json')) continue
+
+    let vs = ''
+    if (Array.isArray(v)) vs = v.join(', ')
+    else if (typeof v === 'object') vs = Object.values(v as any).join(', ')
+    else vs = String(v)
+
+    vs = vs.trim()
+    if (!vs) continue
+
+    // avoid repeating badges/size since we show them explicitly
+    if (k.toLowerCase() === 'badges') continue
+    if (k.toLowerCase() === 'size') continue
+
+    optionsPairs.push({ k, v: vs })
+  }
+
+  return { size, personalization, badges: allBadges, optionsPairs }
+}
+
+function prettyKey(k: string) {
+  // small niceness for UI labels
+  const map: Record<string, string> = {
+    custName: 'Name',
+    custNumber: 'Number',
+    nameOnShirt: 'Name',
+    numberOnShirt: 'Number',
+    playerName: 'Name',
+    playerNumber: 'Number',
+  }
+  if (map[k]) return map[k]
+  return k
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (m) => m.toUpperCase())
+}
+
+/* ========================= Component ========================= */
+
 export default function OrderDetailsClient({ orderId }: { orderId: string }) {
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [order, setOrder] = useState<OrderDetailsDTO | null>(null);
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+  const [order, setOrder] = useState<OrderDetailsDTO | null>(null)
 
   useEffect(() => {
-    let alive = true;
+    let alive = true
 
     async function run() {
-      setLoading(true);
-      setErr(null);
+      setLoading(true)
+      setErr(null)
       try {
-        const r = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, { method: 'GET' });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j?.error || 'Failed to load order details');
-        if (!alive) return;
-        setOrder(j?.order ?? j?.data?.order ?? null);
+        const r = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, { method: 'GET' })
+        const j = await r.json()
+        if (!r.ok) throw new Error(j?.error || 'Failed to load order details')
+        if (!alive) return
+        setOrder(j?.order ?? j?.data?.order ?? null)
       } catch (e: any) {
-        if (!alive) return;
-        setErr(e?.message ?? 'Something went wrong');
+        if (!alive) return
+        setErr(e?.message ?? 'Something went wrong')
       } finally {
-        if (!alive) return;
-        setLoading(false);
+        if (!alive) return
+        setLoading(false)
       }
     }
 
-    run();
+    run()
     return () => {
-      alive = false;
-    };
-  }, [orderId]);
+      alive = false
+    }
+  }, [orderId])
 
-  const currency = useMemo(() => (order?.currency || 'eur').toUpperCase(), [order?.currency]);
+  const currency = useMemo(() => (order?.currency || 'eur').toUpperCase(), [order?.currency])
 
   const itemsSubtotal = useMemo(() => {
-    if (!order) return 0;
-    return order.items.reduce((acc, it) => acc + (Number(it.totalPrice) || 0), 0);
-  }, [order]);
+    if (!order) return 0
+    return order.items.reduce((acc, it) => acc + (Number(it.totalPrice) || 0), 0)
+  }, [order])
 
-  const ship = useMemo(() => (order ? shippingFromOrder(order) : null), [order]);
+  const ship = useMemo(() => (order ? shippingFromOrder(order) : null), [order])
 
-  const totalCents = useMemo(() => (order ? computeTotalCents(order) : 0), [order]);
+  const totalCents = useMemo(() => (order ? computeTotalCents(order) : 0), [order])
 
   const statusStyle = useMemo(() => {
-    const status = String(order?.status || '').toLowerCase();
+    const status = String(order?.status || '').toLowerCase()
     return status === 'paid' || status === 'shipped' || status === 'delivered'
       ? 'bg-green-100 text-green-700 border border-green-200'
       : status === 'pending'
-      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-      : 'bg-gray-100 text-gray-700 border';
-  }, [order?.status]);
+        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+        : 'bg-gray-100 text-gray-700 border'
+  }, [order?.status])
 
   return (
     <main className="container-fw pt-12 pb-20">
@@ -198,14 +385,10 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
           </div>
         )}
 
-        {!loading && err && (
-          <div className="rounded-2xl border p-4 bg-red-50 text-red-700 text-sm">{err}</div>
-        )}
+        {!loading && err && <div className="rounded-2xl border p-4 bg-red-50 text-red-700 text-sm">{err}</div>}
 
         {!loading && !err && !order && (
-          <div className="rounded-2xl border p-6 bg-white/70 text-center text-sm text-gray-600">
-            Order not found.
-          </div>
+          <div className="rounded-2xl border p-6 bg-white/70 text-center text-sm text-gray-600">Order not found.</div>
         )}
 
         {!loading && !err && order && (
@@ -217,12 +400,15 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
 
                 <ul className="divide-y">
                   {order.items.map((it) => {
-                    const img = it.image || it.product?.imageUrls?.[0] || '/placeholder.png';
-                    const title = it.name || it.product?.name || 'Item';
+                    const img = it.image || it.product?.imageUrls?.[0] || '/placeholder.png'
+                    const title = it.name || it.product?.name || 'Item'
+
+                    const details = deriveItemDetails(it)
+                    const productHref = it.product?.slug ? `/product/${it.product.slug}` : null
 
                     return (
-                      <li key={it.id} className="flex items-center gap-4 p-4">
-                        <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0">
+                      <li key={it.id} className="flex items-start gap-4 p-4">
+                        <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0 mt-0.5">
                           <Image
                             src={img}
                             alt={title}
@@ -235,20 +421,61 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">{title}</div>
+                          <div className="truncate font-medium">
+                            {productHref ? (
+                              <Link href={productHref} className="hover:underline">
+                                {title}
+                              </Link>
+                            ) : (
+                              title
+                            )}
+                          </div>
+
                           <div className="text-sm text-gray-600">
                             Qty: {it.qty}
                             <span className="mx-2">·</span>
                             {money(it.unitPrice, currency)} each
                           </div>
 
-                          {it.product?.badges?.length > 0 && (
+                          {/* ✅ Size / Personalization (like admin parsing) */}
+                          {(details.size || details.personalization?.name || details.personalization?.number) && (
+                            <div className="mt-2 text-sm text-gray-700 space-y-0.5">
+                              {details.size ? (
+                                <div>
+                                  <span className="text-gray-500">Size:</span> {details.size}
+                                </div>
+                              ) : null}
+
+                              {details.personalization ? (
+                                <div>
+                                  <span className="text-gray-500">Personalization:</span>{' '}
+                                  {details.personalization.name ? details.personalization.name : '—'}
+                                  {details.personalization.number ? ` · #${details.personalization.number}` : ''}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+
+                          {/* ✅ Options key/values (clean) */}
+                          {details.optionsPairs.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
-                              {it.product.badges.map((b, idx) => (
+                              {details.optionsPairs.map((p, idx) => (
                                 <span
-                                  key={`${b}-${idx}`}
+                                  key={`${p.k}-${idx}`}
                                   className="text-xs px-2 py-1 rounded-full border bg-white"
+                                  title={p.k}
                                 >
+                                  <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* ✅ Badges (merged from snapshot/options + product.badges) */}
+                          {details.badges.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {details.badges.map((b, idx) => (
+                                <span key={`${b}-${idx}`} className="text-xs px-2 py-1 rounded-full border bg-white">
                                   {b}
                                 </span>
                               ))}
@@ -258,7 +485,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
 
                         <div className="shrink-0 font-semibold">{money(it.totalPrice, currency)}</div>
                       </li>
-                    );
+                    )
                   })}
                 </ul>
               </div>
@@ -296,14 +523,12 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                     <span className="font-mono break-all">{order.id}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Created:</span>{' '}
-                    {new Date(order.createdAt).toLocaleString()}
+                    <span className="text-gray-500">Created:</span> {new Date(order.createdAt).toLocaleString()}
                   </div>
 
                   {order.paidAt && (
                     <div>
-                      <span className="text-gray-500">Paid at:</span>{' '}
-                      {new Date(order.paidAt).toLocaleString()}
+                      <span className="text-gray-500">Paid at:</span> {new Date(order.paidAt).toLocaleString()}
                     </div>
                   )}
 
@@ -328,12 +553,8 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                       <div>
                         {ship.address.line1 && <div>{ship.address.line1}</div>}
                         {ship.address.line2 && <div>{ship.address.line2}</div>}
-                        <div>
-                          {[ship.address.postal_code, ship.address.city].filter(Boolean).join(' ')}
-                        </div>
-                        <div>
-                          {[ship.address.state, ship.address.country].filter(Boolean).join(', ')}
-                        </div>
+                        <div>{[ship.address.postal_code, ship.address.city].filter(Boolean).join(' ')}</div>
+                        <div>{[ship.address.state, ship.address.country].filter(Boolean).join(', ')}</div>
                       </div>
                     )}
                   </div>
@@ -358,5 +579,5 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
         )}
       </div>
     </main>
-  );
+  )
 }
