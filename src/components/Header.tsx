@@ -334,10 +334,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             ) : (
               <Link
                 href="/account/signup"
-                className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-gray-100 text-sm"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 hover:bg-gray-100 whitespace-nowrap"
+                aria-label="Sign up"
               >
-                <LogIn className="h-4 w-4" />
-                Sign up
+                <LogIn className="h-4 w-4 shrink-0" />
+                <span className="text-[13px] font-medium leading-none whitespace-nowrap shrink-0">
+                  Sign up
+                </span>
               </Link>
             )}
           </div>
@@ -438,11 +441,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           ) : (
             <Link
               href="/account/signup"
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50 whitespace-nowrap"
               onClick={() => setMobileOpen(false)}
             >
-              <LogIn className="h-4 w-4" />
-              Sign up
+              <LogIn className="h-4 w-4 shrink-0" />
+              <span className="whitespace-nowrap">Sign up</span>
             </Link>
           )}
         </div>
