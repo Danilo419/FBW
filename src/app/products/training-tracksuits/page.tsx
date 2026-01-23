@@ -731,8 +731,7 @@ export default function TrainingTracksuitsPage() {
                 Training tracksuits
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
-                Only products that include <b>“Training Tracksuit”</b> in the
-                name.
+                Full training sets (top & pants) for warm-ups, travel and everyday training sessions.
               </p>
             </div>
 
