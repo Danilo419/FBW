@@ -260,7 +260,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 className="inline-flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 text-sm"
               >
                 <LogIn className="h-4 w-4" />
-                Sign in
+                Sign up
               </Link>
             )}
           </div>
@@ -337,7 +337,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-gray-100 text-sm"
               >
                 <LogIn className="h-4 w-4" />
-                Login
+                Sign up
               </Link>
             )}
           </div>
@@ -442,7 +442,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               onClick={() => setMobileOpen(false)}
             >
               <LogIn className="h-4 w-4" />
-              Sign in
+              Sign up
             </Link>
           )}
         </div>
