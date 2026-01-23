@@ -82,7 +82,7 @@ export default async function ClubsPage() {
           </div>
         </div>
 
-        {/* Grade de cartões — imagem cheia, hover com zoom, CTA no rodapé */}
+        {/* Grade de cartões — agora com o MESMO tamanho vertical das Nations */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
           {clubs.map((club) => (
             <Link
@@ -90,7 +90,8 @@ export default async function ClubsPage() {
               href={`/products/team/${club.slug}`}
               className="group block touch-manipulation"
             >
-              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
+              {/* ✅ IGUAL às Nations: aspect-[2/3] (mais alto) */}
+              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
                 {club.image ? (
                   <img
                     src={club.image}
@@ -104,7 +105,7 @@ export default async function ClubsPage() {
 
                 <div className="pointer-events-none absolute inset-0 ring-0 group-hover:ring-2 group-hover:ring-emerald-500/40 transition" />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition">
                   <div className="flex items-center justify-between text-white text-[11px] sm:text-xs md:text-sm">
                     View jerseys
                     <ArrowRight className="h-4 w-4" />
@@ -112,7 +113,7 @@ export default async function ClubsPage() {
                 </div>
               </div>
 
-              <div className="px-1 pt-2 text-center">
+              <div className="px-1 pt-3 text-center">
                 <h3 className="font-semibold text-xs sm:text-sm md:text-base text-slate-900">
                   {club.name}
                 </h3>
