@@ -1,4 +1,3 @@
-// src/app/nations/page.tsx
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ArrowRight } from "lucide-react";
@@ -12,7 +11,6 @@ type NationCard = { name: string; image?: string | null; slug: string };
 /**
  * Assets em: /public/assets/nations
  * IMPORTANTE: em Vercel (Linux) o path é case-sensitive.
- * Estes nomes precisam bater com os ficheiros reais (ex: Portugalfc.png).
  */
 const NATION_ASSET_BY_SLUG: Record<string, string> = {
   argentina: "Argentinafc.png",
@@ -31,8 +29,6 @@ const NATION_ASSET_BY_SLUG: Record<string, string> = {
   switzerland: "Switzerlandfc.png",
   "united-states": "UnitedStatesfc.png",
   uruguay: "Uruguayfc.png",
-
-  // se na tua BD aparecer "USA" em vez de "United States", aponta para o mesmo asset:
   usa: "UnitedStatesfc.png",
 };
 
@@ -44,7 +40,7 @@ function findNationAsset(teamName: string): string | null {
 
 export default async function NationsPage() {
   const rows = await prisma.product.findMany({
-    where: { teamType: "NATION" }, // ✅ só seleções
+    where: { teamType: "NATION" },
     select: { team: true, imageUrls: true },
     orderBy: { team: "asc" },
   });
@@ -56,7 +52,6 @@ export default async function NationsPage() {
     if (!team || map.has(team)) continue;
 
     const assetImg = findNationAsset(team);
-
     const arr = Array.isArray(r.imageUrls) ? r.imageUrls : [];
     const firstDbImg =
       arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
@@ -95,7 +90,7 @@ export default async function NationsPage() {
           </div>
         </div>
 
-        {/* Grid igual ao Clubs */}
+        {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
           {nations.map((nation) => (
             <Link
@@ -103,7 +98,8 @@ export default async function NationsPage() {
               href={`/nations/${nation.slug}`}
               className="group block touch-manipulation"
             >
-              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
+              {/* ⬇️ CARD MAIS ALTO (IMAGEM MAIOR NA VERTICAL) */}
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
                 {nation.image ? (
                   <img
                     src={nation.image}
@@ -117,7 +113,7 @@ export default async function NationsPage() {
 
                 <div className="pointer-events-none absolute inset-0 ring-0 group-hover:ring-2 group-hover:ring-emerald-500/40 transition" />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition">
                   <div className="flex items-center justify-between text-white text-[11px] sm:text-xs md:text-sm">
                     View jerseys
                     <ArrowRight className="h-4 w-4" />
@@ -125,7 +121,7 @@ export default async function NationsPage() {
                 </div>
               </div>
 
-              <div className="px-1 pt-2 text-center">
+              <div className="px-1 pt-2.5 text-center">
                 <h3 className="font-semibold text-xs sm:text-sm md:text-base text-slate-900">
                   {nation.name}
                 </h3>
