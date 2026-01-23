@@ -94,7 +94,7 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\bfc\s*porto\b|\bporto\b/i, "FC Porto"],
   [/\bsporting\s*cp\b|\bsporting\b(?!.*gijon)\b/i, "Sporting CP"],
   [/\bsc\s*braga\b|\bbraga\b/i, "SC Braga"],
-  // ✅ AQUI: Vitória SC -> Vitória de Guimarães (mantendo o mesmo padrão)
+  // ✅ Vitória SC -> Vitória de Guimarães
   [/\bvitoria\s*(sc)?\b/i, "Vitória de Guimarães"],
 
   // seleções (algumas comuns)
@@ -340,19 +340,19 @@ export default function ResultsClient({
 
   if (loading) {
     return (
-      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={i}
             className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
           >
             <div className="aspect-[4/5] bg-slate-100" />
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
               <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
               <div className="h-3 w-20 bg-slate-200 rounded" />
               <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="h-12" />
+              <div className="h-11 sm:h-12" />
             </div>
           </div>
         ))}
@@ -366,7 +366,8 @@ export default function ResultsClient({
 
   return (
     <>
-      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {/* ✅ Grid com 2 por linha no mobile */}
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
         {pageItems.length === 0 && (
           <p className="text-gray-500 col-span-full">
             Nenhum produto encontrado.
@@ -385,7 +386,7 @@ export default function ResultsClient({
             <a
               key={String(p.id)}
               href={href}
-              className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
+              className="group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200"
             >
               {sale && (
                 <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
@@ -408,36 +409,39 @@ export default function ResultsClient({
                       img._fallbackApplied = true;
                       img.src = FALLBACK_IMG;
                     }}
-                    className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                    className="absolute inset-0 h-full w-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
 
-                <div className="p-5 flex flex-col grow">
+                <div className="p-4 sm:p-5 flex flex-col grow">
                   <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
                     {teamLabel}
                   </div>
 
-                  <div className="mt-1 text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+                  <div className="mt-1 text-[13px] sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
                     {p.name}
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-3 sm:mt-4">
                     <div className="flex items-end gap-2">
                       {sale && (
-                        <div className="text-[13px] text-slate-500 line-through">
+                        <div className="text-[12px] sm:text-[13px] text-slate-500 line-through">
                           {moneyAfter(sale.compareAtCents)}
                         </div>
                       )}
 
                       {parts && (
-                        <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                          <span className="text-2xl font-semibold tracking-tight leading-none">
+                        <div
+                          className="flex items-end"
+                          style={{ color: "#1c40b7" }}
+                        >
+                          <span className="text-[20px] sm:text-2xl font-semibold tracking-tight leading-none">
                             {parts.int}
                           </span>
-                          <span className="text-[13px] font-medium translate-y-[1px]">
+                          <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
                             ,{parts.dec}
                           </span>
-                          <span className="text-[15px] font-medium translate-y-[1px] ml-1">
+                          <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                             {parts.sym}
                           </span>
                         </div>
@@ -447,7 +451,7 @@ export default function ResultsClient({
 
                   <div className="mt-auto">
                     <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                    <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <div className="h-11 sm:h-12 flex items-center gap-2 text-[13px] sm:text-sm font-medium text-slate-700">
                       <span className="transition group-hover:translate-x-0.5">
                         View product
                       </span>
