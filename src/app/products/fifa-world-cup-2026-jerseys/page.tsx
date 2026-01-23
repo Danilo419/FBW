@@ -63,17 +63,22 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (igual ao search)
+   CLUB LABEL (FIX: nunca "Team", nunca "Chelsea Shadow", etc.)
 ============================================================ */
 
+// ⚠️ BUG ORIGINAL: "(real madrid|madrid)" fazia Atlético de Madrid virar Real Madrid
+// ✅ FIX: Real Madrid só com "real madrid"
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  // Espanha
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\b(real\s*)?betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -85,6 +90,148 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+const COLOR_WORDS = new Set(
+  [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+const VARIANT_WORDS = new Set(
+  [
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "CUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+  ].map((x) => x.toUpperCase())
+);
+
+// palavras “apelido”/coleção que nunca devem aparecer no label (Shadow, Samurai, etc.)
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+  ].map((x) => x.toUpperCase())
+);
+
+// começos que são nomes multi-palavra válidos (para não cortar “Real Madrid”, etc.)
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
@@ -95,14 +242,107 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // "X & Y" (cores) => fica só X
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing lixo (PRIMARY/cores/descritores)
+  const tokens = s.split(/\s+/);
+  let out = tokens.slice();
+
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-À-ÖØ-Ý]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
+  }
+
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
+  return normalizeStr(joined);
+}
+
+/** ✅ garantia final: se não for nome multi-palavra válido => fica só a 1ª palavra */
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) return s;
+
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  return parts[0];
+}
+
+function inferClubFromName(name?: string | null): string {
+  const s = normalizeStr(name);
+  if (!s) return "";
+
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept|World\s*Cup)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
+  );
+
+  return hardClampClubName(cleanTeamValue(cleaned));
+}
+
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
-  if (byTeam) return byTeam;
+  const teamClean = cleanTeamValue(p.team);
+  if (teamClean) return hardClampClubName(teamClean);
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Team";
+  const inferred = inferClubFromName(p.name);
+  if (inferred) return inferred;
+
+  // ✅ nunca "Team"
+  return "";
 }
 
 /* ============================================================
@@ -111,7 +351,6 @@ function getClubLabel(p: UIProduct): string {
 ============================================================ */
 
 function normName(p: UIProduct) {
-  // robusto: remove acentos e normaliza separadores
   const raw = (p.name ?? "")
     .toUpperCase()
     .normalize("NFD")
@@ -128,18 +367,14 @@ function hasAllTerms(p: UIProduct, terms: string[]): boolean {
 function isWorldCup2026(p: UIProduct): boolean {
   if (!p?.name) return false;
 
-  // obrigatório: "WORLD CUP" e "2026"
   if (!hasAllTerms(p, ["WORLD CUP", "2026"])) return false;
 
-  // extras: excluir coisas óbvias que não são jerseys (se quiseres)
   const n = normName(p);
 
-  // acessórios / itens não relacionados
   if (n.includes("SCARF")) return false;
   if (n.includes("BALL")) return false;
   if (n.includes("POSTER")) return false;
 
-  // baby/infant
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
 
@@ -155,6 +390,7 @@ function ProductCard({ p }: { p: UIProduct }) {
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
+
   const teamLabel = getClubLabel(p);
 
   return (
@@ -187,9 +423,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-xs sm:text-sm font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
@@ -262,13 +501,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
   if (left > 2) pages.push("dots");
-
   for (let i = left; i <= right; i++) pages.push(i);
-
   if (right < total - 1) pages.push("dots");
-
   pages.push(last);
 
   return pages;
@@ -276,8 +511,6 @@ function buildPaginationRange(
 
 /* ============================================================
    Página FIFA World Cup 2026 Jerseys
-   - Busca via /api/search?q=world%20cup%202026
-   - Filtra: nome contém "World Cup" e "2026"
 ============================================================ */
 
 export default function FifaWorldCup2026JerseysPage() {
@@ -297,12 +530,13 @@ export default function FifaWorldCup2026JerseysPage() {
     setLoading(true);
     setError(null);
 
-    // query alinhada com o que queres
     fetch(`/api/search?q=world%20cup%202026`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+        const arr: UIProduct[] = Array.isArray(json?.products)
+          ? json.products
+          : [];
         if (!cancelled) {
           setResults(arr);
           setPage(1);
@@ -324,7 +558,6 @@ export default function FifaWorldCup2026JerseysPage() {
   const wc2026Filtered = useMemo(() => {
     let base = results.filter(isWorldCup2026);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -334,7 +567,6 @@ export default function FifaWorldCup2026JerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -356,7 +588,6 @@ export default function FifaWorldCup2026JerseysPage() {
       return copy;
     }
 
-    // default: ordenar por team + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
@@ -417,7 +648,6 @@ export default function FifaWorldCup2026JerseysPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        {/* Filtros + info */}
         <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -462,7 +692,6 @@ export default function FifaWorldCup2026JerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -483,10 +712,8 @@ export default function FifaWorldCup2026JerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
@@ -503,7 +730,6 @@ export default function FifaWorldCup2026JerseysPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -514,7 +740,6 @@ export default function FifaWorldCup2026JerseysPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -548,7 +773,6 @@ export default function FifaWorldCup2026JerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

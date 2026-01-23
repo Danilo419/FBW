@@ -63,17 +63,24 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (igual ao search)
+   CLUB LABEL (CORRIGIDO)
+   - NÃO usar "madrid" => Real Madrid (isso estraga nomes)
+   - não mostrar "Club" genérico
+   - se o team vier tipo "Chelsea Shadow" / "Japan Samurai",
+     mostramos só "Chelsea" / "Japan"
 ============================================================ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  // Espanha
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -85,24 +92,255 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+const COLOR_WORDS = new Set(
+  [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+const VARIANT_WORDS = new Set(
+  [
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "TRACKSUITS",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+  ].map((x) => x.toUpperCase())
+);
+
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+  ].map((x) => x.toUpperCase())
+);
+
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
-
   for (const [re, club] of CLUB_PATTERNS) {
     if (re.test(s)) return club;
   }
   return null;
 }
 
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // "X & Y" (cores) => fica só X
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing lixo (PRIMARY/cores/descritores)
+  const tokens = s.split(/\s+/);
+  let out = tokens.slice();
+
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-À-ÖØ-Ý]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
+  }
+
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
+  return normalizeStr(joined);
+}
+
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) return s;
+
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  return parts[0];
+}
+
+function inferClubFromName(name?: string | null): string {
+  const s = normalizeStr(name);
+  if (!s) return "";
+
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Tracksuit|Tracksuits|Training|Set|Suit|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept|Jersey|Kit)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
+  );
+
+  return hardClampClubName(cleanTeamValue(cleaned));
+}
+
+/** ✅ Só o nome do clube (ou vazio). Nunca "Club" */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
-  if (byTeam) return byTeam;
+  const teamClean = cleanTeamValue(p.team);
+  if (teamClean) return hardClampClubName(teamClean);
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Club";
+  const inferred = inferClubFromName(p.name);
+  if (inferred) return inferred;
+
+  return "";
 }
 
 /* ============================================================
@@ -137,9 +375,7 @@ function isTrainingTracksuit(p: UIProduct): boolean {
     n.includes("SWEAT");
 
   const hasBottom =
-    n.includes("PANTS") ||
-    n.includes("TROUSERS") ||
-    n.includes("BOTTOMS");
+    n.includes("PANTS") || n.includes("TROUSERS") || n.includes("BOTTOMS");
 
   // Se NÃO tiver "TRACKSUIT" literal, exigimos ter bottom explícito
   if (!hasBottom && !n.includes("TRACKSUIT") && !n.includes("TRACK SUIT")) {
@@ -159,6 +395,9 @@ function isTrainingTracksuit(p: UIProduct): boolean {
   // Excluir baby / infant
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
+
+  // (opcional) Se quiser ser mais rígido, exigir top OU bottom além do tracksuit:
+  if (!hasTop && !hasBottom) return false;
 
   return true;
 }
@@ -204,9 +443,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir (nunca "Club") */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-xs sm:text-sm font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
@@ -279,19 +521,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
-  if (left > 2) {
-    pages.push("dots");
-  }
-
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
-
-  if (right < total - 1) {
-    pages.push("dots");
-  }
-
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
   pages.push(last);
 
   return pages;
@@ -315,7 +547,6 @@ export default function TrainingTracksuitsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query mais alinhada com tracksuits
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -325,9 +556,7 @@ export default function TrainingTracksuitsPage() {
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products)
-          ? json.products
-          : [];
+        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
         if (!cancelled) {
           setResults(arr);
           setPage(1);
@@ -349,7 +578,6 @@ export default function TrainingTracksuitsPage() {
   const tracksuitsFiltered = useMemo(() => {
     let base = results.filter(isTrainingTracksuit);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -359,7 +587,6 @@ export default function TrainingTracksuitsPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -381,14 +608,16 @@ export default function TrainingTracksuitsPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
-      const ta = getClubLabel(a).toUpperCase();
-      const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      const ta = (getClubLabel(a) || "").toUpperCase();
+      const tb = (getClubLabel(b) || "").toUpperCase();
+
+      // vazios vão para o fim
+      if (!ta && tb) return 1;
+      if (ta && !tb) return -1;
+
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -429,8 +658,7 @@ export default function TrainingTracksuitsPage() {
                 Training tracksuits
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
-                Full training sets (top & pants) for warm-ups, travel and
-                everyday training sessions.
+                Full training sets (top & pants) for warm-ups, travel and everyday training sessions.
               </p>
             </div>
 
@@ -445,7 +673,6 @@ export default function TrainingTracksuitsPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        {/* Filtros + info */}
         <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -490,7 +717,6 @@ export default function TrainingTracksuitsPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -511,10 +737,8 @@ export default function TrainingTracksuitsPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
@@ -531,7 +755,6 @@ export default function TrainingTracksuitsPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -542,7 +765,6 @@ export default function TrainingTracksuitsPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -576,12 +798,9 @@ export default function TrainingTracksuitsPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Próxima página"

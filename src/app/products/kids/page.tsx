@@ -62,16 +62,21 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE ========= */
+/* ========= Extração do NOME DO CLUBE (FIX: sem "Chelsea Shadow", sem "Japan Samurai") ========= */
 
+// ⚠️ BUG ORIGINAL: "(real madrid|madrid)" fazia "Atlético de Madrid" cair em "Real Madrid"
+// ✅ FIX: Real Madrid só casa com "real madrid"
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  // Espanha
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -83,24 +88,255 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+const COLOR_WORDS = new Set(
+  [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+const VARIANT_WORDS = new Set(
+  [
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+  ].map((x) => x.toUpperCase())
+);
+
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+  ].map((x) => x.toUpperCase())
+);
+
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
+
   for (const [re, club] of CLUB_PATTERNS) {
     if (re.test(s)) return club;
   }
   return null;
 }
 
-/** Só o nome do clube (capitalização normal) */
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // "X & Y" (cores) => fica só X
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing lixo (PRIMARY/cores/descritores)
+  const tokens = s.split(/\s+/);
+  let out = tokens.slice();
+
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-À-ÖØ-Ý]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
+  }
+
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
+  return normalizeStr(joined);
+}
+
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) return s;
+
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  return parts[0];
+}
+
+function inferClubFromName(name?: string | null): string {
+  const s = normalizeStr(name);
+  if (!s) return "";
+
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
+  );
+
+  return hardClampClubName(cleanTeamValue(cleaned));
+}
+
+/** ✅ Só o nome do clube (ou vazio). Nunca "Club" */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
-  if (byTeam) return byTeam;
+  const teamClean = cleanTeamValue(p.team);
+  if (teamClean) return hardClampClubName(teamClean);
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Club";
+  const inferred = inferClubFromName(p.name);
+  if (inferred) return inferred;
+
+  return "";
 }
 
 /* ============================ Helpers de filtro ============================ */
@@ -173,21 +409,12 @@ function getPriceEurFromApi(raw: any): number | undefined {
 
 function mapApiToUIProduct(raw: any): UIProduct {
   const name =
-    raw.name ??
-    raw.title ??
-    raw.productName ??
-    raw.fullName ??
-    "Unnamed product";
+    raw.name ?? raw.title ?? raw.productName ?? raw.fullName ?? "Unnamed product";
 
   const img = getImageFromApi(raw);
   const price = getPriceEurFromApi(raw);
   const team =
-    raw.team ??
-    raw.club ??
-    raw.clubName ??
-    raw.teamName ??
-    raw.nationalTeam ??
-    null;
+    raw.team ?? raw.club ?? raw.clubName ?? raw.teamName ?? raw.nationalTeam ?? null;
 
   return {
     id: raw.id ?? raw.productId ?? raw._id ?? raw.slug ?? name,
@@ -240,9 +467,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir (nunca "Club") */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-sm sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
@@ -314,20 +544,11 @@ function buildPaginationRange(
 
   pages.push(first);
 
-  if (left > 2) {
-    pages.push("dots");
-  }
-
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
-
-  if (right < total - 1) {
-    pages.push("dots");
-  }
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
 
   pages.push(last);
-
   return pages;
 }
 
@@ -336,23 +557,7 @@ function buildPaginationRange(
 const PAGE_SIZE = 12;
 
 // mesmas queries largas da página Adult para puxar o catálogo todo
-const SEARCH_QUERIES = [
-  "a",
-  "e",
-  "i",
-  "o",
-  "u",
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-];
+const SEARCH_QUERIES = ["a", "e", "i", "o", "u", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 export default function KidsPage() {
   const [results, setResults] = useState<UIProduct[]>([]);
@@ -361,9 +566,7 @@ export default function KidsPage() {
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
-    "team"
-  );
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">("team");
 
   useEffect(() => {
     let cancelled = false;
@@ -425,7 +628,6 @@ export default function KidsPage() {
   const filteredSorted = useMemo(() => {
     let base = results;
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -435,7 +637,6 @@ export default function KidsPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -448,23 +649,18 @@ export default function KidsPage() {
     if (sort === "price-asc" || sort === "price-desc") {
       const copy = base.slice();
       copy.sort((a, b) => {
-        const pa =
-          typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
-        const pb =
-          typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        const pa = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const pb = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
         return sort === "price-asc" ? pa - pb : pb - pa;
       });
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -520,7 +716,6 @@ export default function KidsPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap pb-10">
-        {/* Filtros + info */}
         <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -565,7 +760,6 @@ export default function KidsPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -586,19 +780,16 @@ export default function KidsPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && (
           <p className="text-red-600 text-sm sm:text-base mt-2">{error}</p>
         )}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm col-span-full">
-                  No kids products were found (check if the name contains
-                  "Kids").
+                  No kids products were found (check if the name contains "Kids").
                 </p>
               )}
 
@@ -609,7 +800,6 @@ export default function KidsPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -620,7 +810,6 @@ export default function KidsPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -654,12 +843,9 @@ export default function KidsPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
                   aria-label="Next page"

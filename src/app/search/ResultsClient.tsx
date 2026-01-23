@@ -9,8 +9,10 @@ type UIProduct = {
   slug?: string;
   img?: string;
   price?: number; // EUR (ex.: 34.99)
-  team?: string | null; // <- pode vir da API (às vezes com sufixos, ex.: "Madrid Retro")
+  team?: string | null;
 };
+
+const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
 
 /* ============================ Promo map (EUR) ============================ */
 const SALE_MAP_EUR: Record<number, number> = {
@@ -39,7 +41,7 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-/** Formata número com 2 casas e símbolo do euro **depois** (ex.: "150,00 €") */
+/** "150,00 €" */
 function moneyAfter(cents: number) {
   const n = (cents / 100).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -48,76 +50,106 @@ function moneyAfter(cents: number) {
   return `${n} €`;
 }
 
-/** Divide o preço em partes para estilização (euros / cêntimos, símbolo vai **depois**) */
 function pricePartsFromCents(cents: number) {
   const euros = Math.floor(cents / 100).toString();
   const dec = (cents % 100).toString().padStart(2, "0");
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= Extração do NOME DO CLUBE (sempre só o clube) =========
-   - Tenta o campo p.team
-   - Se não der, tenta no p.name
-   - Ignora sufixos como "Retro", "Training", cores, etc.            */
+/* ============================ CLUB LABEL (CORRIGIDO) ============================ */
+
+function normalizeStr(s?: string | null) {
+  return (s ?? "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // remove acentos
+}
+
+/**
+ * IMPORTANTÍSSIMO:
+ * - NÃO usar "|madrid" para Real Madrid, porque apanha "Atlético de Madrid".
+ * - "Atlético/Atletico" precisa ser detetado corretamente.
+ */
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
-  [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
-  [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/[\b\s]atletico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
+  [/\breal\s*madrid\b/i, "Real Madrid"],
+
+  [/\b(fc\s*)?barcelona\b|\bbarca\b/i, "FC Barcelona"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
-  [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
-  [/\bfc\s*porto|porto\b/i, "FC Porto"],
-  [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
-  [/\bsc\s*braga|braga\b/i, "SC Braga"],
-  [/\bv[itó|ito]ria\s*(sc)?\b/i, "Vitória SC"],
-];
 
-function normalizeStr(s?: string | null) {
-  return (s ?? "").replace(/\s{2,}/g, " ").trim();
-}
+  [/\bsl?\s*benfica\b|\bbenfica\b/i, "SL Benfica"],
+  [/\bfc\s*porto\b|\bporto\b/i, "FC Porto"],
+  [/\bsporting\s*cp\b|\bsporting\b(?!.*gij[oó]n)\b/i, "Sporting CP"],
+  [/\bsc\s*braga\b|\bbraga\b/i, "SC Braga"],
+  [/\bvitoria\s*(sc)?\b/i, "Vitória SC"],
+];
 
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
 
+  // match por ordem (prioridade)
   for (const [re, club] of CLUB_PATTERNS) {
     if (re.test(s)) return club;
   }
   return null;
 }
 
-/** Obtém SEMPRE só o nome do clube (capitalização normal; o chip usa uppercase no CSS) */
 function getClubLabel(p: UIProduct): string {
-  // 1) tenta a partir do campo team (mesmo que venha "Madrid Retro", etc.)
   const byTeam = clubFromString(p.team);
   if (byTeam) return byTeam;
 
-  // 2) tenta a partir do nome do produto
   const byName = clubFromString(p.name);
   if (byName) return byName;
 
-  // 3) fallback
   return "Club";
 }
 
+/* ============================ Paginação com "..." ============================ */
+
+function buildPaginationRange(
+  current: number,
+  total: number
+): (number | "dots")[] {
+  const pages: (number | "dots")[] = [];
+
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+    return pages;
+  }
+
+  const first = 1;
+  const last = total;
+  const left = Math.max(current - 1, 2);
+  const right = Math.min(current + 1, total - 1);
+
+  pages.push(first);
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
+  pages.push(last);
+
+  return pages;
+}
+
 /* ============================ Componente ============================ */
-/**
- * - Mostra no máximo 12 por página
- * - Paginação no fim: « 1 2 3 »
- * - Chip azul mostra sempre APENAS o nome do clube
- */
-export default function ResultsClient({ initialQuery = "" }: { initialQuery?: string }) {
+
+export default function ResultsClient({
+  initialQuery = "",
+}: {
+  initialQuery?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // paginação
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
 
-  // fetch inicial / quando muda query
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -128,7 +160,9 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
       .then(async (r) => {
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+        const arr: UIProduct[] = Array.isArray(json?.products)
+          ? json.products
+          : [];
         if (!cancelled) {
           setResults(arr);
           setPage(1);
@@ -207,7 +241,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
           const sale = cents != null ? getSale(p.price!) : null;
           const parts = cents != null ? pricePartsFromCents(cents) : null;
 
-          // 🔵 Sempre só o clube
           const teamLabel = getClubLabel(p);
 
           return (
@@ -216,39 +249,32 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
               href={href}
               className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
             >
-              {/* Sticker vermelho com % */}
               {sale && (
                 <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
                   -{sale.pct}%
                 </div>
               )}
 
-              {/* Card */}
               <div className="flex flex-col h-full">
-                {/* Imagem */}
                 <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     alt={p.name}
-                    src={
-                      p.img ||
-                      "data:image/svg+xml;utf8," +
-                        encodeURIComponent(
-                          `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000' viewBox='0 0 800 1000'>
-                            <rect width='100%' height='100%' fill='#f3f4f6'/>
-                            <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-                              font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='26' fill='#9ca3af'>No image</text>
-                          </svg>`
-                        )
-                    }
+                    src={p.img || FALLBACK_IMG}
                     loading="lazy"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement & {
+                        _fallbackApplied?: boolean;
+                      };
+                      if (img._fallbackApplied) return;
+                      img._fallbackApplied = true;
+                      img.src = FALLBACK_IMG;
+                    }}
                     className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
 
-                {/* Conteúdo */}
                 <div className="p-5 flex flex-col grow">
-                  {/* Chip azul — só o clube */}
                   <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
                     {teamLabel}
                   </div>
@@ -257,7 +283,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
                     {p.name}
                   </div>
 
-                  {/* Preços */}
                   <div className="mt-4">
                     <div className="flex items-end gap-2">
                       {sale && (
@@ -282,7 +307,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
                     </div>
                   </div>
 
-                  {/* Footer */}
                   <div className="mt-auto">
                     <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                     <div className="h-12 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -306,7 +330,6 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
         })}
       </div>
 
-      {/* Paginação no fim: « 1 2 3 » */}
       {totalPages > 1 && (
         <nav className="mt-10 flex items-center justify-center gap-2 select-none">
           <button
@@ -319,28 +342,38 @@ export default function ResultsClient({ initialQuery = "" }: { initialQuery?: st
             «
           </button>
 
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {Array.from({ length: totalPages }).map((_, idx) => {
-              const n = idx + 1;
-              const active = n === page;
+          {buildPaginationRange(page, totalPages).map((item, idx) => {
+            if (item === "dots") {
               return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPage(n)}
-                  className={[
-                    "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
-                    active
-                      ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                      : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
-                  ].join(" ")}
-                  aria-current={active ? "page" : undefined}
+                <span
+                  key={`dots-${idx}`}
+                  className="px-3 py-2 text-sm text-slate-500"
                 >
-                  {n}
-                </button>
+                  ...
+                </span>
               );
-            })}
-          </div>
+            }
+
+            const n = item as number;
+            const active = n === page;
+
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPage(n)}
+                className={[
+                  "min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                  active
+                    ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
+                    : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                ].join(" ")}
+                aria-current={active ? "page" : undefined}
+              >
+                {n}
+              </button>
+            );
+          })}
 
           <button
             type="button"

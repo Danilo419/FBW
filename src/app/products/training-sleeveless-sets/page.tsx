@@ -63,14 +63,14 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (igual ao search)
+   CLUB LABEL (FIX: nunca "Madrid" => Real Madrid; remove "cores" do team)
 ============================================================ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
@@ -85,6 +85,145 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+const COLOR_WORDS = new Set(
+  [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+const VARIANT_WORDS = new Set(
+  [
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+  ].map((x) => x.toUpperCase())
+);
+
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+  ].map((x) => x.toUpperCase())
+);
+
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
@@ -95,14 +234,106 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // "X & Y" (cores) => fica só X
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing lixo (PRIMARY/cores/descritores)
+  const tokens = s.split(/\s+/);
+  let out = tokens.slice();
+
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-À-ÖØ-Ý]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
+  }
+
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
+  return normalizeStr(joined);
+}
+
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) return s;
+
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  return parts[0];
+}
+
+function inferClubFromName(name?: string | null): string {
+  const s = normalizeStr(name);
+  if (!s) return "";
+
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept|Sleeveless|Tank|Vest|Set|Shorts)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
+  );
+
+  return hardClampClubName(cleanTeamValue(cleaned));
+}
+
+/** ✅ Só o nome do clube (ou vazio). Nunca "Club". */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
-  if (byTeam) return byTeam;
+  const teamClean = cleanTeamValue(p.team);
+  if (teamClean) return hardClampClubName(teamClean);
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Club";
+  const inferred = inferClubFromName(p.name);
+  if (inferred) return inferred;
+
+  return "";
 }
 
 /* ============================================================
@@ -124,8 +355,14 @@ function isTrainingSleevelessSet(p: UIProduct): boolean {
   if (!hasSleeveless) return false;
 
   // tem de ser conjunto (camisola + calções)
+  // (evita "SLEEVELESS JERSEY" que não é set)
   const hasSetParts =
-    n.includes("SHORTS") || n.includes("SET") || n.includes(" KIT");
+    n.includes("SHORTS") ||
+    n.includes(" SLEEVELESS SET") ||
+    n.includes(" TRAINING SET") ||
+    n.includes(" SET ") ||
+    n.endsWith(" SET") ||
+    n.includes(" KIT");
 
   if (!hasSetParts) return false;
 
@@ -138,7 +375,7 @@ function isTrainingSleevelessSet(p: UIProduct): boolean {
   if (n.includes("POSTER")) return false;
 
   // excluir kids/baby
-  if (n.includes("KIDS KIT")) return false;
+  if (n.includes("KIDS")) return false; // aqui queres só adulto
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
 
@@ -187,9 +424,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-3 sm:p-4 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir (nunca "Club") */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-[13px] sm:text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
             {p.name}
@@ -262,19 +502,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
-  if (left > 2) {
-    pages.push("dots");
-  }
-
-  for (let i = left; i <= right; i++) {
-    pages.push(i);
-  }
-
-  if (right < total - 1) {
-    pages.push("dots");
-  }
-
+  if (left > 2) pages.push("dots");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("dots");
   pages.push(last);
 
   return pages;
@@ -282,8 +512,6 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Training Sleeveless Sets
-   - Mobile-first
-   - 2 produtos por linha (grid-cols-2 no mobile)
 ============================================================ */
 
 export default function TrainingSleevelessSetsPage() {
@@ -298,41 +526,72 @@ export default function TrainingSleevelessSetsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // mesma API que a search, query mais alinhada com training sets
+  // ✅ puxar o catálogo completo (igual à página Adult)
+  const SEARCH_QUERIES = useMemo(
+    () => ["a", "e", "i", "o", "u", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    []
+  );
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    fetch(`/api/search?q=training`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
-        const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products)
-          ? json.products
-          : [];
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const all: UIProduct[] = [];
+
+        for (const q of SEARCH_QUERIES) {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+            cache: "no-store",
+          });
+          if (!res.ok) continue;
+
+          const json = await res.json();
+          const arr: UIProduct[] = Array.isArray(json?.products)
+            ? json.products
+            : Array.isArray(json)
+            ? json
+            : [];
+
+          all.push(...arr);
+        }
+
+        // ✅ dedupe (id/slug/name)
+        const seen = new Set<string>();
+        const unique: UIProduct[] = [];
+        for (const p of all) {
+          const key = String(p.id ?? p.slug ?? p.name ?? "");
+          if (!key) continue;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          unique.push(p);
+        }
+
         if (!cancelled) {
-          setResults(arr);
+          setResults(unique);
           setPage(1);
         }
-      })
-      .catch((e) => {
+      } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Error loading products");
         }
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
+    load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [SEARCH_QUERIES]);
 
   const setsFiltered = useMemo(() => {
     let base = results.filter(isTrainingSleevelessSet);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -342,7 +601,6 @@ export default function TrainingSleevelessSetsPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -364,14 +622,11 @@ export default function TrainingSleevelessSetsPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -412,8 +667,7 @@ export default function TrainingSleevelessSetsPage() {
                 Training sleeveless sets
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm text-gray-600">
-                Tank + shorts training sets for high-intensity sessions and hot
-                weather workouts.
+                Tank + shorts training sets for high-intensity sessions and hot weather workouts.
               </p>
             </div>
 
@@ -431,7 +685,6 @@ export default function TrainingSleevelessSetsPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw px-4 sm:px-6 section-gap">
-        {/* Filtros + info */}
         <div className="mb-4 sm:mb-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -476,7 +729,6 @@ export default function TrainingSleevelessSetsPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -497,12 +749,8 @@ export default function TrainingSleevelessSetsPage() {
           </div>
         )}
 
-        {/* ERRO */}
-        {!loading && error && (
-          <p className="text-red-600 text-sm">{error}</p>
-        )}
+        {!loading && error && <p className="text-red-600 text-sm">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
@@ -519,7 +767,6 @@ export default function TrainingSleevelessSetsPage() {
 
             {pageItems.length > 0 && totalPages > 1 && (
               <nav className="mt-7 sm:mt-8 flex items-center justify-center gap-1.5 sm:gap-2 select-none">
-                {/* seta anterior */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -530,7 +777,6 @@ export default function TrainingSleevelessSetsPage() {
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
@@ -564,12 +810,9 @@ export default function TrainingSleevelessSetsPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Próxima página"

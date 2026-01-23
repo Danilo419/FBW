@@ -63,17 +63,23 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (igual ao search)
+   CLUB LABEL (CORRIGIDO)
+   - remove "madrid" genérico => não pode virar Real Madrid
+   - nunca inventa "Shadow", "Samurai", cores, etc.
+   - se não der para inferir com segurança => não mostra label
 ============================================================ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  // Espanha
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -85,6 +91,146 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+const COLOR_WORDS = new Set(
+  [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+const VARIANT_WORDS = new Set(
+  [
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+    "RETRO",
+  ].map((x) => x.toUpperCase())
+);
+
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+  ].map((x) => x.toUpperCase())
+);
+
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
@@ -95,14 +241,107 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // "X & Y" (cores) => fica só X
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing lixo (PRIMARY/RETRO/cores/descritores)
+  const tokens = s.split(/\s+/);
+  let out = tokens.slice();
+
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-À-ÖØ-Ý]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
+  }
+
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
+  return normalizeStr(joined);
+}
+
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) return s;
+
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  return parts[0];
+}
+
+function inferClubFromName(name?: string | null): string {
+  const s = normalizeStr(name);
+  if (!s) return "";
+
+  // antes de "Retro ..." ou outras palavras típicas
+  const cut = s.split(
+    /\s+(Retro|Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Concept)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
+  );
+
+  return hardClampClubName(cleanTeamValue(cleaned));
+}
+
+/** ✅ Só mostra label se houver algo seguro (nunca "Club") */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
-  if (byTeam) return byTeam;
+  const teamClean = cleanTeamValue(p.team);
+  if (teamClean) return hardClampClubName(teamClean);
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Club";
+  const inferred = inferClubFromName(p.name);
+  if (inferred) return inferred;
+
+  return "";
 }
 
 /* ============================================================
@@ -130,8 +369,7 @@ function isRetroJersey(p: UIProduct): boolean {
   if (n.includes("INFANT")) return false;
   if (n.includes(" KIT")) return false; // kit completo
 
-  // *** mantém a tua regra atual: excluir retro "Long Sleeve" ***
-  // Se quiseres mostrar também Retro Long Sleeve, apaga estas 2 linhas:
+  // mantém tua regra: excluir retro Long Sleeve
   if (n.includes("LONG SLEEVE")) return false;
 
   return true;
@@ -178,9 +416,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-3 sm:p-5 flex flex-col grow">
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir (nunca "Club") */}
+          {teamLabel && (
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-[13px] sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
             {p.name}
@@ -253,13 +494,9 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
   if (left > 2) pages.push("dots");
-
   for (let i = left; i <= right; i++) pages.push(i);
-
   if (right < total - 1) pages.push("dots");
-
   pages.push(last);
 
   return pages;
@@ -278,9 +515,9 @@ export default function RetroJerseysPage() {
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<
-    "team" | "price-asc" | "price-desc" | "random"
-  >("team");
+  const [sort, setSort] = useState<"team" | "price-asc" | "price-desc" | "random">(
+    "team"
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -291,9 +528,7 @@ export default function RetroJerseysPage() {
       .then(async (r) => {
         if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
         const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products)
-          ? json.products
-          : [];
+        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
         if (!cancelled) {
           setResults(arr);
           setPage(1);
@@ -315,7 +550,6 @@ export default function RetroJerseysPage() {
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isRetroJersey);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -325,7 +559,6 @@ export default function RetroJerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -347,7 +580,6 @@ export default function RetroJerseysPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
@@ -394,8 +626,7 @@ export default function RetroJerseysPage() {
                 Retro jerseys
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Throwback legends from classic seasons — iconic retro jerseys
-                from your favourite clubs.
+                Throwback legends from classic seasons — iconic retro jerseys from your favourite clubs.
               </p>
             </div>
 
@@ -410,7 +641,6 @@ export default function RetroJerseysPage() {
 
       {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        {/* Filtros + info */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -455,7 +685,6 @@ export default function RetroJerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
           <div className="grid grid-cols-2 gap-3 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -476,10 +705,8 @@ export default function RetroJerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
             <div className="grid grid-cols-2 gap-3 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

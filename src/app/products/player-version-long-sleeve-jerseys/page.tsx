@@ -63,17 +63,21 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (igual ao search)
+   CLUB LABEL (FIX: sem "Shadow", sem "Samurai", etc.)
+   + FIX CRÍTICO: "Madrid" NÃO pode mapear para "Real Madrid"
 ============================================================ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(real\s*madrid|madrid)\b/i, "Real Madrid"],
+  // Espanha
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
-  [/\b(real\s*)?betis\b/i, "Real Betis"],
+  [/\breal\s*betis\b/i, "Real Betis"],
   [/\bsevilla\b/i, "Sevilla FC"],
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
+
+  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -85,24 +89,254 @@ function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
 }
 
+const COLOR_WORDS = new Set(
+  [
+    "RED",
+    "BLACK",
+    "WHITE",
+    "BLUE",
+    "NAVY",
+    "SKY",
+    "SKYBLUE",
+    "SKY-BLUE",
+    "LIGHT",
+    "DARK",
+    "GREEN",
+    "YELLOW",
+    "PINK",
+    "PURPLE",
+    "ORANGE",
+    "GREY",
+    "GRAY",
+    "GOLD",
+    "SILVER",
+    "BEIGE",
+    "BROWN",
+    "MAROON",
+    "BURGUNDY",
+    "CREAM",
+    "TEAL",
+    "LIME",
+    "AQUA",
+    "CYAN",
+  ].map((x) => x.toUpperCase())
+);
+
+const VARIANT_WORDS = new Set(
+  [
+    "PRIMARY",
+    "HOME",
+    "AWAY",
+    "THIRD",
+    "FOURTH",
+    "1ST",
+    "2ND",
+    "3RD",
+    "4TH",
+    "FIRST",
+    "SECOND",
+
+    "CLUB",
+    "TEAM",
+    "MEN",
+    "WOMEN",
+    "KID",
+    "KIDS",
+    "YOUTH",
+
+    "GOALKEEPER",
+    "GK",
+    "JERSEY",
+    "KIT",
+    "TRAINING",
+    "TRACKSUIT",
+    "SET",
+    "SUIT",
+    "PRE-MATCH",
+    "PREMATCH",
+    "WARM-UP",
+    "WARMUP",
+    "EDITION",
+    "SPECIAL",
+    "LIMITED",
+    "CONCEPT",
+  ].map((x) => x.toUpperCase())
+);
+
+const DESCRIPTOR_WORDS = new Set(
+  [
+    "TRICOLOR",
+    "TRI-COLOR",
+    "TRICOLOUR",
+    "TRI-COLOUR",
+    "BICOLOR",
+    "BI-COLOR",
+    "BICOLOUR",
+    "BI-COLOUR",
+    "MULTICOLOR",
+    "MULTI-COLOR",
+    "MULTICOLOUR",
+    "MULTI-COLOUR",
+    "COLORWAY",
+    "COLOURWAY",
+
+    "SHADOW",
+    "SAMURAI",
+    "DRAGON",
+    "LION",
+    "PHANTOM",
+    "STEALTH",
+    "NINJA",
+    "WARRIOR",
+    "LEGEND",
+    "ELITE",
+    "PREMIUM",
+  ].map((x) => x.toUpperCase())
+);
+
+const MULTIWORD_STARTERS = new Set(
+  [
+    "REAL",
+    "ATLÉTICO",
+    "ATLETICO",
+    "MANCHESTER",
+    "PARIS",
+    "BORUSSIA",
+    "BAYER",
+    "BAYERN",
+    "INTER",
+    "AC",
+    "AS",
+    "SL",
+    "FC",
+    "SC",
+    "CD",
+    "UD",
+    "RB",
+    "SPORTING",
+    "NEW",
+    "SOUTH",
+    "NORTH",
+    "COSTA",
+    "SAUDI",
+    "LOS",
+    "LAS",
+    "LA",
+    "DE",
+    "DEL",
+    "AL",
+  ].map((x) => x.toUpperCase())
+);
+
 function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
-
   for (const [re, club] of CLUB_PATTERNS) {
     if (re.test(s)) return club;
   }
   return null;
 }
 
+function cleanTeamValue(v?: string | null): string {
+  let s = normalizeStr(v);
+  if (!s) return "";
+
+  s = s.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+
+  const up = s.toUpperCase();
+  if (up === "CLUB" || up === "TEAM") return "";
+
+  // "X & Y" (cores) => fica só X
+  const amp = s.split(/\s*&\s*/);
+  if (amp.length > 1) s = normalizeStr(amp[0]);
+
+  // remove trailing lixo (PRIMARY/cores/descritores)
+  const tokens = s.split(/\s+/);
+  let out = tokens.slice();
+
+  while (out.length > 1) {
+    const lastRaw = out[out.length - 1];
+    const last = lastRaw.toUpperCase().replace(/[^A-Z-À-ÖØ-Ý]/g, "");
+    const last2 = last.replace(/-/g, "");
+
+    if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (COLOR_WORDS.has(last) || COLOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    if (DESCRIPTOR_WORDS.has(last) || DESCRIPTOR_WORDS.has(last2)) {
+      out.pop();
+      continue;
+    }
+    break;
+  }
+
+  let joined = normalizeStr(out.join(" "));
+  joined = joined.replace(
+    /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
+    ""
+  );
+  return normalizeStr(joined);
+}
+
+function hardClampClubName(label: string): string {
+  const s = normalizeStr(label);
+  if (!s) return "";
+
+  const byPattern = clubFromString(s);
+  if (byPattern) return byPattern;
+
+  const parts = s.split(/\s+/);
+  if (parts.length <= 1) return s;
+
+  const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
+  if (MULTIWORD_STARTERS.has(firstUp)) return s;
+
+  const secondUp = (parts[1] ?? "")
+    .toUpperCase()
+    .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
+  const secondUp2 = secondUp.replace(/-/g, "");
+  if (DESCRIPTOR_WORDS.has(secondUp) || DESCRIPTOR_WORDS.has(secondUp2)) {
+    return parts[0];
+  }
+
+  return parts[0];
+}
+
+function inferClubFromName(name?: string | null): string {
+  const s = normalizeStr(name);
+  if (!s) return "";
+
+  const cut = s.split(
+    /\s+(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept|Player Version|Long Sleeve|Long-Sleeve|L\/S|LS)\b/i
+  )[0];
+
+  const cleaned = normalizeStr(
+    cut.replace(
+      /\b(20\d{2}\/\d{2}|25\/26|24\/25|23\/24|22\/23|2026|2025|2024|2023)\b/gi,
+      ""
+    )
+  );
+
+  return hardClampClubName(cleanTeamValue(cleaned));
+}
+
+/** ✅ Só o nome do clube (ou vazio). Nunca "Club" */
 function getClubLabel(p: UIProduct): string {
-  const byTeam = clubFromString(p.team);
-  if (byTeam) return byTeam;
+  const teamClean = cleanTeamValue(p.team);
+  if (teamClean) return hardClampClubName(teamClean);
 
-  const byName = clubFromString(p.name);
-  if (byName) return byName;
+  const byNamePattern = clubFromString(p.name);
+  if (byNamePattern) return byNamePattern;
 
-  return "Club";
+  const inferred = inferClubFromName(p.name);
+  if (inferred) return inferred;
+
+  return "";
 }
 
 /* ============================================================
@@ -117,10 +351,8 @@ function isPlayerVersionLongSleeveJersey(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // tem de ser player version
   if (!n.includes("PLAYER VERSION")) return false;
 
-  // tem de ser manga comprida (aceita variações)
   const isLongSleeve =
     n.includes("LONG SLEEVE") ||
     n.includes("LONG-SLEEVE") ||
@@ -128,10 +360,8 @@ function isPlayerVersionLongSleeveJersey(p: UIProduct): boolean {
     /\bLS\b/.test(n);
   if (!isLongSleeve) return false;
 
-  // excluir RETRO
   if (n.includes("RETRO")) return false;
 
-  // excluir conjuntos / outros produtos
   if (n.includes("SET")) return false;
   if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
@@ -140,7 +370,6 @@ function isPlayerVersionLongSleeveJersey(p: UIProduct): boolean {
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
 
-  // (mantém a exclusão de "kit completo" mas sem matar nomes normais)
   if (n.includes("FULL KIT")) return false;
   if (n.includes("KIT SET")) return false;
   if (n.includes("JERSEY + SHORTS")) return false;
@@ -190,9 +419,12 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 flex flex-col grow">
-          <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
-            {teamLabel}
-          </div>
+          {/* ✅ só mostra se existir (nunca "Club") */}
+          {teamLabel && (
+            <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
+              {teamLabel}
+            </div>
+          )}
 
           <div className="mt-1 text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
             {p.name}
@@ -265,21 +497,16 @@ function buildPaginationRange(
   const right = Math.min(current + 1, total - 1);
 
   pages.push(first);
-
   if (left > 2) pages.push("dots");
-
   for (let i = left; i <= right; i++) pages.push(i);
-
   if (right < total - 1) pages.push("dots");
-
   pages.push(last);
 
   return pages;
 }
 
 /* ============================================================
-   Fetch: usa o novo endpoint que vai à DB e devolve TUDO
-   /api/player-version-long-sleeve-jerseys
+   Fetch: /api/player-version-long-sleeve-jerseys
 ============================================================ */
 
 async function fetchProductsOnce(url: string): Promise<UIProduct[]> {
@@ -314,7 +541,6 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       setError(null);
 
       try {
-        // ✅ agora busca ao endpoint específico (não depende do /api/search)
         const arr = await fetchProductsOnce(
           `/api/player-version-long-sleeve-jerseys`
         );
@@ -341,7 +567,6 @@ export default function PlayerVersionLongSleeveJerseysPage() {
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isPlayerVersionLongSleeveJersey);
 
-    // filtro de texto (nome / equipa)
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
       base = base.filter((p) => {
@@ -351,7 +576,6 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       });
     }
 
-    // sort
     if (sort === "random") {
       const copy = base.slice();
       for (let i = copy.length - 1; i > 0; i--) {
@@ -373,14 +597,11 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       return copy;
     }
 
-    // default: ordenar por club + nome
     const copy = base.slice();
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
     return copy;
@@ -411,22 +632,22 @@ export default function PlayerVersionLongSleeveJerseysPage() {
     <div className="min-h-screen bg-white">
       {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-5 px-4 sm:px-6">
-          <div className="flex flex-col gap-3">
+        <div className="container-fw py-8 sm:py-12 px-4 sm:px-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Player Version
               </p>
-              <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
-                Player version jerseys (on-pitch fit, long sleeve)
+              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
+                Player version jerseys (long sleeve)
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
+              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
                 Authentic on-pitch fit jerseys (player version), long sleeve
                 only.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-start mt-1">
+            <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
               <a href="/" className="btn-outline text-sm">
                 ← Back to Home Page
               </a>
@@ -436,23 +657,21 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       </section>
 
       {/* CONTEÚDO */}
-      <section className="container-fw section-gap px-4 sm:px-6">
-        {/* Filtros + info */}
-        <div className="mb-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+      <section className="container-fw section-gap px-4 sm:px-0">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading player version long-sleeve jerseys…</span>
             ) : (
               <span>
-                {jerseysFiltered.length} player version long-sleeve jerseys
-                found
+                {jerseysFiltered.length} player version long-sleeve jerseys found
               </span>
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="relative w-full">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="search"
@@ -466,15 +685,15 @@ export default function PlayerVersionLongSleeveJerseysPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Sort by:</span>
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
+              <span className="text-gray-500 whitespace-nowrap">Sort by:</span>
               <select
                 value={sort}
                 onChange={(e) => {
                   setSort(e.target.value as any);
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="team">Team & name</option>
                 <option value="price-asc">Price (low → high)</option>
@@ -485,9 +704,8 @@ export default function PlayerVersionLongSleeveJerseysPage() {
           </div>
         </div>
 
-        {/* LOADING */}
         {loading && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -506,13 +724,11 @@ export default function PlayerVersionLongSleeveJerseysPage() {
           </div>
         )}
 
-        {/* ERRO */}
         {!loading && error && <p className="text-red-600">{error}</p>}
 
-        {/* GRID + PAGINAÇÃO */}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
                   Nenhum player version long-sleeve jersey encontrado.
@@ -525,25 +741,23 @@ export default function PlayerVersionLongSleeveJerseysPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-2 select-none">
-                {/* seta anterior */}
+              <nav className="mt-10 flex items-center justify-center gap-2 select-none">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Página anterior"
                 >
                   «
                 </button>
 
-                {/* números com ... */}
                 {buildPaginationRange(page, totalPages).map((item, idx) => {
                   if (item === "dots") {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-3 py-2 text-sm text-slate-500"
+                        className="px-3 py-2 text-xs sm:text-sm text-slate-500"
                       >
                         ...
                       </span>
@@ -559,7 +773,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[36px] px-3 py-2 rounded-xl ring-1 text-sm transition",
+                        "min-w-[36px] sm:min-w-[40px] px-3 py-2 rounded-xl ring-1 transition text-xs sm:text-sm",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
                           : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
@@ -571,12 +785,11 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                   );
                 })}
 
-                {/* seta seguinte */}
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
                   aria-label="Próxima página"
                 >
                   »
