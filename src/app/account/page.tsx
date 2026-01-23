@@ -80,9 +80,11 @@ export default async function AccountPage() {
     <div className="container-fw py-16 space-y-8">
       <div>
         <h1 className="text-3xl font-extrabold">My account</h1>
+        <br>
         <p className="text-gray-600">
           Manage your profile, security and personal info.
         </p>
+        </br>
       </div>
 
       <AccountClient

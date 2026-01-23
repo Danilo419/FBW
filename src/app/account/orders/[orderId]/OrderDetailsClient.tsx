@@ -42,7 +42,7 @@ type OrderItemDTO = {
     name: string
     slug?: string | null
     imageUrls: string[]
-    badges: string[]
+    badges: any
   }
 }
 
@@ -60,7 +60,6 @@ type OrderDetailsDTO = {
   totalCents?: number | null // cents (preferred)
   total?: number | null // legacy float
 
-  // shipping canonical (if your API returns these)
   shippingFullName?: string | null
   shippingEmail?: string | null
   shippingPhone?: string | null
@@ -71,7 +70,6 @@ type OrderDetailsDTO = {
   shippingPostalCode?: string | null
   shippingCountry?: string | null
 
-  // or snapshot JSON (if your API returns this)
   shippingJson?: ShippingJson
 
   items: OrderItemDTO[]
@@ -136,7 +134,7 @@ function shippingFromOrder(order: any): ShippingJson {
 
 function computeTotalCents(order: any) {
   if (typeof order?.totalCents === 'number') return order.totalCents
-  if (typeof order?.total === 'number') return Math.round(order.total * 100) // legacy float
+  if (typeof order?.total === 'number') return Math.round(order.total * 100)
 
   const itemsSum =
     (order?.items || []).reduce((acc: number, it: any) => acc + (Number(it?.totalPrice) || 0), 0) || 0
@@ -146,7 +144,7 @@ function computeTotalCents(order: any) {
   return itemsSum + shipping + tax
 }
 
-/* ========================= Item detail extraction (like admin) ========================= */
+/* ========================= Item detail extraction ========================= */
 
 function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapPers =
@@ -222,11 +220,40 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
   return { name, number }
 }
 
+/* ✅ badges split (fix) */
+function splitBadgesString(s: string): string[] {
+  const raw = String(s ?? '').trim()
+  if (!raw) return []
+  const parts = raw.split(/[,\n;|]+/g).map((x) => x.trim())
+  return parts.filter(Boolean)
+}
+
 function normalizeBadges(rawBadges: any): string[] {
   if (!rawBadges) return []
-  if (Array.isArray(rawBadges)) return rawBadges.map(String).filter(Boolean)
-  if (typeof rawBadges === 'object') return Object.values(rawBadges).map(String).filter(Boolean)
-  return [String(rawBadges)].filter(Boolean)
+
+  if (Array.isArray(rawBadges)) {
+    const out: string[] = []
+    for (const v of rawBadges) {
+      if (v == null) continue
+      if (typeof v === 'string') out.push(...splitBadgesString(v))
+      else if (typeof v === 'object') out.push(...splitBadgesString(Object.values(v as any).join(',')))
+      else out.push(...splitBadgesString(String(v)))
+    }
+    return out
+  }
+
+  if (typeof rawBadges === 'object') {
+    const out: string[] = []
+    for (const v of Object.values(rawBadges)) {
+      if (v == null) continue
+      if (typeof v === 'string') out.push(...splitBadgesString(v))
+      else if (typeof v === 'object') out.push(...splitBadgesString(Object.values(v as any).join(',')))
+      else out.push(...splitBadgesString(String(v)))
+    }
+    return out
+  }
+
+  return splitBadgesString(String(rawBadges))
 }
 
 function deriveItemDetails(it: OrderItemDTO) {
@@ -253,18 +280,12 @@ function deriveItemDetails(it: OrderItemDTO) {
     null
 
   const badgesFromSnap = normalizeBadges(rawBadges)
-
-  // Keep product badges too (some APIs store them here)
-  const badgesFromProduct = ensureArray<string>(it?.product?.badges).map(String).filter(Boolean)
-
-  // Merge + de-dupe
+  const badgesFromProduct = normalizeBadges(it?.product?.badges)
   const allBadges = Array.from(new Set([...badgesFromSnap, ...badgesFromProduct])).filter(Boolean)
 
-  // Options: show clean key/value list (excluding noisy blobs)
   const optionsPairs: Array<{ k: string; v: string }> = []
   for (const [k, v] of Object.entries(optionsObj)) {
     if (v == null || v === '') continue
-    // avoid dumping huge objects
     if (k.toLowerCase().includes('json')) continue
 
     let vs = ''
@@ -275,7 +296,6 @@ function deriveItemDetails(it: OrderItemDTO) {
     vs = vs.trim()
     if (!vs) continue
 
-    // avoid repeating badges/size since we show them explicitly
     if (k.toLowerCase() === 'badges') continue
     if (k.toLowerCase() === 'size') continue
 
@@ -286,7 +306,6 @@ function deriveItemDetails(it: OrderItemDTO) {
 }
 
 function prettyKey(k: string) {
-  // small niceness for UI labels
   const map: Record<string, string> = {
     custName: 'Name',
     custNumber: 'Number',
@@ -364,7 +383,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
         </Link>
       </div>
 
-      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
+      <div className="rounded-2xl border bg-white p-4 sm:p-6 shadow-sm space-y-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-2xl font-bold">Order details</h1>
 
@@ -407,8 +426,46 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                     const productHref = it.product?.slug ? `/product/${it.product.slug}` : null
 
                     return (
-                      <li key={it.id} className="flex items-start gap-4 p-4">
-                        <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0 mt-0.5">
+                      <li
+                        key={it.id}
+                        className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 p-4"
+                      >
+                        {/* top row (mobile): image + price */}
+                        <div className="flex items-start justify-between gap-3 sm:hidden">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0">
+                              <Image
+                                src={img}
+                                alt={title}
+                                fill
+                                className="object-cover"
+                                sizes="56px"
+                                priority={false}
+                                unoptimized
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate font-medium">
+                                {productHref ? (
+                                  <Link href={productHref} className="hover:underline">
+                                    {title}
+                                  </Link>
+                                ) : (
+                                  title
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Qty: {it.qty}
+                                <span className="mx-2">·</span>
+                                {money(it.unitPrice, currency)} each
+                              </div>
+                            </div>
+                          </div>
+                          <div className="shrink-0 font-semibold">{money(it.totalPrice, currency)}</div>
+                        </div>
+
+                        {/* desktop/tablet: image */}
+                        <div className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0 hidden sm:block mt-0.5">
                           <Image
                             src={img}
                             alt={title}
@@ -420,7 +477,8 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                           />
                         </div>
 
-                        <div className="min-w-0 flex-1">
+                        {/* desktop/tablet: content */}
+                        <div className="min-w-0 flex-1 hidden sm:block">
                           <div className="truncate font-medium">
                             {productHref ? (
                               <Link href={productHref} className="hover:underline">
@@ -437,7 +495,6 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             {money(it.unitPrice, currency)} each
                           </div>
 
-                          {/* ✅ Size / Personalization (like admin parsing) */}
                           {(details.size || details.personalization?.name || details.personalization?.number) && (
                             <div className="mt-2 text-sm text-gray-700 space-y-0.5">
                               {details.size ? (
@@ -456,7 +513,6 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
-                          {/* ✅ Options key/values (clean) */}
                           {details.optionsPairs.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {details.optionsPairs.map((p, idx) => (
@@ -471,11 +527,13 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
-                          {/* ✅ Badges (merged from snapshot/options + product.badges) */}
                           {details.badges.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {details.badges.map((b, idx) => (
-                                <span key={`${b}-${idx}`} className="text-xs px-2 py-1 rounded-full border bg-white">
+                                <span
+                                  key={`${b}-${idx}`}
+                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                >
                                   {b}
                                 </span>
                               ))}
@@ -483,7 +541,56 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                           )}
                         </div>
 
-                        <div className="shrink-0 font-semibold">{money(it.totalPrice, currency)}</div>
+                        {/* desktop/tablet: price */}
+                        <div className="shrink-0 font-semibold hidden sm:block">{money(it.totalPrice, currency)}</div>
+
+                        {/* mobile: details block below */}
+                        <div className="sm:hidden">
+                          {(details.size || details.personalization?.name || details.personalization?.number) && (
+                            <div className="mt-2 text-sm text-gray-700 space-y-0.5">
+                              {details.size ? (
+                                <div>
+                                  <span className="text-gray-500">Size:</span> {details.size}
+                                </div>
+                              ) : null}
+
+                              {details.personalization ? (
+                                <div>
+                                  <span className="text-gray-500">Personalization:</span>{' '}
+                                  {details.personalization.name ? details.personalization.name : '—'}
+                                  {details.personalization.number ? ` · #${details.personalization.number}` : ''}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+
+                          {details.optionsPairs.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {details.optionsPairs.map((p, idx) => (
+                                <span
+                                  key={`${p.k}-${idx}`}
+                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                  title={p.k}
+                                >
+                                  <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {details.badges.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {details.badges.map((b, idx) => (
+                                <span
+                                  key={`${b}-${idx}`}
+                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                >
+                                  {b}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </li>
                     )
                   })}
