@@ -11,6 +11,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  ReferenceLine,
 } from "recharts";
 
 type Metric = "visitors" | "sales" | "profit" | "orders" | "conversion";
@@ -50,16 +51,33 @@ function formatPercent(v: number) {
   }).format(v)}%`;
 }
 
-function prettyDateLabel(isoYYYYMMDD: string) {
-  const d = new Date(isoYYYYMMDD + "T00:00:00.000Z");
-  if (Number.isNaN(d.getTime())) return isoYYYYMMDD;
+function parseISOToTs(isoYYYYMMDD: string) {
+  const ts = Date.parse(isoYYYYMMDD + "T00:00:00.000Z");
+  return Number.isFinite(ts) ? ts : NaN;
+}
+
+function formatDateTick(ts: number) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  // Premium: "25 Dec" (limpo e consistente)
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
-/* ======================================================================================
-   Nice ticks for € axis (0€, 50€, 100€ ...)
-   Uses "nice number" algorithm (1/2/5 * 10^n).
-====================================================================================== */
+function formatDateTooltip(ts: number) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  // Premium: "Thu, 23 Jan 2026"
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/* ===========================
+   Nice ticks for Y axis
+=========================== */
 function niceNum(range: number, round: boolean) {
   const exponent = Math.floor(Math.log10(range));
   const fraction = range / Math.pow(10, exponent);
@@ -83,10 +101,9 @@ function niceNum(range: number, round: boolean) {
 function buildNiceTicks(min: number, max: number, maxTicks = 6) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
   if (max === min) {
-    // cria um range à volta do valor
     const pad = max === 0 ? 10 : Math.abs(max) * 0.2;
-    min = min - pad;
-    max = max + pad;
+    min -= pad;
+    max += pad;
   }
 
   const range = niceNum(max - min, false);
@@ -96,25 +113,80 @@ function buildNiceTicks(min: number, max: number, maxTicks = 6) {
   const niceMax = Math.ceil(max / step) * step;
 
   const ticks: number[] = [];
-  // evita loops infinitos
-  const limit = 200;
-  let i = 0;
-
-  for (let v = niceMin; v <= niceMax + step / 2; v += step) {
+  for (let v = niceMin, i = 0; v <= niceMax + step / 2 && i < 200; v += step, i++) {
     ticks.push(Number(v.toFixed(10)));
-    i++;
-    if (i > limit) break;
   }
-
   return ticks;
 }
 
 function eurTickLabel(v: number) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "";
-  // estilo compacto no eixo: "50€"
-  // arredonda para inteiro para ficar limpo
-  return `${Math.round(n)}€`;
+  const int = Math.round(n);
+  const withSep = new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 0 }).format(int);
+  return `${withSep}€`;
+}
+
+/* ===========================
+   Premium X ticks: 6 evenly spaced
+=========================== */
+function buildEvenTimeTicks(minTs: number, maxTs: number, count = 6) {
+  if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) return [];
+  if (count <= 1) return [minTs];
+  if (maxTs <= minTs) return [minTs];
+
+  const step = (maxTs - minTs) / (count - 1);
+  const ticks: number[] = [];
+  for (let i = 0; i < count; i++) ticks.push(minTs + step * i);
+  return ticks;
+}
+
+/* ===========================
+   Premium tooltip
+=========================== */
+function TooltipCard({
+  active,
+  payload,
+  label,
+  metric,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: any;
+  metric: Metric;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const ts = Number(label);
+  const v = Number(payload?.[0]?.value);
+
+  const valueText =
+    metric === "sales" || metric === "profit"
+      ? formatEUR(Number.isFinite(v) ? v : 0)
+      : metric === "conversion"
+        ? formatPercent(Number.isFinite(v) ? v : 0)
+        : formatInt(Number.isFinite(v) ? v : 0);
+
+  const title =
+    metric === "sales"
+      ? "Sales"
+      : metric === "profit"
+        ? "Profit"
+        : metric === "orders"
+          ? "Orders"
+          : metric === "conversion"
+            ? "Conversion"
+            : "Visitors";
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur px-3 py-2">
+      <div className="text-[11px] text-gray-500">{formatDateTooltip(ts)}</div>
+      <div className="mt-1 flex items-baseline gap-2">
+        <div className="text-sm font-semibold text-gray-900">{valueText}</div>
+        <div className="text-[11px] text-gray-500">{title}</div>
+      </div>
+    </div>
+  );
 }
 
 export default function MetricChart({
@@ -127,7 +199,6 @@ export default function MetricChart({
   const [metric, setMetric] = useState<Metric>(defaultMetric);
   const [period, setPeriod] = useState<Period>(defaultPeriod);
 
-  // custom range (YYYY-MM-DD)
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
 
@@ -160,9 +231,7 @@ export default function MetricChart({
     async function run() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/admin/analytics?${qs}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/admin/analytics?${qs}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to load analytics");
         const json = await res.json();
         if (!ignore) setPayload(json);
@@ -185,11 +254,24 @@ export default function MetricChart({
   const chartData = useMemo(() => {
     const s = series?.[metric];
     const arr = Array.isArray(s) ? s : [];
-    return labels.map((label, i) => ({
-      label,
-      value: typeof arr[i] === "number" ? arr[i] : 0,
-    }));
+    return labels
+      .map((label, i) => ({
+        label,
+        ts: parseISOToTs(label),
+        value: typeof arr[i] === "number" ? arr[i] : 0,
+      }))
+      .filter((p) => Number.isFinite(p.ts))
+      .sort((a, b) => a.ts - b.ts);
   }, [labels, series, metric]);
+
+  const xTicks = useMemo(() => {
+    if (chartData.length === 0) return undefined as any;
+    const minTs = chartData[0].ts;
+    const maxTs = chartData[chartData.length - 1].ts;
+    if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) return undefined as any;
+    if (maxTs <= minTs) return [minTs];
+    return buildEvenTimeTicks(minTs, maxTs, 6);
+  }, [chartData]);
 
   const { yDomain, yTicks } = useMemo(() => {
     if (!(metric === "sales" || metric === "profit" || metric === "conversion")) {
@@ -202,14 +284,14 @@ export default function MetricChart({
     for (const p of chartData) {
       const v = Number(p.value);
       if (!Number.isFinite(v)) continue;
-      if (v < min) min = v;
-      if (v > max) max = v;
+      min = Math.min(min, v);
+      max = Math.max(max, v);
     }
     if (!Number.isFinite(min) || !Number.isFinite(max)) {
       return { yDomain: undefined as any, yTicks: undefined as any };
     }
 
-    // Para money, forçar min a 0 (fica mais parecido com o teu gráfico antigo)
+    // Premium: money sempre com baseline 0 visível
     if (metric === "sales" || metric === "profit") {
       min = Math.min(0, min);
       max = Math.max(0, max);
@@ -219,7 +301,7 @@ export default function MetricChart({
       return { yDomain: domain, yTicks: ticks };
     }
 
-    // Conversion (%): também ticks “bonitos”
+    // Conversion %
     if (metric === "conversion") {
       min = Math.min(0, min);
       max = Math.max(0, max);
@@ -232,7 +314,6 @@ export default function MetricChart({
     return { yDomain: undefined as any, yTicks: undefined as any };
   }, [chartData, metric]);
 
-  // Total box
   const totalValue = useMemo(() => {
     if (!payload) return 0;
 
@@ -244,7 +325,6 @@ export default function MetricChart({
     if (metric === "sales") return payload.totals?.sales ?? 0;
     if (metric === "profit") return payload.totals?.profit ?? 0;
 
-    // conversion rate overall
     if (metric === "conversion") {
       if (totalVisitors <= 0) return 0;
       return (totalOrders / totalVisitors) * 100;
@@ -266,18 +346,6 @@ export default function MetricChart({
     if (metric === "sales" || metric === "profit") return (v: number) => eurTickLabel(v);
     if (metric === "conversion") return (v: number) => `${Math.round(Number(v) || 0)}%`;
     return (v: number) => formatInt(Number(v) || 0);
-  }, [metric]);
-
-  const tooltipValueFormatter = useMemo(() => {
-    return (val: any) => {
-      const n = typeof val === "number" ? val : Number(val);
-      if (!Number.isFinite(n)) return ["", "Value"] as any;
-
-      if (metric === "sales" || metric === "profit") return [formatEUR(n), "Value"] as any;
-      if (metric === "conversion") return [formatPercent(n), "Value"] as any;
-
-      return [formatInt(n), "Value"] as any;
-    };
   }, [metric]);
 
   return (
@@ -356,57 +424,93 @@ export default function MetricChart({
         </div>
       )}
 
-      {/* Total box */}
+      {/* Total box (premium spacing) */}
       <div className="mt-4">
-        <div className="w-full md:w-[320px] rounded-xl border p-4">
+        <div className="w-full md:w-[360px] rounded-2xl border p-4 shadow-sm">
           <div className="text-xs text-gray-500">Total</div>
-          <div className="text-2xl font-extrabold">{loading ? "…" : totalText}</div>
+          <div className="text-2xl font-extrabold tracking-tight">
+            {loading ? "…" : totalText}
+          </div>
           <div className="mt-1 text-xs text-gray-500">{activeMetricLabel}</div>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="mt-3 h-[320px] md:h-[360px]">
+      <div className="mt-3 h-[320px] md:h-[380px]">
         {loading ? (
-          <div className="h-full rounded-xl border flex items-center justify-center text-sm text-gray-500">
+          <div className="h-full rounded-2xl border flex items-center justify-center text-sm text-gray-500">
             Loading…
           </div>
         ) : !payload || chartData.length === 0 ? (
-          <div className="h-full rounded-xl border flex items-center justify-center text-sm text-gray-500">
+          <div className="h-full rounded-2xl border flex items-center justify-center text-sm text-gray-500">
             No data.
           </div>
         ) : (
-          <div className="h-full rounded-xl border p-2">
+          <div className="h-full rounded-2xl border p-2 md:p-3">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
-                margin={{ top: 10, right: 16, left: 8, bottom: 10 }}
+                margin={{ top: 16, right: 20, left: 22, bottom: 22 }}
               >
-                <CartesianGrid strokeDasharray="4 6" />
+                {/* premium: line gradient */}
+                <defs>
+                  <linearGradient id="fwLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.95} />
+                  </linearGradient>
+                </defs>
+
+                {/* premium grid */}
+                <CartesianGrid strokeDasharray="4 8" stroke="#e5e7eb" />
+
+                {/* premium x axis: 6 evenly spaced ticks, equal distances */}
                 <XAxis
-                  dataKey="label"
-                  tickFormatter={prettyDateLabel}
-                  interval="preserveStartEnd"
-                  minTickGap={16}
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={["dataMin", "dataMax"]}
+                  ticks={xTicks as any}
+                  tickFormatter={(ts: any) => formatDateTick(Number(ts))}
+                  height={34}
+                  tickMargin={12}
+                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  axisLine={false}
+                  tickLine={false}
                 />
+
+                {/* premium y axis */}
                 <YAxis
                   tickFormatter={yTickFormatter as any}
                   domain={yDomain as any}
                   ticks={yTicks as any}
+                  width={72}
+                  tickMargin={12}
+                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  axisLine={false}
+                  tickLine={false}
                 />
+
+                {/* premium: baseline 0 para Profit/Sales */}
+                {(metric === "profit" || metric === "sales") && (
+                  <ReferenceLine y={0} stroke="#e5e7eb" strokeWidth={1} />
+                )}
+
+                {/* premium tooltip */}
                 <Tooltip
-                  formatter={tooltipValueFormatter as any}
-                  labelFormatter={(label: any) => {
-                    const s = String(label ?? "");
-                    return s ? s : "Date";
-                  }}
+                  cursor={{ stroke: "#cbd5e1", strokeDasharray: "6 6" }}
+                  content={(props: any) => <TooltipCard {...props} metric={metric} />}
+                  labelFormatter={(label: any) => formatDateTooltip(Number(label))}
                 />
+
                 <Line
                   type="monotone"
                   dataKey="value"
+                  stroke="url(#fwLine)"
                   strokeWidth={3}
                   dot={false}
-                  activeDot={{ r: 4 }}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive
+                  animationDuration={450}
                 />
               </LineChart>
             </ResponsiveContainer>
