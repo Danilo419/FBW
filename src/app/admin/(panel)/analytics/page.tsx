@@ -3,12 +3,12 @@ import MetricChart from "@/components/analytics/MetricChart";
 import LiveVisitorsBadge from "@/components/analytics/LiveVisitorsBadge";
 
 // Tipos iguais aos usados dentro do MetricChart (não exportados de lá)
-type Metric = "visitors" | "sales" | "orders" | "conversion";
+type Metric = "visitors" | "sales" | "profit" | "orders" | "conversion";
 type Period = "today" | "7d" | "30d" | "90d" | "custom";
 
 type SP = Record<string, string | string[]>;
 
-const METRICS = ["visitors", "sales", "orders", "conversion"] as const;
+const METRICS = ["visitors", "sales", "profit", "orders", "conversion"] as const;
 const PERIODS = ["today", "7d", "30d", "90d", "custom"] as const;
 
 function toMetric(value: unknown, fallback: Metric): Metric {
