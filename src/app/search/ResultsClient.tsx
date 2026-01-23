@@ -69,10 +69,11 @@ function normalizeStr(s?: string | null) {
 /**
  * IMPORTANTÍSSIMO:
  * - NÃO usar "|madrid" para Real Madrid, porque apanha "Atlético de Madrid".
- * - "Atlético/Atletico" precisa ser detetado corretamente.
+ * - Aqui o texto já vem sem acentos (normalizeStr), então usamos "atletico".
  */
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  [/[\b\s]atletico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
+  // ✅ FIX: \b tem de estar FORA de []
+  [/\batletico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\breal\s*madrid\b/i, "Real Madrid"],
 
   [/\b(fc\s*)?barcelona\b|\bbarca\b/i, "FC Barcelona"],
@@ -83,7 +84,7 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
 
   [/\bsl?\s*benfica\b|\bbenfica\b/i, "SL Benfica"],
   [/\bfc\s*porto\b|\bporto\b/i, "FC Porto"],
-  [/\bsporting\s*cp\b|\bsporting\b(?!.*gij[oó]n)\b/i, "Sporting CP"],
+  [/\bsporting\s*cp\b|\bsporting\b(?!.*gijon)\b/i, "Sporting CP"],
   [/\bsc\s*braga\b|\bbraga\b/i, "SC Braga"],
   [/\bvitoria\s*(sc)?\b/i, "Vitória SC"],
 ];
@@ -92,7 +93,6 @@ function clubFromString(input?: string | null): string | null {
   const s = normalizeStr(input);
   if (!s) return null;
 
-  // match por ordem (prioridade)
   for (const [re, club] of CLUB_PATTERNS) {
     if (re.test(s)) return club;
   }

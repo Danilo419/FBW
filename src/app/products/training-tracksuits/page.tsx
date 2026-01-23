@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
 /* ============================================================
-   Tipos (iguais ao ResultsClient / outras páginas)
+   Tipos
 ============================================================ */
 type UIProduct = {
   id: string | number;
@@ -19,7 +19,7 @@ type UIProduct = {
 const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
 
 /* ============================================================
-   Preços / Promo (copiado do search)
+   Preços / Promo
 ============================================================ */
 
 const SALE_MAP_EUR: Record<number, number> = {
@@ -63,11 +63,7 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (CORRIGIDO)
-   - NÃO usar "madrid" => Real Madrid (isso estraga nomes)
-   - não mostrar "Club" genérico
-   - se o team vier tipo "Chelsea Shadow" / "Japan Samurai",
-     mostramos só "Chelsea" / "Japan"
+   CLUB LABEL (mesmo teu bloco)
 ============================================================ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
@@ -251,11 +247,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -329,7 +323,6 @@ function inferClubFromName(name?: string | null): string {
   return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ Só o nome do clube (ou vazio). Nunca "Club" */
 function getClubLabel(p: UIProduct): string {
   const teamClean = cleanTeamValue(p.team);
   if (teamClean) return hardClampClubName(teamClean);
@@ -344,8 +337,86 @@ function getClubLabel(p: UIProduct): string {
 }
 
 /* ============================================================
-   Filtro: Training Tracksuits (full training sets)
-   - Fatos de treino completos: top + pants
+   MAPEAR API -> UIProduct (ROBUSTO)
+============================================================ */
+
+function getImageFromApi(raw: any): string | undefined {
+  return (
+    raw.img ??
+    raw.image ??
+    raw.imageUrl ??
+    raw.imageURL ??
+    raw.mainImage ??
+    raw.mainImageUrl ??
+    raw.mainImageURL ??
+    raw.thumbnail ??
+    raw.thumbnailUrl ??
+    raw.coverImage ??
+    raw.coverImageUrl ??
+    raw.cardImage ??
+    raw.cardImageUrl ??
+    raw.listImage ??
+    raw.listImageUrl ??
+    raw.gridImage ??
+    raw.gridImageUrl ??
+    raw.heroImage ??
+    raw.heroImageUrl ??
+    raw.primaryImage ??
+    raw.primaryImageUrl ??
+    raw.picture ??
+    raw.pictureUrl ??
+    raw.photo ??
+    raw.photoUrl ??
+    raw.imageUrls?.[0] ??
+    raw.images?.[0]?.url ??
+    raw.gallery?.[0]?.url ??
+    undefined
+  );
+}
+
+function getPriceEurFromApi(raw: any): number | undefined {
+  if (typeof raw.price === "number") return raw.price;
+  if (typeof raw.currentPrice === "number") return raw.currentPrice;
+
+  if (typeof raw.basePrice === "number") {
+    const v = raw.basePrice;
+    if (Number.isInteger(v) && v > 200) return Math.round(v) / 100;
+    return v;
+  }
+
+  if (typeof raw.priceCents === "number") return Math.round(raw.priceCents) / 100;
+
+  return undefined;
+}
+
+function mapApiToUIProduct(raw: any): UIProduct {
+  const name =
+    raw?.name ??
+    raw?.title ??
+    raw?.productName ??
+    raw?.fullName ??
+    "Unnamed product";
+
+  const team =
+    raw?.team ??
+    raw?.club ??
+    raw?.clubName ??
+    raw?.teamName ??
+    raw?.nationalTeam ??
+    null;
+
+  return {
+    id: raw?.id ?? raw?.productId ?? raw?._id ?? raw?.slug ?? name,
+    name,
+    slug: raw?.slug ?? raw?.handle ?? undefined,
+    img: getImageFromApi(raw) ?? FALLBACK_IMG,
+    price: getPriceEurFromApi(raw),
+    team,
+  };
+}
+
+/* ============================================================
+   Filtro: Training Tracksuits (MAIS PERMISSIVO)
 ============================================================ */
 
 function normName(p: UIProduct) {
@@ -356,54 +427,37 @@ function isTrainingTracksuit(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // Tem de indicar fato de treino / tracksuit
-  const isTracksuit =
+  // ✅ aceitar mais variações
+  const looksLikeTracksuit =
     n.includes("TRACKSUIT") ||
     n.includes("TRACK SUIT") ||
     n.includes("TRAINING SUIT") ||
+    n.includes("PRESENTATION SUIT") ||
     n.includes("TRAINING SET") ||
-    n.includes("PRESENTATION SUIT");
+    n.includes("SUIT");
 
-  if (!isTracksuit) return false;
+  if (!looksLikeTracksuit) return false;
 
-  // Indícios de top + pants / full set
-  const hasTop =
-    n.includes("TOP") ||
-    n.includes("JACKET") ||
-    n.includes("ZIP") ||
-    n.includes("HOODIE") ||
-    n.includes("SWEAT");
-
-  const hasBottom =
-    n.includes("PANTS") || n.includes("TROUSERS") || n.includes("BOTTOMS");
-
-  // Se NÃO tiver "TRACKSUIT" literal, exigimos ter bottom explícito
-  if (!hasBottom && !n.includes("TRACKSUIT") && !n.includes("TRACK SUIT")) {
-    return false;
-  }
-
-  // Excluir coisas que não interessam
+  // ❌ excluir “only” (peças soltas)
   if (n.includes("SHORTS ONLY")) return false;
   if (n.includes("JACKET ONLY")) return false;
+  if (n.includes("TOP ONLY")) return false;
   if (n.includes("PANTS ONLY")) return false;
 
-  // Excluir acessórios
+  // ❌ acessórios / irrelevante
   if (n.includes("SCARF")) return false;
   if (n.includes("BALL")) return false;
   if (n.includes("POSTER")) return false;
 
-  // Excluir baby / infant
+  // ❌ baby / infant
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-
-  // (opcional) Se quiser ser mais rígido, exigir top OU bottom além do tracksuit:
-  if (!hasTop && !hasBottom) return false;
 
   return true;
 }
 
 /* ============================================================
-   Card de produto (igual look & feel do search)
+   Card
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
@@ -443,7 +497,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -501,7 +554,7 @@ function ProductCard({ p }: { p: UIProduct }) {
 }
 
 /* ============================================================
-   Helper de paginação com "..."
+   Paginação com "..."
 ============================================================ */
 
 function buildPaginationRange(
@@ -530,10 +583,16 @@ function buildPaginationRange(
 }
 
 /* ============================================================
-   Página Training Tracksuits
-   - Busca via /api/search?q=tracksuit
-   - Filtra full training sets (top & pants)
+   Página Training Tracksuits (FETCH ROBUSTO + MERGE QUERIES)
 ============================================================ */
+
+const SEARCH_QUERIES = [
+  "tracksuit",
+  "training tracksuit",
+  "training suit",
+  "presentation suit",
+  "training set",
+];
 
 export default function TrainingTracksuitsPage() {
   const [loading, setLoading] = useState(false);
@@ -549,34 +608,67 @@ export default function TrainingTracksuitsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    fetch(`/api/search?q=tracksuit`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
-        const json = await r.json();
-        const arr: UIProduct[] = Array.isArray(json?.products) ? json.products : [];
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const allRaw: any[] = [];
+
+        for (const q of SEARCH_QUERIES) {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+            cache: "no-store",
+          });
+          if (!res.ok) continue;
+
+          const json = await res.json();
+
+          const list: any[] = Array.isArray(json?.products)
+            ? json.products
+            : Array.isArray(json)
+            ? json
+            : [];
+
+          allRaw.push(...list);
+        }
+
+        // remover duplicados
+        const seen = new Set<string>();
+        const uniqueRaw: any[] = [];
+        for (const p of allRaw) {
+          const key = String(p?.id ?? p?.slug ?? p?.name ?? p?.title ?? "");
+          if (!key) continue;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          uniqueRaw.push(p);
+        }
+
+        const mapped = uniqueRaw.map(mapApiToUIProduct);
+        const filtered = mapped.filter(isTrainingTracksuit);
+
         if (!cancelled) {
-          setResults(arr);
+          setResults(filtered);
           setPage(1);
         }
-      })
-      .catch((e) => {
+      } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || "Error loading products");
         }
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
+    load();
     return () => {
       cancelled = true;
     };
   }, []);
 
   const tracksuitsFiltered = useMemo(() => {
-    let base = results.filter(isTrainingTracksuit);
+    let base = results;
 
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toUpperCase();
@@ -612,11 +704,8 @@ export default function TrainingTracksuitsPage() {
     copy.sort((a, b) => {
       const ta = (getClubLabel(a) || "").toUpperCase();
       const tb = (getClubLabel(b) || "").toUpperCase();
-
-      // vazios vão para o fim
       if (!ta && tb) return 1;
       if (ta && !tb) return -1;
-
       if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
@@ -658,7 +747,8 @@ export default function TrainingTracksuitsPage() {
                 Training tracksuits
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
-                Full training sets (top & pants) for warm-ups, travel and everyday training sessions.
+                Full training sets (top & pants) for warm-ups, travel and
+                everyday training sessions.
               </p>
             </div>
 
