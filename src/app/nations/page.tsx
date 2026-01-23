@@ -8,10 +8,6 @@ export const revalidate = 0;
 
 type NationCard = { name: string; image?: string | null; slug: string };
 
-/**
- * Assets em: /public/assets/nations
- * IMPORTANTE: em Vercel (Linux) o path é case-sensitive.
- */
 const NATION_ASSET_BY_SLUG: Record<string, string> = {
   argentina: "Argentinafc.png",
   belgium: "Belgiumfc.png",
@@ -98,8 +94,8 @@ export default async function NationsPage() {
               href={`/nations/${nation.slug}`}
               className="group block touch-manipulation"
             >
-              {/* ⬇️ CARD MAIS ALTO (IMAGEM MAIOR NA VERTICAL) */}
-              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
+              {/* ⬆️ CARD AINDA MAIS ALTO */}
+              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
                 {nation.image ? (
                   <img
                     src={nation.image}
@@ -121,7 +117,7 @@ export default async function NationsPage() {
                 </div>
               </div>
 
-              <div className="px-1 pt-2.5 text-center">
+              <div className="px-1 pt-3 text-center">
                 <h3 className="font-semibold text-xs sm:text-sm md:text-base text-slate-900">
                   {nation.name}
                 </h3>
