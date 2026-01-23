@@ -16,6 +16,57 @@ export const dynamic = "force-dynamic";
  */
 const MAX_FREE_ITEMS_PER_ORDER = 2;
 
+/* ========================= BADGE LABELS (same as ProductConfigurator) ========================= */
+const BADGE_LABELS: Record<string, string> = {
+  "premier-league-regular": "Premier League – League Badge",
+  "premier-league-champions": "Premier League – Champions (Gold)",
+  "la-liga-regular": "La Liga – League Badge",
+  "la-liga-champions": "La Liga – Champion",
+  "serie-a-regular": "Serie A – League Badge",
+  "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
+  "bundesliga-regular": "Bundesliga – League Badge",
+  "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
+  "ligue1-regular": "Ligue 1 – League Badge",
+  "ligue1-champions": "Ligue 1 – Champion",
+  "primeira-liga-regular": "Primeira Liga – League Badge",
+  "primeira-liga-champions": "Primeira Liga – Champion",
+  "eredivisie-regular": "Eredivisie – League Badge",
+  "eredivisie-champions": "Eredivisie – Champion",
+  "scottish-premiership-regular": "Scottish Premiership – League Badge",
+  "scottish-premiership-champions": "Scottish Premiership – Champion",
+  "mls-regular": "MLS – League Badge",
+  "mls-champions": "MLS – Champions (MLS Cup Holders)",
+  "brasileirao-regular": "Brasileirão – League Badge",
+  "brasileirao-champions": "Brasileirão – Champion",
+  "super-lig-regular": "Süper Lig – League Badge",
+  "super-lig-champions": "Süper Lig – Champion",
+  "spl-saudi-regular": "Saudi Pro League – League Badge",
+  "spl-saudi-champions": "Saudi Pro League – Champion",
+  "ucl-regular": "UEFA Champions League – Starball Badge",
+  "ucl-winners": "UEFA Champions League – Winners Badge",
+  "uel-regular": "UEFA Europa League – Badge",
+  "uel-winners": "UEFA Europa League – Winners Badge",
+  "uecl-regular": "UEFA Europa Conference League – Badge",
+  "uecl-winners": "UEFA Europa Conference League – Winners Badge",
+  "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
+
+  // ✅ extra (your screenshot shows this key)
+  "intercontinental-cup-champions": "FIFA Intercontinental Cup – Champions Badge",
+};
+
+function humanizeBadge(value: string) {
+  const key = String(value ?? "").trim();
+  if (!key) return "";
+  if (BADGE_LABELS[key]) return BADGE_LABELS[key];
+
+  // fallback: nice Title Case
+  return key
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 /* ------------------------------- helpers ------------------------------- */
 function isExternalUrl(u: string) {
   return /^https?:\/\//i.test(u) || u.startsWith("//");
@@ -138,6 +189,17 @@ function extractNameNumberFromOptions(opts: Record<string, any> | null) {
   return { name: nameStr, number: numStr };
 }
 
+/** ✅ badges: show the same human labels as ProductConfigurator */
+function formatBadgesValue(raw: string) {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((v) => humanizeBadge(v))
+    .filter(Boolean)
+    .join(", ");
+}
+
 function optionsToRows(opts: Record<string, any> | null) {
   if (!opts) return [];
   return Object.entries(opts)
@@ -150,9 +212,20 @@ function optionsToRows(opts: Record<string, any> | null) {
     })
     .map(([k, v]) => {
       let vv = asDisplayValue(v);
-      if (k === "badges") vv = vv.split(",").map((s) => s.trim()).filter(Boolean).join(", ");
+
+      // ✅ if badges are stored as array / json string / comma string, normalize anyway
+      if (k === "badges") {
+        // vv is already a string here; keep consistent
+        vv = formatBadgesValue(vv);
+      } else if (typeof k === "string" && k.toLowerCase() === "badges") {
+        vv = formatBadgesValue(vv);
+      } else {
+        // if someone stored badges under a different casing, still handle later
+      }
+
       return [prettifyKey(k), vv] as const;
-    });
+    })
+    .filter(([, v]) => String(v).trim() !== "");
 }
 
 /* -------------------------- promo (Buy X Get Y) -------------------------- */

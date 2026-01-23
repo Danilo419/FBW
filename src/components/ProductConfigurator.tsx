@@ -133,7 +133,13 @@ function sanitizeNameUnicode(input: string, maxLen = 14) {
     .replace(/\s+/g, " ")
     .slice(0, maxLen);
 }
-function sanitizeNumber(input: string, maxLen = 2) {
+
+/**
+ * ✅ Agora aceita 3 dígitos (0–999)
+ * - mantém só números
+ * - limita a 3 chars
+ */
+function sanitizeNumber(input: string, maxLen = 3) {
   return input.replace(/\D/g, "").slice(0, maxLen);
 }
 
@@ -249,9 +255,7 @@ export default function ProductConfigurator({ product }: Props) {
   }, [sizes, selectedSize]);
 
   /* ---------- Groups ---------- */
-  const customizationGroupFromDb = product.optionGroups.find(
-    (g) => g.key === "customization"
-  );
+  const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
@@ -292,9 +296,7 @@ export default function ProductConfigurator({ product }: Props) {
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
-      : original.values.filter(
-          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
-        );
+      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
 
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
@@ -328,8 +330,7 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) =>
-    setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -381,14 +382,12 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Sanitize (✅ supports accents) ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
-  const safeNumber = useMemo(() => sanitizeNumber(custNumber, 2), [custNumber]);
+  const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]); // ✅ 3 dígitos
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
-    ).filter((el) => {
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
@@ -793,9 +792,7 @@ export default function ProductConfigurator({ product }: Props) {
               </div>
               <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
                 <label className="block">
-                  <span className="text-[11px] sm:text-xs text-gray-600">
-                    Name (uppercase)
-                  </span>
+                  <span className="text-[11px] sm:text-xs text-gray-600">Name (uppercase)</span>
                   <input
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. BELLINGHAM"
@@ -805,16 +802,14 @@ export default function ProductConfigurator({ product }: Props) {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[11px] sm:text-xs text-gray-600">
-                    Number (0–99)
-                  </span>
+                  <span className="text-[11px] sm:text-xs text-gray-600">Number (0–999)</span>
                   <input
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. 5"
                     value={custNumber}
                     onChange={(e) => setCustNumber(e.target.value)}
                     inputMode="numeric"
-                    maxLength={2}
+                    maxLength={3} // ✅ 3 números
                   />
                 </label>
               </div>
@@ -918,9 +913,7 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
                 <div className="text-sm">
                   <div className="font-semibold">Item added to cart</div>
-                  <div className="text-gray-600">
-                    You can keep shopping or proceed to checkout.
-                  </div>
+                  <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
                 <button
                   className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
@@ -995,8 +988,7 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) =>
-    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
+  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
