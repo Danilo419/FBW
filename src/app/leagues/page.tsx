@@ -1,7 +1,8 @@
 // src/app/leagues/page.tsx
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import { ArrowRight } from "lucide-react";
 import { LEAGUES_CONFIG, TEAM_TO_LEAGUE } from "@/lib/leaguesConfig";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ async function getActiveLeagues() {
 
   const activeLeagueSlugs = new Set<string>();
   for (const row of teams) {
-    const leagueSlug = TEAM_TO_LEAGUE.get(row.team);
+    const leagueSlug = row.team ? TEAM_TO_LEAGUE.get(row.team) : undefined;
     if (leagueSlug) activeLeagueSlugs.add(leagueSlug);
   }
 
@@ -25,73 +26,80 @@ async function getActiveLeagues() {
   );
 }
 
+type LeagueCard = {
+  slug: string;
+  name: string;
+  image: string;
+};
+
 export default async function LeaguesPage() {
-  const leaguesToShow = await getActiveLeagues();
+  const leaguesToShow = (await getActiveLeagues()) as LeagueCard[];
 
   return (
-    <main className="min-h-screen bg-white">
-      <div className="container-fw pt-10 sm:pt-12 pb-14">
-        {/* HEADER DO TÍTULO */}
-        <div className="text-center mb-8 space-y-3">
-          <h1
-            className="
-              inline-block
-              text-4xl sm:text-5xl md:text-6xl
-              font-black 
-              tracking-tight 
-              leading-[1.1]
-              py-1
-              bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 
-              text-transparent bg-clip-text
-            "
-          >
-            Leagues
-          </h1>
+    <main className="min-h-screen bg-white py-6 md:py-10">
+      <div className="container-fw mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
+        {/* Header — IGUAL AO VISUAL DA PÁGINA CLUBS */}
+        <div className="mb-6 md:mb-8 flex flex-col gap-4 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900">
+              Leagues
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-slate-600 max-w-xl">
+              Explore the world&apos;s most prestigious football leagues with{" "}
+              <span className="font-semibold text-emerald-600">
+                FootballWorld
+              </span>{" "}
+              products available.
+            </p>
+          </div>
 
-          <p className="text-gray-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto">
-            Explore the world&apos;s most prestigious football leagues
-          </p>
+          <div className="inline-flex items-center justify-end text-[11px] sm:text-xs text-slate-500 gap-1">
+            <span className="uppercase tracking-[0.18em]">Total leagues</span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-800 font-medium">
+              {leaguesToShow.length}
+            </span>
+          </div>
         </div>
 
-        {/* GRID */}
-        <div className="mx-auto max-w-6xl lg:max-w-7xl">
-          <div className="grid gap-8 sm:gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {leaguesToShow.map((league) => (
-              <Link key={league.slug} href={`/leagues/${league.slug}`} className="group block">
-                <div
-                  className="
-                    rounded-[2rem] bg-white border border-gray-200 
-                    overflow-hidden shadow-sm 
-                    transition-transform duration-300
-                    hover:scale-[1.01] hover:shadow-md
-                  "
-                >
-                  {/* IMAGE */}
-                  <div className="relative w-full pt-[130%] overflow-hidden rounded-t-[2rem]">
-                    <Image
-                      src={league.image}
-                      alt={league.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-                    />
-                  </div>
+        {/* Grid — IGUAL AO VISUAL DA PÁGINA CLUBS */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+          {leaguesToShow.map((league) => (
+            <Link
+              key={league.slug}
+              href={`/leagues/${league.slug}`}
+              className="group block touch-manipulation"
+            >
+              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
+                {league.image ? (
+                  <Image
+                    src={league.image}
+                    alt={league.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
+                    priority={false}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
+                )}
 
-                  {/* CONTENT */}
-                  <div className="px-6 sm:px-7 py-6 sm:py-7 space-y-4 text-center">
-                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-                      {league.name}
-                    </h3>
-
-                    <div className="h-[2px] w-10 bg-gradient-to-r from-sky-400 to-transparent mx-auto rounded-full" />
-
-                    <div className="pt-1 text-xs sm:text-sm font-semibold text-sky-600 tracking-[0.2em]">
-                      VIEW CLUBS
-                    </div>
+                <div className="pointer-events-none absolute inset-0 ring-0 group-hover:ring-2 group-hover:ring-emerald-500/40 transition" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition">
+                  <div className="flex items-center justify-between text-white text-[11px] sm:text-xs md:text-sm">
+                    View clubs
+                    <ArrowRight className="h-4 w-4" />
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
+              </div>
+
+              <div className="px-1 pt-3 text-center">
+                <h3 className="font-semibold text-xs sm:text-sm md:text-base text-slate-900">
+                  {league.name}
+                </h3>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </main>
