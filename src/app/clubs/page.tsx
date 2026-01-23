@@ -1,4 +1,3 @@
-// src/app/clubs/page.tsx
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ArrowRight } from "lucide-react";
@@ -14,7 +13,7 @@ export const revalidate = 0;
 
 /* ---------------- usar SEMPRE as helpers da lib ---------------- */
 function findClubAsset(teamName: string): string | null {
-  const slug = slugFromTeamName(teamName); // ✅ normaliza com aliases (Atlético -> atletico-madrid)
+  const slug = slugFromTeamName(teamName); // ✅ normaliza com aliases
   for (const [league, clubs] of Object.entries(leagueClubs) as [
     LeagueKey,
     string[]
@@ -48,7 +47,6 @@ export default async function ClubsPage() {
     const firstDbImg =
       arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
 
-    // ✅ usa o slug normalizado central (compatível com /products/team/[slug])
     const slug = slugFromTeamName(team);
     map.set(team, { image: assetImg ?? firstDbImg, slug });
   }
@@ -61,7 +59,7 @@ export default async function ClubsPage() {
     <main className="min-h-screen bg-white py-6 md:py-10">
       <div className="container-fw mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6 md:mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 md:mb-8 flex flex-col gap-3 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900">
               Clubs
@@ -74,6 +72,7 @@ export default async function ClubsPage() {
               products available.
             </p>
           </div>
+
           <div className="inline-flex items-center justify-end text-[11px] sm:text-xs text-slate-500 gap-1">
             <span className="uppercase tracking-[0.18em]">Total clubs</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-800 font-medium">
@@ -82,7 +81,7 @@ export default async function ClubsPage() {
           </div>
         </div>
 
-        {/* Grade de cartões — agora com o MESMO tamanho vertical das Nations */}
+        {/* Grade de cartões — mesmo tamanho das Nations */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
           {clubs.map((club) => (
             <Link
@@ -90,7 +89,6 @@ export default async function ClubsPage() {
               href={`/products/team/${club.slug}`}
               className="group block touch-manipulation"
             >
-              {/* ✅ IGUAL às Nations: aspect-[2/3] (mais alto) */}
               <div className="relative aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
                 {club.image ? (
                   <img
