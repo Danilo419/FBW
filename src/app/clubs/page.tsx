@@ -59,7 +59,7 @@ export default async function ClubsPage() {
     <main className="min-h-screen bg-white py-6 md:py-10">
       <div className="container-fw mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6 md:mb-8 flex flex-col gap-3 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 md:mb-8 flex flex-col gap-4 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900">
               Clubs
