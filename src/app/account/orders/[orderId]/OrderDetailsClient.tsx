@@ -10,6 +10,50 @@ function money(cents?: number | null, currency = 'EUR') {
   return (n / 100).toLocaleString(undefined, { style: 'currency', currency })
 }
 
+/* ========================= Badge labels (same as ProductConfigurator) ========================= */
+const BADGE_LABELS: Record<string, string> = {
+  'premier-league-regular': 'Premier League – League Badge',
+  'premier-league-champions': 'Premier League – Champions (Gold)',
+  'la-liga-regular': 'La Liga – League Badge',
+  'la-liga-champions': 'La Liga – Champion',
+  'serie-a-regular': 'Serie A – League Badge',
+  'serie-a-scudetto': 'Italy – Scudetto (Serie A Champion)',
+  'bundesliga-regular': 'Bundesliga – League Badge',
+  'bundesliga-champions': 'Bundesliga – Champion (Meister Badge)',
+  'ligue1-regular': 'Ligue 1 – League Badge',
+  'ligue1-champions': 'Ligue 1 – Champion',
+  'primeira-liga-regular': 'Primeira Liga – League Badge',
+  'primeira-liga-champions': 'Primeira Liga – Champion',
+  'eredivisie-regular': 'Eredivisie – League Badge',
+  'eredivisie-champions': 'Eredivisie – Champion',
+  'scottish-premiership-regular': 'Scottish Premiership – League Badge',
+  'scottish-premiership-champions': 'Scottish Premiership – Champion',
+  'mls-regular': 'MLS – League Badge',
+  'mls-champions': 'MLS – Champions (MLS Cup Holders)',
+  'brasileirao-regular': 'Brasileirão – League Badge',
+  'brasileirao-champions': 'Brasileirão – Champion',
+  'super-lig-regular': 'Süper Lig – League Badge',
+  'super-lig-champions': 'Süper Lig – Champion',
+  'spl-saudi-regular': 'Saudi Pro League – League Badge',
+  'spl-saudi-champions': 'Saudi Pro League – Champion',
+  'ucl-regular': 'UEFA Champions League – Starball Badge',
+  'ucl-winners': 'UEFA Champions League – Winners Badge',
+  'uel-regular': 'UEFA Europa League – Badge',
+  'uel-winners': 'UEFA Europa League – Winners Badge',
+  'uecl-regular': 'UEFA Europa Conference League – Badge',
+  'uecl-winners': 'UEFA Europa Conference League – Winners Badge',
+  'club-world-cup-champions': 'FIFA Club World Cup – Champions Badge',
+}
+
+function humanizeBadge(value: string) {
+  if (BADGE_LABELS[value]) return BADGE_LABELS[value]
+  return String(value)
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase())
+}
+
 /* ========================= Types ========================= */
 
 type ShippingJson =
@@ -97,10 +141,6 @@ function pickStr(o: any, keys: string[]): string | null {
     if (v != null && String(v).trim() !== '') return String(v)
   }
   return null
-}
-
-function ensureArray<T>(v: any): T[] {
-  return Array.isArray(v) ? v : []
 }
 
 function shippingFromOrder(order: any): ShippingJson {
@@ -423,13 +463,12 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                     const title = it.name || it.product?.name || 'Item'
 
                     const details = deriveItemDetails(it)
-                    const productHref = it.product?.slug ? `/product/${it.product.slug}` : null
+
+                    // ✅ match your real route: /products/[slug]
+                    const productHref = it.product?.slug ? `/products/${it.product.slug}` : null
 
                     return (
-                      <li
-                        key={it.id}
-                        className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 p-4"
-                      >
+                      <li key={it.id} className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 p-4">
                         {/* top row (mobile): image + price */}
                         <div className="flex items-start justify-between gap-3 sm:hidden">
                           <div className="flex items-start gap-3 min-w-0">
@@ -527,14 +566,16 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
+                          {/* ✅ badges with the SAME names as ProductConfigurator */}
                           {details.badges.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {details.badges.map((b, idx) => (
                                 <span
                                   key={`${b}-${idx}`}
                                   className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                  title={b} // keep raw as tooltip
                                 >
-                                  {b}
+                                  {humanizeBadge(b)}
                                 </span>
                               ))}
                             </div>
@@ -578,14 +619,16 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
+                          {/* ✅ badges with the SAME names as ProductConfigurator */}
                           {details.badges.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {details.badges.map((b, idx) => (
                                 <span
                                   key={`${b}-${idx}`}
                                   className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                  title={b}
                                 >
-                                  {b}
+                                  {humanizeBadge(b)}
                                 </span>
                               ))}
                             </div>
