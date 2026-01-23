@@ -130,254 +130,261 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   const displayName = session?.user?.name || session?.user?.email || "User";
 
   return (
-    <header
-      className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/80 backdrop-blur transform transition-transform duration-300 ${
-        hidden ? "-translate-y-full" : "translate-y-0"
-      }`}
-    >
-      {/* DESKTOP BAR */}
-      <div className="container-fw hidden md:flex h-24 items-center gap-4">
-        {/* Logo (left) */}
-        <Link href="/" className="flex items-center gap-3 shrink-0">
-          <Image
-            src="/logo.png"
-            alt="FootballWorld"
-            width={120}
-            height={120}
-            priority
-            className="h-16 w-auto object-contain"
-          />
-          <span className="sr-only">FootballWorld</span>
-        </Link>
+    <>
+      {/* IMPORTANT FIX:
+          O MobileDrawer usa position:fixed. Se ele ficar DENTRO de um elemento com transform,
+          o fixed passa a ficar “preso” ao header (fica minúsculo e inutilizável no mobile).
+          Por isso o drawer está FORA do <header>, como “irmão”.
+      */}
+      <header
+        className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/80 backdrop-blur transition-transform duration-300 ${
+          hidden ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
+        {/* DESKTOP BAR */}
+        <div className="container-fw hidden md:flex h-24 items-center gap-4">
+          {/* Logo (left) */}
+          <Link href="/" className="flex items-center gap-3 shrink-0">
+            <Image
+              src="/logo.png"
+              alt="FootballWorld"
+              width={120}
+              height={120}
+              priority
+              className="h-16 w-auto object-contain"
+            />
+            <span className="sr-only">FootballWorld</span>
+          </Link>
 
-        {/* Centered nav */}
-        <nav className="hidden lg:flex flex-1 items-center justify-center gap-10 text-[16px] font-medium">
-          <Link href="/nations" className="hover:text-blue-700">
-            Nations
-          </Link>
-          <Link href="/leagues" className="hover:text-blue-700">
-            Leagues
-          </Link>
-          <Link href="/clubs" className="hover:text-blue-700">
-            Clubs
-          </Link>
-          <Link href="/faq" className="hover:text-blue-700">
-            FAQ
-          </Link>
-          {isAdmin && (
-            <Link href="/admin" className="hover:text-blue-700">
-              Admin
+          {/* Centered nav */}
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-10 text-[16px] font-medium">
+            <Link href="/nations" className="hover:text-blue-700">
+              Nations
             </Link>
-          )}
-        </nav>
-
-        {/* Right: Search + Cart + User */}
-        <div className="ml-auto flex items-center gap-3">
-          {/* Search (desktop) */}
-          <SearchBar className="hidden lg:block" />
-
-          {/* Cart (desktop) */}
-          <Link
-            href="/cart"
-            aria-label="Open cart"
-            className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-            title="Cart"
-            data-cart-anchor="true"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span
-                aria-label={`${cartCount} items in cart`}
-                className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
-              >
-                {cartCount > 99 ? "99+" : cartCount}
-              </span>
-            )}
-          </Link>
-
-          {/* User */}
-          {status === "authenticated" ? (
-            <div className="relative">
-              <button
-                ref={userBtnRef}
-                onClick={() => setUserOpen((v) => !v)}
-                className="group inline-flex items-center gap-2 rounded-full border px-3 py-2 hover:bg-gray-100"
-                aria-haspopup="menu"
-                aria-expanded={userOpen}
-                aria-controls="user-menu"
-              >
-                <Avatar key={avatarSrc || "__"} src={avatarSrc} name={displayName} size={40} />
-                <ChevronDown
-                  className={`h-5 w-5 transition-transform ${userOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {userOpen && (
-                <div
-                  ref={userMenuRef}
-                  id="user-menu"
-                  role="menu"
-                  aria-label="User menu"
-                  className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white shadow-xl p-1"
-                >
-                  <div className="px-3 py-2">
-                    <div className="text-xs text-gray-500">Signed in as</div>
-                    <div className="truncate text-sm font-medium">{displayName}</div>
-                  </div>
-                  <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
-                    Account page
-                  </MenuItem>
-                  {isAdmin && (
-                    <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
-                      Admin panel
-                    </MenuItem>
-                  )}
-                  <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
-                    Change account
-                  </MenuItem>
-                  <div className="my-1 h-px bg-gray-100" />
-                  <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
-                    Help / FAQ
-                  </MenuItem>
-                  <MenuButton
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                    icon={<LogOut className="h-4 w-4" />}
-                  >
-                    Sign out
-                  </MenuButton>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Link
-              href="/account/signup"
-              className="inline-flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 text-sm"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign in
+            <Link href="/leagues" className="hover:text-blue-700">
+              Leagues
             </Link>
-          )}
-        </div>
-      </div>
-
-      {/* MOBILE BAR */}
-      <div className="container-fw md:hidden flex h-20 items-center justify-between">
-        {/* Hamburger */}
-        <button
-          aria-label="Open menu"
-          onClick={() => setMobileOpen(true)}
-          className="inline-flex items-center justify-center rounded-xl border px-3 py-2 hover:bg-gray-100"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="FootballWorld"
-            width={96}
-            height={96}
-            priority
-            className="h-14 w-auto object-contain"
-          />
-          <span className="sr-only">FootballWorld</span>
-        </Link>
-
-        {/* Right side (mobile) */}
-        <div className="flex items-center gap-2">
-          {/* Search toggle */}
-          <button
-            aria-label="Open search"
-            onClick={() => setShowSearchMobile((v) => !v)}
-            className="inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-            title="Search"
-          >
-            <Search className="h-5 w-5" />
-          </button>
-
-          {/* Cart */}
-          <Link
-            href="/cart"
-            aria-label="Open cart"
-            className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-            title="Cart"
-            data-cart-anchor="true"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span
-                aria-label={`${cartCount} items in cart`}
-                className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
-              >
-                {cartCount > 99 ? "99+" : cartCount}
-              </span>
-            )}
-          </Link>
-
-          {status === "authenticated" ? (
-            <button
-              onClick={() => setUserOpen((v) => !v)}
-              className="inline-flex items-center justify-center rounded-full border p-1.5 hover:bg-gray-100"
-              aria-haspopup="menu"
-              aria-expanded={userOpen}
-              aria-controls="user-menu-mobile"
-            >
-              <Avatar key={avatarSrc || "__m"} src={avatarSrc} name={displayName} size={36} />
-            </button>
-          ) : (
-            <Link
-              href="/account/signup"
-              className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-gray-100 text-sm"
-            >
-              <LogIn className="h-4 w-4" />
-              Login
+            <Link href="/clubs" className="hover:text-blue-700">
+              Clubs
             </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Search row (mobile) */}
-      {showSearchMobile && (
-        <div className="md:hidden container-fw pb-3">
-          <SearchBar className="w-full" onSubmitted={() => setShowSearchMobile(false)} />
-        </div>
-      )}
-
-      {/* User dropdown (mobile) */}
-      {userOpen && (
-        <div id="user-menu-mobile" role="menu" className="md:hidden container-fw">
-          <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
-            <div className="px-3 py-2">
-              <div className="text-xs text-gray-500">Signed in as</div>
-              <div className="truncate text-sm font-medium">{displayName}</div>
-            </div>
-            <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
-              Account page
-            </MenuItem>
+            <Link href="/faq" className="hover:text-blue-700">
+              FAQ
+            </Link>
             {isAdmin && (
-              <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
-                Admin panel
-              </MenuItem>
+              <Link href="/admin" className="hover:text-blue-700">
+                Admin
+              </Link>
             )}
-            <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
-              Change account
-            </MenuItem>
-            <div className="my-1 h-px bg-gray-100" />
-            <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
-              Help / FAQ
-            </MenuItem>
-            <MenuButton
-              onClick={() => signOut({ callbackUrl: "/" })}
-              icon={<LogOut className="h-4 w-4" />}
+          </nav>
+
+          {/* Right: Search + Cart + User */}
+          <div className="ml-auto flex items-center gap-3">
+            {/* Search (desktop) */}
+            <SearchBar className="hidden lg:block" />
+
+            {/* Cart (desktop) */}
+            <Link
+              href="/cart"
+              aria-label="Open cart"
+              className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
+              title="Cart"
+              data-cart-anchor="true"
             >
-              Sign out
-            </MenuButton>
+              <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span
+                  aria-label={`${cartCount} items in cart`}
+                  className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
+                >
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
+            </Link>
+
+            {/* User */}
+            {status === "authenticated" ? (
+              <div className="relative">
+                <button
+                  ref={userBtnRef}
+                  onClick={() => setUserOpen((v) => !v)}
+                  className="group inline-flex items-center gap-2 rounded-full border px-3 py-2 hover:bg-gray-100"
+                  aria-haspopup="menu"
+                  aria-expanded={userOpen}
+                  aria-controls="user-menu"
+                >
+                  <Avatar key={avatarSrc || "__"} src={avatarSrc} name={displayName} size={40} />
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform ${userOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {userOpen && (
+                  <div
+                    ref={userMenuRef}
+                    id="user-menu"
+                    role="menu"
+                    aria-label="User menu"
+                    className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white shadow-xl p-1"
+                  >
+                    <div className="px-3 py-2">
+                      <div className="text-xs text-gray-500">Signed in as</div>
+                      <div className="truncate text-sm font-medium">{displayName}</div>
+                    </div>
+                    <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
+                      Account page
+                    </MenuItem>
+                    {isAdmin && (
+                      <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
+                        Admin panel
+                      </MenuItem>
+                    )}
+                    <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
+                      Change account
+                    </MenuItem>
+                    <div className="my-1 h-px bg-gray-100" />
+                    <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
+                      Help / FAQ
+                    </MenuItem>
+                    <MenuButton
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      icon={<LogOut className="h-4 w-4" />}
+                    >
+                      Sign out
+                    </MenuButton>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/account/signup"
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 text-sm"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
-      )}
 
-      {/* MOBILE DRAWER */}
+        {/* MOBILE BAR */}
+        <div className="container-fw md:hidden flex h-20 items-center justify-between">
+          {/* Hamburger */}
+          <button
+            aria-label="Open menu"
+            onClick={() => setMobileOpen(true)}
+            className="inline-flex items-center justify-center rounded-xl border px-3 py-2 hover:bg-gray-100"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.png"
+              alt="FootballWorld"
+              width={96}
+              height={96}
+              priority
+              className="h-14 w-auto object-contain"
+            />
+            <span className="sr-only">FootballWorld</span>
+          </Link>
+
+          {/* Right side (mobile) */}
+          <div className="flex items-center gap-2">
+            {/* Search toggle */}
+            <button
+              aria-label="Open search"
+              onClick={() => setShowSearchMobile((v) => !v)}
+              className="inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
+              title="Search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+
+            {/* Cart */}
+            <Link
+              href="/cart"
+              aria-label="Open cart"
+              className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
+              title="Cart"
+              data-cart-anchor="true"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span
+                  aria-label={`${cartCount} items in cart`}
+                  className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
+                >
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
+            </Link>
+
+            {status === "authenticated" ? (
+              <button
+                onClick={() => setUserOpen((v) => !v)}
+                className="inline-flex items-center justify-center rounded-full border p-1.5 hover:bg-gray-100"
+                aria-haspopup="menu"
+                aria-expanded={userOpen}
+                aria-controls="user-menu-mobile"
+              >
+                <Avatar key={avatarSrc || "__m"} src={avatarSrc} name={displayName} size={36} />
+              </button>
+            ) : (
+              <Link
+                href="/account/signup"
+                className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-gray-100 text-sm"
+              >
+                <LogIn className="h-4 w-4" />
+                Login
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Search row (mobile) */}
+        {showSearchMobile && (
+          <div className="md:hidden container-fw pb-3">
+            <SearchBar className="w-full" onSubmitted={() => setShowSearchMobile(false)} />
+          </div>
+        )}
+
+        {/* User dropdown (mobile) */}
+        {userOpen && (
+          <div id="user-menu-mobile" role="menu" className="md:hidden container-fw">
+            <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
+              <div className="px-3 py-2">
+                <div className="text-xs text-gray-500">Signed in as</div>
+                <div className="truncate text-sm font-medium">{displayName}</div>
+              </div>
+              <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
+                Account page
+              </MenuItem>
+              {isAdmin && (
+                <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
+                  Admin panel
+                </MenuItem>
+              )}
+              <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
+                Change account
+              </MenuItem>
+              <div className="my-1 h-px bg-gray-100" />
+              <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
+                Help / FAQ
+              </MenuItem>
+              <MenuButton
+                onClick={() => signOut({ callbackUrl: "/" })}
+                icon={<LogOut className="h-4 w-4" />}
+              >
+                Sign out
+              </MenuButton>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* MOBILE DRAWER (FORA DO HEADER) */}
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)}>
         <div className="px-4 pt-3 pb-6 border-b">
           <Link href="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
@@ -440,7 +447,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           )}
         </div>
       </MobileDrawer>
-    </header>
+    </>
   );
 }
 
@@ -690,13 +697,9 @@ function SearchBar({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="truncate text-sm font-medium">{it.name}</div>
-                      <div className="truncate text-xs text-gray-500">
-                        {it.clubName || "Product"}
-                      </div>
+                      <div className="truncate text-xs text-gray-500">{it.clubName || "Product"}</div>
                     </div>
-                    <div className="shrink-0 text-sm font-semibold">
-                      {formatPrice(it.price)}
-                    </div>
+                    <div className="shrink-0 text-sm font-semibold">{formatPrice(it.price)}</div>
                   </button>
                 </li>
               ))}
@@ -783,7 +786,7 @@ function Avatar({ src, name, size = 40 }: { src?: string; name?: string; size?: 
 
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return
+    return (
       <img
         src={src}
         alt={name || "Avatar"}
@@ -791,7 +794,8 @@ function Avatar({ src, name, size = 40 }: { src?: string; name?: string; size?: 
         height={size}
         className="rounded-full object-cover"
         style={{ width: size, height: size }}
-      />;
+      />
+    );
   }
 
   return (
@@ -832,17 +836,28 @@ function MobileDrawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  // Opcional: trava o scroll do body quando o menu está aberto
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   return (
     <>
       <div
-        className={`fixed inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity md:hidden ${
+        className={`fixed inset-0 z-[999] bg-black/30 backdrop-blur-[2px] transition-opacity md:hidden ${
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         aria-hidden="true"
         onClick={onClose}
       />
       <aside
-        className={`fixed inset-y-0 left-0 w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr_auto]
+        className={`fixed inset-y-0 left-0 z-[1000] w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr]
           transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}
         role="dialog"
         aria-modal="true"
@@ -858,7 +873,8 @@ function MobileDrawer({
           </button>
         </div>
 
-        <div className="overflow-auto">{children}</div>
+        {/* Scroll real do menu */}
+        <div className="overflow-y-auto">{children}</div>
       </aside>
     </>
   );
