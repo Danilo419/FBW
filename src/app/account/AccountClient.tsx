@@ -118,7 +118,7 @@ export default function AccountClient(props: Props) {
       {/* ✅ Mobile: horizontal tabs; Desktop: sidebar */}
       <aside className="card p-3 sm:p-4 h-fit">
         {/* FIX (mobile):
-            - Os botões estavam a encolher (shrink) dentro do overflow-x, e o texto "My Orders" ficava cortado.
+            - Os botões estavam a encolher (shrink) dentro do overflow-x, e o texto "Orders" ficava cortado.
             - Agora cada tab tem shrink-0 e o nav tem min-w-max para garantir largura real + scroll horizontal suave.
         */}
         <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-3 px-3 lg:mx-0 lg:px-0">
@@ -127,7 +127,7 @@ export default function AccountClient(props: Props) {
               ['overview', 'Overview'],
               ['profile', 'Profile'],
               ['security', 'Security'],
-              ['orders', 'My Orders'],
+              ['orders', 'Orders'],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -208,7 +208,7 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
   )
 }
 
-/* ========================= MY ORDERS ========================= */
+/* ========================= ORDERS ========================= */
 
 type OrderListItem = {
   id: string
@@ -266,7 +266,7 @@ function MyOrders() {
       <div className="flex items-start sm:items-center justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <ReceiptText className="h-5 w-5 shrink-0" /> My Orders
+            <ReceiptText className="h-5 w-5 shrink-0" /> Orders
           </h2>
           <p className="text-sm text-gray-600 mt-1">Only paid orders are shown here.</p>
         </div>
