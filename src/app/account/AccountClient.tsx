@@ -117,7 +117,11 @@ export default function AccountClient(props: Props) {
     <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
       {/* ✅ Mobile: horizontal tabs; Desktop: sidebar */}
       <aside className="card p-3 sm:p-4 h-fit">
-        <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* FIX (mobile):
+            - Os botões estavam a encolher (shrink) dentro do overflow-x, e o texto "My Orders" ficava cortado.
+            - Agora cada tab tem shrink-0 e o nav tem min-w-max para garantir largura real + scroll horizontal suave.
+        */}
+        <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-3 px-3 lg:mx-0 lg:px-0">
           {(
             [
               ['overview', 'Overview'],
@@ -129,7 +133,7 @@ export default function AccountClient(props: Props) {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`whitespace-nowrap text-left rounded-xl px-3 py-2 transition text-sm sm:text-base ${
+              className={`shrink-0 min-w-max whitespace-nowrap text-left rounded-xl px-3 py-2 leading-5 transition text-sm sm:text-base ${
                 tab === key ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'
               }`}
             >
