@@ -68,13 +68,13 @@ function normalizeStr(s?: string | null) {
 
 /**
  * Patterns só para os MAIS IMPORTANTES / QUE DÃO ERRO COM FREQUÊNCIA.
- * Isto NÃO é a solução 100% (porque nunca vai cobrir tudo),
- * serve apenas para "acertar perfeito" quando possível.
+ * (o fallback garante sempre um label mesmo sem bater em patterns)
  */
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\batletico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\breal\s*madrid\b/i, "Real Madrid"],
-  [/\b(fc\s*)?barcelona\b|\bbarca\b/i, "Barcelona"], // (tu preferes "Barcelona" no naming)
+  [/\b(fc\s*)?barcelona\b|\bbarca\b/i, "Barcelona"],
+
   [/\bmanchester\s*city\b/i, "Manchester City"],
   [/\bmanchester\s*united\b/i, "Manchester United"],
   [/\bparis\s*saint\s*germain\b|\bpsg\b/i, "PSG"],
@@ -83,16 +83,19 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\bjuventus\b/i, "Juventus"],
   [/\bac\s*milan\b/i, "AC Milan"],
   [/\binter\s*milan\b|\binter\b/i, "Inter Milan"],
+
   [/\b(sevilla)\b/i, "Sevilla FC"],
   [/\b(real\s*sociedad)\b/i, "Real Sociedad"],
   [/\b(villarreal)\b/i, "Villarreal"],
   [/\b(real\s*betis)\b/i, "Real Betis"],
 
+  // Portugal
   [/\bbenfica\b|\bsl\s*benfica\b/i, "Benfica"],
   [/\bfc\s*porto\b|\bporto\b/i, "FC Porto"],
   [/\bsporting\s*cp\b|\bsporting\b(?!.*gijon)\b/i, "Sporting CP"],
   [/\bsc\s*braga\b|\bbraga\b/i, "SC Braga"],
-  [/\bvitoria\s*(sc)?\b/i, "Vitória SC"],
+  // ✅ AQUI: Vitória SC -> Vitória de Guimarães (mantendo o mesmo padrão)
+  [/\bvitoria\s*(sc)?\b/i, "Vitória de Guimarães"],
 
   // seleções (algumas comuns)
   [/\bportugal\b/i, "Portugal"],
@@ -115,75 +118,83 @@ function clubFromString(input?: string | null): string | null {
 }
 
 /**
- * Palavras que NUNCA fazem parte do "nome do clube" e aparecem depois do nome.
- * (vai cortar o nome do produto assim que encontrar uma destas)
+ * Palavras que não fazem parte do “nome do clube” e aparecem depois do nome.
  */
 const CUT_WORDS_RE =
   /\b(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Jersey|Kit|Kids|Kid|Women|Woman|Man|Men|Player|Version|Authentic|Fan|Retro|Vintage|Classic|Long|Sleeve|Short|Sleeve|Training|Pre-Match|Prematch|Warm-Up|Warmup|Tracksuit|Track\s*Suit|Tracksuits|Suit|Set|Pants|Trousers|Shorts|Jacket|Hoodie|Zip|Top|Edition|Special|Limited|Concept|World|Cup|UCL|Champions|League|Europa|Conference)\b/i;
 
-const YEAR_RE = /\b(19|20)\d{2}\s*\/\s*\d{2}\b|\b(19|20)\d{2}\b|\b\d{2}\s*\/\s*\d{2}\b/gi;
+const YEAR_RE =
+  /\b(19|20)\d{2}\s*\/\s*\d{2}\b|\b(19|20)\d{2}\b|\b\d{2}\s*\/\s*\d{2}\b/gi;
 
 const COLORISH_RE =
   /\b(Black|White|Blue|Navy|Sky|Red|Green|Yellow|Pink|Purple|Orange|Grey|Gray|Gold|Silver|Beige|Brown|Maroon|Burgundy|Cream|Teal|Lime|Aqua|Cyan)\b/gi;
 
-const CONNECTORS = new Set(["FC", "SC", "AC", "AS", "CD", "UD", "CF", "FK", "SK", "SV", "RB", "IF", "BK"]);
+const CONNECTORS = new Set([
+  "FC",
+  "SC",
+  "AC",
+  "AS",
+  "CD",
+  "UD",
+  "CF",
+  "FK",
+  "SK",
+  "SV",
+  "RB",
+  "IF",
+  "BK",
+]);
 
-/**
- * ✅ Garantido: devolve SEMPRE algum nome para o chip.
- * Estratégia:
- * 1) Se der match por pattern => perfeito.
- * 2) Usa team se existir (limpa sufixos e cores).
- * 3) Se falhar, inferir do início do p.name:
- *    - corta quando encontra palavras de “categoria”
- *    - remove anos / cores
- *    - pega nas 1-4 primeiras palavras (com conectores)
- */
 function inferFromNameGuaranteed(p: UIProduct): string {
   const rawName = normalizeStr(p.name);
   if (!rawName) return "Unknown";
 
-  // 1) patterns em nome
   const byPattern = clubFromString(rawName);
   if (byPattern) return byPattern;
 
-  // 2) tenta a partir do team (mesmo que venha sujo)
   const rawTeam = normalizeStr(p.team);
   if (rawTeam) {
     const teamPattern = clubFromString(rawTeam);
     if (teamPattern) return teamPattern;
 
-    // limpa o team removendo cores/anos e palavras comuns
     let t = rawTeam.replace(YEAR_RE, " ").replace(COLORISH_RE, " ");
     t = t.replace(/\s{2,}/g, " ").trim();
 
-    // se vier "Club" ou "Team", ignora
     const up = t.toUpperCase();
     if (up && up !== "CLUB" && up !== "TEAM") {
-      // pega nas 1-4 primeiras palavras do team (com conectores)
       const tokens = t.split(/\s+/).filter(Boolean);
-      const picked: string[] = [];
-      for (let i = 0; i < tokens.length && picked.length < 4; i++) {
-        const w = tokens[i];
-        picked.push(w);
-      }
+      const picked = tokens.slice(0, 4);
       const teamGuess = picked.join(" ").trim();
       if (teamGuess) return teamGuess;
     }
   }
 
-  // 3) inferir do name
   let cut = rawName.split(CUT_WORDS_RE)[0].trim();
   cut = cut.replace(YEAR_RE, " ").replace(COLORISH_RE, " ");
   cut = cut.replace(/[–—\-|]+/g, " ");
   cut = cut.replace(/\s{2,}/g, " ").trim();
 
-  // Se ficou vazio, volta ao nome original
   if (!cut) cut = rawName;
 
   const tokens = cut.split(/\s+/).filter(Boolean);
 
-  // montar label até 4 tokens; permite conectores e palavras pequenas ("de", "da", "of", "al", "el", etc.)
-  const allowSmall = new Set(["de", "da", "do", "dos", "das", "of", "al", "el", "la", "le", "los", "las", "di", "del"]);
+  const allowSmall = new Set([
+    "de",
+    "da",
+    "do",
+    "dos",
+    "das",
+    "of",
+    "al",
+    "el",
+    "la",
+    "le",
+    "los",
+    "las",
+    "di",
+    "del",
+  ]);
+
   const label: string[] = [];
 
   for (let i = 0; i < tokens.length && label.length < 4; i++) {
@@ -191,7 +202,6 @@ function inferFromNameGuaranteed(p: UIProduct): string {
     const wClean = w.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "");
     if (!wClean) continue;
 
-    // não deixar começar por lixo
     if (label.length === 0) {
       label.push(w);
       continue;
@@ -214,11 +224,10 @@ function inferFromNameGuaranteed(p: UIProduct): string {
   const out = label.join(" ").trim();
   if (out) return out;
 
-  // fallback final (nunca falha)
   return tokens.slice(0, 2).join(" ") || "Unknown";
 }
 
-/** ✅ Função final: nunca retorna "Club" */
+/** ✅ final: nunca retorna "Club" */
 function getSafeClubLabel(p: UIProduct): string {
   const byTeam = clubFromString(p.team);
   if (byTeam) return byTeam;
@@ -226,7 +235,6 @@ function getSafeClubLabel(p: UIProduct): string {
   const byName = clubFromString(p.name);
   if (byName) return byName;
 
-  // garantido
   const inferred = inferFromNameGuaranteed(p);
   if (inferred && inferred.toUpperCase() !== "CLUB") return inferred;
 
@@ -285,7 +293,6 @@ export default function ResultsClient({
         if (!r.ok) throw new Error(`Search failed (${r.status})`);
         const json = await r.json();
 
-        // ✅ robusto: pode vir {products:[...]} OU array direto
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
           : Array.isArray(json)
@@ -372,7 +379,6 @@ export default function ResultsClient({
           const sale = cents != null ? getSale(p.price!) : null;
           const parts = cents != null ? pricePartsFromCents(cents) : null;
 
-          // ✅ nunca “Club”
           const teamLabel = getSafeClubLabel(p);
 
           return (

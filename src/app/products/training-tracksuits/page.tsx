@@ -384,7 +384,8 @@ function getPriceEurFromApi(raw: any): number | undefined {
     return v;
   }
 
-  if (typeof raw.priceCents === "number") return Math.round(raw.priceCents) / 100;
+  if (typeof raw.priceCents === "number")
+    return Math.round(raw.priceCents) / 100;
 
   return undefined;
 }
@@ -416,44 +417,22 @@ function mapApiToUIProduct(raw: any): UIProduct {
 }
 
 /* ============================================================
-   Filtro: Training Tracksuits (MAIS PERMISSIVO)
+   FILTRO: SÓ "Training Tracksuit" NO NOME (EXATO)
 ============================================================ */
 
-function normName(p: UIProduct) {
-  return (p.name ?? "").toUpperCase();
+function normalizeForMatch(s?: string | null) {
+  return normalizeStr(s ?? "")
+    .toUpperCase()
+    .replace(/\s+/g, " ");
 }
 
-function isTrainingTracksuit(p: UIProduct): boolean {
-  const n = normName(p);
+function hasTrainingTracksuitExact(p: UIProduct): boolean {
+  const n = normalizeForMatch(p.name);
   if (!n) return false;
 
-  // ✅ aceitar mais variações
-  const looksLikeTracksuit =
-    n.includes("TRACKSUIT") ||
-    n.includes("TRACK SUIT") ||
-    n.includes("TRAINING SUIT") ||
-    n.includes("PRESENTATION SUIT") ||
-    n.includes("TRAINING SET") ||
-    n.includes("SUIT");
-
-  if (!looksLikeTracksuit) return false;
-
-  // ❌ excluir “only” (peças soltas)
-  if (n.includes("SHORTS ONLY")) return false;
-  if (n.includes("JACKET ONLY")) return false;
-  if (n.includes("TOP ONLY")) return false;
-  if (n.includes("PANTS ONLY")) return false;
-
-  // ❌ acessórios / irrelevante
-  if (n.includes("SCARF")) return false;
-  if (n.includes("BALL")) return false;
-  if (n.includes("POSTER")) return false;
-
-  // ❌ baby / infant
-  if (n.includes("BABY")) return false;
-  if (n.includes("INFANT")) return false;
-
-  return true;
+  // ✅ Apenas produtos que contenham literalmente "TRAINING TRACKSUIT"
+  // (case-insensitive e tolerante a múltiplos espaços)
+  return n.includes("TRAINING TRACKSUIT");
 }
 
 /* ============================================================
@@ -583,12 +562,15 @@ function buildPaginationRange(
 }
 
 /* ============================================================
-   Página Training Tracksuits (FETCH ROBUSTO + MERGE QUERIES)
+   Página Training Tracksuits
+   (FETCH ROBUSTO + MERGE QUERIES, MAS FILTRO 100% EXATO)
 ============================================================ */
 
 const SEARCH_QUERIES = [
-  "tracksuit",
+  // podes manter estes para “puxar” mais resultados do teu /api/search,
+  // mas só passam no filtro se tiverem "Training Tracksuit" no nome
   "training tracksuit",
+  "tracksuit",
   "training suit",
   "presentation suit",
   "training set",
@@ -645,7 +627,9 @@ export default function TrainingTracksuitsPage() {
         }
 
         const mapped = uniqueRaw.map(mapApiToUIProduct);
-        const filtered = mapped.filter(isTrainingTracksuit);
+
+        // ✅ AQUI: só "Training Tracksuit" no nome
+        const filtered = mapped.filter(hasTrainingTracksuitExact);
 
         if (!cancelled) {
           setResults(filtered);
@@ -747,8 +731,8 @@ export default function TrainingTracksuitsPage() {
                 Training tracksuits
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
-                Full training sets (top & pants) for warm-ups, travel and
-                everyday training sessions.
+                Only products that include <b>“Training Tracksuit”</b> in the
+                name.
               </p>
             </div>
 
@@ -783,7 +767,7 @@ export default function TrainingTracksuitsPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or tracksuit name"
+                placeholder="Search by team or product name"
                 className="w-full rounded-2xl border px-9 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -834,7 +818,7 @@ export default function TrainingTracksuitsPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
-                  Nenhum training tracksuit encontrado.
+                  Nenhum produto com “Training Tracksuit” no nome foi encontrado.
                 </p>
               )}
 
