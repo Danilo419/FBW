@@ -11,7 +11,6 @@ import {
   LogOut,
   LogIn,
   User,
-  ArrowLeftRight,
   HelpCircle,
   Menu,
   X,
@@ -65,17 +64,27 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
     };
   }, [mobileOpen, userOpen, showSearchMobile]);
 
-  // Dropdown user
+  // Dropdown user (DESKTOP + MOBILE refs)
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const userBtnRef = useRef<HTMLButtonElement | null>(null);
+  const userMenuMobileRef = useRef<HTMLDivElement | null>(null);
+  const userBtnMobileRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
+    const onDocPointerDown = (e: PointerEvent) => {
       if (!userOpen) return;
       const t = e.target as Node;
-      if (userMenuRef.current?.contains(t) || userBtnRef.current?.contains(t)) return;
+
+      const insideDesktop =
+        userMenuRef.current?.contains(t) || userBtnRef.current?.contains(t);
+      const insideMobile =
+        userMenuMobileRef.current?.contains(t) ||
+        userBtnMobileRef.current?.contains(t);
+
+      if (insideDesktop || insideMobile) return;
       setUserOpen(false);
     };
+
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setUserOpen(false);
@@ -83,10 +92,12 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         setShowSearchMobile(false);
       }
     };
-    document.addEventListener("mousedown", onDocClick);
+
+    // pointerdown é melhor para touch do que mousedown
+    document.addEventListener("pointerdown", onDocPointerDown);
     document.addEventListener("keydown", onEsc);
     return () => {
-      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("pointerdown", onDocPointerDown);
       document.removeEventListener("keydown", onEsc);
     };
   }, [userOpen]);
@@ -212,9 +223,16 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                   aria-expanded={userOpen}
                   aria-controls="user-menu"
                 >
-                  <Avatar key={avatarSrc || "__"} src={avatarSrc} name={displayName} size={40} />
+                  <Avatar
+                    key={avatarSrc || "__"}
+                    src={avatarSrc}
+                    name={displayName}
+                    size={40}
+                  />
                   <ChevronDown
-                    className={`h-5 w-5 transition-transform ${userOpen ? "rotate-180" : ""}`}
+                    className={`h-5 w-5 transition-transform ${
+                      userOpen ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
@@ -228,23 +246,39 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                   >
                     <div className="px-3 py-2">
                       <div className="text-xs text-gray-500">Signed in as</div>
-                      <div className="truncate text-sm font-medium">{displayName}</div>
+                      <div className="truncate text-sm font-medium">
+                        {displayName}
+                      </div>
                     </div>
-                    <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
+
+                    <MenuItem
+                      href="/account"
+                      icon={<User className="h-4 w-4" />}
+                      onClick={() => setUserOpen(false)}
+                    >
                       Account page
                     </MenuItem>
+
                     {isAdmin && (
-                      <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
+                      <MenuItem
+                        href="/admin"
+                        icon={<User className="h-4 w-4" />}
+                        onClick={() => setUserOpen(false)}
+                      >
                         Admin panel
                       </MenuItem>
                     )}
-                    <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
-                      Change account
-                    </MenuItem>
+
                     <div className="my-1 h-px bg-gray-100" />
-                    <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
+
+                    <MenuItem
+                      href="/faq"
+                      icon={<HelpCircle className="h-4 w-4" />}
+                      onClick={() => setUserOpen(false)}
+                    >
                       Help / FAQ
                     </MenuItem>
+
                     <MenuButton
                       onClick={() => signOut({ callbackUrl: "/" })}
                       icon={<LogOut className="h-4 w-4" />}
@@ -323,13 +357,19 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
             {status === "authenticated" ? (
               <button
+                ref={userBtnMobileRef}
                 onClick={() => setUserOpen((v) => !v)}
                 className="inline-flex items-center justify-center rounded-full border p-1.5 hover:bg-gray-100"
                 aria-haspopup="menu"
                 aria-expanded={userOpen}
                 aria-controls="user-menu-mobile"
               >
-                <Avatar key={avatarSrc || "__m"} src={avatarSrc} name={displayName} size={36} />
+                <Avatar
+                  key={avatarSrc || "__m"}
+                  src={avatarSrc}
+                  name={displayName}
+                  size={36}
+                />
               </button>
             ) : (
               <Link
@@ -355,27 +395,46 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
         {/* User dropdown (mobile) */}
         {userOpen && (
-          <div id="user-menu-mobile" role="menu" className="md:hidden container-fw">
+          <div
+            ref={userMenuMobileRef}
+            id="user-menu-mobile"
+            role="menu"
+            className="md:hidden container-fw"
+          >
             <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
               <div className="px-3 py-2">
                 <div className="text-xs text-gray-500">Signed in as</div>
                 <div className="truncate text-sm font-medium">{displayName}</div>
               </div>
-              <MenuItem href="/account" icon={<User className="h-4 w-4" />}>
+
+              <MenuItem
+                href="/account"
+                icon={<User className="h-4 w-4" />}
+                onClick={() => setUserOpen(false)}
+              >
                 Account page
               </MenuItem>
+
               {isAdmin && (
-                <MenuItem href="/admin" icon={<User className="h-4 w-4" />}>
+                <MenuItem
+                  href="/admin"
+                  icon={<User className="h-4 w-4" />}
+                  onClick={() => setUserOpen(false)}
+                >
                   Admin panel
                 </MenuItem>
               )}
-              <MenuItem href="/account/signup" icon={<ArrowLeftRight className="h-4 w-4" />}>
-                Change account
-              </MenuItem>
+
               <div className="my-1 h-px bg-gray-100" />
-              <MenuItem href="/faq" icon={<HelpCircle className="h-4 w-4" />}>
+
+              <MenuItem
+                href="/faq"
+                icon={<HelpCircle className="h-4 w-4" />}
+                onClick={() => setUserOpen(false)}
+              >
                 Help / FAQ
               </MenuItem>
+
               <MenuButton
                 onClick={() => signOut({ callbackUrl: "/" })}
                 icon={<LogOut className="h-4 w-4" />}
@@ -489,7 +548,7 @@ function SearchBar({
 
   // Close when clicking outside
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
+    const onDocPointerDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!wrapRef.current) return;
       if (!wrapRef.current.contains(t)) {
@@ -497,8 +556,8 @@ function SearchBar({
         setActive(-1);
       }
     };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, []);
 
   const sortByRelevance = (arr: ProductSearchItem[], q: string) => {
@@ -517,7 +576,8 @@ function SearchBar({
 
       const aIdx = an.indexOf(phrase);
       const bIdx = bn.indexOf(phrase);
-      if (aIdx !== bIdx) return (aIdx === -1 ? 1 : aIdx) - (bIdx === -1 ? 1 : bIdx);
+      if (aIdx !== bIdx)
+        return (aIdx === -1 ? 1 : aIdx) - (bIdx === -1 ? 1 : bIdx);
 
       return a.name.localeCompare(b.name);
     });
@@ -741,15 +801,18 @@ function MenuItem({
   href,
   icon,
   children,
+  onClick,
 }: {
   href: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
+  onClick?: () => void;
 }) {
   return (
     <Link
       role="menuitem"
       href={href}
+      onClick={onClick}
       className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-gray-50"
     >
       {icon}
