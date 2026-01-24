@@ -1,11 +1,11 @@
 // src/app/(store)/cart/actions.ts
-'use server';
+"use server";
 
-import { cookies } from 'next/headers';
-import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-import { calculateCartTotals } from '@/lib/cart/pricing';
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { applyPromotions, type CartLine } from "@/lib/cartPromotions";
 
 /* ========= validação ========= */
 const AddToCartSchema = z.object({
@@ -21,7 +21,7 @@ const AddToCartSchema = z.object({
       number: z
         .string()
         .trim()
-        .regex(/^\d{1,3}$/, 'Invalid number')
+        .regex(/^\d{1,3}$/, "Invalid number")
         .optional()
         .nullable(),
 
@@ -35,7 +35,7 @@ type AddToCartInput = z.infer<typeof AddToCartSchema>;
 /* ========= helpers ========= */
 function normalizeOptions(obj?: Record<string, string | null>) {
   if (!obj) return {};
-  const entries = Object.entries(obj).filter(([, v]) => v != null && v !== '');
+  const entries = Object.entries(obj).filter(([, v]) => v != null && v !== "");
   entries.sort(([a], [b]) => a.localeCompare(b));
   return Object.fromEntries(entries);
 }
@@ -49,7 +49,7 @@ function sameJson(a: unknown, b: unknown) {
  * (o UI também permite espaços; aqui não tiramos espaços)
  */
 function sanitizeName(v: unknown) {
-  const s = (v == null ? '' : String(v)).trim();
+  const s = (v == null ? "" : String(v)).trim();
   if (!s) return null;
   const up = s.toUpperCase().slice(0, 14);
   return up || null;
@@ -62,16 +62,16 @@ function sanitizeName(v: unknown) {
  * - permite "0" e "000" etc (porque é string)
  */
 function sanitizeNumber(v: unknown) {
-  const s = (v == null ? '' : String(v)).trim();
+  const s = (v == null ? "" : String(v)).trim();
   if (!s) return null;
-  const only = s.replace(/\D/g, '').slice(0, 3); // ✅ agora 3
+  const only = s.replace(/\D/g, "").slice(0, 3);
   return only || null;
 }
 
 async function getOrCreateCart() {
-  const jar = await cookies(); // ✅ no teu setup é Promise<ReadonlyRequestCookies>
+  const jar = await cookies();
 
-  const existingSid = jar.get('sid')?.value ?? null;
+  const existingSid = jar.get("sid")?.value ?? null;
   const userId: string | null = null; // se tiveres auth, mete aqui
 
   if (existingSid) {
@@ -79,14 +79,13 @@ async function getOrCreateCart() {
     if (found) return found;
   }
 
-  const newSid: string =
-    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+  const newSid: string = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 dias
-  jar.set('sid', newSid, {
+  jar.set("sid", newSid, {
     httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
+    sameSite: "lax",
+    path: "/",
     expires,
     secure: true, // ✅ em prod
   });
@@ -101,8 +100,23 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
     where: { id: productId },
     select: { basePrice: true },
   });
-  if (!product) throw new Error('Product not found');
+  if (!product) throw new Error("Product not found");
   return product.basePrice;
+}
+
+function emptySummary() {
+  return {
+    count: 0,
+    subtotal: 0,
+    discount: 0,
+    shipping: 0,
+    total: 0,
+    promotion: {
+      promoName: "NONE" as const,
+      freeUnitsCount: 0,
+      hasPromotion: false,
+    },
+  };
 }
 
 /* ========= actions ========= */
@@ -134,8 +148,8 @@ export async function addToCartAction(raw: AddToCartInput) {
 
     /**
      * ✅ IMPORTANTÍSSIMO:
-     * Guardar name/number também dentro de optionsJson (porque o teu DB estava só a guardar options).
-     * Assim, MESMO que o checkout copie só optionsJson para o OrderItem, o admin vai ver.
+     * Guardar name/number também dentro de optionsJson
+     * para garantir que o carrinho/admin mostrem sempre corretamente.
      */
     const optionsJsonWithPersonalization: Record<string, any> = { ...optionsJson };
     if (cleanName) optionsJsonWithPersonalization.custName = cleanName;
@@ -150,7 +164,7 @@ export async function addToCartAction(raw: AddToCartInput) {
         optionsJson: true,
         personalization: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
 
     const existing = siblings.find(
@@ -165,8 +179,8 @@ export async function addToCartAction(raw: AddToCartInput) {
         where: { id: existing.id },
         data: {
           qty: newQty,
-          unitPrice,
-          totalPrice: unitPrice * newQty,
+          unitPrice, // ✅ sempre preço real do produto
+          totalPrice: unitPrice * newQty, // ✅ SEM promo aqui
           optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
         },
@@ -177,15 +191,15 @@ export async function addToCartAction(raw: AddToCartInput) {
           cartId: cart.id,
           productId: input.productId,
           qty: input.qty,
-          unitPrice,
-          totalPrice: unitPrice * input.qty,
+          unitPrice, // ✅ sempre preço real do produto
+          totalPrice: unitPrice * input.qty, // ✅ SEM promo aqui
           optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
         },
       });
     }
 
-    revalidatePath('/cart');
+    revalidatePath("/cart");
 
     const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
     return {
@@ -195,35 +209,22 @@ export async function addToCartAction(raw: AddToCartInput) {
       lineTotal: unitPrice * input.qty,
     };
   } catch (err) {
-    console.error('[addToCartAction] failed:', err);
-    return { ok: false as const, error: 'ADD_TO_CART_FAILED' };
+    console.error("[addToCartAction] failed:", err);
+    return { ok: false as const, error: "ADD_TO_CART_FAILED" };
   }
 }
 
 /**
  * getCartSummary agora:
  * - lê as linhas do carrinho
- * - monta array de itens com (id, name, price, quantity)
- * - usa calculateCartTotals (promoções + shipping)
+ * - usa applyPromotions (mesma lógica do Stripe e do cart/page.tsx)
  * - devolve subtotal, discount, shipping, total, etc.
  */
 export async function getCartSummary() {
   const jar = await cookies();
-  const sid = jar.get('sid')?.value ?? null;
-  if (!sid) {
-    return {
-      count: 0,
-      subtotal: 0,
-      discount: 0,
-      shipping: 0,
-      total: 0,
-      promotion: {
-        discount: 0,
-        freeUnitsCount: 0,
-        hasPromotion: false,
-      },
-    };
-  }
+  const sid = jar.get("sid")?.value ?? null;
+
+  if (!sid) return emptySummary();
 
   const rawItems = await prisma.cartItem.findMany({
     where: { cart: { sessionId: sid } },
@@ -232,56 +233,67 @@ export async function getCartSummary() {
       qty: true,
       unitPrice: true,
       product: {
-        select: { name: true },
+        select: { name: true, imageUrls: true },
       },
     },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (!rawItems.length) {
-    return {
-      count: 0,
-      subtotal: 0,
-      discount: 0,
-      shipping: 0,
-      total: 0,
-      promotion: {
-        discount: 0,
-        freeUnitsCount: 0,
-        hasPromotion: false,
-      },
-    };
-  }
+  if (!rawItems.length) return emptySummary();
 
-  const cartItemsForPricing = rawItems.map((it) => ({
-    id: it.id,
-    name: it.product?.name ?? '',
-    price: it.unitPrice,
-    quantity: it.qty,
+  const subtotal = rawItems.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
+
+  const lines: CartLine[] = rawItems.map((it) => ({
+    id: String(it.id),
+    name: it.product?.name ?? "",
+    unitAmountCents: Math.max(0, Number(it.unitPrice ?? 0)),
+    qty: Math.max(0, Number(it.qty ?? 0)),
+    image: it.product?.imageUrls?.[0] ?? null,
   }));
 
-  const totals = calculateCartTotals(cartItemsForPricing);
+  const promo = applyPromotions(lines);
+
+  const payableSubtotal = promo.lines.reduce(
+    (acc, l) => acc + l.payQty * l.unitAmountCents,
+    0
+  );
+
+  const discount = Math.max(0, subtotal - payableSubtotal);
+  const shipping = promo.shippingCents;
+  const total = payableSubtotal + shipping;
 
   return {
     count: rawItems.length,
-    ...totals,
+    subtotal,
+    discount,
+    shipping,
+    total,
+    promotion: {
+      promoName: promo.promoName,
+      freeUnitsCount: promo.freeItemsApplied,
+      hasPromotion: promo.promoName !== "NONE" && promo.freeItemsApplied > 0,
+    },
   };
 }
 
 /* ====== EXTRA: mover estas actions para fora do page.tsx ====== */
 
 export async function removeItem(formData: FormData) {
-  const id = formData.get('itemId');
-  if (!id || typeof id !== 'string') return;
+  const id = formData.get("itemId");
+  if (!id || typeof id !== "string") return;
+
   try {
     await prisma.cartItem.delete({ where: { id } });
   } catch {}
-  revalidatePath('/cart');
+
+  revalidatePath("/cart");
 }
 
 export async function updateQty(formData: FormData) {
-  const id = formData.get('itemId');
-  const qty = Number(formData.get('qty'));
-  if (!id || typeof id !== 'string' || !Number.isFinite(qty) || qty < 1) return;
+  const id = formData.get("itemId");
+  const qty = Number(formData.get("qty"));
+  if (!id || typeof id !== "string" || !Number.isFinite(qty) || qty < 1) return;
+
   try {
     const item = await prisma.cartItem.findUnique({
       where: { id },
@@ -289,13 +301,16 @@ export async function updateQty(formData: FormData) {
     });
     if (!item) return;
 
+    const q = Math.min(99, Math.floor(qty));
+
     await prisma.cartItem.update({
       where: { id },
       data: {
-        qty,
-        totalPrice: item.unitPrice * qty,
+        qty: q,
+        totalPrice: item.unitPrice * q, // ✅ SEM promo aqui
       },
     });
   } catch {}
-  revalidatePath('/cart');
+
+  revalidatePath("/cart");
 }

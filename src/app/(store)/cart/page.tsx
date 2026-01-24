@@ -8,13 +8,9 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import type { Prisma, CartItem } from "@prisma/client";
 import { removeItem } from "./actions";
+import { applyPromotions, MAX_FREE_ITEMS_PER_ORDER } from "@/lib/cartPromotions";
 
 export const dynamic = "force-dynamic";
-
-/* ========================= IMPORTANT RULE =========================
- * ✅ MAX 2 FREE ITEMS PER ORDER (HARD CAP)
- */
-const MAX_FREE_ITEMS_PER_ORDER = 2;
 
 /* ========================= BADGE LABELS (same as ProductConfigurator) ========================= */
 const BADGE_LABELS: Record<string, string> = {
@@ -133,7 +129,10 @@ function prettifyKey(k: string) {
   };
   const lower = String(k).toLowerCase();
   if (map[lower]) return map[lower];
-  return map[k] ?? String(k).replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  return (
+    map[k] ??
+    String(k).replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())
+  );
 }
 
 function asDisplayValue(v: unknown) {
@@ -247,19 +246,14 @@ function optionsToRows(opts: Record<string, any> | null) {
   if (!opts) return [];
 
   const blockKeys = new Set<string>([
-    // name/number variations
     "name",
     "number",
     "playername",
     "playernumber",
     "player_name",
     "player_number",
-
-    // main blocks handled elsewhere
     "customization",
     "badges",
-
-    // avoid duplicates (these are shown in the meta block)
     "size",
     "custname",
     "custnumber",
@@ -277,39 +271,29 @@ function optionsToRows(opts: Record<string, any> | null) {
     .filter(([, v]) => String(v).trim() !== "");
 }
 
-/* -------------------------- promo (Buy X Get Y) -------------------------- */
+/* -------------------------- promo labels / banner -------------------------- */
 
-type PromoKind = "B2G3" | "B3G5" | null;
-
-function pickPromo(totalQty: number): {
-  kind: PromoKind;
-  groupSize: number;
-  freePerGroup: number;
-  shippingCents: number | null;
-  threshold: number;
-} {
-  if (totalQty >= 5)
-    return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0, threshold: 5 };
-  if (totalQty >= 3)
-    return { kind: "B2G3", groupSize: 3, freePerGroup: 1, shippingCents: 0, threshold: 3 };
-  return { kind: null, groupSize: 0, freePerGroup: 0, shippingCents: null, threshold: 0 };
-}
-
-function promoLabel(kind: PromoKind) {
-  if (kind === "B2G3") return "Buy 2, Get 3";
-  if (kind === "B3G5") return "Buy 3, Get 5";
+function promoTitleFromName(p: ReturnType<typeof applyPromotions>["promoName"]) {
+  if (p === "BUY_1_GET_1") return "Buy 1 Get 1";
+  if (p === "BUY_2_GET_3") return "Buy 2 Get 3";
+  if (p === "BUY_3_GET_5") return "Buy 3 Get 5";
   return null;
 }
 
 function promoBannerMessage(totalQty: number) {
+  // Ajustado para bater com as promos reais
   if (totalQty <= 1) {
-    return { title: "Promotion Preview", message: `Add more items to unlock: Buy 2 Get 3`, showPill: false };
+    return {
+      title: "Promotion Preview",
+      message: "Add 1 more item to unlock: Buy 1 Get 1",
+      showPill: false,
+    };
   }
   if (totalQty === 2) {
     return {
       title: "Promotion Preview",
-      message: "Add 1 more item to unlock Buy 2 Get 3 and receive 1 free product.",
-      showPill: false,
+      message: "Add 1 more item to unlock: Buy 2 Get 3 (get 1 free item).",
+      showPill: true,
     };
   }
   if (totalQty === 3) {
@@ -318,9 +302,8 @@ function promoBannerMessage(totalQty: number) {
   if (totalQty === 4) {
     return {
       title: "Promotion Preview",
-      message:
-        "You are now in the Buy 3 Get 5 promotion and are eligible to receive 1 more free product — add 1 more item to the cart!",
-      showPill: false,
+      message: "Add 1 more item to unlock: Buy 3 Get 5 (get 2 free items).",
+      showPill: true,
     };
   }
   return { title: "Promotion Preview", message: null as string | null, showPill: true };
@@ -407,35 +390,32 @@ export default async function CartPage() {
   const subtotalCents: number = displayItems.reduce((acc: number, it: any) => acc + it.displayTotal, 0);
   const totalQty = displayItems.reduce((acc: number, it: any) => acc + (it.qty ?? 0), 0);
 
-  const promo = pickPromo(totalQty);
-  const promoGroupsRaw = promo.kind ? Math.floor(totalQty / promo.groupSize) : 0;
-  const freeCountRaw = promo.kind ? promoGroupsRaw * promo.freePerGroup : 0;
-
-  const freeCount = Math.min(MAX_FREE_ITEMS_PER_ORDER, freeCountRaw);
-
-  const unitPool: Array<{ itemId: string; unitCents: number }> = [];
-  for (const it of displayItems as any[]) {
-    const q = Math.max(0, Number(it.qty ?? 0));
-    const unit = Math.max(0, Number(it.displayUnit ?? 0));
-    for (let i = 0; i < q; i++) unitPool.push({ itemId: String(it.id), unitCents: unit });
-  }
-  unitPool.sort((a, b) => a.unitCents - b.unitCents);
+  // ✅ SINGLE SOURCE OF TRUTH: same logic as Stripe (server)
+  const promo = applyPromotions(
+    displayItems.map((it: any) => ({
+      id: String(it.id),
+      name: String(it.product?.name ?? it.name ?? "Item"),
+      unitAmountCents: Math.max(0, Number(it.displayUnit ?? 0)),
+      qty: Math.max(0, Number(it.qty ?? 0)),
+      image: (it.product?.imageUrls?.[0] ?? null) as any,
+    }))
+  );
 
   const freeQtyByItemId = new Map<string, number>();
-  let discountCents = 0;
-  for (let i = 0; i < Math.min(freeCount, unitPool.length); i++) {
-    const u = unitPool[i];
-    discountCents += u.unitCents;
-    freeQtyByItemId.set(u.itemId, (freeQtyByItemId.get(u.itemId) ?? 0) + 1);
+  for (const l of promo.lines) {
+    if (l.freeQty > 0) freeQtyByItemId.set(String(l.id), l.freeQty);
   }
 
-  const promoActive = !!(promo.kind && promoGroupsRaw > 0);
-  const baseShippingCents = totalQty === 1 || totalQty === 2 ? 500 : 0;
-  const shippingCents: number = promoActive ? (promo.shippingCents ?? 0) : baseShippingCents;
+  const payableSubtotalCents = promo.lines.reduce(
+    (acc, l) => acc + l.payQty * l.unitAmountCents,
+    0
+  );
 
-  const totalPayableCents = subtotalCents - discountCents + shippingCents;
+  const discountCents = Math.max(0, subtotalCents - payableSubtotalCents);
+  const shippingCents = promo.shippingCents;
+  const totalPayableCents = payableSubtotalCents + shippingCents;
 
-  const promoTitle = promoActive ? promoLabel(promo.kind) : null;
+  const promoTitle = promoTitleFromName(promo.promoName);
   const banner = promoBannerMessage(totalQty);
 
   return (
@@ -453,11 +433,14 @@ export default async function CartPage() {
             </div>
           </div>
 
-          {banner.showPill && promoTitle ? (
+          {banner.showPill ? (
             <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
-              <span className="font-semibold text-gray-900">{promoTitle}</span>
+              <span className="font-semibold text-gray-900">{promoTitle ?? "No promotion"}</span>
               <span className="text-gray-500">
-                • Free items: <span className="font-semibold text-gray-900">{freeCount}/{MAX_FREE_ITEMS_PER_ORDER}</span>{" "}
+                • Free items:{" "}
+                <span className="font-semibold text-gray-900">
+                  {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
+                </span>{" "}
                 • Shipping:{" "}
                 {shippingCents === 0 ? (
                   <span className="font-semibold text-gray-900">FREE</span>
@@ -480,7 +463,6 @@ export default async function CartPage() {
           const badgePills = getBadgePillsFromOpts(it.opts);
           const optionRows = optionsToRows(it.opts);
 
-          // pegar Name/Number de options (porque o teu actions.ts grava como custName/custNumber)
           const custNameRaw =
             it.opts?.custName ?? it.opts?.CustName ?? it.opts?.custname ?? it.opts?.customerName ?? null;
           const custNumberRaw =
@@ -491,7 +473,6 @@ export default async function CartPage() {
           const custNumber =
             custNumberRaw != null && String(custNumberRaw).trim() ? String(custNumberRaw).trim() : null;
 
-          // Size (normalmente está em optionsJson como "size")
           const sizeRaw = it.opts?.size ?? it.opts?.Size ?? null;
           const size = sizeRaw != null && String(sizeRaw).trim() ? String(sizeRaw).trim() : null;
 
@@ -505,7 +486,6 @@ export default async function CartPage() {
           const lineBefore = it.displayTotal;
           const lineAfter = (it.displayUnit ?? 0) * payableQty;
 
-          // ✅ ORDER: Name, Number, Size, (Badges)
           const hasMetaBlock = !!(custName || custNumber || size || badgePills.length > 0 || freeQty > 0);
 
           return (
@@ -532,7 +512,7 @@ export default async function CartPage() {
 
                       {showTeam && <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>}
 
-                      {/* ✅ Name, Number, Size, Badges */}
+                      {/* ✅ ORDER: Name, Number, Size, (Badges) */}
                       {hasMetaBlock && (
                         <div className="mt-2 space-y-2">
                           {custName && (
@@ -560,7 +540,7 @@ export default async function CartPage() {
                             <div className="text-xs text-gray-700">
                               <div className="font-semibold text-gray-900 mb-1">Badges:</div>
 
-                              {/* ✅ MOBILE: pills full-width so text uses the space around it (no big empty left/right) */}
+                              {/* ✅ MOBILE: pills take full width so text uses surrounding space */}
                               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
                                 {badgePills.map((b) => (
                                   <span
@@ -600,7 +580,7 @@ export default async function CartPage() {
                         </div>
                       )}
 
-                      {/* other options (still shown, but without customization/badges/name/number/size/cust*) */}
+                      {/* other options */}
                       {optionRows.length > 0 && (
                         <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600">
                           {optionRows.map(([k, v]) => (
@@ -693,13 +673,14 @@ export default async function CartPage() {
               <div className="pt-3 text-xs text-gray-500">
                 Free items applied:{" "}
                 <span className="font-semibold text-gray-800">
-                  {freeCount}/{MAX_FREE_ITEMS_PER_ORDER}
+                  {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
                 </span>{" "}
                 (always the cheapest ones).
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
-                Add more items to unlock: <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
+                Add more items to unlock:{" "}
+                <span className="font-semibold text-gray-800">Buy 1 Get 1</span>
               </div>
             )}
           </div>
