@@ -196,7 +196,6 @@ export default function ProductConfigurator({ product }: Props) {
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
   /* ---------- Thumbs ---------- */
-  const MAX_VISIBLE_THUMBS = 6;
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -380,7 +379,11 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize (✅ supports accents) ---------- */
+  /* ---------- Sanitize (✅ supports accents) ----------
+     IMPORTANTE:
+     - custName agora é "raw" (pode ter espaços durante a escrita)
+     - safeName é o que vai para a encomenda (sanitizado + 14 chars)
+  */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]); // ✅ 3 dígitos
 
@@ -425,7 +428,6 @@ export default function ProductConfigurator({ product }: Props) {
     setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
   }
 
-  // ✅ NEW animation: Framer Motion "ghost" that flies to cart (and always disappears)
   function flyToCart() {
     if (typeof window === "undefined") return;
 
@@ -798,11 +800,11 @@ export default function ProductConfigurator({ product }: Props) {
                     placeholder="e.g. BELLINGHAM"
                     value={custName}
                     onChange={(e) => {
-                      // ✅ bloqueia logo no input: só fica no state o que realmente vai para a encomenda (14 chars)
-                      const cleaned = sanitizeNameUnicode(e.target.value, 14);
-                      setCustName(cleaned);
+                      // ✅ NÃO sanitizar aqui para não “comer” espaços enquanto o user escreve.
+                      // Só limitamos o comprimento a 14 no state (e o sanitizado final é safeName).
+                      setCustName(e.target.value.slice(0, 14));
                     }}
-                    maxLength={14} // ✅ agora o utilizador só consegue escrever 14
+                    maxLength={14} // ✅ só consegue escrever 14 chars
                   />
                 </label>
 
