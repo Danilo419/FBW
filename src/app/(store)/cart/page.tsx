@@ -49,8 +49,6 @@ const BADGE_LABELS: Record<string, string> = {
   "uecl-regular": "UEFA Europa Conference League – Badge",
   "uecl-winners": "UEFA Europa Conference League – Winners Badge",
   "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
-
-  // ✅ extra (your screenshot shows this key)
   "intercontinental-cup-champions": "FIFA Intercontinental Cup – Champions Badge",
 };
 
@@ -59,7 +57,6 @@ function humanizeBadge(value: string) {
   if (!key) return "";
   if (BADGE_LABELS[key]) return BADGE_LABELS[key];
 
-  // fallback: nice Title Case
   return key
     .replace(/[-_]/g, " ")
     .replace(/\s+/g, " ")
@@ -81,11 +78,9 @@ function normalizeUrl(u: string) {
 function formatMoneyRight(cents: number) {
   const s = formatMoney(cents);
 
-  // "-€12.34" -> "-12.34€"
   let m = s.match(/^-€\s*(.+)$/);
   if (m) return `-${m[1]}€`;
 
-  // "€12.34" -> "12.34€"
   m = s.match(/^€\s*(.+)$/);
   if (m) return `${m[1]}€`;
 
@@ -111,7 +106,6 @@ function getCoverUrl(imageUrls: unknown) {
       const s = imageUrls.trim();
       if (!s) return "/placeholder.png";
 
-      // JSON array string
       if (s.startsWith("[") && s.endsWith("]")) {
         const parsed = JSON.parse(s);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -120,7 +114,6 @@ function getCoverUrl(imageUrls: unknown) {
         }
       }
 
-      // single url
       return normalizeUrl(s) || "/placeholder.png";
     }
 
@@ -189,42 +182,94 @@ function extractNameNumberFromOptions(opts: Record<string, any> | null) {
   return { name: nameStr, number: numStr };
 }
 
-/** ✅ badges: show the same human labels as ProductConfigurator */
-function formatBadgesValue(raw: string) {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((v) => humanizeBadge(v))
-    .filter(Boolean)
-    .join(", ");
+/* ---------- Badges parsing: supports array / json array string / comma string ---------- */
+function parseBadgesRaw(v: unknown): string[] {
+  if (!v) return [];
+
+  // array already
+  if (Array.isArray(v)) {
+    return v.map((x) => String(x ?? "").trim()).filter(Boolean);
+  }
+
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return [];
+
+    // JSON array string
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          return parsed.map((x) => String(x ?? "").trim()).filter(Boolean);
+        }
+      } catch {
+        // fallthrough to comma split
+      }
+    }
+
+    // comma string
+    return s
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
+function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
+  if (!opts) return [];
+  const raw =
+    opts.badges ??
+    opts.Badges ??
+    opts.BADGES ??
+    opts.badge ??
+    opts.Badge ??
+    null;
+
+  const keysOrLabels = parseBadgesRaw(raw);
+  const pills = keysOrLabels
+    .map((x) => humanizeBadge(x))
+    .map((x) => String(x).trim())
+    .filter(Boolean);
+
+  // unique (keep order)
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  for (const p of pills) {
+    if (seen.has(p)) continue;
+    seen.add(p);
+    uniq.push(p);
+  }
+  return uniq;
+}
+
+/**
+ * ✅ options rows (texto)
+ * - remove "badges" (vamos renderizar como pills)
+ * - remove "customization" (pedido: remover essa linha)
+ * - remove name/number "soltos" (continua como já estava)
+ */
 function optionsToRows(opts: Record<string, any> | null) {
   if (!opts) return [];
   return Object.entries(opts)
     .filter(([k, v]) => {
-      const key = k.toLowerCase();
+      const key = String(k).toLowerCase();
+
+      // remover name/number "soltos"
       if (key === "name" || key === "number") return false;
       if (key === "playername" || key === "playernumber") return false;
       if (key === "player_name" || key === "player_number") return false;
+
+      // ✅ remover "customization" (seta vermelha)
+      if (key === "customization") return false;
+
+      // ✅ remover "badges" daqui (vamos mostrar em pills)
+      if (key === "badges") return false;
+
       return v != null && String(v).trim() !== "";
     })
-    .map(([k, v]) => {
-      let vv = asDisplayValue(v);
-
-      // ✅ if badges are stored as array / json string / comma string, normalize anyway
-      if (k === "badges") {
-        // vv is already a string here; keep consistent
-        vv = formatBadgesValue(vv);
-      } else if (typeof k === "string" && k.toLowerCase() === "badges") {
-        vv = formatBadgesValue(vv);
-      } else {
-        // if someone stored badges under a different casing, still handle later
-      }
-
-      return [prettifyKey(k), vv] as const;
-    })
+    .map(([k, v]) => [prettifyKey(k), asDisplayValue(v)] as const)
     .filter(([, v]) => String(v).trim() !== "");
 }
 
@@ -237,10 +282,8 @@ function pickPromo(totalQty: number): {
   groupSize: number;
   freePerGroup: number;
   shippingCents: number | null;
-  threshold: number; // minimum qty to be "in" that promo tier
+  threshold: number;
 } {
-  // ✅ SEM "Buy 1 Get 1"
-  // Melhor tier primeiro
   if (totalQty >= 5)
     return { kind: "B3G5", groupSize: 5, freePerGroup: 2, shippingCents: 0, threshold: 5 };
   if (totalQty >= 3)
@@ -254,9 +297,7 @@ function promoLabel(kind: PromoKind) {
   return null;
 }
 
-/** Mensagem do bloco de promoção (de acordo com o que pediste) */
 function promoBannerMessage(totalQty: number) {
-  // 0 ou 1 item: mostrar unlock do Buy 2 Get 3
   if (totalQty <= 1) {
     return {
       title: "Promotion Preview",
@@ -265,7 +306,6 @@ function promoBannerMessage(totalQty: number) {
     };
   }
 
-  // ✅ 2 itens: NÃO há item grátis (grátis é o 3º). Logo: "falta 1" e NÃO "já és elegível".
   if (totalQty === 2) {
     return {
       title: "Promotion Preview",
@@ -274,7 +314,6 @@ function promoBannerMessage(totalQty: number) {
     };
   }
 
-  // 3 itens: já está no buy2get3 (qualifica para 1 grátis) — podemos mostrar pill normal
   if (totalQty === 3) {
     return {
       title: "Promotion Preview",
@@ -283,7 +322,6 @@ function promoBannerMessage(totalQty: number) {
     };
   }
 
-  // 4 itens: mostrar preview do buy3get5 (falta 1 para ganhar +1 grátis)
   if (totalQty === 4) {
     return {
       title: "Promotion Preview",
@@ -293,7 +331,6 @@ function promoBannerMessage(totalQty: number) {
     };
   }
 
-  // 5+ itens: pill normal (buy3get5)
   return {
     title: "Promotion Preview",
     message: null as string | null,
@@ -403,10 +440,8 @@ export default async function CartPage() {
   const promoGroupsRaw = promo.kind ? Math.floor(totalQty / promo.groupSize) : 0;
   const freeCountRaw = promo.kind ? promoGroupsRaw * promo.freePerGroup : 0;
 
-  // ✅ HARD CAP: máximo 2 grátis por encomenda
   const freeCount = Math.min(MAX_FREE_ITEMS_PER_ORDER, freeCountRaw);
 
-  // Expand para unidades (para escolher as mais baratas como FREE)
   const unitPool: Array<{ itemId: string; unitCents: number }> = [];
   for (const it of displayItems as any[]) {
     const q = Math.max(0, Number(it.qty ?? 0));
@@ -427,18 +462,12 @@ export default async function CartPage() {
 
   const promoActive = !!(promo.kind && promoGroupsRaw > 0);
 
-  // ✅ Shipping rules (como pediste):
-  // - Com 1 produto no carrinho: aplicar €5 de shipping
-  // - Com 2 produtos: NÃO há grátis (grátis é o 3º). Shipping mantém-se €5 até desbloquear (3+)
-  // - Com 3+ (promo ativa): shipping FREE
   const baseShippingCents = totalQty === 1 || totalQty === 2 ? 500 : 0;
-
   const shippingCents: number = promoActive ? (promo.shippingCents ?? 0) : baseShippingCents;
 
   const totalPayableCents = subtotalCents - discountCents + shippingCents;
 
   const promoTitle = promoActive ? promoLabel(promo.kind) : null;
-
   const banner = promoBannerMessage(totalQty);
 
   return (
@@ -459,7 +488,6 @@ export default async function CartPage() {
             </div>
           </div>
 
-          {/* Mensagem custom (1 item / 2 itens / 4 itens) OU pill normal */}
           {banner.showPill && promoTitle ? (
             <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
               <span className="font-semibold text-gray-900">{promoTitle}</span>
@@ -487,6 +515,10 @@ export default async function CartPage() {
           const cover = getCoverUrl(it.product.imageUrls);
           const external = isExternalUrl(cover);
 
+          // ✅ badges em pills (como na tua imagem)
+          const badgePills = getBadgePillsFromOpts(it.opts);
+
+          // ✅ rows sem "Badges" e sem "Customization"
           const optionRows = optionsToRows(it.opts);
 
           const teamRaw = it.product.team ? String(it.product.team) : "";
@@ -529,26 +561,32 @@ export default async function CartPage() {
                         <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>
                       )}
 
-                      {(it.name || it.number || freeQty > 0) && (
+                      {/* ✅ BADGES as pills */}
+                      {badgePills.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {badgePills.map((b) => (
+                            <span
+                              key={b}
+                              className="inline-flex items-center rounded-full border bg-white px-3 py-1 text-xs text-gray-800 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
+                            >
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* ✅ REMOVE as 3 coisas das setas:
+                          - remover pills de Name
+                          - remover pills de Number
+                          - remover linha de Customization (já removida em optionsToRows)
+                          Mantemos FREE pill, se houver
+                      */}
+                      {freeQty > 0 && (
                         <div className="mt-2 inline-flex flex-wrap items-center gap-2">
-                          {it.name && (
-                            <span className="rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
-                              <span className="text-gray-500">Name:</span>{" "}
-                              <span className="font-semibold">{it.name}</span>
-                            </span>
-                          )}
-                          {it.number && (
-                            <span className="rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
-                              <span className="text-gray-500">Number:</span>{" "}
-                              <span className="font-semibold">{it.number}</span>
-                            </span>
-                          )}
-                          {freeQty > 0 && (
-                            <span className="rounded-full border bg-green-50 px-3 py-1 text-xs text-green-800">
-                              <span className="font-semibold">FREE</span>{" "}
-                              <span className="text-green-700">x{freeQty}</span>
-                            </span>
-                          )}
+                          <span className="rounded-full border bg-green-50 px-3 py-1 text-xs text-green-800">
+                            <span className="font-semibold">FREE</span>{" "}
+                            <span className="text-green-700">x{freeQty}</span>
+                          </span>
                         </div>
                       )}
 
