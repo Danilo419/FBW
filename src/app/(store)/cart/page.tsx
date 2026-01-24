@@ -241,19 +241,37 @@ function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
  * - remove "badges" (vamos renderizar como pills)
  * - remove "customization"
  * - remove name/number "soltos"
+ * - ✅ remove size/custName/custNumber (porque já mostramos no bloco meta)
  */
 function optionsToRows(opts: Record<string, any> | null) {
   if (!opts) return [];
+
+  const blockKeys = new Set<string>([
+    // name/number variations
+    "name",
+    "number",
+    "playername",
+    "playernumber",
+    "player_name",
+    "player_number",
+
+    // main blocks handled elsewhere
+    "customization",
+    "badges",
+
+    // ✅ avoid duplicates (these are shown in the meta block)
+    "size",
+    "custname",
+    "custnumber",
+    "customername",
+    "customernumber",
+  ]);
+
   return Object.entries(opts)
     .filter(([k, v]) => {
       const key = String(k).toLowerCase();
 
-      if (key === "name" || key === "number") return false;
-      if (key === "playername" || key === "playernumber") return false;
-      if (key === "player_name" || key === "player_number") return false;
-
-      if (key === "customization") return false;
-      if (key === "badges") return false;
+      if (blockKeys.has(key)) return false;
 
       return v != null && String(v).trim() !== "";
     })
@@ -360,7 +378,10 @@ export default async function CartPage() {
         <h1 className="text-3xl font-extrabold mb-6">Your Cart</h1>
         <div className="rounded-2xl border p-10 bg-white/70 text-gray-600">Your cart is empty.</div>
         <div className="mt-6">
-          <Link href="/products" className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700">
+          <Link
+            href="/products"
+            className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700"
+          >
             Browse products
           </Link>
         </div>
@@ -578,7 +599,7 @@ export default async function CartPage() {
                         </div>
                       )}
 
-                      {/* other options (still shown, but without customization/badges/name/number) */}
+                      {/* other options (still shown, but without customization/badges/name/number/size/cust*) */}
                       {optionRows.length > 0 && (
                         <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600">
                           {optionRows.map(([k, v]) => (
