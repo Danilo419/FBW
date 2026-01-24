@@ -14,8 +14,17 @@ const AddToCartSchema = z.object({
   options: z.record(z.string(), z.string().nullable()).default({}),
   personalization: z
     .object({
-      name: z.string().max(20).optional().nullable(),
-      number: z.string().max(2).optional().nullable(),
+      // ✅ backend como fonte da verdade: 14 chars (igual ao que vai para a encomenda)
+      name: z.string().max(14).optional().nullable(),
+
+      // ✅ 0–999 (1 a 3 dígitos) — guardamos como string
+      number: z
+        .string()
+        .trim()
+        .regex(/^\d{1,3}$/, 'Invalid number')
+        .optional()
+        .nullable(),
+
       playerId: z.string().optional().nullable(),
     })
     .optional()
@@ -34,17 +43,28 @@ function sameJson(a: unknown, b: unknown) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+/**
+ * Nome:
+ * - mantém o que o UI faz: trim + uppercase + max 14
+ * (o UI também permite espaços; aqui não tiramos espaços)
+ */
 function sanitizeName(v: unknown) {
   const s = (v == null ? '' : String(v)).trim();
   if (!s) return null;
-  // igual ao teu UI: uppercase + max 14 (no UI tu cortas a 14)
   const up = s.toUpperCase().slice(0, 14);
   return up || null;
 }
+
+/**
+ * Número:
+ * - mantém só dígitos
+ * - limita a 3
+ * - permite "0" e "000" etc (porque é string)
+ */
 function sanitizeNumber(v: unknown) {
   const s = (v == null ? '' : String(v)).trim();
   if (!s) return null;
-  const only = s.replace(/\D/g, '').slice(0, 2);
+  const only = s.replace(/\D/g, '').slice(0, 3); // ✅ agora 3
   return only || null;
 }
 
@@ -91,7 +111,6 @@ export async function addToCartAction(raw: AddToCartInput) {
     const input = AddToCartSchema.parse(raw);
 
     const cart = await getOrCreateCart();
-
     const unitPrice = await getBaseUnitPrice(input.productId);
 
     // ✅ normalizar options
@@ -99,8 +118,11 @@ export async function addToCartAction(raw: AddToCartInput) {
 
     // ✅ normalizar personalization
     const inPers = input.personalization ?? null;
+
+    // (mesmo que Zod valide, continuamos a limpar por segurança)
     const cleanName = sanitizeName(inPers?.name);
     const cleanNumber = sanitizeNumber(inPers?.number);
+
     const personalization =
       cleanName || cleanNumber || inPers?.playerId
         ? {
@@ -125,10 +147,10 @@ export async function addToCartAction(raw: AddToCartInput) {
       select: {
         id: true,
         qty: true,
-        optionsJson: true, // ajusta se no schema o nome for diferente
-        personalization: true, // idem
+        optionsJson: true,
+        personalization: true,
       },
-      orderBy: { createdAt: 'asc' }, // garante ordem determinística
+      orderBy: { createdAt: 'asc' },
     });
 
     const existing = siblings.find(
@@ -143,7 +165,7 @@ export async function addToCartAction(raw: AddToCartInput) {
         where: { id: existing.id },
         data: {
           qty: newQty,
-          unitPrice, // base
+          unitPrice,
           totalPrice: unitPrice * newQty,
           optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
@@ -155,7 +177,7 @@ export async function addToCartAction(raw: AddToCartInput) {
           cartId: cart.id,
           productId: input.productId,
           qty: input.qty,
-          unitPrice, // base
+          unitPrice,
           totalPrice: unitPrice * input.qty,
           optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
@@ -169,8 +191,8 @@ export async function addToCartAction(raw: AddToCartInput) {
     return {
       ok: true as const,
       cartId: cart.id,
-      count, // nº de linhas
-      lineTotal: unitPrice * input.qty, // total da operação atual
+      count,
+      lineTotal: unitPrice * input.qty,
     };
   } catch (err) {
     console.error('[addToCartAction] failed:', err);
@@ -186,7 +208,7 @@ export async function addToCartAction(raw: AddToCartInput) {
  * - devolve subtotal, discount, shipping, total, etc.
  */
 export async function getCartSummary() {
-  const jar = await cookies(); // ✅ usar await
+  const jar = await cookies();
   const sid = jar.get('sid')?.value ?? null;
   if (!sid) {
     return {
@@ -230,7 +252,6 @@ export async function getCartSummary() {
     };
   }
 
-  // Montar array no formato esperado pelo calculateCartTotals
   const cartItemsForPricing = rawItems.map((it) => ({
     id: it.id,
     name: it.product?.name ?? '',
@@ -241,8 +262,8 @@ export async function getCartSummary() {
   const totals = calculateCartTotals(cartItemsForPricing);
 
   return {
-    count: rawItems.length, // nº de linhas do carrinho (como antes)
-    ...totals, // subtotal, discount, shipping, total, promotion
+    count: rawItems.length,
+    ...totals,
   };
 }
 
@@ -262,7 +283,6 @@ export async function updateQty(formData: FormData) {
   const qty = Number(formData.get('qty'));
   if (!id || typeof id !== 'string' || !Number.isFinite(qty) || qty < 1) return;
   try {
-    // buscar item para ter o unitPrice
     const item = await prisma.cartItem.findUnique({
       where: { id },
       select: { unitPrice: true },
