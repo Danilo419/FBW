@@ -65,12 +65,11 @@ function freeCountForTier(tier: PromoName) {
 }
 
 function shippingForTier(totalQty: number, tier: PromoName) {
-  // Regras que descreveste:
+  // Regras:
   // - 1 item -> 5€ shipping
   // - 2 items (Buy 1 Get 1) -> 5€ shipping
   // - 3+ items (Buy 2 Get 3 / Buy 3 Get 5) -> FREE shipping
   if (tier === "BUY_2_GET_3" || tier === "BUY_3_GET_5") return 0;
-  // fallback: se por algum motivo tier não bate, usa qty
   return totalQty >= 3 ? 0 : 500;
 }
 
@@ -128,10 +127,7 @@ function applyPromotionsCheapest(items: CartItemRow[]) {
 
 /* ============================== HELPERS ============================== */
 
-function toAbsoluteImage(
-  url: string | null | undefined,
-  APP: string
-): string | null {
+function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
   if (!url) return null;
   const t = url.trim();
   if (!t) return null;
@@ -173,13 +169,11 @@ export async function POST(req: NextRequest) {
   try {
     const stripe = getStripe();
 
-    // Auth
+    // ✅ Guest checkout allowed:
+    // If user is logged in, we associate the order/session to userId.
+    // If not, we proceed using the cart sessionId (sid cookie).
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id as string | undefined;
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method; // (mantido caso uses depois)
@@ -189,8 +183,12 @@ export async function POST(req: NextRequest) {
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
+    if (!sid) {
+      return NextResponse.json({ error: "Cart session not found" }, { status: 400 });
+    }
+
     const cart = await prisma.cart.findFirst({
-      where: { sessionId: sid ?? undefined },
+      where: { sessionId: sid },
       include: {
         items: {
           include: {
@@ -218,10 +216,7 @@ export async function POST(req: NextRequest) {
       totalPrice: (it as any).totalPrice ?? null,
     }));
 
-    const originalSubtotal = cartItems.reduce(
-      (acc, it) => acc + (it.qty * it.unitPrice),
-      0
-    );
+    const originalSubtotal = cartItems.reduce((acc, it) => acc + it.qty * it.unitPrice, 0);
 
     // ✅ APLICA PROMOÇÕES (cheapest ones) + shipping
     const promo = applyPromotionsCheapest(cartItems);
@@ -240,14 +235,11 @@ export async function POST(req: NextRequest) {
     const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
-        shippingFromCookie = JSON.parse(
-          Buffer.from(rawShip, "base64").toString("utf8")
-        );
+        shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
       } catch {}
     }
 
     /* -------- Create local order (PENDING) -------- */
-    // ✅ Cria items pagos e items FREE separados (para bater certo com Stripe e com UI)
     const orderItemsCreate = promo.applied.flatMap((row) => {
       const it = cartItems[row.idx]!;
       const img = it.product.imageUrls?.[0] ?? null;
@@ -288,12 +280,11 @@ export async function POST(req: NextRequest) {
 
     const createdOrder = await prisma.order.create({
       data: {
-        userId,
-        sessionId: cart.sessionId ?? null,
+        userId: userId ?? null, // ✅ allow guest
+        sessionId: cart.sessionId ?? sid,
         status: "pending",
         currency,
 
-        // ✅ Guarda valores reais coerentes com o que o Stripe vai cobrar
         subtotal: originalSubtotal, // "antes"
         shipping: shippingCents,
         tax: 0,
@@ -327,11 +318,11 @@ export async function POST(req: NextRequest) {
     /* -------- METADATA (100% SAFE) -------- */
     const metadata: Record<string, string> = {
       orderId: createdOrder.id,
-      userId,
       promoName: promo.tier,
       freeItemsApplied: String(promo.freeApplied),
       shippingCents: String(shippingCents),
       discountCents: String(discountCents),
+      ...(userId ? { userId } : {}),
       ...shippingToMetadata(shippingFromCookie),
     };
 
@@ -353,13 +344,15 @@ export async function POST(req: NextRequest) {
       line_items,
       shipping_options,
       metadata,
-      client_reference_id: userId,
 
-      // mantém o teu comportamento
+      ...(userId ? { client_reference_id: userId } : {}),
+
       ...(shippingFromCookie?.email
         ? { customer_email: shippingFromCookie.email.slice(0, 200) }
         : {}),
-      // se depois quiseres usar method, dá para configurar aqui
+
+      // NOTE: kept "method" variable to avoid breaking your flow,
+      // you can wire it to payment_method_types / automatic payment methods if you want later.
     });
 
     await prisma.order.update({
