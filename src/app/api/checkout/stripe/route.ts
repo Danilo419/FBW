@@ -6,6 +6,7 @@ import { getStripe } from "@/lib/stripe";
 import { getServerBaseUrl } from "@/lib/origin";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { applyPromotions, MAX_FREE_ITEMS_PER_ORDER } from "@/lib/cartPromotions";
 
 export const runtime = "nodejs";
 
@@ -43,87 +44,6 @@ type CartItemRow = {
   optionsJson?: any;
   totalPrice?: number | null;
 };
-
-/* ============================== PROMOS ============================== */
-
-const MAX_FREE_ITEMS_PER_ORDER = 2;
-
-type PromoName = "NONE" | "BUY_1_GET_1" | "BUY_2_GET_3" | "BUY_3_GET_5";
-
-function getTier(totalQty: number): PromoName {
-  if (totalQty >= 5) return "BUY_3_GET_5"; // 5 -> 2 free
-  if (totalQty >= 3) return "BUY_2_GET_3"; // 3 -> 1 free
-  if (totalQty >= 2) return "BUY_1_GET_1"; // 2 -> 1 free
-  return "NONE";
-}
-
-function freeCountForTier(tier: PromoName) {
-  if (tier === "BUY_3_GET_5") return 2;
-  if (tier === "BUY_2_GET_3") return 1;
-  if (tier === "BUY_1_GET_1") return 1;
-  return 0;
-}
-
-function shippingForTier(totalQty: number, tier: PromoName) {
-  // Regras:
-  // - 1 item -> 5€ shipping
-  // - 2 items (Buy 1 Get 1) -> 5€ shipping
-  // - 3+ items (Buy 2 Get 3 / Buy 3 Get 5) -> FREE shipping
-  if (tier === "BUY_2_GET_3" || tier === "BUY_3_GET_5") return 0;
-  return totalQty >= 3 ? 0 : 500;
-}
-
-type AppliedItem = {
-  idx: number;
-  payQty: number;
-  freeQty: number;
-};
-
-function applyPromotionsCheapest(items: CartItemRow[]) {
-  const totalQty = items.reduce((a, it) => a + (it.qty ?? 0), 0);
-  const tier = getTier(totalQty);
-  let freeToApply = Math.min(freeCountForTier(tier), MAX_FREE_ITEMS_PER_ORDER);
-
-  const applied: AppliedItem[] = items.map((_, idx) => ({
-    idx,
-    payQty: items[idx]!.qty,
-    freeQty: 0,
-  }));
-
-  if (freeToApply <= 0) {
-    return {
-      tier,
-      totalQty,
-      freeApplied: 0,
-      applied,
-    };
-  }
-
-  // expande para unidades e ordena por mais barato
-  const units: { idx: number; unitPrice: number }[] = [];
-  items.forEach((it, idx) => {
-    const q = it.qty ?? 0;
-    for (let k = 0; k < q; k++) units.push({ idx, unitPrice: it.unitPrice });
-  });
-
-  units.sort((a, b) => a.unitPrice - b.unitPrice);
-
-  for (let i = 0; i < units.length && freeToApply > 0; i++) {
-    const idx = units[i]!.idx;
-    applied[idx]!.freeQty += 1;
-    applied[idx]!.payQty -= 1;
-    freeToApply--;
-  }
-
-  const freeApplied = applied.reduce((a, x) => a + x.freeQty, 0);
-
-  return {
-    tier,
-    totalQty,
-    freeApplied,
-    applied,
-  };
-}
 
 /* ============================== HELPERS ============================== */
 
@@ -169,14 +89,13 @@ export async function POST(req: NextRequest) {
   try {
     const stripe = getStripe();
 
-    // ✅ Guest checkout allowed:
-    // If user is logged in, we associate the order/session to userId.
-    // If not, we proceed using the cart sessionId (sid cookie).
+    // ✅ Guest checkout allowed
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id as string | undefined;
 
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method; // (mantido caso uses depois)
+    void method; // silence unused warning if not used yet
 
     const APP = await getServerBaseUrl();
 
@@ -209,25 +128,42 @@ export async function POST(req: NextRequest) {
     // Normaliza items do cart (cents)
     const cartItems: CartItemRow[] = cart.items.map((it: any) => ({
       productId: it.productId,
-      qty: it.qty,
-      unitPrice: it.unitPrice,
+      qty: Math.max(0, Number(it.qty ?? 0)),
+      unitPrice: Math.max(0, Number(it.unitPrice ?? 0)),
       product: it.product,
-      optionsJson: it.optionsJson ?? it.options ?? it.snapshotJson ?? it.optionsJSON ?? (it as any).optionsJson ?? {},
+      optionsJson:
+        it.optionsJson ??
+        it.options ??
+        it.snapshotJson ??
+        it.optionsJSON ??
+        (it as any).optionsJson ??
+        {},
       totalPrice: (it as any).totalPrice ?? null,
     }));
 
     const originalSubtotal = cartItems.reduce((acc, it) => acc + it.qty * it.unitPrice, 0);
 
-    // ✅ APLICA PROMOÇÕES (cheapest ones) + shipping
-    const promo = applyPromotionsCheapest(cartItems);
-    const shippingCents = shippingForTier(promo.totalQty, promo.tier);
+    // ✅ SINGLE SOURCE OF TRUTH: same as cart page
+    const promo = applyPromotions(
+      cartItems.map((it, idx) => ({
+        id: String(idx), // id local (index) para mapear de volta
+        name: String(it.product?.name ?? "Item"),
+        unitAmountCents: it.unitPrice,
+        qty: it.qty,
+        image: it.product?.imageUrls?.[0] ?? null,
+      }))
+    );
 
-    const paidSubtotal = promo.applied.reduce((acc, row) => {
-      const it = cartItems[row.idx]!;
-      return acc + row.payQty * it.unitPrice;
+    // Map promo result back to cartItems by index
+    const paidSubtotal = promo.lines.reduce((acc, line) => {
+      const idx = Number(line.id);
+      const it = cartItems[idx];
+      if (!it) return acc;
+      return acc + line.payQty * it.unitPrice;
     }, 0);
 
     const discountCents = Math.max(0, originalSubtotal - paidSubtotal);
+    const shippingCents = promo.shippingCents; // ✅ 500 when 1–2 items, 0 when 3+
     const totalCents = paidSubtotal + shippingCents;
 
     /* -------- Shipping from cookie -------- */
@@ -240,31 +176,32 @@ export async function POST(req: NextRequest) {
     }
 
     /* -------- Create local order (PENDING) -------- */
-    const orderItemsCreate = promo.applied.flatMap((row) => {
-      const it = cartItems[row.idx]!;
+    const orderItemsCreate = promo.lines.flatMap((line) => {
+      const idx = Number(line.id);
+      const it = cartItems[idx]!;
       const img = it.product.imageUrls?.[0] ?? null;
-      const baseSnapshot = (it as any).optionsJson ?? {};
+      const baseSnapshot = it.optionsJson ?? {};
 
       const out: any[] = [];
 
-      if (row.payQty > 0) {
+      if (line.payQty > 0) {
         out.push({
           productId: it.productId,
           name: it.product.name,
           image: img,
-          qty: row.payQty,
+          qty: line.payQty,
           unitPrice: it.unitPrice,
-          totalPrice: row.payQty * it.unitPrice,
+          totalPrice: line.payQty * it.unitPrice,
           snapshotJson: baseSnapshot,
         });
       }
 
-      if (row.freeQty > 0) {
+      if (line.freeQty > 0) {
         out.push({
           productId: it.productId,
           name: `${it.product.name} (FREE)`,
           image: img,
-          qty: row.freeQty,
+          qty: line.freeQty,
           unitPrice: 0,
           totalPrice: 0,
           snapshotJson: {
@@ -280,15 +217,15 @@ export async function POST(req: NextRequest) {
 
     const createdOrder = await prisma.order.create({
       data: {
-        userId: userId ?? null, // ✅ allow guest
+        userId: userId ?? null,
         sessionId: cart.sessionId ?? sid,
         status: "pending",
         currency,
 
-        subtotal: originalSubtotal, // "antes"
+        subtotal: originalSubtotal, // antes
         shipping: shippingCents,
         tax: 0,
-        total: totalCents, // "a pagar"
+        total: totalCents, // a pagar
 
         shippingJson: shippingFromCookie as any,
         items: { create: orderItemsCreate },
@@ -318,10 +255,11 @@ export async function POST(req: NextRequest) {
     /* -------- METADATA (100% SAFE) -------- */
     const metadata: Record<string, string> = {
       orderId: createdOrder.id,
-      promoName: promo.tier,
-      freeItemsApplied: String(promo.freeApplied),
+      promoName: String(promo.promoName ?? "NONE"),
+      freeItemsApplied: String(promo.freeItemsApplied ?? 0),
       shippingCents: String(shippingCents),
       discountCents: String(discountCents),
+      maxFreeItemsCap: String(MAX_FREE_ITEMS_PER_ORDER),
       ...(userId ? { userId } : {}),
       ...shippingToMetadata(shippingFromCookie),
     };
@@ -350,9 +288,6 @@ export async function POST(req: NextRequest) {
       ...(shippingFromCookie?.email
         ? { customer_email: shippingFromCookie.email.slice(0, 200) }
         : {}),
-
-      // NOTE: kept "method" variable to avoid breaking your flow,
-      // you can wire it to payment_method_types / automatic payment methods if you want later.
     });
 
     await prisma.order.update({
@@ -366,9 +301,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);
-    return NextResponse.json(
-      { error: err?.message ?? "Stripe error" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
   }
 }

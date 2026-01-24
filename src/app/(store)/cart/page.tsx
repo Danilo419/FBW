@@ -274,31 +274,46 @@ function optionsToRows(opts: Record<string, any> | null) {
 /* -------------------------- promo labels / banner -------------------------- */
 
 function promoTitleFromName(p: ReturnType<typeof applyPromotions>["promoName"]) {
-  if (p === "BUY_1_GET_1") return "Buy 1 Get 1";
+  // ✅ BUY_1_GET_1 removed
   if (p === "BUY_2_GET_3") return "Buy 2 Get 3";
   if (p === "BUY_3_GET_5") return "Buy 3 Get 5";
   return null;
 }
 
 function promoBannerMessage(totalQty: number) {
-  // Ajustado para bater com as promos reais
-  if (totalQty <= 1) {
+  // ✅ Promotions only start at 3 items
+  if (totalQty <= 0) {
     return {
       title: "Promotion Preview",
-      message: "Add 1 more item to unlock: Buy 1 Get 1",
+      message: "Add items to unlock promotions.",
       showPill: false,
     };
   }
+
+  if (totalQty === 1) {
+    return {
+      title: "Promotion Preview",
+      message: "Add 2 more items to unlock: Buy 2 Get 3 (get 1 free item).",
+      showPill: false,
+    };
+  }
+
   if (totalQty === 2) {
     return {
       title: "Promotion Preview",
       message: "Add 1 more item to unlock: Buy 2 Get 3 (get 1 free item).",
+      showPill: false,
+    };
+  }
+
+  if (totalQty === 3) {
+    return {
+      title: "Promotion Preview",
+      message: "Add 2 more items to unlock: Buy 3 Get 5 (get 2 free items).",
       showPill: true,
     };
   }
-  if (totalQty === 3) {
-    return { title: "Promotion Preview", message: null as string | null, showPill: true };
-  }
+
   if (totalQty === 4) {
     return {
       title: "Promotion Preview",
@@ -306,6 +321,7 @@ function promoBannerMessage(totalQty: number) {
       showPill: true,
     };
   }
+
   return { title: "Promotion Preview", message: null as string | null, showPill: true };
 }
 
@@ -406,10 +422,7 @@ export default async function CartPage() {
     if (l.freeQty > 0) freeQtyByItemId.set(String(l.id), l.freeQty);
   }
 
-  const payableSubtotalCents = promo.lines.reduce(
-    (acc, l) => acc + l.payQty * l.unitAmountCents,
-    0
-  );
+  const payableSubtotalCents = promo.lines.reduce((acc, l) => acc + l.payQty * l.unitAmountCents, 0);
 
   const discountCents = Math.max(0, subtotalCents - payableSubtotalCents);
   const shippingCents = promo.shippingCents;
@@ -468,8 +481,7 @@ export default async function CartPage() {
           const custNumberRaw =
             it.opts?.custNumber ?? it.opts?.CustNumber ?? it.opts?.custnumber ?? it.opts?.customerNumber ?? null;
 
-          const custName =
-            custNameRaw != null && String(custNameRaw).trim() ? String(custNameRaw).trim() : null;
+          const custName = custNameRaw != null && String(custNameRaw).trim() ? String(custNameRaw).trim() : null;
           const custNumber =
             custNumberRaw != null && String(custNumberRaw).trim() ? String(custNumberRaw).trim() : null;
 
@@ -680,7 +692,7 @@ export default async function CartPage() {
             ) : (
               <div className="pt-3 text-xs text-gray-500">
                 Add more items to unlock:{" "}
-                <span className="font-semibold text-gray-800">Buy 1 Get 1</span>
+                <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
               </div>
             )}
           </div>
