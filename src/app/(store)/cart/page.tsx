@@ -128,8 +128,12 @@ function prettifyKey(k: string) {
     size: "Size",
     badges: "Badges",
     customization: "Customization",
+    custname: "CustName",
+    custnumber: "CustNumber",
   };
-  return map[k] ?? k.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  const lower = String(k).toLowerCase();
+  if (map[lower]) return map[lower];
+  return map[k] ?? String(k).replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 function asDisplayValue(v: unknown) {
@@ -186,7 +190,6 @@ function extractNameNumberFromOptions(opts: Record<string, any> | null) {
 function parseBadgesRaw(v: unknown): string[] {
   if (!v) return [];
 
-  // array already
   if (Array.isArray(v)) {
     return v.map((x) => String(x ?? "").trim()).filter(Boolean);
   }
@@ -195,19 +198,15 @@ function parseBadgesRaw(v: unknown): string[] {
     const s = v.trim();
     if (!s) return [];
 
-    // JSON array string
     if (s.startsWith("[") && s.endsWith("]")) {
       try {
         const parsed = JSON.parse(s);
         if (Array.isArray(parsed)) {
           return parsed.map((x) => String(x ?? "").trim()).filter(Boolean);
         }
-      } catch {
-        // fallthrough to comma split
-      }
+      } catch {}
     }
 
-    // comma string
     return s
       .split(",")
       .map((x) => x.trim())
@@ -219,13 +218,7 @@ function parseBadgesRaw(v: unknown): string[] {
 
 function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
   if (!opts) return [];
-  const raw =
-    opts.badges ??
-    opts.Badges ??
-    opts.BADGES ??
-    opts.badge ??
-    opts.Badge ??
-    null;
+  const raw = opts.badges ?? opts.Badges ?? opts.BADGES ?? opts.badge ?? opts.Badge ?? null;
 
   const keysOrLabels = parseBadgesRaw(raw);
   const pills = keysOrLabels
@@ -233,7 +226,6 @@ function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
     .map((x) => String(x).trim())
     .filter(Boolean);
 
-  // unique (keep order)
   const seen = new Set<string>();
   const uniq: string[] = [];
   for (const p of pills) {
@@ -247,8 +239,8 @@ function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
 /**
  * ✅ options rows (texto)
  * - remove "badges" (vamos renderizar como pills)
- * - remove "customization" (pedido: remover essa linha)
- * - remove name/number "soltos" (continua como já estava)
+ * - remove "customization"
+ * - remove name/number "soltos"
  */
 function optionsToRows(opts: Record<string, any> | null) {
   if (!opts) return [];
@@ -256,15 +248,11 @@ function optionsToRows(opts: Record<string, any> | null) {
     .filter(([k, v]) => {
       const key = String(k).toLowerCase();
 
-      // remover name/number "soltos"
       if (key === "name" || key === "number") return false;
       if (key === "playername" || key === "playernumber") return false;
       if (key === "player_name" || key === "player_number") return false;
 
-      // ✅ remover "customization" (seta vermelha)
       if (key === "customization") return false;
-
-      // ✅ remover "badges" daqui (vamos mostrar em pills)
       if (key === "badges") return false;
 
       return v != null && String(v).trim() !== "";
@@ -299,13 +287,8 @@ function promoLabel(kind: PromoKind) {
 
 function promoBannerMessage(totalQty: number) {
   if (totalQty <= 1) {
-    return {
-      title: "Promotion Preview",
-      message: `Add more items to unlock: Buy 2 Get 3`,
-      showPill: false,
-    };
+    return { title: "Promotion Preview", message: `Add more items to unlock: Buy 2 Get 3`, showPill: false };
   }
-
   if (totalQty === 2) {
     return {
       title: "Promotion Preview",
@@ -313,15 +296,9 @@ function promoBannerMessage(totalQty: number) {
       showPill: false,
     };
   }
-
   if (totalQty === 3) {
-    return {
-      title: "Promotion Preview",
-      message: null as string | null,
-      showPill: true,
-    };
+    return { title: "Promotion Preview", message: null as string | null, showPill: true };
   }
-
   if (totalQty === 4) {
     return {
       title: "Promotion Preview",
@@ -330,12 +307,7 @@ function promoBannerMessage(totalQty: number) {
       showPill: false,
     };
   }
-
-  return {
-    title: "Promotion Preview",
-    message: null as string | null,
-    showPill: true,
-  };
+  return { title: "Promotion Preview", message: null as string | null, showPill: true };
 }
 
 /* ------------------------------- types ------------------------------- */
@@ -368,23 +340,13 @@ export default async function CartPage() {
 
   const cart = (await prisma.cart.findFirst({
     where: {
-      OR: [
-        userId ? { userId } : undefined,
-        sid ? { sessionId: sid } : undefined,
-      ].filter(Boolean) as any,
+      OR: [userId ? { userId } : undefined, sid ? { sessionId: sid } : undefined].filter(Boolean) as any,
     },
     include: {
       items: {
         include: {
           product: {
-            select: {
-              id: true,
-              name: true,
-              team: true,
-              imageUrls: true,
-              slug: true,
-              basePrice: true,
-            },
+            select: { id: true, name: true, team: true, imageUrls: true, slug: true, basePrice: true },
           },
         },
         orderBy: { createdAt: "asc" },
@@ -396,14 +358,9 @@ export default async function CartPage() {
     return (
       <div className="container-fw py-16">
         <h1 className="text-3xl font-extrabold mb-6">Your Cart</h1>
-        <div className="rounded-2xl border p-10 bg-white/70 text-gray-600">
-          Your cart is empty.
-        </div>
+        <div className="rounded-2xl border p-10 bg-white/70 text-gray-600">Your cart is empty.</div>
         <div className="mt-6">
-          <Link
-            href="/products"
-            className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700"
-          >
+          <Link href="/products" className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700">
             Browse products
           </Link>
         </div>
@@ -428,15 +385,10 @@ export default async function CartPage() {
     return { ...it, displayUnit, displayTotal, opts, pers, name, number };
   });
 
-  const subtotalCents: number = displayItems.reduce(
-    (acc: number, it: any) => acc + it.displayTotal,
-    0
-  );
-
+  const subtotalCents: number = displayItems.reduce((acc: number, it: any) => acc + it.displayTotal, 0);
   const totalQty = displayItems.reduce((acc: number, it: any) => acc + (it.qty ?? 0), 0);
 
   const promo = pickPromo(totalQty);
-
   const promoGroupsRaw = promo.kind ? Math.floor(totalQty / promo.groupSize) : 0;
   const freeCountRaw = promo.kind ? promoGroupsRaw * promo.freePerGroup : 0;
 
@@ -448,12 +400,10 @@ export default async function CartPage() {
     const unit = Math.max(0, Number(it.displayUnit ?? 0));
     for (let i = 0; i < q; i++) unitPool.push({ itemId: String(it.id), unitCents: unit });
   }
-
   unitPool.sort((a, b) => a.unitCents - b.unitCents);
 
   const freeQtyByItemId = new Map<string, number>();
   let discountCents = 0;
-
   for (let i = 0; i < Math.min(freeCount, unitPool.length); i++) {
     const u = unitPool[i];
     discountCents += u.unitCents;
@@ -461,7 +411,6 @@ export default async function CartPage() {
   }
 
   const promoActive = !!(promo.kind && promoGroupsRaw > 0);
-
   const baseShippingCents = totalQty === 1 || totalQty === 2 ? 500 : 0;
   const shippingCents: number = promoActive ? (promo.shippingCents ?? 0) : baseShippingCents;
 
@@ -481,10 +430,7 @@ export default async function CartPage() {
             <div className="text-sm font-semibold text-gray-900">{banner.title}</div>
             <div className="text-sm text-gray-600">
               The free items are always the cheapest ones. Max{" "}
-              <span className="font-semibold text-gray-900">
-                {MAX_FREE_ITEMS_PER_ORDER}
-              </span>{" "}
-              free items per order.
+              <span className="font-semibold text-gray-900">{MAX_FREE_ITEMS_PER_ORDER}</span> free items per order.
             </div>
           </div>
 
@@ -492,10 +438,7 @@ export default async function CartPage() {
             <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
               <span className="font-semibold text-gray-900">{promoTitle}</span>
               <span className="text-gray-500">
-                • Free items:{" "}
-                <span className="font-semibold text-gray-900">
-                  {freeCount}/{MAX_FREE_ITEMS_PER_ORDER}
-                </span>{" "}
+                • Free items: <span className="font-semibold text-gray-900">{freeCount}/{MAX_FREE_ITEMS_PER_ORDER}</span>{" "}
                 • Shipping:{" "}
                 {shippingCents === 0 ? (
                   <span className="font-semibold text-gray-900">FREE</span>
@@ -515,23 +458,37 @@ export default async function CartPage() {
           const cover = getCoverUrl(it.product.imageUrls);
           const external = isExternalUrl(cover);
 
-          // ✅ badges em pills (como na tua imagem)
           const badgePills = getBadgePillsFromOpts(it.opts);
 
-          // ✅ rows sem "Badges" e sem "Customization"
           const optionRows = optionsToRows(it.opts);
+
+          // pegar CustName/CustNumber de options (porque o teu actions.ts grava como custName/custNumber)
+          const custNameRaw =
+            it.opts?.custName ?? it.opts?.CustName ?? it.opts?.custname ?? it.opts?.customerName ?? null;
+          const custNumberRaw =
+            it.opts?.custNumber ?? it.opts?.CustNumber ?? it.opts?.custnumber ?? it.opts?.customerNumber ?? null;
+
+          const custName =
+            custNameRaw != null && String(custNameRaw).trim() ? String(custNameRaw).trim() : null;
+          const custNumber =
+            custNumberRaw != null && String(custNumberRaw).trim() ? String(custNumberRaw).trim() : null;
+
+          // Size (normalmente está em optionsJson como "size")
+          const sizeRaw = it.opts?.size ?? it.opts?.Size ?? null;
+          const size = sizeRaw != null && String(sizeRaw).trim() ? String(sizeRaw).trim() : null;
 
           const teamRaw = it.product.team ? String(it.product.team) : "";
           const nameRaw = it.product.name ? String(it.product.name) : "";
-          const showTeam =
-            !!teamRaw.trim() &&
-            teamRaw.trim().toLowerCase() !== nameRaw.trim().toLowerCase();
+          const showTeam = !!teamRaw.trim() && teamRaw.trim().toLowerCase() !== nameRaw.trim().toLowerCase();
 
           const freeQty = freeQtyByItemId.get(String(it.id)) ?? 0;
           const payableQty = Math.max(0, (it.qty ?? 0) - freeQty);
 
           const lineBefore = it.displayTotal;
           const lineAfter = (it.displayUnit ?? 0) * payableQty;
+
+          // ✅ ORDER: CustName, CustNumber, Size, (Badges)
+          const hasMetaBlock = !!(custName || custNumber || size || badgePills.length > 0 || freeQty > 0);
 
           return (
             <div
@@ -553,43 +510,75 @@ export default async function CartPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h3 className="font-semibold leading-snug break-words">
-                        {it.product.name}
-                      </h3>
+                      <h3 className="font-semibold leading-snug break-words">{it.product.name}</h3>
 
-                      {showTeam && (
-                        <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>
-                      )}
+                      {showTeam && <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>}
 
-                      {/* ✅ BADGES as pills */}
-                      {badgePills.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {badgePills.map((b) => (
-                            <span
-                              key={b}
-                              className="inline-flex items-center rounded-full border bg-white px-3 py-1 text-xs text-gray-800 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
-                            >
-                              {b}
-                            </span>
-                          ))}
+                      {/* ✅ CustName, CustNumber, Size, Badges (order you asked) */}
+                      {hasMetaBlock && (
+                        <div className="mt-2 space-y-2">
+                          {custName && (
+                            <div className="text-xs text-gray-700">
+                              <span className="font-semibold text-gray-900">CustName:</span>{" "}
+                              <span className="break-words">{custName}</span>
+                            </div>
+                          )}
+
+                          {custNumber && (
+                            <div className="text-xs text-gray-700">
+                              <span className="font-semibold text-gray-900">CustNumber:</span>{" "}
+                              <span className="break-words">{custNumber}</span>
+                            </div>
+                          )}
+
+                          {size && (
+                            <div className="text-xs text-gray-700">
+                              <span className="font-semibold text-gray-900">Size:</span>{" "}
+                              <span className="break-words">{size}</span>
+                            </div>
+                          )}
+
+                          {badgePills.length > 0 && (
+                            <div className="text-xs text-gray-700">
+                              <div className="font-semibold text-gray-900 mb-1">Badges:</div>
+
+                              {/* ✅ pills that work on mobile: smaller padding/text, max width, wrap, no weird ovals */}
+                              <div className="flex flex-wrap gap-2">
+                                {badgePills.map((b) => (
+                                  <span
+                                    key={b}
+                                    className="
+                                      inline-flex items-center rounded-full border bg-white
+                                      px-2.5 py-1 text-[11px] sm:text-xs
+                                      text-gray-800
+                                      shadow-[0_1px_0_rgba(0,0,0,0.03)]
+                                      max-w-full
+                                    "
+                                    style={{
+                                      // ✅ quebra o texto dentro do pill em mobile sem virar um "círculo gigante"
+                                      whiteSpace: "normal",
+                                      lineHeight: "1.2",
+                                    }}
+                                  >
+                                    <span className="break-words">{b}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {freeQty > 0 && (
+                            <div className="inline-flex flex-wrap items-center gap-2">
+                              <span className="rounded-full border bg-green-50 px-3 py-1 text-xs text-green-800">
+                                <span className="font-semibold">FREE</span>{" "}
+                                <span className="text-green-700">x{freeQty}</span>
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {/* ✅ REMOVE as 3 coisas das setas:
-                          - remover pills de Name
-                          - remover pills de Number
-                          - remover linha de Customization (já removida em optionsToRows)
-                          Mantemos FREE pill, se houver
-                      */}
-                      {freeQty > 0 && (
-                        <div className="mt-2 inline-flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border bg-green-50 px-3 py-1 text-xs text-green-800">
-                            <span className="font-semibold">FREE</span>{" "}
-                            <span className="text-green-700">x{freeQty}</span>
-                          </span>
-                        </div>
-                      )}
-
+                      {/* other options (still shown, but without customization/badges/name/number) */}
                       {optionRows.length > 0 && (
                         <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600">
                           {optionRows.map(([k, v]) => (
@@ -603,18 +592,13 @@ export default async function CartPage() {
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <div className="text-sm text-gray-500">
-                        Unit: {formatMoneyRight(it.displayUnit)}
-                      </div>
+                      <div className="text-sm text-gray-500">Unit: {formatMoneyRight(it.displayUnit)}</div>
 
-                      <div className="mt-0.5 text-base font-semibold">
-                        {formatMoneyRight(lineAfter)}
-                      </div>
+                      <div className="mt-0.5 text-base font-semibold">{formatMoneyRight(lineAfter)}</div>
 
                       {freeQty > 0 && lineAfter !== lineBefore && (
                         <div className="mt-0.5 text-xs text-gray-500">
-                          Before:{" "}
-                          <span className="line-through">{formatMoneyRight(lineBefore)}</span>
+                          Before: <span className="line-through">{formatMoneyRight(lineBefore)}</span>
                         </div>
                       )}
                     </div>
@@ -662,8 +646,7 @@ export default async function CartPage() {
 
             <div className="flex items-center justify-between">
               <span className="text-gray-600">
-                Discount{" "}
-                {promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
+                Discount {promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
               </span>
               <span className={`font-semibold ${discountCents > 0 ? "text-green-700" : ""}`}>
                 -{formatMoneyRight(discountCents)}
@@ -681,9 +664,7 @@ export default async function CartPage() {
 
             <div className="pt-3 border-t flex items-center justify-between">
               <span className="text-base font-extrabold">Total</span>
-              <span className="text-base font-extrabold">
-                {formatMoneyRight(totalPayableCents)}
-              </span>
+              <span className="text-base font-extrabold">{formatMoneyRight(totalPayableCents)}</span>
             </div>
 
             {promoTitle ? (
@@ -696,8 +677,7 @@ export default async function CartPage() {
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
-                Add more items to unlock:{" "}
-                <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
+                Add more items to unlock: <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
               </div>
             )}
           </div>
