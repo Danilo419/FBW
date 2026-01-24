@@ -259,7 +259,7 @@ function optionsToRows(opts: Record<string, any> | null) {
     "customization",
     "badges",
 
-    // ✅ avoid duplicates (these are shown in the meta block)
+    // avoid duplicates (these are shown in the meta block)
     "size",
     "custname",
     "custnumber",
@@ -270,9 +270,7 @@ function optionsToRows(opts: Record<string, any> | null) {
   return Object.entries(opts)
     .filter(([k, v]) => {
       const key = String(k).toLowerCase();
-
       if (blockKeys.has(key)) return false;
-
       return v != null && String(v).trim() !== "";
     })
     .map(([k, v]) => [prettifyKey(k), asDisplayValue(v)] as const)
@@ -480,10 +478,9 @@ export default async function CartPage() {
           const external = isExternalUrl(cover);
 
           const badgePills = getBadgePillsFromOpts(it.opts);
-
           const optionRows = optionsToRows(it.opts);
 
-          // pegar CustName/CustNumber de options (porque o teu actions.ts grava como custName/custNumber)
+          // pegar Name/Number de options (porque o teu actions.ts grava como custName/custNumber)
           const custNameRaw =
             it.opts?.custName ?? it.opts?.CustName ?? it.opts?.custname ?? it.opts?.customerName ?? null;
           const custNumberRaw =
@@ -508,7 +505,7 @@ export default async function CartPage() {
           const lineBefore = it.displayTotal;
           const lineAfter = (it.displayUnit ?? 0) * payableQty;
 
-          // ✅ ORDER: CustName, CustNumber, Size, (Badges)
+          // ✅ ORDER: Name, Number, Size, (Badges)
           const hasMetaBlock = !!(custName || custNumber || size || badgePills.length > 0 || freeQty > 0);
 
           return (
@@ -535,19 +532,19 @@ export default async function CartPage() {
 
                       {showTeam && <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>}
 
-                      {/* ✅ CustName, CustNumber, Size, Badges (order you asked) */}
+                      {/* ✅ Name, Number, Size, Badges */}
                       {hasMetaBlock && (
                         <div className="mt-2 space-y-2">
                           {custName && (
                             <div className="text-xs text-gray-700">
-                              <span className="font-semibold text-gray-900">CustName:</span>{" "}
+                              <span className="font-semibold text-gray-900">Name:</span>{" "}
                               <span className="break-words">{custName}</span>
                             </div>
                           )}
 
                           {custNumber && (
                             <div className="text-xs text-gray-700">
-                              <span className="font-semibold text-gray-900">CustNumber:</span>{" "}
+                              <span className="font-semibold text-gray-900">Number:</span>{" "}
                               <span className="break-words">{custNumber}</span>
                             </div>
                           )}
@@ -563,22 +560,26 @@ export default async function CartPage() {
                             <div className="text-xs text-gray-700">
                               <div className="font-semibold text-gray-900 mb-1">Badges:</div>
 
-                              {/* ✅ pills that work on mobile: smaller padding/text, max width, wrap, no weird ovals */}
-                              <div className="flex flex-wrap gap-2">
+                              {/* ✅ MOBILE: pills full-width so text uses the space around it (no big empty left/right) */}
+                              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
                                 {badgePills.map((b) => (
                                   <span
                                     key={b}
                                     className="
-                                      inline-flex items-center rounded-full border bg-white
-                                      px-2.5 py-1 text-[11px] sm:text-xs
+                                      inline-flex
+                                      w-full sm:w-auto
+                                      justify-start
+                                      rounded-xl sm:rounded-full
+                                      border bg-white
+                                      px-3 py-1.5 sm:px-2.5 sm:py-1
+                                      text-[11px] sm:text-xs
                                       text-gray-800
                                       shadow-[0_1px_0_rgba(0,0,0,0.03)]
-                                      max-w-full
                                     "
                                     style={{
-                                      // ✅ quebra o texto dentro do pill em mobile sem virar um "círculo gigante"
                                       whiteSpace: "normal",
-                                      lineHeight: "1.2",
+                                      lineHeight: "1.25",
+                                      textAlign: "left",
                                     }}
                                   >
                                     <span className="break-words">{b}</span>
