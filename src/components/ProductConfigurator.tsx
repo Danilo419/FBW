@@ -184,8 +184,7 @@ export default function ProductConfigurator({ product }: Props) {
     originalUnitPriceForMoney = originalPriceEur * factor;
   }
 
-  const hasDiscount =
-    typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
+  const hasDiscount = typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
 
   const discountPercent = hasDiscount
     ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
@@ -330,7 +329,8 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) =>
+    setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -387,7 +387,9 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
+    const anchors = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
+    ).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
@@ -442,7 +444,6 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
-    // normalize //...
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
     const from: FlyRect = {
@@ -451,7 +452,7 @@ export default function ProductConfigurator({ product }: Props) {
       width: start.width,
       height: start.height,
     };
-    // target as a small "square" around cart center (looks nicer than shrinking into 0)
+
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
     const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height))); // 18–34px
@@ -514,7 +515,6 @@ export default function ProductConfigurator({ product }: Props) {
       setJustAdded(true);
       setShowToast(true);
 
-      // ✅ run new fly animation
       flyToCart();
 
       window.setTimeout(() => setShowToast(false), 2000);
@@ -797,10 +797,15 @@ export default function ProductConfigurator({ product }: Props) {
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. BELLINGHAM"
                     value={custName}
-                    onChange={(e) => setCustName(e.target.value)}
-                    maxLength={20}
+                    onChange={(e) => {
+                      // ✅ bloqueia logo no input: só fica no state o que realmente vai para a encomenda (14 chars)
+                      const cleaned = sanitizeNameUnicode(e.target.value, 14);
+                      setCustName(cleaned);
+                    }}
+                    maxLength={14} // ✅ agora o utilizador só consegue escrever 14
                   />
                 </label>
+
                 <label className="block">
                   <span className="text-[11px] sm:text-xs text-gray-600">Number (0–999)</span>
                   <input
@@ -809,7 +814,7 @@ export default function ProductConfigurator({ product }: Props) {
                     value={custNumber}
                     onChange={(e) => setCustNumber(e.target.value)}
                     inputMode="numeric"
-                    maxLength={3} // ✅ 3 números
+                    maxLength={3}
                   />
                 </label>
               </div>
@@ -988,7 +993,8 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
+  const isActive = (value: string) =>
+    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
