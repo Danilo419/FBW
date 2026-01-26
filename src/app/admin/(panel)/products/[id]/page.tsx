@@ -578,9 +578,9 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* Script: Upload local -> Cloudinary (/api/upload) -> inserir no ImagesEditor */}
+        {/* Script: Upload local -> Vercel Blob (/api/upload) -> inserir no ImagesEditor */}
         <Script
-          id={`cloudinary-upload-auto-add-${product.id}`}
+          id={`blob-upload-auto-add-${product.id}`}
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `

@@ -232,7 +232,7 @@ export default function NewProductPage() {
     ).slice(0, 50);
   }, [badgeQuery, ALL_BADGES]);
 
-  /* ===================== Images (Cloudinary via /api/upload) ===================== */
+  /* ===================== Images (Vercel Blob via /api/upload) ===================== */
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -253,12 +253,13 @@ export default function NewProductPage() {
         const formData = new FormData();
         formData.append("file", file);
 
+        // ✅ this endpoint now uploads to Vercel Blob (server-side)
         const res = await fetch("/api/upload", {
           method: "POST",
           body: formData,
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({} as any));
         if (!res.ok) {
           errors.push(`${file.name}: ${data?.error ?? "upload failed"}`);
           continue;
