@@ -447,20 +447,35 @@ export default async function CartPage() {
           </div>
 
           {banner.showPill ? (
-            <div className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-4 py-2 text-sm">
-              <span className="font-semibold text-gray-900">{promoTitle ?? "No promotion"}</span>
-              <span className="text-gray-500">
-                • Free items:{" "}
-                <span className="font-semibold text-gray-900">
-                  {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
-                </span>{" "}
-                • Shipping:{" "}
-                {shippingCents === 0 ? (
-                  <span className="font-semibold text-gray-900">FREE</span>
-                ) : (
-                  <span className="font-semibold text-gray-900">5€</span>
-                )}
-              </span>
+            // ✅ FIX MOBILE: make it clear + avoid weird line breaks
+            <div className="w-full sm:w-auto">
+              <div className="rounded-2xl sm:rounded-full border bg-gray-50 px-4 py-3 sm:py-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="font-semibold text-gray-900 text-sm sm:text-sm leading-tight">
+                    {promoTitle ?? "No promotion"}
+                  </span>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 text-sm">
+                    <div className="inline-flex items-center justify-between gap-2">
+                      <span className="text-gray-500">Free items</span>
+                      <span className="font-semibold text-gray-900 tabular-nums">
+                        {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
+                      </span>
+                    </div>
+
+                    <div className="hidden sm:block text-gray-300">•</div>
+
+                    <div className="inline-flex items-center justify-between gap-2">
+                      <span className="text-gray-500">Shipping</span>
+                      {shippingCents === 0 ? (
+                        <span className="font-semibold text-gray-900">FREE</span>
+                      ) : (
+                        <span className="font-semibold text-gray-900">5€</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-sm text-gray-700 font-medium">{banner.message ?? " "}</div>
