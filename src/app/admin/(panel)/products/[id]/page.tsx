@@ -4,7 +4,8 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { updateProduct, setSelectedBadges } from "@/app/admin/(panel)/products/actions";
 import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilityToggle";
 import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
@@ -60,6 +61,76 @@ function completeAdultsWithGhosts<T extends { id?: string; size: string; availab
     if (hit) return { ...hit, __ghost: false as const };
     return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & { __ghost: true };
   });
+}
+
+/** ===== Add missing adult size (ghost -> DB) =====
+ * Sem prisma.productSize — usa nested write via relação product.sizes
+ */
+async function addAdultSizeAction(formData: FormData): Promise<void> {
+  "use server";
+
+  const productId = String(formData.get("productId") || "").trim();
+  const raw = String(formData.get("size") || "").trim();
+  if (!productId || !raw) return;
+
+  const size = normalizeAdultSizeLabel(raw);
+  if (!isAllowedAdultSize(size)) return;
+
+  // verifica duplicados (case-insensitive) lendo as sizes do produto
+  const p = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, sizes: { select: { id: true, size: true } } },
+  });
+  if (!p) return;
+
+  const exists = (p.sizes || []).some((s) => (s.size || "").trim().toUpperCase() === size.toUpperCase());
+  if (!exists) {
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        sizes: {
+          create: {
+            size,
+            available: false, // começa indisponível (para “selecionar tamanhos não disponíveis”)
+          },
+        },
+      },
+    });
+  }
+
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath(`/admin`);
+  redirect(`/admin/products/${productId}`);
+}
+
+/** ===== Remove size from product (delete row)
+ * Sem prisma.productSize — usa nested delete via relação product.sizes
+ */
+async function removeSizeAction(formData: FormData): Promise<void> {
+  "use server";
+
+  const productId = String(formData.get("productId") || "").trim();
+  const sizeId = String(formData.get("sizeId") || "").trim();
+  if (!productId || !sizeId) return;
+
+  // nested delete (funciona independentemente do nome real do model no schema)
+  try {
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        sizes: {
+          delete: { id: sizeId },
+        },
+      },
+    });
+  } catch (e) {
+    // se já foi removido ou não existir, só dá refresh na mesma
+    console.error(e);
+  }
+
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath(`/admin`);
+  redirect(`/admin/products/${productId}`);
 }
 
 /* =============== Badge Catalog (EN) =============== */
@@ -718,7 +789,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
               return (
                 <div
                   key={s.id}
-                  className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
+                  className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${
                     isGhost ? "bg-gray-50" : unavailable ? "bg-red-50" : "bg-green-50"
                   }`}
                   title={isGhost ? "This size does not exist in the database yet" : undefined}
@@ -736,17 +807,37 @@ section .images-editor [placeholder*="Paste an image URL"] {
                     )}
                   </div>
 
-                  {isGhost ? (
-                    <button
-                      type="button"
-                      className="cursor-not-allowed text-xs rounded-lg border px-2 py-1 text-gray-400"
-                      disabled
-                    >
-                      Unavailable
-                    </button>
-                  ) : (
-                    <SizeAvailabilityToggle sizeId={s.id} initialUnavailable={unavailable} />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isGhost ? (
+                      <form action={addAdultSizeAction}>
+                        <input type="hidden" name="productId" value={product.id} />
+                        <input type="hidden" name="size" value={s.size} />
+                        <button
+                          type="submit"
+                          className="text-xs rounded-lg border px-2 py-1 hover:bg-gray-50"
+                          title="Create this size (starts as unavailable)"
+                        >
+                          Add
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <SizeAvailabilityToggle sizeId={s.id} initialUnavailable={unavailable} />
+
+                        <form action={removeSizeAction}>
+                          <input type="hidden" name="productId" value={product.id} />
+                          <input type="hidden" name="sizeId" value={s.id} />
+                          <button
+                            type="submit"
+                            className="text-xs rounded-lg border px-2 py-1 hover:bg-gray-50"
+                            title="Remove this size from the product"
+                          >
+                            Remove
+                          </button>
+                        </form>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -754,8 +845,9 @@ section .images-editor [placeholder*="Paste an image URL"] {
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Sizes shown are fixed to S–2XL. Entries marked as <strong>ghost</strong> don’t exist in the
-          database yet; create them (via seed/Studio) to enable the toggle.
+          Sizes shown are fixed to <strong>S–2XL</strong>. Entries marked as <strong>ghost</strong> don’t exist in the
+          database yet — click <strong>Add</strong> to create them (they start as unavailable), then use the toggle to
+          enable/disable. Use <strong>Remove</strong> to delete a size from the product.
         </p>
       </section>
     </div>
