@@ -1,6 +1,6 @@
-// src/app/products/page.tsx
-import { redirect } from "next/navigation";
+// src/app/products/ProductsClient.tsx
+"use client";
 
-export default function ProductsPage() {
-  redirect("/clubs");
+export default function ProductsClient() {
+  return null;
 }
