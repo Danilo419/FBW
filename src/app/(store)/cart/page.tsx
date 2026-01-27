@@ -376,7 +376,7 @@ export default async function CartPage() {
         <div className="rounded-2xl border p-10 bg-white/70 text-gray-600">Your cart is empty.</div>
         <div className="mt-6">
           <Link
-            href="/products"
+            href="/clubs"
             className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700"
           >
             Browse products

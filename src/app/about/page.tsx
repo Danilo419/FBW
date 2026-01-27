@@ -259,7 +259,7 @@ export default async function AboutPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/products"
+              href="/clubs"
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-sm font-medium text-white shadow-md hover:brightness-110"
             >
               Shop products
