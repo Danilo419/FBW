@@ -1384,7 +1384,7 @@ export default function Home() {
                   tracked shipping.
                 </p>
                 <div className="mt-6 flex items-center gap-3">
-                  <MagneticButton href="/products">
+                  <MagneticButton href="/clubs">
                     Browse products <ArrowRight className="h-4 w-4" />
                   </MagneticButton>
                 </div>
