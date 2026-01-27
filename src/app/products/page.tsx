@@ -1,10 +1,6 @@
-import { Suspense } from "react";
-import ProductsClient from "./ProductsClient";
+// src/app/products/page.tsx
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return (
-    <Suspense fallback={<div className="container-fw py-16"><p>Loading…</p></div>}>
-      <ProductsClient />
-    </Suspense>
-  );
+export default function ProductsPage() {
+  redirect("/clubs");
 }
