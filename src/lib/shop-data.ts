@@ -176,7 +176,7 @@ export const clubSlugToTeamName: Record<string, string> = {
 
   // Eredivisie
   "ajax":"AFC Ajax","psv":"PSV Eindhoven","feyenoord":"Feyenoord","az-alkmaar":"AZ Alkmaar","fc-twente":"FC Twente","utrecht":"FC Utrecht",
-  "heerenveen":"SC Heerenveen","nec-nijmegen":"NEC Nijmegen","sparta-rotterdam":"Sparta Rotterdam","go-ahead-eagles":"Go Ahead Eagles",
+  "heerenveen":"SC Telstar","nec-nijmegen":"NEC Nijmegen","sparta-rotterdam":"Sparta Rotterdam","go-ahead-eagles":"Go Ahead Eagles",
   "pec-zwolle":"PEC Zwolle","heracles":"Heracles Almelo","fortuna-sittard":"Fortuna Sittard","fc-groningen":"FC Groningen","nac-breda":"NAC Breda",
   "telstar":"SC Telstar","excelsior":"Excelsior","fc-volendam":"FC Volendam",
 };
@@ -203,6 +203,7 @@ const NAME_ALIASES: Record<string, string> = {
   "atlético": "atletico-madrid",
   "atletico": "atletico-madrid",
 
+  // Vitória de Guimarães
   "vitória-de-guimarães": "vitoria-sc",
 
   // Barcelona sem FC
@@ -217,19 +218,24 @@ const NAME_ALIASES: Record<string, string> = {
 // nome-normalizado -> slug oficial
 const NAME_TO_SLUG: Record<string, string> = (() => {
   const base: Record<string, string> = {};
+
+  // mapeia nomes "bonitos" oficiais -> slug
   for (const [slug, pretty] of Object.entries(clubSlugToTeamName)) {
     base[normalizeForSlug(pretty)] = slug;
   }
-  for (const [aliasNorm, slug] of Object.entries(NAME_ALIASES)) {
-    base[aliasNorm] = slug;
+
+  // ✅ CORREÇÃO: normalizar também as chaves dos aliases
+  for (const [aliasRaw, slug] of Object.entries(NAME_ALIASES)) {
+    base[normalizeForSlug(aliasRaw)] = slug;
   }
+
   return base;
 })();
 
 /** Garante que a string fornecida (nome ou slug) é devolvida como slug oficial */
 function ensureSlug(input: string): string {
   const norm = normalizeForSlug(input);
-  if (clubSlugToTeamName[norm]) return norm;        // já é slug oficial
+  if (clubSlugToTeamName[norm]) return norm;         // já é slug oficial
   if (NAME_TO_SLUG[norm]) return NAME_TO_SLUG[norm]; // é nome/alias conhecido
   return norm; // fallback
 }
@@ -240,7 +246,10 @@ function ensureSlug(input: string): string {
 export function teamNameFromSlug(slug: string): string {
   const hit = clubSlugToTeamName[slug];
   if (hit) return hit;
-  return slug.split("-").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
+  return slug
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(" ");
 }
 
 /** Converte um nome qualquer para slug oficial */
