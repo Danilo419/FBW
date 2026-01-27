@@ -121,7 +121,8 @@ export const clubSlugToTeamName: Record<string, string> = {
   "motherwell":"Motherwell FC","st-mirren":"St Mirren","kilmarnock":"Kilmarnock FC","dundee":"Dundee FC","dundee-united":"Dundee United","livingston":"Livingston FC","falkirk":"Falkirk FC",
 
   // Primeira Liga
-  "benfica":"SL Benfica","porto":"FC Porto","sporting":"Sporting CP","braga":"SC Braga","vitoria-sc":"Vitória SC",
+  // ✅ IMPORTANTE: aqui o "nome oficial" deve bater com o que está na BD (team)
+  "benfica":"SL Benfica","porto":"FC Porto","sporting":"Sporting CP","braga":"SC Braga","vitoria-sc":"Vitória de Guimarães",
   "rio-ave":"Rio Ave FC","famalicao":"FC Famalicão","gil-vicente":"Gil Vicente FC","casa-pia":"Casa Pia AC","moreirense":"Moreirense FC",
   "arouca":"FC Arouca","estoril-praia":"Estoril Praia","santa-clara":"CD Santa Clara","estrela-da-amadora":"Estrela da Amadora","tondela":"CD Tondela",
   "avs-futebol-sad":"AVS Futebol SAD","nacional-da-madeira":"CD Nacional","alverca":"FC Alverca",
@@ -176,7 +177,7 @@ export const clubSlugToTeamName: Record<string, string> = {
 
   // Eredivisie
   "ajax":"AFC Ajax","psv":"PSV Eindhoven","feyenoord":"Feyenoord","az-alkmaar":"AZ Alkmaar","fc-twente":"FC Twente","utrecht":"FC Utrecht",
-  "heerenveen":"SC Telstar","nec-nijmegen":"NEC Nijmegen","sparta-rotterdam":"Sparta Rotterdam","go-ahead-eagles":"Go Ahead Eagles",
+  "heerenveen":"SC Heerenveen","nec-nijmegen":"NEC Nijmegen","sparta-rotterdam":"Sparta Rotterdam","go-ahead-eagles":"Go Ahead Eagles",
   "pec-zwolle":"PEC Zwolle","heracles":"Heracles Almelo","fortuna-sittard":"Fortuna Sittard","fc-groningen":"FC Groningen","nac-breda":"NAC Breda",
   "telstar":"SC Telstar","excelsior":"Excelsior","fc-volendam":"FC Volendam",
 };
@@ -205,8 +206,10 @@ const NAME_ALIASES: Record<string, string> = {
 
   // Vitória de Guimarães
   "vitória-de-guimarães": "vitoria-sc",
+  "vitoria-de-guimaraes": "vitoria-sc",
+  "vitoria-sc": "vitoria-sc",
 
-  // Barcelona sem FC
+  // Barcelona sem FC (mantém)
   "barcelona": "barcelona",
 
   // Alguns atalhos populares
@@ -224,7 +227,7 @@ const NAME_TO_SLUG: Record<string, string> = (() => {
     base[normalizeForSlug(pretty)] = slug;
   }
 
-  // ✅ CORREÇÃO: normalizar também as chaves dos aliases
+  // ✅ normaliza também as chaves dos aliases (para bater com normalizeForSlug(input))
   for (const [aliasRaw, slug] of Object.entries(NAME_ALIASES)) {
     base[normalizeForSlug(aliasRaw)] = slug;
   }
@@ -235,8 +238,8 @@ const NAME_TO_SLUG: Record<string, string> = (() => {
 /** Garante que a string fornecida (nome ou slug) é devolvida como slug oficial */
 function ensureSlug(input: string): string {
   const norm = normalizeForSlug(input);
-  if (clubSlugToTeamName[norm]) return norm;         // já é slug oficial
-  if (NAME_TO_SLUG[norm]) return NAME_TO_SLUG[norm]; // é nome/alias conhecido
+  if (clubSlugToTeamName[norm]) return norm;          // já é slug oficial
+  if (NAME_TO_SLUG[norm]) return NAME_TO_SLUG[norm];  // é nome/alias conhecido
   return norm; // fallback
 }
 
@@ -255,6 +258,15 @@ export function teamNameFromSlug(slug: string): string {
 /** Converte um nome qualquer para slug oficial */
 export function slugFromTeamName(name: string): string {
   return ensureSlug(name);
+}
+
+/**
+ * ✅ Nome a usar nas queries do Prisma.
+ * Recebe slug OU nome, normaliza para slug oficial e devolve o "nome oficial" (o mesmo que tens guardado na BD).
+ */
+export function teamNameForQuery(input: string): string {
+  const slug = ensureSlug(input);
+  return clubSlugToTeamName[slug] ?? input;
 }
 
 /** Caminho da imagem: aceita SLUG **ou** NOME e normaliza automaticamente */
