@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { slugFromTeamName, teamNamesForQuery, teamNameFromSlug } from "@/lib/shop-data";
 
 /* ============================ Config ============================ */
 export const revalidate = 60;
@@ -13,22 +14,6 @@ type PageProps = {
 };
 
 const PAGE_SIZE = 12;
-
-const TEAM_MAP: Record<string, string> = {
-  "real-madrid": "Real Madrid",
-  barcelona: "FC Barcelona",
-  "atletico-madrid": "Atlético de Madrid",
-  "real-betis": "Real Betis",
-  sevilla: "Sevilla FC",
-  "real-sociedad": "Real Sociedad",
-  villarreal: "Villarreal",
-
-  benfica: "SL Benfica",
-  porto: "FC Porto",
-  sporting: "Sporting CP",
-  braga: "SC Braga",
-  "vitoria-sc": "Vitória SC",
-};
 
 /* ============================ Promo map ============================ */
 const SALE_MAP: Record<number, number> = {
@@ -140,19 +125,34 @@ export default async function TeamProductsPage({
   searchParams,
 }: PageProps) {
   const { team } = await params;
-  const slug = team.toLowerCase();
-  const teamName = TEAM_MAP[slug] ?? fallbackTitle(slug);
+
+  // ✅ slug "oficial" (com aliases) — ex: "Vitória de Guimarães" -> "vitoria-sc"
+  const slug = slugFromTeamName(decodeURIComponent(team || ""));
+
+  // ✅ nomes possíveis para bater com o que está na BD (robusto)
+  const namesForQuery = teamNamesForQuery(team);
+
+  // ✅ título para UI (não interfere na query)
+  const teamTitle =
+    teamNameFromSlug(slug) || TEAM_MAP_FALLBACK[slug] || fallbackTitle(slug);
 
   const sp = (await searchParams) ?? {};
   const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  const where: Prisma.ProductWhereInput = {
-    OR: [
-      { team: { equals: teamName } },
-      { team: { contains: teamName, mode: "insensitive" } },
-      { team: { contains: slug, mode: "insensitive" } },
-    ],
-  };
+  // ✅ WHERE robusto:
+  // - tenta equals (mais rápido)
+  // - tenta contains (caso existam variações no texto)
+  const or: Prisma.ProductWhereInput[] = [];
+  for (const nm of namesForQuery) {
+    const clean = (nm || "").trim();
+    if (!clean) continue;
+    or.push({ team: { equals: clean } });
+    or.push({ team: { contains: clean, mode: "insensitive" } });
+  }
+  // fallback extra: o próprio slug (se alguém guardou team como slug por engano)
+  or.push({ team: { contains: slug, mode: "insensitive" } });
+
+  const where: Prisma.ProductWhereInput = { OR: or };
 
   const totalCount = await prisma.product.count({ where });
   if (!totalCount) notFound();
@@ -178,7 +178,7 @@ export default async function TeamProductsPage({
 
   return (
     <List
-      team={teamName}
+      team={teamTitle}
       items={products}
       totalPages={totalPages}
       currentPage={currentPage}
@@ -186,6 +186,29 @@ export default async function TeamProductsPage({
     />
   );
 }
+
+/**
+ * Só para UI: caso teamNameFromSlug não tenha o slug ainda,
+ * isto garante um fallback bonito.
+ * (Não é usado na query.)
+ */
+const TEAM_MAP_FALLBACK: Record<string, string> = {
+  "real-madrid": "Real Madrid",
+  "barcelona": "FC Barcelona",
+  "atletico-madrid": "Atlético de Madrid",
+  "real-betis": "Real Betis",
+  "sevilla": "Sevilla FC",
+  "real-sociedad": "Real Sociedad",
+  "villarreal": "Villarreal",
+
+  "benfica": "SL Benfica",
+  "porto": "FC Porto",
+  "sporting": "Sporting CP",
+  "braga": "SC Braga",
+
+  // ✅ aqui não interessa se na BD é "Vitória de Guimarães" — é só título
+  "vitoria-sc": "Vitória de Guimarães",
+};
 
 /* ============================ UI ============================ */
 function List({
@@ -317,9 +340,7 @@ function List({
             <ul className="flex items-center gap-3">
               <li>
                 <PaginationPill
-                  href={
-                    currentPage > 1 ? `/products/team/${teamSlug}?page=1` : undefined
-                  }
+                  href={currentPage > 1 ? `/products/team/${teamSlug}?page=1` : undefined}
                   label="Primeira página"
                 >
                   &laquo;
@@ -329,11 +350,7 @@ function List({
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                 <li key={n}>
                   <PaginationPill
-                    href={
-                      n === currentPage
-                        ? undefined
-                        : `/products/team/${teamSlug}?page=${n}`
-                    }
+                    href={n === currentPage ? undefined : `/products/team/${teamSlug}?page=${n}`}
                     active={n === currentPage}
                     label={`Página ${n}`}
                   >
@@ -344,11 +361,7 @@ function List({
 
               <li>
                 <PaginationPill
-                  href={
-                    currentPage < totalPages
-                      ? `/products/team/${teamSlug}?page=${totalPages}`
-                      : undefined
-                  }
+                  href={currentPage < totalPages ? `/products/team/${teamSlug}?page=${totalPages}` : undefined}
                   label="Última página"
                 >
                   &raquo;
@@ -379,7 +392,8 @@ function PaginationPill({
   const activeCls = "border-sky-600 bg-sky-600 text-white shadow-md";
   const idleCls =
     "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700";
-  const disabledCls = "border-slate-200 bg-white text-slate-300 pointer-events-none";
+  const disabledCls =
+    "border-slate-200 bg-white text-slate-300 pointer-events-none";
 
   if (!href) {
     return (

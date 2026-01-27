@@ -172,7 +172,7 @@ export const clubSlugToTeamName: Record<string, string> = {
   // Saudi Pro League
   "al-ahli":"Al-Ahli","al-ettifaq":"Al-Ettifaq","al-fateh":"Al-Fateh","al-fayha":"Al-Fayha","al-hazem":"Al-Hazem",
   "al-hilal":"Al-Hilal","al-ittihad":"Al-Ittihad","al-khaleej":"Al-Khaleej","al-kholood":"Al-Kholood","al-najma":"Al-Najma",
-  "al-nassr":"Al-Nassr","al-okhdood":"Al-Okhdood","al-qadsiah":"Al-Qadsiah","al-riyadh":"Al-Riyadh","al-shabab":"Al-Shabab",
+  "al-nassr":"Al-Nassr","al-okhdood":"Al-Okhdood","al_qadsiah":"Al-Qadsiah","al-riyadh":"Al-Riyadh","al-shabab":"Al-Shabab",
   "al-taawoun":"Al-Taawoun","damac":"Damac","neom":"NEOM FC",
 
   // Eredivisie
@@ -207,9 +207,11 @@ const NAME_ALIASES: Record<string, string> = {
   // Vitória de Guimarães
   "vitória-de-guimarães": "vitoria-sc",
   "vitoria-de-guimaraes": "vitoria-sc",
+  "vitoria sc": "vitoria-sc",
   "vitoria-sc": "vitoria-sc",
+  "vitoria": "vitoria-sc",
 
-  // Barcelona sem FC (mantém)
+  // Barcelona sem FC
   "barcelona": "barcelona",
 
   // Alguns atalhos populares
@@ -261,8 +263,34 @@ export function slugFromTeamName(name: string): string {
 }
 
 /**
- * ✅ Nome a usar nas queries do Prisma.
- * Recebe slug OU nome, normaliza para slug oficial e devolve o "nome oficial" (o mesmo que tens guardado na BD).
+ * ✅ Nomes possíveis a usar em queries do Prisma.
+ * Útil porque a BD pode ter variações (ex: "Vitória de Guimarães" vs "Vitória SC").
+ */
+export function teamNamesForQuery(input: string): string[] {
+  const slug = ensureSlug(input);
+  const out = new Set<string>();
+
+  // nome "oficial" (idealmente igual ao que está guardado na BD)
+  const official = clubSlugToTeamName[slug];
+  if (official) out.add(official);
+
+  // também tenta o input cru (às vezes já vem exatamente como na BD)
+  if (typeof input === "string" && input.trim()) out.add(input.trim());
+
+  // casos especiais / compatibilidade retroativa
+  if (slug === "vitoria-sc") {
+    out.add("Vitória de Guimarães");
+    out.add("Vitória SC");
+    out.add("Vitoria de Guimaraes");
+    out.add("Vitoria SC");
+  }
+
+  return Array.from(out);
+}
+
+/**
+ * ✅ Nome a usar nas queries do Prisma (modo simples).
+ * Se quiseres o modo robusto, usa teamNamesForQuery + { in: [...] }.
  */
 export function teamNameForQuery(input: string): string {
   const slug = ensureSlug(input);
