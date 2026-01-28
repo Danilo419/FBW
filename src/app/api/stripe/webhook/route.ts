@@ -181,14 +181,14 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
-/* -------------------- userId helpers (added) -------------------- */
+/* -------------------- userId helpers -------------------- */
 
-function userIdFromCheckoutSession(session: Stripe.Checkout.Session): string | null {
-  // Prefer explicit metadata
+function userIdFromCheckoutSession(
+  session: Stripe.Checkout.Session
+): string | null {
   const metaUser = nz((session.metadata as any)?.userId);
   if (metaUser) return metaUser;
 
-  // Fallback: client_reference_id (we can set it to userId when creating session)
   const ref = nz((session as any)?.client_reference_id);
   if (ref) return ref;
 
@@ -199,7 +199,7 @@ function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
   return nz((pi.metadata as any)?.userId);
 }
 
-/* -------------------- email helpers (added) -------------------- */
+/* -------------------- email helpers -------------------- */
 
 function shippingAddressToString(s?: ShippingJson | null): string | null {
   if (!s?.address) return null;
@@ -215,8 +215,57 @@ function shippingAddressToString(s?: ShippingJson | null): string | null {
   return parts.length ? parts.join(", ") : null;
 }
 
-function centsToEur(n?: number | null): number {
-  return typeof n === "number" ? n / 100 : 0;
+function totalFromOrder(order: any, optsTotalCents?: number | null): number {
+  if (typeof order?.totalCents === "number") return order.totalCents / 100;
+  if (typeof order?.total === "number") return order.total;
+
+  const subtotal = typeof order?.subtotal === "number" ? order.subtotal : 0;
+  const shipping = typeof order?.shipping === "number" ? order.shipping : 0;
+  const tax = typeof order?.tax === "number" ? order.tax : 0;
+
+  const sum = subtotal + shipping + tax;
+  if (sum > 0) return sum / 100;
+
+  if (typeof optsTotalCents === "number") return optsTotalCents / 100;
+
+  return 0;
+}
+
+function shippingPriceFromOrder(order: any): number {
+  return typeof order?.shipping === "number" ? order.shipping / 100 : 0;
+}
+
+function orderEmail(order: any, mergedShipping?: ShippingJson | null): string | null {
+  return (
+    nz(order?.shippingEmail) ||
+    nz(order?.shippingJson?.email) ||
+    nz(mergedShipping?.email) ||
+    null
+  );
+}
+
+function orderCustomerName(order: any, mergedShipping?: ShippingJson | null): string | null {
+  return (
+    nz(order?.shippingFullName) ||
+    nz(order?.shippingJson?.name) ||
+    nz(mergedShipping?.name) ||
+    null
+  );
+}
+
+function orderShippingAddress(order: any, mergedShipping?: ShippingJson | null): string | null {
+  const parts = [
+    nz(order?.shippingAddress1),
+    nz(order?.shippingAddress2),
+    nz(order?.shippingPostalCode),
+    nz(order?.shippingCity),
+    nz(order?.shippingRegion),
+    nz(order?.shippingCountry),
+  ].filter(Boolean) as string[];
+
+  if (parts.length) return parts.join(", ");
+
+  return shippingAddressToString((order?.shippingJson as ShippingJson) ?? mergedShipping ?? null);
 }
 
 /* ------------------------- status updaters ------------------------- */
@@ -229,7 +278,7 @@ async function markPaid(
     currency?: string | null;
     totalCents?: number | null;
     shipping?: ShippingJson;
-    userId?: string | null; // ✅ added
+    userId?: string | null;
   }
 ): Promise<{ transitioned: boolean }> {
   const existing = await prisma.order.findUnique({
@@ -238,7 +287,7 @@ async function markPaid(
       status: true,
       shippingJson: true,
       shippingCountry: true,
-      userId: true, // ✅ added
+      userId: true,
     },
   });
 
@@ -251,106 +300,93 @@ async function markPaid(
     existing?.shippingJson as ShippingJson,
     opts.shipping ?? null
   );
+
   const country =
     (mergedShipping?.address?.country || existing?.shippingCountry || null)
       ?.toString() || null;
 
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      // ✅ Link order to user for "My Orders"
-      ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
+  const updateData: any = {
+    // Link order to user for "My Orders"
+    ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
 
-      status: "paid",
-      paymentStatus: "paid",
-      paidAt: new Date(),
-      stripePaymentIntentId: opts.paymentIntentId ?? null,
-      stripeSessionId: opts.sessionId ?? undefined,
-      currency: upper(opts.currency) ?? undefined,
-      totalCents: typeof opts.totalCents === "number" ? opts.totalCents : undefined,
-      ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
-      ...(country ? { shippingCountry: country } : {}),
-    },
-  });
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    stripePaymentIntentId: opts.paymentIntentId ?? null,
+    stripeSessionId: opts.sessionId ?? undefined,
+    currency: upper(opts.currency) ?? undefined,
+    totalCents: typeof opts.totalCents === "number" ? opts.totalCents : undefined,
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
+  // ✅ Idempotência SEM mexer no schema:
+  // Só 1 request "ganha" a transição de pending -> paid
+  let transitioned = false;
 
   if (!wasAlreadyFinal) {
+    const claim = await prisma.order.updateMany({
+      where: {
+        id: orderId,
+        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+      },
+      data: updateData,
+    });
+
+    transitioned = claim.count === 1;
+
+    // Se alguém já atualizou em paralelo, garantimos ao menos que dados Stripe ficam atualizados
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: updateData,
+      });
+    }
+  } else {
+    // Já estava final: só atualiza campos Stripe/shipping sem enviar email
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+  }
+
+  if (transitioned) {
     await finalizePaidOrder(orderId);
 
-    // ✅ SEND ORDER CONFIRMATION EMAIL (ADDED) - only on first transition to paid
+    // ✅ Enviar email 1x (porque transitioned==true só acontece uma vez)
     try {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
         include: { items: true },
       });
 
-      const to =
-        (order as any)?.email ??
-        (order as any)?.customerEmail ??
-        (order as any)?.shippingJson?.email ??
-        null;
+      if (order) {
+        const to = orderEmail(order, mergedShipping);
 
-      if (to) {
-        const shippingJson =
-          (order as any)?.shippingJson
-            ? ((order as any).shippingJson as ShippingJson)
-            : mergedShipping;
+        if (to) {
+          const items = (order.items ?? []).map((i: any) => ({
+            name: i?.name ?? "Item",
+            qty: typeof i?.qty === "number" ? i.qty : 1,
+            price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
+          }));
 
-        const totalEur =
-          typeof (order as any)?.total === "number"
-            ? (order as any).total
-            : typeof (order as any)?.totalCents === "number"
-            ? centsToEur((order as any).totalCents)
-            : typeof opts.totalCents === "number"
-            ? centsToEur(opts.totalCents)
-            : 0;
-
-        const shippingEur =
-          typeof (order as any)?.shippingPrice === "number"
-            ? (order as any).shippingPrice
-            : typeof (order as any)?.shippingCents === "number"
-            ? centsToEur((order as any).shippingCents)
-            : 0;
-
-        const customerName =
-          (order as any)?.customerName ??
-          (order as any)?.shippingJson?.name ??
-          null;
-
-        const shippingAddress =
-          (order as any)?.shippingAddress ??
-          shippingAddressToString(shippingJson) ??
-          null;
-
-        await sendOrderConfirmationEmail({
-          to,
-          orderId: (order as any)?.id ?? orderId,
-          items: ((order as any)?.items ?? []).map((i: any) => ({
-            name: i?.name ?? i?.title ?? "Item",
-            qty:
-              typeof i?.qty === "number"
-                ? i.qty
-                : typeof i?.quantity === "number"
-                ? i.quantity
-                : 1,
-            price:
-              typeof i?.price === "number"
-                ? i.price
-                : typeof i?.priceCents === "number"
-                ? centsToEur(i.priceCents)
-                : 0,
-          })),
-          total: totalEur,
-          shippingPrice: shippingEur,
-          customerName,
-          shippingAddress,
-        });
+          await sendOrderConfirmationEmail({
+            to,
+            orderId: order.id,
+            items,
+            total: totalFromOrder(order, opts.totalCents ?? null),
+            shippingPrice: shippingPriceFromOrder(order),
+            customerName: orderCustomerName(order, mergedShipping),
+            shippingAddress: orderShippingAddress(order, mergedShipping),
+          });
+        }
       }
     } catch (err) {
       console.error("Order confirmation email failed:", err);
     }
   }
 
-  return { transitioned: !wasAlreadyFinal };
+  return { transitioned };
 }
 
 async function markPending(
@@ -359,18 +395,19 @@ async function markPending(
     paymentIntentId?: string | null;
     sessionId?: string | null;
     shipping?: ShippingJson;
-    userId?: string | null; // ✅ added
+    userId?: string | null;
   }
 ) {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { shippingJson: true, shippingCountry: true, userId: true }, // ✅ added
+    select: { shippingJson: true, shippingCountry: true, userId: true },
   });
 
   const mergedShipping = mergeShipping(
     existing?.shippingJson as ShippingJson,
     opts.shipping ?? null
   );
+
   const country =
     (mergedShipping?.address?.country || existing?.shippingCountry || null)
       ?.toString() || null;
@@ -378,9 +415,7 @@ async function markPending(
   await prisma.order.update({
     where: { id: orderId },
     data: {
-      // ✅ Link order to user for "My Orders"
       ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
-
       status: "pending",
       paymentStatus: "pending",
       stripePaymentIntentId: opts.paymentIntentId ?? null,
@@ -422,7 +457,6 @@ export const POST = async (req: NextRequest) => {
 
   let event: Stripe.Event;
 
-  // Stripe precisa do body raw para verificar a assinatura
   let raw: string;
   try {
     raw = await req.text();
@@ -436,10 +470,8 @@ export const POST = async (req: NextRequest) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // ✅ discover userId (for My Orders)
         const userId = userIdFromCheckoutSession(session);
 
-        // encontrar orderId
         let orderId =
           (session.metadata?.orderId as string | undefined) ??
           (session.payment_intent &&
@@ -448,7 +480,6 @@ export const POST = async (req: NextRequest) => {
             ? (session.payment_intent.metadata.orderId as string)
             : undefined);
 
-        // fallbacks: procurar pela sessionId ou pelo paymentIntentId
         const piId =
           typeof session.payment_intent === "string"
             ? session.payment_intent
@@ -471,9 +502,10 @@ export const POST = async (req: NextRequest) => {
 
         if (!orderId) break;
 
-        const fromMeta = shippingFromMetadata(session.metadata ?? null);
-        const fromSession = shippingFromSession(session);
-        const shipping = mergeShipping(fromMeta, fromSession);
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
 
         const totalCents =
           typeof session.amount_total === "number" ? session.amount_total : undefined;
@@ -486,8 +518,9 @@ export const POST = async (req: NextRequest) => {
             currency,
             totalCents,
             shipping,
-            userId, // ✅ added
+            userId,
           });
+
           if (transitioned) {
             try {
               await pusherServer.trigger("stats", "metric:update", {
@@ -505,7 +538,7 @@ export const POST = async (req: NextRequest) => {
             paymentIntentId: piId,
             sessionId: session.id,
             shipping,
-            userId, // ✅ added
+            userId,
           });
         }
         break;
@@ -514,7 +547,6 @@ export const POST = async (req: NextRequest) => {
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // ✅ discover userId (for My Orders)
         const userId = userIdFromCheckoutSession(session);
 
         const piId =
@@ -522,7 +554,7 @@ export const POST = async (req: NextRequest) => {
             ? session.payment_intent
             : session.payment_intent?.id ?? null;
 
-        let orderId =
+        const orderId =
           (session.metadata?.orderId as string | undefined) ??
           (await prisma.order
             .findFirst({
@@ -552,8 +584,9 @@ export const POST = async (req: NextRequest) => {
               ? session.amount_total
               : undefined,
           shipping,
-          userId, // ✅ added
+          userId,
         });
+
         if (transitioned) {
           try {
             await pusherServer.trigger("stats", "metric:update", {
@@ -572,7 +605,6 @@ export const POST = async (req: NextRequest) => {
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
 
-        // ✅ discover userId (for My Orders)
         const userId = userIdFromPaymentIntent(pi);
 
         let orderId = pi.metadata?.orderId as string | undefined;
@@ -586,18 +618,16 @@ export const POST = async (req: NextRequest) => {
         }
         if (!orderId) break;
 
-        const shipping = shippingFromPaymentIntent(pi);
-        const totalCents =
-          typeof pi.amount_received === "number" ? pi.amount_received : undefined;
-
         const { transitioned } = await markPaid(orderId, {
           paymentIntentId: pi.id,
           sessionId: null,
           currency: pi.currency ?? undefined,
-          totalCents,
-          shipping,
-          userId, // ✅ added
+          totalCents:
+            typeof pi.amount_received === "number" ? pi.amount_received : undefined,
+          shipping: shippingFromPaymentIntent(pi),
+          userId,
         });
+
         if (transitioned) {
           try {
             await pusherServer.trigger("stats", "metric:update", {
@@ -616,7 +646,6 @@ export const POST = async (req: NextRequest) => {
       case "payment_intent.processing": {
         const pi = event.data.object as Stripe.PaymentIntent;
 
-        // ✅ discover userId (for My Orders)
         const userId = userIdFromPaymentIntent(pi);
 
         const orderId =
@@ -627,12 +656,13 @@ export const POST = async (req: NextRequest) => {
               select: { id: true },
             })
             .then((r) => r?.id));
+
         if (orderId) {
           await markPending(orderId, {
             paymentIntentId: pi.id,
             sessionId: null,
             shipping: shippingFromPaymentIntent(pi),
-            userId, // ✅ added
+            userId,
           });
         }
         break;
@@ -668,7 +698,7 @@ export const POST = async (req: NextRequest) => {
 
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session;
-        let orderId =
+        const orderId =
           (session.metadata?.orderId as string | undefined) ||
           (await prisma.order
             .findFirst({
@@ -680,6 +710,7 @@ export const POST = async (req: NextRequest) => {
                     : []),
                 ],
               },
+              select: { id: true },
             })
             .then((r) => r?.id));
         if (orderId) await markCanceled(orderId);
@@ -689,6 +720,7 @@ export const POST = async (req: NextRequest) => {
       // Fallback legacy
       case "charge.succeeded": {
         const charge = event.data.object as Stripe.Charge;
+
         let orderId = charge.metadata?.orderId as string | undefined;
 
         if (!orderId && charge.payment_intent) {
@@ -696,6 +728,7 @@ export const POST = async (req: NextRequest) => {
             typeof charge.payment_intent === "string"
               ? charge.payment_intent
               : (charge.payment_intent as any)?.id;
+
           const byPI = await prisma.order.findFirst({
             where: { stripePaymentIntentId: piId },
             select: { id: true },
@@ -708,6 +741,7 @@ export const POST = async (req: NextRequest) => {
             typeof charge.payment_intent === "string"
               ? charge.payment_intent
               : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
+
           const cents =
             typeof charge.amount_captured === "number"
               ? charge.amount_captured
@@ -721,9 +755,9 @@ export const POST = async (req: NextRequest) => {
             currency: charge.currency,
             totalCents: cents,
             shipping: null,
-            // NOTE: charge doesn't reliably carry userId; keep null
             userId: null,
           });
+
           if (transitioned) {
             try {
               await pusherServer.trigger("stats", "metric:update", {

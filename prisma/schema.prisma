@@ -132,9 +132,9 @@ model Product {
   updatedAt DateTime @updatedAt
 
   @@index([team])
-  @@index([teamType])         // ✅ ADDED
+  @@index([teamType])       // ✅ ADDED
   @@index([season])
-  @@index([teamType, team])   // ✅ ADDED (útil p/ lists por clubs/nations)
+  @@index([teamType, team]) // ✅ ADDED (útil p/ lists por clubs/nations)
 }
 
 model SizeStock {
@@ -155,9 +155,9 @@ model OptionGroup {
   key       String     // "size", "customization", "shorts", "socks", "badges", ...
   label     String
   type      OptionType
-  required  Boolean    @default(false)
+  required  Boolean @default(false)
 
-  product Product        @relation("ProductOptions", fields: [productId], references: [id])
+  product Product       @relation("ProductOptions", fields: [productId], references: [id])
   values  OptionValue[]
 
   @@index([productId])
@@ -282,8 +282,8 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   sessionId String?
-  status    String  @default("pending") // mantido como String para compatibilidade
-  currency  String  @default("eur")
+  status    String @default("pending") // mantido como String para compatibilidade
+  currency  String @default("eur")
 
   // Totais
   subtotal Int @default(0)
@@ -326,6 +326,10 @@ model Order {
   shippedAt      DateTime?
   deliveredAt    DateTime?
 
+  // ✅ Email confirmations (idempotency)
+  confirmationEmailSentAt     DateTime?
+  confirmationEmailProviderId String?
+
   // Other
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -344,6 +348,9 @@ model Order {
   @@index([shippedAt])
   @@index([deliveredAt])
   @@index([trackingCode])
+
+  // ✅ Email indexes (optional but helpful)
+  @@index([confirmationEmailSentAt])
 }
 
 model OrderItem {
@@ -429,8 +436,8 @@ model NewsletterSubscriber {
 model NewsletterCampaign {
   id              String   @id @default(cuid())
   subject         String
-  style           String   // "simple" | "pretty"
-  contentJson     String   // guarda o editor (blocos) em JSON
+  style           String // "simple" | "pretty"
+  contentJson     String // guarda o editor (blocos) em JSON
   html            String
   text            String
   status          String   @default("DRAFT") // DRAFT | SENDING | SENT | FAILED
@@ -440,19 +447,19 @@ model NewsletterCampaign {
   createdAt       DateTime @default(now())
   sentAt          DateTime?
 
-  logs            NewsletterSendLog[]
+  logs NewsletterSendLog[]
 }
 
 model NewsletterSendLog {
-  id          String   @id @default(cuid())
-  campaignId  String
-  email       String
-  status      String   // SENT | FAILED
-  providerId  String?
-  error       String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  campaignId String
+  email      String
+  status     String // SENT | FAILED
+  providerId String?
+  error      String?
+  createdAt  DateTime @default(now())
 
-  campaign    NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([email])
