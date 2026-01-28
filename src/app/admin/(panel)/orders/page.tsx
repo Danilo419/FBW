@@ -165,11 +165,13 @@ async function deleteOrderAction(formData: FormData): Promise<void> {
 
 /* ---------- page ---------- */
 type PageProps = {
-  searchParams?: { page?: string };
+  // ✅ Next 15 types in your project expect searchParams as Promise
+  searchParams?: Promise<{ page?: string }>;
 };
 
 export default async function OrdersPage({ searchParams }: PageProps) {
-  const rawPage = (searchParams?.page ?? "1").toString();
+  const sp = (await searchParams) ?? {};
+  const rawPage = (sp.page ?? "1").toString();
   const currentPage = Math.max(1, Number.parseInt(rawPage, 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
@@ -234,7 +236,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 </tr>
               )}
 
-              {orders.map((ord) => {
+              {orders.map((ord: OrderRow) => {
                 const ship = fromOrder(ord);
                 const total = normalizeTotal(ord);
                 const currency = (ord?.currency || "EUR").toString().toUpperCase();
