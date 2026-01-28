@@ -11,12 +11,10 @@ function fmtMoney(amount: number, currency = "EUR") {
 
 /** Heurística robusta para normalizar total (euros vs. cêntimos) */
 function normalizeTotal(o: any): number {
-  // 1) Se existir totalCents, é a fonte da verdade
   if (typeof o.totalCents === "number" && !Number.isNaN(o.totalCents)) {
     return o.totalCents / 100;
   }
 
-  // 2) Se existir total, tentar perceber a escala
   if (typeof o.total === "number" && !Number.isNaN(o.total)) {
     const t = o.total;
 
@@ -43,9 +41,8 @@ function normalizeTotal(o: any): number {
     return t;
   }
 
-  // 3) Calcular a partir de subtotal + shipping + tax (cada um pode estar em euros ou cêntimos)
   const parts = [Number(o.subtotal ?? 0), Number(o.shipping ?? 0), Number(o.tax ?? 0)];
-  const normalized = parts
+  return parts
     .map((p) => {
       if (Number.isNaN(p)) return 0;
       if (p >= 1000) return p / 100;
@@ -53,11 +50,9 @@ function normalizeTotal(o: any): number {
       return p;
     })
     .reduce((a, b) => a + b, 0);
-
-  return normalized;
 }
 
-/* ---------- shipping utils (minimal for name/email) ---------- */
+/* ---------- shipping utils ---------- */
 function safeParseJSON(input: any): Record<string, any> {
   if (!input) return {};
   if (typeof input === "string") {
@@ -70,6 +65,7 @@ function safeParseJSON(input: any): Record<string, any> {
   if (typeof input === "object") return input as Record<string, any>;
   return {};
 }
+
 function getDeep(obj: any, paths: string[][]): string | undefined {
   for (const p of paths) {
     let cur: any = obj;
@@ -87,6 +83,7 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
   }
   return undefined;
 }
+
 function fromOrder(order: any) {
   if (order.shippingFullName || order.shippingEmail) {
     return {
@@ -94,9 +91,11 @@ function fromOrder(order: any) {
       email: order.shippingEmail ?? order?.user?.email ?? null,
     };
   }
+
   const j = safeParseJSON(order?.shippingJson);
   const candidates = (keys: string[]) =>
     [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
+
   return {
     fullName:
       getDeep(j, candidates(["fullName"])) ??
@@ -106,19 +105,6 @@ function fromOrder(order: any) {
       null,
     email: getDeep(j, candidates(["email"])) ?? order?.user?.email ?? null,
   };
-}
-
-/* ---------- payment state heuristic ---------- */
-type PaymentState = "pending" | "paid" | "unknown";
-function getPaymentState(o: any): PaymentState {
-  const raw = String(o?.paymentStatus ?? "").toUpperCase();
-  const PAID = new Set(["PAID", "SUCCEEDED", "COMPLETED", "CAPTURED", "SETTLED"]);
-  const PENDING = new Set(["PENDING", "UNPAID", "WAITING", "PROCESSING"]);
-
-  if (o?.paidAt) return "paid";
-  if (PAID.has(raw)) return "paid";
-  if (PENDING.has(raw)) return "pending";
-  return "unknown";
 }
 
 /* ---------- select ---------- */
@@ -146,7 +132,17 @@ type OrderRow = Prisma.OrderGetPayload<{ select: typeof orderSelect }>;
 /* ---------- page ---------- */
 export default async function OrdersPage() {
   const orders: OrderRow[] = await prisma.order.findMany({
-    orderBy: { createdAt: "desc" } as any,
+    where: {
+      OR: [
+        { paidAt: { not: null } },
+        {
+          paymentStatus: {
+            in: ["PAID", "SUCCEEDED", "COMPLETED", "CAPTURED", "SETTLED"],
+          },
+        },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
     take: 100,
     select: orderSelect,
   });
@@ -155,7 +151,9 @@ export default async function OrdersPage() {
     <div className="space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-extrabold">Orders</h1>
-        <p className="text-sm text-gray-500">Full list of the most recent orders.</p>
+        <p className="text-sm text-gray-500">
+          Showing only paid orders.
+        </p>
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
@@ -176,28 +174,19 @@ export default async function OrdersPage() {
               {orders.length === 0 && (
                 <tr>
                   <td className="py-3 text-gray-500" colSpan={7}>
-                    No data to display.
+                    No paid orders found.
                   </td>
                 </tr>
               )}
+
               {orders.map((ord) => {
                 const ship = fromOrder(ord);
                 const total = normalizeTotal(ord);
                 const currency = (ord?.currency || "EUR").toString().toUpperCase();
                 const isResolved = (ord?.status || "").toUpperCase() === "RESOLVED";
-                const payState = getPaymentState(ord);
-
-                const rowBg =
-                  payState === "pending"
-                    ? "bg-red-50"
-                    : payState === "paid" && !isResolved
-                    ? "bg-yellow-50"
-                    : payState === "paid" && isResolved
-                    ? "bg-green-50"
-                    : "";
 
                 return (
-                  <tr key={ord.id} className={`border-b last:border-0 align-top ${rowBg}`}>
+                  <tr key={ord.id} className="border-b last:border-0 align-top bg-yellow-50">
                     <td className="py-2 pr-3 font-mono whitespace-nowrap">{ord.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
@@ -214,8 +203,6 @@ export default async function OrdersPage() {
                       <a
                         href={`/admin/orders/${ord.id}`}
                         className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
-                        aria-label={`View order ${ord.id}`}
-                        title="View details"
                       >
                         <Eye className="h-4 w-4" />
                         View
