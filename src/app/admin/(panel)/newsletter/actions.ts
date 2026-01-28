@@ -2,7 +2,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Resend } from "resend";
+import { resend, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/resend";
 
 export type StyleMode =
   | "simple"
@@ -109,7 +109,6 @@ function buildHtmlEmail(opts: {
   const { subject, blocks, style, unsubscribeUrl } = opts;
   const safeSubject = escapeHtml(subject);
 
-  // -------------------- Styles --------------------
   if (style === "simple") {
     const body = blocksToHtml(blocks, "#111");
     return `
@@ -290,7 +289,7 @@ function buildHtmlEmail(opts: {
     `;
   }
 
-  // default = pretty (teu atual)
+  // default = pretty
   const body = blocksToHtml(blocks, "#111");
   return `
   <div style="background:#f6f7fb;padding:24px">
@@ -361,14 +360,10 @@ export async function sendNewsletterEmailAction(formData: FormData) {
     return { ok: false as const, error: "Invalid editor content JSON." };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.NEWSLETTER_FROM;
-
-  if (!apiKey || !from) {
-    return { ok: false as const, error: "Missing RESEND_API_KEY or NEWSLETTER_FROM in env." };
+  // ✅ Only require the API key (EMAIL_FROM comes from your shared lib/resend.ts)
+  if (!process.env.RESEND_API_KEY) {
+    return { ok: false as const, error: "Missing RESEND_API_KEY in env." };
   }
-
-  const resend = new Resend(apiKey);
 
   const subs = (await prisma.newsletterSubscriber.findMany({
     where: { unsubscribedAt: null },
@@ -400,7 +395,10 @@ export async function sendNewsletterEmailAction(formData: FormData) {
     unsubscribeUrl: `${siteUrl()}/api/newsletter/unsubscribe?token=__TOKEN__`,
   });
 
-  const textBase = buildTextEmail(blocks, `${siteUrl()}/api/newsletter/unsubscribe?token=__TOKEN__`);
+  const textBase = buildTextEmail(
+    blocks,
+    `${siteUrl()}/api/newsletter/unsubscribe?token=__TOKEN__`
+  );
 
   await prisma.newsletterCampaign.update({
     where: { id: campaign.id },
@@ -416,7 +414,14 @@ export async function sendNewsletterEmailAction(formData: FormData) {
       const html = buildHtmlEmail({ subject, blocks, style, unsubscribeUrl });
       const text = buildTextEmail(blocks, unsubscribeUrl);
 
-      const out = await resend.emails.send({ from, to: s.email, subject, html, text });
+      const out = await resend.emails.send({
+        from: EMAIL_FROM,
+        replyTo: EMAIL_REPLY_TO,
+        to: s.email,
+        subject,
+        html,
+        text,
+      });
 
       const anyOut = out as unknown as {
         data?: { id?: string } | null;

@@ -34,26 +34,9 @@ function getBaseUrl(req: Request) {
   return origin || "http://localhost:3000";
 }
 
-/** Avoid logging full emails */
-function safeEmailHint(email: string) {
-  const at = email.indexOf("@");
-  if (at <= 1) return "***";
-  return `${email.slice(0, 2)}***${email.slice(at)}`;
-}
-
 export async function POST(req: Request) {
   // ✅ Always return generic ok to avoid leaking whether the email exists
   const genericOk = NextResponse.json({ ok: true });
-
-  // ✅ Debug marker logs (safe)
-  console.log("[forgot-password] HIT", {
-    ts: new Date().toISOString(),
-    hasResendKey: !!process.env.RESEND_API_KEY,
-    hasEmailFrom: !!process.env.EMAIL_FROM,
-    hasReplyTo: !!process.env.EMAIL_REPLY_TO,
-    host: req.headers.get("host") ?? null,
-    origin: req.headers.get("origin") ?? null,
-  });
 
   try {
     // -------- parse body --------
@@ -61,24 +44,16 @@ export async function POST(req: Request) {
     try {
       const json = await req.json();
       const parsed = BodySchema.safeParse(json);
-      if (!parsed.success) {
-        console.log("[forgot-password] invalid body");
-        return genericOk;
-      }
+      if (!parsed.success) return genericOk;
       email = parsed.data.email.trim();
     } catch {
-      console.log("[forgot-password] invalid json");
       return genericOk;
     }
 
     const ip = getClientIp(req);
     const emailNormalized = email.toLowerCase();
-    console.log("[forgot-password] request", {
-      ip: ip !== "unknown" ? ip : null,
-      emailHint: safeEmailHint(emailNormalized),
-    });
 
-    // -------- find user --------
+    // -------- find user (case-insensitive) --------
     let user: { id: string; email: string | null } | null = null;
     try {
       user = await prisma.user.findFirst({
@@ -92,15 +67,10 @@ export async function POST(req: Request) {
       });
     } catch (e) {
       console.error("[forgot-password] prisma user lookup failed:", e);
-      return genericOk;
+      return genericOk; // don't leak
     }
 
-    if (!user?.email) {
-      console.log("[forgot-password] user not found");
-      return genericOk;
-    }
-
-    console.log("[forgot-password] user found", { id: user.id });
+    if (!user?.email) return genericOk;
 
     // -------- create token --------
     const token = crypto.randomBytes(32).toString("hex");
@@ -116,20 +86,13 @@ export async function POST(req: Request) {
       });
     } catch (e) {
       console.error("[forgot-password] prisma token write failed:", e);
-      return genericOk;
+      return genericOk; // don't leak
     }
 
+    // -------- send email --------
     const base = getBaseUrl(req);
     const resetUrl = `${base}/reset-password?token=${token}`;
 
-    console.log("[forgot-password] about to send", {
-      toHint: safeEmailHint(user.email),
-      from: EMAIL_FROM,
-      replyTo: EMAIL_REPLY_TO,
-      base,
-    });
-
-    // -------- send email --------
     try {
       const resp = await resend.emails.send({
         from: EMAIL_FROM,
@@ -143,15 +106,18 @@ export async function POST(req: Request) {
         text: resetPasswordEmailText(resetUrl),
       });
 
-      console.log("[forgot-password] Resend response:", resp);
+      // Keep a minimal log that doesn't leak user existence/content
+      if (resp?.error) {
+        console.error("[forgot-password] Resend error:", resp.error);
+      }
     } catch (e) {
       console.error("[forgot-password] Resend send failed:", e);
-      return genericOk;
+      return genericOk; // don't leak
     }
 
     return genericOk;
   } catch (e) {
     console.error("[forgot-password] Handler crashed:", e);
-    return genericOk;
+    return genericOk; // never 500 to client
   }
 }
