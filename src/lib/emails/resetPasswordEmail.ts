@@ -17,9 +17,13 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
   const safeUrl = escapeHtml(resetUrl);
   const safeIp = ipHint ? escapeHtml(ipHint) : "";
 
-  // LOGO Cloudinary (email-safe)
+  /**
+   * ✅ IMPORTANT:
+   * - c_fit → keeps original aspect ratio
+   * - ONLY width is set (no height!)
+   */
   const LOGO_URL =
-    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_120,h_120,c_fit,f_auto,q_auto/logo_r0vd15.png";
+    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_140,c_fit,f_auto,q_auto/logo_r0vd15.png";
 
   return `<!doctype html>
 <html lang="en">
@@ -38,7 +42,7 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0d14;">
     <tr>
       <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:720px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:760px;">
 
           <!-- HEADER -->
           <tr>
@@ -46,27 +50,25 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
 
-                  <!-- LOGO COLUMN (FIXED WIDTH) -->
+                  <!-- LOGO COLUMN (WIDE + NO DISTORTION) -->
                   <td
-                    width="84"
-                    align="center"
+                    width="180"
                     valign="middle"
-                    style="width:84px;min-width:84px;max-width:84px;padding-right:12px;"
+                    style="width:180px;min-width:180px;padding-right:16px;"
                   >
                     <img
                       src="${LOGO_URL}"
                       alt="FootballWorld"
-                      width="56"
-                      height="56"
-                      style="display:block;border-radius:14px;"
+                      width="140"
+                      style="display:block;max-width:100%;height:auto;"
                     />
                   </td>
 
-                  <!-- BRAND TEXT COLUMN -->
+                  <!-- BRAND TEXT -->
                   <td valign="middle">
                     <div
                       style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                             font-weight:900;font-size:20px;color:#ffffff;line-height:1.1;">
+                             font-weight:900;font-size:22px;color:#ffffff;line-height:1.1;">
                       FootballWorld
                     </div>
                     <div
