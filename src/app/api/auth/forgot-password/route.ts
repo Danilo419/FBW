@@ -11,7 +11,6 @@ import {
   resetPasswordEmailHtml,
   resetPasswordEmailText,
 } from "@/lib/emails/resetPasswordEmail";
-import { rlForgotPasswordByIp, rlForgotPasswordByEmail } from "@/lib/rateLimit";
 
 const BodySchema = z.object({
   email: z.string().email(),
@@ -31,16 +30,18 @@ function getBaseUrl(req: Request) {
     .replace(/\/$/, "");
   if (envBase) return envBase;
 
+  // fallback: use request origin (works in dev + production)
   const origin = req.headers.get("origin")?.trim().replace(/\/$/, "");
   return origin || "http://localhost:3000";
 }
 
 export async function POST(req: Request) {
-  // ✅ Sempre 200 para evitar leak de user existence
+  // ✅ Always return generic ok to avoid leaking whether the email exists
   const genericOk = NextResponse.json({ ok: true });
 
   try {
     let email = "";
+
     try {
       const json = await req.json();
       const parsed = BodySchema.safeParse(json);
@@ -53,14 +54,7 @@ export async function POST(req: Request) {
     const ip = getClientIp(req);
     const emailNormalized = email.toLowerCase();
 
-    // Rate-limit
-    const ipRes = await rlForgotPasswordByIp.limit(ip);
-    if (!ipRes.success) return genericOk;
-
-    const emailRes = await rlForgotPasswordByEmail.limit(emailNormalized);
-    if (!emailRes.success) return genericOk;
-
-    // User
+    // ✅ Find user (case-insensitive)
     const user = await prisma.user.findFirst({
       where: {
         email: {
@@ -68,18 +62,18 @@ export async function POST(req: Request) {
           mode: "insensitive",
         },
       },
-      select: { email: true },
+      select: { id: true, email: true },
     });
 
     if (!user?.email) return genericOk;
 
-    // Tokens
+    // ✅ Invalidate old tokens for this email
     await prisma.passwordResetToken.deleteMany({
       where: { email: user.email },
     });
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
     await prisma.passwordResetToken.create({
       data: { email: user.email, token, expiresAt },
@@ -104,13 +98,12 @@ export async function POST(req: Request) {
       console.log("[forgot-password] Resend response:", resp);
     } catch (e) {
       console.error("[forgot-password] Resend send failed:", e);
-      return genericOk;
+      return genericOk; // don't leak
     }
 
     return genericOk;
   } catch (e) {
     console.error("[forgot-password] Handler crashed:", e);
-    // ✅ nunca devolver 500 ao cliente
-    return genericOk;
+    return genericOk; // never 500 to client
   }
 }
