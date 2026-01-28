@@ -313,7 +313,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 Prev
               </a>
 
-              {/* First page + ellipsis */}
+              {/* First page ++ ellipsis */}
               {start > 1 && (
                 <>
                   <a
