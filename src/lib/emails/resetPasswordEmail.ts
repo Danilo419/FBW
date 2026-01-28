@@ -17,9 +17,9 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
   const safeUrl = escapeHtml(resetUrl);
   const safeIp = ipHint ? escapeHtml(ipHint) : "";
 
-  // ✅ Cloudinary public URL (guaranteed to work in emails)
+  // Cloudinary logo (public, email-safe)
   const LOGO_URL =
-    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_88,h_88,c_fill,f_auto,q_auto/logo_r0vd15.png";
+    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_104,h_104,c_fill,f_auto,q_auto/logo_r0vd15.png";
 
   return `<!doctype html>
 <html lang="en">
@@ -31,39 +31,50 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
 </head>
 
 <body style="margin:0;padding:0;background-color:#0a0d14;">
-  <!-- Preheader (hidden preview text) -->
+  <!-- Preheader -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
     Reset your FootballWorld password. Link expires in 1 hour.
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0d14;">
     <tr>
-      <td align="center" style="padding:28px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;">
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:700px;">
 
-          <!-- HEADER -->
+          <!-- HEADER (FIXED HEIGHT / SPACING) -->
           <tr>
-            <td style="padding-bottom:14px;">
+            <td style="padding:16px 0 20px 0;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="left" style="vertical-align:middle;">
+                  <td align="left" valign="middle">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="vertical-align:middle;">
+                        <!-- LOGO CELL -->
+                        <td
+                          valign="middle"
+                          style="padding:0 14px 0 0;min-height:60px;"
+                        >
                           <img
                             src="${LOGO_URL}"
                             alt="FootballWorld"
-                            width="44"
-                            height="44"
-                            style="display:block;border-radius:12px;"
+                            width="52"
+                            height="52"
+                            style="display:block;border-radius:14px;"
                           />
                         </td>
-                        <td style="padding-left:12px;vertical-align:middle;">
-                          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                                      font-weight:900;font-size:18px;color:#ffffff;">
+
+                        <!-- BRAND TEXT -->
+                        <td valign="middle">
+                          <div
+                            style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                                   font-weight:900;font-size:20px;color:#ffffff;
+                                   line-height:1.1;">
                             FootballWorld
                           </div>
-                          <div style="font-size:12px;color:rgba(255,255,255,.70);">
+                          <div
+                            style="margin-top:4px;
+                                   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                                   font-size:13px;color:rgba(255,255,255,.70);">
                             Account Security
                           </div>
                         </td>
@@ -71,8 +82,13 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
                     </table>
                   </td>
 
-                  <td align="right" style="font-size:12px;color:rgba(255,255,255,.65);
-                                          font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                  <!-- YEAR -->
+                  <td
+                    align="right"
+                    valign="middle"
+                    style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                           font-size:13px;color:rgba(255,255,255,.65);"
+                  >
                     ${year}
                   </td>
                 </tr>
@@ -88,12 +104,12 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
                        border:1px solid rgba(255,255,255,.10);overflow:hidden;">
 
                 <tr>
-                  <td style="padding:22px;">
+                  <td style="padding:24px;">
                     <div style="height:4px;border-radius:999px;
                                 background:linear-gradient(90deg,#2b9bff,#7fcb49);"></div>
 
-                    <h1 style="margin:16px 0 10px;
-                               font-size:24px;line-height:1.2;color:#fff;
+                    <h1 style="margin:18px 0 10px;
+                               font-size:24px;line-height:1.25;color:#fff;
                                font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Reset your password
                     </h1>
@@ -152,7 +168,7 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
                 </tr>
 
                 <tr>
-                  <td style="padding:14px 22px;
+                  <td style="padding:14px 24px;
                              border-top:1px solid rgba(255,255,255,.08);
                              background:rgba(255,255,255,.03);
                              font-size:12px;color:rgba(255,255,255,.55);
@@ -166,7 +182,7 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
           </tr>
 
           <tr>
-            <td style="padding-top:14px;text-align:center;
+            <td style="padding-top:16px;text-align:center;
                        font-size:11px;color:rgba(255,255,255,.45);
                        font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
               You received this email because someone requested a password reset for your FootballWorld account.
