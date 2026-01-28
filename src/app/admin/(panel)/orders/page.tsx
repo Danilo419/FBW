@@ -129,7 +129,7 @@ const orderSelect = {
 
 type OrderRow = Prisma.OrderGetPayload<{ select: typeof orderSelect }>;
 
-/* ---------- page ---------- */
+/* ----------- page ----------- */
 export default async function OrdersPage() {
   const orders: OrderRow[] = await prisma.order.findMany({
     where: {
