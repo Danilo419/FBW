@@ -17,9 +17,9 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
   const safeUrl = escapeHtml(resetUrl);
   const safeIp = ipHint ? escapeHtml(ipHint) : "";
 
-  // Cloudinary logo (public, email-safe)
+  // LOGO Cloudinary (email-safe)
   const LOGO_URL =
-    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_104,h_104,c_fill,f_auto,q_auto/logo_r0vd15.png";
+    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_120,h_120,c_fit,f_auto,q_auto/logo_r0vd15.png";
 
   return `<!doctype html>
 <html lang="en">
@@ -31,7 +31,6 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
 </head>
 
 <body style="margin:0;padding:0;background-color:#0a0d14;">
-  <!-- Preheader -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
     Reset your FootballWorld password. Link expires in 1 hour.
   </div>
@@ -39,47 +38,43 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0d14;">
     <tr>
       <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:700px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:720px;">
 
-          <!-- HEADER (FIXED HEIGHT / SPACING) -->
+          <!-- HEADER -->
           <tr>
-            <td style="padding:16px 0 20px 0;">
+            <td style="padding:18px 0 22px 0;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="left" valign="middle">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <!-- LOGO CELL -->
-                        <td
-                          valign="middle"
-                          style="padding:0 14px 0 0;min-height:60px;"
-                        >
-                          <img
-                            src="${LOGO_URL}"
-                            alt="FootballWorld"
-                            width="52"
-                            height="52"
-                            style="display:block;border-radius:14px;"
-                          />
-                        </td>
 
-                        <!-- BRAND TEXT -->
-                        <td valign="middle">
-                          <div
-                            style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                                   font-weight:900;font-size:20px;color:#ffffff;
-                                   line-height:1.1;">
-                            FootballWorld
-                          </div>
-                          <div
-                            style="margin-top:4px;
-                                   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                                   font-size:13px;color:rgba(255,255,255,.70);">
-                            Account Security
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
+                  <!-- LOGO COLUMN (FIXED WIDTH) -->
+                  <td
+                    width="84"
+                    align="center"
+                    valign="middle"
+                    style="width:84px;min-width:84px;max-width:84px;padding-right:12px;"
+                  >
+                    <img
+                      src="${LOGO_URL}"
+                      alt="FootballWorld"
+                      width="56"
+                      height="56"
+                      style="display:block;border-radius:14px;"
+                    />
+                  </td>
+
+                  <!-- BRAND TEXT COLUMN -->
+                  <td valign="middle">
+                    <div
+                      style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                             font-weight:900;font-size:20px;color:#ffffff;line-height:1.1;">
+                      FootballWorld
+                    </div>
+                    <div
+                      style="margin-top:4px;
+                             font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                             font-size:13px;color:rgba(255,255,255,.70);">
+                      Account Security
+                    </div>
                   </td>
 
                   <!-- YEAR -->
@@ -87,10 +82,11 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
                     align="right"
                     valign="middle"
                     style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                           font-size:13px;color:rgba(255,255,255,.65);"
+                           font-size:13px;color:rgba(255,255,255,.65);white-space:nowrap;"
                   >
                     ${year}
                   </td>
+
                 </tr>
               </table>
             </td>
@@ -104,7 +100,7 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
                        border:1px solid rgba(255,255,255,.10);overflow:hidden;">
 
                 <tr>
-                  <td style="padding:24px;">
+                  <td style="padding:26px;">
                     <div style="height:4px;border-radius:999px;
                                 background:linear-gradient(90deg,#2b9bff,#7fcb49);"></div>
 
@@ -168,7 +164,7 @@ export function resetPasswordEmailHtml({ resetUrl, ipHint }: ResetPasswordEmailP
                 </tr>
 
                 <tr>
-                  <td style="padding:14px 24px;
+                  <td style="padding:14px 26px;
                              border-top:1px solid rgba(255,255,255,.08);
                              background:rgba(255,255,255,.03);
                              font-size:12px;color:rgba(255,255,255,.55);
