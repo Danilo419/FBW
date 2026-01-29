@@ -43,11 +43,14 @@ const BADGE_LABELS: Record<string, string> = {
   'uecl-regular': 'UEFA Europa Conference League – Badge',
   'uecl-winners': 'UEFA Europa Conference League – Winners Badge',
   'club-world-cup-champions': 'FIFA Club World Cup – Champions Badge',
+  'intercontinental-cup-champions': 'FIFA Intercontinental Cup – Champions Badge',
 }
 
 function humanizeBadge(value: string) {
-  if (BADGE_LABELS[value]) return BADGE_LABELS[value]
-  return String(value)
+  const key = String(value ?? '').trim()
+  if (!key) return ''
+  if (BADGE_LABELS[key]) return BADGE_LABELS[key]
+  return key
     .replace(/[-_]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -79,14 +82,14 @@ type OrderItemDTO = {
   totalPrice: number // cents
   name: string
   image?: string | null
-  snapshotJson?: any
-  personalizationJson?: any
+  snapshotJson?: unknown
+  personalizationJson?: unknown
   product: {
     id: string
     name: string
     slug?: string | null
-    imageUrls: any // ⬅️ keep flexible (string[] | string | json | etc.)
-    badges: any
+    imageUrls: unknown
+    badges: unknown
   }
 }
 
@@ -121,74 +124,89 @@ type OrderDetailsDTO = {
 
 /* ========================= Helpers ========================= */
 
-function safeParseJSON(input: any): Record<string, any> {
+function safeParseJSON(input: unknown): Record<string, unknown> {
   if (!input) return {}
   if (typeof input === 'string') {
     try {
-      return JSON.parse(input)
+      const parsed = JSON.parse(input)
+      if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>
+      return {}
     } catch {
       return {}
     }
   }
-  if (typeof input === 'object') return input as Record<string, any>
+  if (typeof input === 'object') return input as Record<string, unknown>
   return {}
 }
 
-/** ✅ normalize imageUrls that can arrive as string[] | string (JSON) | object (Prisma Json) */
-function normalizeImageUrls(raw: any): string[] {
-  if (!raw) return []
-
-  if (Array.isArray(raw)) {
-    return raw
-      .filter(Boolean)
-      .map((x) => String(x).trim())
-      .filter(Boolean)
-  }
-
-  if (typeof raw === 'string') {
-    const s = raw.trim()
-    if (!s) return []
-
-    // JSON-ish string
-    if (
-      (s.startsWith('[') && s.endsWith(']')) ||
-      (s.startsWith('{') && s.endsWith('}')) ||
-      (s.startsWith('"') && s.endsWith('"'))
-    ) {
-      try {
-        const parsed = JSON.parse(s)
-        return normalizeImageUrls(parsed)
-      } catch {
-        // fallback: treat as a single url
-        return [s]
-      }
-    }
-
-    // plain url
-    return [s]
-  }
-
-  if (typeof raw === 'object') {
-    // Prisma Json sometimes ends up as object with numeric keys or nested values
-    const vals = Object.values(raw)
-    const out: string[] = []
-    for (const v of vals) out.push(...normalizeImageUrls(v))
-    return out
-  }
-
-  return []
-}
-
-function pickStr(o: any, keys: string[]): string | null {
+function pickStr(o: unknown, keys: string[]): string | null {
   if (!o || typeof o !== 'object') return null
+  const obj = o as Record<string, unknown>
   for (const k of keys) {
-    const v = (o as any)?.[k]
+    const v = obj[k]
     if (v != null && String(v).trim() !== '') return String(v)
   }
   return null
 }
 
-function shippingFromOrder(order: any): ShippingJson {
+/* ------------------- ✅ image helpers (typed, no implicit any) ------------------- */
+function isExternalUrl(u: string): boolean {
+  return /^https?:\/\//i.test(u) || u.startsWith('//')
+}
+
+function normalizeUrl(u: string): string {
+  if (!u) return ''
+  if (u.startsWith('//')) return `https:${u}`
+  return u
+}
+
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === 'object' && !Array.isArray(x)
+}
+
+/**
+ * ✅ same logic as cart + fully typed
+ */
+function getCoverUrl(imageUrls: unknown): string {
+  try {
+    if (!imageUrls) return '/placeholder.png'
+
+    if (Array.isArray(imageUrls)) {
+      const first = String(imageUrls[0] ?? '').trim()
+      return normalizeUrl(first) || '/placeholder.png'
+    }
+
+    if (typeof imageUrls === 'string') {
+      const s = imageUrls.trim()
+      if (!s) return '/placeholder.png'
+
+      if (s.startsWith('[') && s.endsWith(']')) {
+        const parsed: unknown = JSON.parse(s)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const first = String(parsed[0] ?? '').trim()
+          return normalizeUrl(first) || '/placeholder.png'
+        }
+      }
+
+      return normalizeUrl(s) || '/placeholder.png'
+    }
+
+    if (isRecord(imageUrls)) {
+      // Prisma Json às vezes vira objeto com valores aninhados
+      for (const v of Object.values(imageUrls)) {
+        const candidate = getCoverUrl(v)
+        if (candidate && candidate !== '/placeholder.png') return candidate
+      }
+      return '/placeholder.png'
+    }
+
+    return '/placeholder.png'
+  } catch {
+    return '/placeholder.png'
+  }
+}
+
+function shippingFromOrder(order: OrderDetailsDTO): ShippingJson {
   const canonical: ShippingJson = {
     name: order?.shippingFullName ?? null,
     email: order?.shippingEmail ?? null,
@@ -217,31 +235,29 @@ function shippingFromOrder(order: any): ShippingJson {
   return snap ?? { name: null, email: null, phone: null, address: null }
 }
 
-function computeTotalCents(order: any) {
-  if (typeof order?.totalCents === 'number') return order.totalCents
-  if (typeof order?.total === 'number') return Math.round(order.total * 100)
+function computeTotalCents(order: OrderDetailsDTO): number {
+  if (typeof (order as any)?.totalCents === 'number') return (order as any).totalCents
+  if (typeof (order as any)?.total === 'number') return Math.round((order as any).total * 100)
 
   const itemsSum =
     (order?.items || []).reduce((acc: number, it: any) => acc + (Number(it?.totalPrice) || 0), 0) || 0
 
-  const shipping = Number(order?.shipping) || 0
-  const tax = Number(order?.tax) || 0
+  const shipping = Number((order as any)?.shipping) || 0
+  const tax = Number((order as any)?.tax) || 0
   return itemsSum + shipping + tax
 }
 
 /* ========================= Item detail extraction ========================= */
 
-function extractPersonalization(it: any, snap: any, optionsObj: any) {
+function extractPersonalization(it: OrderItemDTO, snap: Record<string, unknown>, optionsObj: Record<string, unknown>) {
   const snapPers =
-    snap?.personalization && typeof snap.personalization === 'object' ? snap.personalization : null
+    snap?.personalization && typeof snap.personalization === 'object' ? (snap.personalization as Record<string, unknown>) : null
 
   const snapPersName = snapPers ? pickStr(snapPers, ['name', 'playerName', 'customName', 'shirtName']) : null
 
-  const snapPersNumber = snapPers
-    ? pickStr(snapPers, ['number', 'playerNumber', 'customNumber', 'shirtNumber'])
-    : null
+  const snapPersNumber = snapPers ? pickStr(snapPers, ['number', 'playerNumber', 'customNumber', 'shirtNumber']) : null
 
-  const snapPersJ = safeParseJSON(snap?.personalizationJson)
+  const snapPersJ = safeParseJSON((snap as any)?.personalizationJson)
   const snapJName = pickStr(snapPersJ, ['name', 'playerName', 'customName', 'shirtName']) ?? null
   const snapJNumber = pickStr(snapPersJ, ['number', 'playerNumber', 'customNumber', 'shirtNumber']) ?? null
 
@@ -250,7 +266,7 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const itJNumber = pickStr(itPersJ, ['number', 'playerNumber', 'customNumber', 'shirtNumber']) ?? null
 
   const directName =
-    pickStr(it, [
+    pickStr(it as any, [
       'personalizationName',
       'playerName',
       'custName',
@@ -260,7 +276,7 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
     ]) ?? null
 
   const directNumber =
-    pickStr(it, [
+    pickStr(it as any, [
       'personalizationNumber',
       'playerNumber',
       'custNumber',
@@ -270,22 +286,16 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
     ]) ?? null
 
   const snapRootName =
-    pickStr(snap, ['custName', 'customerName', 'nameOnShirt', 'shirtName', 'playerName']) ?? null
+    pickStr(snap as any, ['custName', 'customerName', 'nameOnShirt', 'shirtName', 'playerName']) ?? null
   const snapRootNumber =
-    pickStr(snap, ['custNumber', 'customerNumber', 'numberOnShirt', 'shirtNumber', 'playerNumber']) ?? null
+    pickStr(snap as any, ['custNumber', 'customerNumber', 'numberOnShirt', 'shirtNumber', 'playerNumber']) ?? null
 
   const optName =
-    pickStr(optionsObj, [
-      'custName',
-      'playerName',
-      'player_name',
-      'shirtName',
-      'shirt_name',
-      'nameOnShirt',
-    ]) ?? null
+    pickStr(optionsObj as any, ['custName', 'playerName', 'player_name', 'shirtName', 'shirt_name', 'nameOnShirt']) ??
+    null
 
   const optNumber =
-    pickStr(optionsObj, [
+    pickStr(optionsObj as any, [
       'custNumber',
       'playerNumber',
       'player_number',
@@ -315,7 +325,7 @@ function splitBadgesString(s: string): string[] {
   return parts.filter(Boolean)
 }
 
-function normalizeBadges(rawBadges: any): string[] {
+function normalizeBadges(rawBadges: unknown): string[] {
   if (!rawBadges) return []
 
   if (Array.isArray(rawBadges)) {
@@ -323,18 +333,18 @@ function normalizeBadges(rawBadges: any): string[] {
     for (const v of rawBadges) {
       if (v == null) continue
       if (typeof v === 'string') out.push(...splitBadgesString(v))
-      else if (typeof v === 'object') out.push(...splitBadgesString(Object.values(v as any).join(',')))
+      else if (isRecord(v)) out.push(...splitBadgesString(Object.values(v).join(',')))
       else out.push(...splitBadgesString(String(v)))
     }
     return out
   }
 
-  if (typeof rawBadges === 'object') {
+  if (isRecord(rawBadges)) {
     const out: string[] = []
     for (const v of Object.values(rawBadges)) {
       if (v == null) continue
       if (typeof v === 'string') out.push(...splitBadgesString(v))
-      else if (typeof v === 'object') out.push(...splitBadgesString(Object.values(v as any).join(',')))
+      else if (isRecord(v)) out.push(...splitBadgesString(Object.values(v).join(',')))
       else out.push(...splitBadgesString(String(v)))
     }
     return out
@@ -346,13 +356,25 @@ function normalizeBadges(rawBadges: any): string[] {
 function deriveItemDetails(it: OrderItemDTO) {
   const snap = safeParseJSON(it?.snapshotJson)
 
-  const optionsObj = safeParseJSON(snap?.optionsJson) || safeParseJSON(snap?.options) || safeParseJSON(snap?.selected) || {}
+  const optionsObj =
+    safeParseJSON((snap as any)?.optionsJson) ||
+    safeParseJSON((snap as any)?.options) ||
+    safeParseJSON((snap as any)?.selected) ||
+    {}
 
   const personalization = extractPersonalization(it, snap, optionsObj)
 
-  const size = (optionsObj as any).size ?? snap?.size ?? pickStr(snap, ['sizeLabel', 'variant', 'skuSize']) ?? null
+  const size =
+    (optionsObj as any).size ??
+    (snap as any)?.size ??
+    pickStr(snap, ['sizeLabel', 'variant', 'skuSize']) ??
+    null
 
-  const rawBadges = (optionsObj as any).badges ?? snap?.badges ?? (optionsObj as any)['competition_badge'] ?? null
+  const rawBadges =
+    (optionsObj as any).badges ??
+    (snap as any)?.badges ??
+    (optionsObj as any)['competition_badge'] ??
+    null
 
   const badgesFromSnap = normalizeBadges(rawBadges)
   const badgesFromProduct = normalizeBadges(it?.product?.badges)
@@ -365,7 +387,7 @@ function deriveItemDetails(it: OrderItemDTO) {
 
     let vs = ''
     if (Array.isArray(v)) vs = v.join(', ')
-    else if (typeof v === 'object') vs = Object.values(v as any).join(', ')
+    else if (isRecord(v)) vs = Object.values(v).join(', ')
     else vs = String(v)
 
     vs = vs.trim()
@@ -411,7 +433,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
       setErr(null)
       try {
         const r = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, { method: 'GET' })
-        const j = await r.json()
+        const j: any = await r.json()
         if (!r.ok) throw new Error(j?.error || 'Failed to load order details')
         if (!alive) return
         setOrder(j?.order ?? j?.data?.order ?? null)
@@ -497,10 +519,10 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                     const title = it.name || it.product?.name || 'Item'
                     const details = deriveItemDetails(it)
 
-                    const imageUrls = normalizeImageUrls(it.product?.imageUrls)
-                    const img = it.image || imageUrls[0] || '/placeholder.png'
+                    const cover = getCoverUrl(it.product?.imageUrls)
+                    const img = normalizeUrl(cover) || '/placeholder.png'
+                    const external = isExternalUrl(img)
 
-                    // ✅ match your real route: /products/[slug]
                     const productHref = it.product?.slug ? `/products/${it.product.slug}` : null
 
                     return (
@@ -516,7 +538,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                                 className="object-cover"
                                 sizes="56px"
                                 priority={false}
-                                unoptimized
+                                unoptimized={external}
                               />
                             </div>
                             <div className="min-w-0">
@@ -548,7 +570,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             className="object-cover"
                             sizes="56px"
                             priority={false}
-                            unoptimized
+                            unoptimized={external}
                           />
                         </div>
 
@@ -602,7 +624,6 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
-                          {/* ✅ badges with label */}
                           {details.badges.length > 0 && (
                             <div className="mt-2">
                               <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
@@ -611,7 +632,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                                   <span
                                     key={`${b}-${idx}`}
                                     className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
-                                    title={b} // keep raw as tooltip
+                                    title={b}
                                   >
                                     {humanizeBadge(b)}
                                   </span>
@@ -658,7 +679,6 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
-                          {/* ✅ badges with label */}
                           {details.badges.length > 0 && (
                             <div className="mt-2">
                               <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
@@ -711,7 +731,8 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                 <h2 className="font-semibold">Meta</h2>
                 <div className="mt-2 text-sm text-gray-700 space-y-1">
                   <div>
-                    <span className="text-gray-500">ID:</span> <span className="font-mono break-all">{order.id}</span>
+                    <span className="text-gray-500">ID:</span>{' '}
+                    <span className="font-mono break-all">{order.id}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Created:</span> {new Date(order.createdAt).toLocaleString()}
