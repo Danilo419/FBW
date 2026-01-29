@@ -53,8 +53,16 @@ function pickStr(o: any, keys: string[]): string | null {
   return null;
 }
 
+/**
+ * ✅ FIX: suporta shippingJson no root e também nested:
+ * {
+ *   name, email, phone,
+ *   address: { line1, city, state, postal_code, country }
+ * }
+ */
 function extractShipping(order: any) {
   try {
+    // 1) Colunas "canónicas" (se existirem no teu schema)
     const canonical = {
       fullName: order?.shippingFullName ?? order?.user?.name ?? null,
       email: order?.shippingEmail ?? order?.user?.email ?? null,
@@ -79,32 +87,86 @@ function extractShipping(order: any) {
       return canonical;
     }
 
+    // 2) shippingJson (novo / atual)
     const j = safeParseJSON(order?.shippingJson);
-    const g = (...alts: string[]) => pickStr(j, alts);
+    const addr = safeParseJSON((j as any)?.address); // ✅ nested address
 
+    // helper: procura no root e depois no nested address
+    const g = (...alts: string[]) => pickStr(j, alts) ?? pickStr(addr, alts);
+
+    const fullName =
+      g("fullName", "name", "recipient") ?? order?.user?.name ?? null;
+
+    const email =
+      g("email", "ship_email", "customer_email", "customerEmail") ??
+      order?.user?.email ??
+      null;
+
+    const phone =
+      g("phone", "telephone", "ship_phone", "customerPhone") ?? null;
+
+    const address1 = g(
+      "address1",
+      "addressLine1",
+      "line1",
+      "street",
+      "ship_line1"
+    );
+
+    const address2 = g(
+      "address2",
+      "addressLine2",
+      "line2",
+      "street2",
+      "ship_line2"
+    );
+
+    const city = g("city", "locality", "town", "ship_city");
+
+    const region = g("region", "state", "province", "ship_state");
+
+    const postalCode = g(
+      "postalCode",
+      "postal_code",
+      "postcode",
+      "zip",
+      "zipCode",
+      "zipcode",
+      "codigoPostal",
+      "cep",
+      "pincode",
+      "eircode",
+      "ship_postal"
+    );
+
+    const country = g("country", "countryCode", "shippingCountry", "ship_country");
+
+    // Se ao menos um campo existir, devolve
+    if (fullName || email || phone || address1 || city || postalCode || country) {
+      return {
+        fullName,
+        email,
+        phone,
+        address1,
+        address2,
+        city,
+        region,
+        postalCode,
+        country,
+      };
+    }
+
+    // 3) fallback final (user)
     return {
-      fullName: g("fullName", "name", "recipient") ?? order?.user?.name ?? null,
-      email:
-        g("email", "ship_email", "customer_email") ?? order?.user?.email ?? null,
-      phone: g("phone", "telephone", "ship_phone"),
-      address1: g("address1", "addressLine1", "line1", "street", "ship_line1"),
-      address2: g("address2", "addressLine2", "line2", "street2", "ship_line2"),
-      city: g("city", "locality", "town", "ship_city"),
-      region: g("region", "state", "province", "ship_state"),
-      postalCode: g(
-        "postalCode",
-        "postal_code",
-        "postcode",
-        "zip",
-        "zipCode",
-        "zipcode",
-        "codigoPostal",
-        "cep",
-        "pincode",
-        "eircode",
-        "ship_postal"
-      ),
-      country: g("country", "countryCode", "shippingCountry", "ship_country"),
+      fullName: order?.user?.name ?? null,
+      email: order?.user?.email ?? null,
+      phone: null,
+      address1: null,
+      address2: null,
+      city: null,
+      region: null,
+      postalCode: null,
+      country: null,
     };
   } catch {
     return {
