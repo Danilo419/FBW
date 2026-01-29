@@ -10,14 +10,22 @@ const EMAIL_FROM = process.env.EMAIL_FROM || "FootballWorld <onboarding@resend.d
 const STORE_NAME = process.env.STORE_NAME || "FootballWorld";
 
 /**
- * Optional (recommended for premium look):
- * - put your logo on a public URL (e.g. https://.../logo.png)
- * - set EMAIL_LOGO_URL in env
+ * ✅ Premium logo (wide, no distortion)
+ * - Set EMAIL_LOGO_URL to a public image (recommended: Cloudinary with w_140,c_fit,f_auto,q_auto)
+ * - If not set, fallback below will be used.
  */
 const EMAIL_LOGO_URL = (process.env.EMAIL_LOGO_URL || "").trim();
-/** Optional: link in header / button (defaults to your domain if you use NEXT_PUBLIC_SITE_URL) */
+
+/** Optional: link in header / button (defaults to NEXT_PUBLIC_SITE_URL if present) */
 const EMAIL_SITE_URL =
   (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "").trim();
+
+/**
+ * ✅ Fallback logo (same approach as your Forgot Password email)
+ * Replace this URL with YOUR final logo if you want.
+ */
+const FALLBACK_LOGO_URL =
+  "https://res.cloudinary.com/dqw7ccro3/image/upload/w_140,c_fit,f_auto,q_auto/logo_r0vd15.png";
 
 /* =========================================================
    Resend enablement
@@ -53,7 +61,7 @@ async function getResendClient() {
 export type EmailLineItem = {
   name: string;
   qty: number;
-  price: number; // EUR (per line / per item, as you already use)
+  price: number; // EUR
 };
 
 export type OrderConfirmationEmailData = {
@@ -78,11 +86,6 @@ export type ShippedEmailData = {
   trackingUrl?: string;
 };
 
-/**
- * ✅ NEW: generic fulfillment/tracking update (admin "Save" -> email customer)
- * - send when shippingStatus or tracking changes
- * - works even without trackingUrl
- */
 export type FulfillmentUpdateEmailData = {
   to: string;
   orderId: string;
@@ -118,7 +121,6 @@ function safeName(name?: string | null) {
 function safeUrl(u?: string | null) {
   const v = (u || "").trim();
   if (!v) return "";
-  // Basic allow-list: only http(s). Prevents weird mail client behavior.
   if (!/^https?:\/\//i.test(v)) return "";
   return v;
 }
@@ -135,6 +137,7 @@ function pill(text: string) {
       font-size:12px;
       font-weight:800;
       letter-spacing:0.2px;
+      white-space:nowrap;
     ">
       ${escapeHtml(text)}
     </span>
@@ -155,12 +158,6 @@ function sectionCard(innerHtml: string) {
   `;
 }
 
-/**
- * Premium items list:
- * - clean rows
- * - subtle separators
- * - qty chip
- */
 function renderItemsPremium(items: EmailLineItem[]) {
   const rows = items
     .map((it) => {
@@ -205,9 +202,6 @@ function renderItemsPremium(items: EmailLineItem[]) {
   `;
 }
 
-/**
- * Premium totals block (table-based for max email client compatibility)
- */
 function renderTotalsBlock(opts: { shipping?: number; total: number }) {
   const shippingLine =
     typeof opts.shipping === "number"
@@ -252,7 +246,6 @@ function primaryButton(label: string, href?: string | null) {
   const url = safeUrl(href);
   if (!url) return "";
 
-  // Use table for button (best email compatibility)
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
       <tr>
@@ -277,6 +270,31 @@ function primaryButton(label: string, href?: string | null) {
   `;
 }
 
+/**
+ * ✅ Logo header exactly like Forgot Password:
+ * - wide logo column (180px)
+ * - image width=140, height auto (no distortion)
+ */
+function renderHeaderLogoCell() {
+  const url = safeUrl(EMAIL_LOGO_URL) || safeUrl(FALLBACK_LOGO_URL);
+  if (!url) return "";
+
+  return `
+    <td
+      width="180"
+      valign="middle"
+      style="width:180px;min-width:180px;padding-right:16px;"
+    >
+      <img
+        src="${escapeHtml(url)}"
+        alt="${escapeHtml(STORE_NAME)}"
+        width="140"
+        style="display:block;max-width:100%;height:auto;"
+      />
+    </td>
+  `;
+}
+
 function wrapEmailHtml(opts: {
   title: string;
   eyebrow?: string;
@@ -290,23 +308,6 @@ function wrapEmailHtml(opts: {
       ? { glow: "rgba(245,158,11,0.25)", line: "#f59e0b" }
       : { glow: "rgba(59,130,246,0.22)", line: "#3b82f6" };
 
-  const logo = safeUrl(EMAIL_LOGO_URL)
-    ? `
-      <img src="${escapeHtml(EMAIL_LOGO_URL)}"
-           width="28"
-           height="28"
-           alt="${escapeHtml(STORE_NAME)}"
-           style="display:block; border-radius:8px;"/>
-    `
-    : `
-      <div style="
-        width:28px; height:28px;
-        border-radius:8px;
-        background:rgba(255,255,255,0.14);
-        border:1px solid rgba(255,255,255,0.18);
-      "></div>
-    `;
-
   const siteUrl = safeUrl(EMAIL_SITE_URL);
 
   const brandLine = siteUrl
@@ -316,69 +317,90 @@ function wrapEmailHtml(opts: {
     : escapeHtml(STORE_NAME);
 
   return `
-  <div style="background:#0b1220; padding:28px 12px;">
-    <div style="max-width:680px; margin:0 auto;">
-      <!-- Top glow -->
-      <div style="
-        height:6px;
-        border-radius:999px;
-        background:${accent.line};
-        box-shadow:0 12px 40px ${accent.glow};
-        margin:0 0 14px;
-      "></div>
+  <div style="margin:0;padding:0;background-color:#0a0d14;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0d14;">
+      <tr>
+        <td align="center" style="padding:28px 12px;">
 
-      <!-- Header -->
-      <div style="
-        background: radial-gradient(1200px 300px at 20% -20%, rgba(255,255,255,0.18), transparent 60%),
-                    radial-gradient(900px 260px at 80% 0%, rgba(255,255,255,0.10), transparent 55%),
-                    linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
-        border:1px solid rgba(255,255,255,0.10);
-        border-radius:22px;
-        overflow:hidden;
-        box-shadow: 0 30px 80px rgba(0,0,0,0.35);
-      ">
-        <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.10);">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:760px;">
+            <!-- TOP GLOW -->
             <tr>
-              <td style="vertical-align:middle;">
-                <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <td>
+                <div style="
+                  height:6px;
+                  border-radius:999px;
+                  background:${accent.line};
+                  box-shadow:0 12px 40px ${accent.glow};
+                  margin:0 0 14px;
+                "></div>
+              </td>
+            </tr>
+
+            <!-- CARD -->
+            <tr>
+              <td>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                  style="background:#0b0f19;border-radius:22px;border:1px solid rgba(255,255,255,.10);overflow:hidden;
+                         box-shadow: 0 30px 80px rgba(0,0,0,0.35);">
+
+                  <!-- HEADER (logo wide like reset password) -->
                   <tr>
-                    <td style="vertical-align:middle;">
-                      ${logo}
+                    <td style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.10);">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          ${renderHeaderLogoCell()}
+
+                          <!-- BRAND TEXT -->
+                          <td valign="middle">
+                            <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                                        font-weight:900;font-size:22px;color:#ffffff;line-height:1.1;">
+                              ${brandLine}
+                            </div>
+                            <div style="margin-top:4px;
+                                        font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                                        font-size:13px;color:rgba(255,255,255,.70);">
+                              ${escapeHtml(opts.eyebrow || "Premium order updates")}
+                            </div>
+                          </td>
+
+                          <!-- RIGHT PILL -->
+                          <td align="right" valign="middle" style="white-space:nowrap;">
+                            ${pill(opts.title)}
+                          </td>
+                        </tr>
+                      </table>
                     </td>
-                    <td style="vertical-align:middle; padding-left:10px;">
-                      <div style="font-weight:1000; color:#ffffff; font-size:14px; letter-spacing:0.3px;">
-                        ${brandLine}
-                      </div>
-                      <div style="margin-top:4px; color:rgba(255,255,255,0.70); font-size:12px;">
-                        ${escapeHtml(opts.eyebrow || "Premium order updates")}
+                  </tr>
+
+                  <!-- BODY -->
+                  <tr>
+                    <td style="background:#f8fafc; padding:22px 20px;">
+                      ${opts.bodyHtml}
+
+                      <div style="margin-top:18px; color:#64748b; font-size:12px; line-height:1.5;
+                                  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                        If you didn’t place this order, you can safely ignore this email.
                       </div>
                     </td>
                   </tr>
+
                 </table>
               </td>
-              <td style="text-align:right; vertical-align:middle;">
-                ${pill(opts.title)}
+            </tr>
+
+            <!-- FOOTER -->
+            <tr>
+              <td style="padding-top:14px; text-align:center; color:rgba(255,255,255,0.70); font-size:12px;
+                         font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                © ${new Date().getFullYear()} ${escapeHtml(STORE_NAME)} · All rights reserved
               </td>
             </tr>
+
           </table>
-        </div>
 
-        <!-- Body -->
-        <div style="background:#f8fafc; padding:22px 20px;">
-          ${opts.bodyHtml}
-
-          <div style="margin-top:18px; color:#64748b; font-size:12px; line-height:1.5;">
-            If you didn’t place this order, you can safely ignore this email.
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div style="max-width:680px; margin:14px auto 0; text-align:center; color:rgba(255,255,255,0.70); font-size:12px;">
-        © ${new Date().getFullYear()} ${escapeHtml(STORE_NAME)} · All rights reserved
-      </div>
-    </div>
+        </td>
+      </tr>
+    </table>
   </div>
   `;
 }
@@ -401,7 +423,6 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationEmailDat
   if (!resend) return { ok: false, skipped: true as const };
 
   const greeting = `Hi ${escapeHtml(safeName(data.customerName))},`;
-
   const itemsHtml = renderItemsPremium(data.items);
 
   const summaryCard = sectionCard(`
@@ -456,7 +477,7 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationEmailDat
   const addressCard = renderAddressBlock(data.shippingAddress);
 
   const body = `
-    <div style="font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial; color:#0b1220;">
+    <div style="font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#0b1220;">
       <div style="font-size:14px; color:#334155; line-height:1.7;">
         ${summaryCard}
       </div>
@@ -529,7 +550,7 @@ export async function sendOrderShippedEmail(data: ShippedEmailData) {
   `);
 
   const body = `
-    <div style="font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial; color:#0b1220;">
+    <div style="font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#0b1220;">
       ${hero}
       <div style="margin-top:14px;">${itemsCard}</div>
     </div>
@@ -552,10 +573,6 @@ export async function sendOrderShippedEmail(data: ShippedEmailData) {
   return { ok: true as const };
 }
 
-/**
- * ✅ NEW: send a fulfillment/tracking update email (admin panel)
- * Use this after you save "Shipping Status" / "Tracking Code" / "Tracking URL".
- */
 export async function sendFulfillmentUpdateEmail(data: FulfillmentUpdateEmailData) {
   const resend = await getResendClient();
   if (!resend) return { ok: false, skipped: true as const };
@@ -610,7 +627,7 @@ export async function sendFulfillmentUpdateEmail(data: FulfillmentUpdateEmailDat
   `);
 
   const body = `
-    <div style="font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial; color:#0b1220;">
+    <div style="font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#0b1220;">
       ${hero}
     </div>
   `;
