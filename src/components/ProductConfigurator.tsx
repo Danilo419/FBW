@@ -129,7 +129,7 @@ function sanitizeNameUnicode(input: string, maxLen = 14) {
   return input
     .trim()
     .toUpperCase()
-    .replace(/[^\p{L} .'-]/gu, "") // ✅ letras Unicode (inclui Ç, Ã, Á, etc)
+    .replace(/[^\p{L} .'-]/gu, "")
     .replace(/\s+/g, " ")
     .slice(0, maxLen);
 }
@@ -379,13 +379,9 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize (✅ supports accents) ----------
-     IMPORTANTE:
-     - custName agora é "raw" (pode ter espaços durante a escrita)
-     - safeName é o que vai para a encomenda (sanitizado + 14 chars)
-  */
+  /* ---------- Sanitize (✅ supports accents) ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
-  const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]); // ✅ 3 dígitos
+  const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
@@ -457,7 +453,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
-    const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height))); // 18–34px
+    const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height)));
     const to: FlyRect = {
       left: endCx - targetSize / 2,
       top: endCy - targetSize / 2,
@@ -526,13 +522,15 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    <div className="w-full flex justify-center overflow-x-hidden px-2">
-      <div className="relative w-full max-w-[260px] sm:max-w-[320px] lg:max-w-none flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
+    // ✅ MOBILE FULL WIDTH: remove "justify-center" + remove max-w tiny constraints
+    <div className="w-full overflow-x-hidden px-3 sm:px-4">
+      {/* ✅ same behavior as Ratings section: full width, centered container */}
+      <div className="relative w-full max-w-6xl mx-auto flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {showToast ? "Item added to cart." : ""}
         </div>
 
-        {/* ✅ NEW: Fly-to-cart overlay (portal to body) */}
+        {/* ✅ Fly-to-cart overlay */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -585,6 +583,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
         {/* ===== GALLERY ===== */}
+        {/* ✅ Ensure gallery uses full width in mobile */}
         <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
           <div className="flex items-center gap-2 sm:gap-3">
             {images.length > 1 ? (
@@ -600,9 +599,10 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="h-10 w-10 shrink-0 hidden lg:block" />
             )}
 
+            {/* ✅ remove max-w that was shrinking the image area on mobile */}
             <div
               ref={imgWrapRef}
-              className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[260px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
+              className="relative aspect-[3/4] w-full mx-auto overflow-hidden rounded-xl bg-white"
             >
               <Image
                 src={activeSrc}
@@ -660,7 +660,8 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="mt-3">
               <div
                 ref={thumbsRef}
-                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+                // ✅ full width, centered; no artificial max-w
+                className="w-full overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
                 <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
@@ -703,6 +704,7 @@ export default function ProductConfigurator({ product }: Props) {
         </div>
 
         {/* ===== CONFIGURATOR ===== */}
+        {/* ✅ guarantee full width, no hidden max-width */}
         <div className="card w-full p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 min-w-0">
           <header className="space-y-1">
             <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight">
@@ -799,12 +801,8 @@ export default function ProductConfigurator({ product }: Props) {
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. BELLINGHAM"
                     value={custName}
-                    onChange={(e) => {
-                      // ✅ NÃO sanitizar aqui para não “comer” espaços enquanto o user escreve.
-                      // Só limitamos o comprimento a 14 no state (e o sanitizado final é safeName).
-                      setCustName(e.target.value.slice(0, 14));
-                    }}
-                    maxLength={14} // ✅ só consegue escrever 14 chars
+                    onChange={(e) => setCustName(e.target.value.slice(0, 14))}
+                    maxLength={14}
                   />
                 </label>
 
