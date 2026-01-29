@@ -8,12 +8,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/* --------------------------- helpers --------------------------- */
+/* --------------------------- money --------------------------- */
 
 function money(cents?: number | null, currency = "EUR") {
   const n = typeof cents === "number" ? cents : 0;
   return (n / 100).toLocaleString(undefined, { style: "currency", currency });
 }
+
+/* --------------------------- url helpers --------------------------- */
 
 function normalizeUrl(u?: string | null) {
   if (!u) return "";
@@ -21,13 +23,101 @@ function normalizeUrl(u?: string | null) {
   return u;
 }
 
-function resolveItemImage(it: any) {
-  const direct = normalizeUrl(it.image);
-  const fromProduct =
-    Array.isArray(it.product?.imageUrls) && it.product.imageUrls.length > 0
-      ? normalizeUrl(it.product.imageUrls[0])
-      : "";
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === "object" && !Array.isArray(x);
+}
+
+/** ✅ robust cover extraction */
+function getCoverUrl(imageUrls: unknown): string {
+  try {
+    if (!imageUrls) return "/placeholder.png";
+
+    if (Array.isArray(imageUrls)) {
+      const first = String(imageUrls[0] ?? "").trim();
+      return normalizeUrl(first) || "/placeholder.png";
+    }
+
+    if (typeof imageUrls === "string") {
+      const s = imageUrls.trim();
+      if (!s) return "/placeholder.png";
+
+      if (s.startsWith("[") && s.endsWith("]")) {
+        const parsed: unknown = JSON.parse(s);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const first = String(parsed[0] ?? "").trim();
+          return normalizeUrl(first) || "/placeholder.png";
+        }
+      }
+
+      return normalizeUrl(s) || "/placeholder.png";
+    }
+
+    if (isRecord(imageUrls)) {
+      for (const v of Object.values(imageUrls)) {
+        const candidate = getCoverUrl(v);
+        if (candidate && candidate !== "/placeholder.png") return candidate;
+      }
+      return "/placeholder.png";
+    }
+
+    return "/placeholder.png";
+  } catch {
+    return "/placeholder.png";
+  }
+}
+
+function resolveItemImage(it: OrderItemRow) {
+  const direct = normalizeUrl(it.image ?? null);
+  const fromProduct = getCoverUrl(it.product?.imageUrls);
   return direct || fromProduct || "/placeholder.png";
+}
+
+/* ========================= Badge labels ========================= */
+
+const BADGE_LABELS: Record<string, string> = {
+  "premier-league-regular": "Premier League – League Badge",
+  "premier-league-champions": "Premier League – Champions (Gold)",
+  "la-liga-regular": "La Liga – League Badge",
+  "la-liga-champions": "La Liga – Champion",
+  "serie-a-regular": "Serie A – League Badge",
+  "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
+  "bundesliga-regular": "Bundesliga – League Badge",
+  "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
+  "ligue1-regular": "Ligue 1 – League Badge",
+  "ligue1-champions": "Ligue 1 – Champion",
+  "primeira-liga-regular": "Primeira Liga – League Badge",
+  "primeira-liga-champions": "Primeira Liga – Champion",
+  "eredivisie-regular": "Eredivisie – League Badge",
+  "eredivisie-champions": "Eredivisie – Champion",
+  "scottish-premiership-regular": "Scottish Premiership – League Badge",
+  "scottish-premiership-champions": "Scottish Premiership – Champion",
+  "mls-regular": "MLS – League Badge",
+  "mls-champions": "MLS – Champions (MLS Cup Holders)",
+  "brasileirao-regular": "Brasileirão – League Badge",
+  "brasileirao-champions": "Brasileirão – Champion",
+  "super-lig-regular": "Süper Lig – League Badge",
+  "super-lig-champions": "Süper Lig – Champion",
+  "spl-saudi-regular": "Saudi Pro League – League Badge",
+  "spl-saudi-champions": "Saudi Pro League – Champion",
+  "ucl-regular": "UEFA Champions League – Starball Badge",
+  "ucl-winners": "UEFA Champions League – Winners Badge",
+  "uel-regular": "UEFA Europa League – Badge",
+  "uel-winners": "UEFA Europa League – Winners Badge",
+  "uecl-regular": "UEFA Europa Conference League – Badge",
+  "uecl-winners": "UEFA Europa Conference League – Winners Badge",
+  "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
+  "intercontinental-cup-champions": "FIFA Intercontinental Cup – Champions Badge",
+};
+
+function humanizeBadge(value: string) {
+  const key = String(value ?? "").trim();
+  if (!key) return "";
+  if (BADGE_LABELS[key]) return BADGE_LABELS[key];
+  return key
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 /* ----------------------------- shipping ----------------------------- */
@@ -48,8 +138,8 @@ type ShippingJson =
     }
   | null;
 
-function shippingFromOrder(order: any): ShippingJson {
-  const canonical = {
+function shippingFromOrder(order: OrderRow): ShippingJson {
+  const canonical: ShippingJson = {
     name: order.shippingFullName ?? null,
     email: order.shippingEmail ?? null,
     phone: order.shippingPhone ?? null,
@@ -64,51 +154,310 @@ function shippingFromOrder(order: any): ShippingJson {
   };
 
   const hasCanonical =
-    canonical.name ||
-    canonical.email ||
-    canonical.phone ||
-    canonical.address?.line1 ||
-    canonical.address?.city ||
-    canonical.address?.country;
+    canonical?.name ||
+    canonical?.email ||
+    canonical?.phone ||
+    canonical?.address?.line1 ||
+    canonical?.address?.city ||
+    canonical?.address?.country;
 
   if (hasCanonical) return canonical;
   return (order.shippingJson ?? null) as ShippingJson;
 }
 
-function computeTotalCents(order: any) {
+function computeTotalCents(order: OrderRow) {
   if (typeof order.totalCents === "number") return order.totalCents;
   if (typeof order.total === "number") return Math.round(order.total * 100);
+
   const itemsSum =
-    (order.items || []).reduce(
-      (acc: number, it: any) => acc + (Number(it.totalPrice) || 0),
-      0
-    ) || 0;
-  return itemsSum + (order.shipping || 0) + (order.tax || 0);
+    (order.items || []).reduce((acc: number, it: OrderItemRow) => {
+      return acc + (Number(it.totalPrice) || 0);
+    }, 0) || 0;
+
+  const shipping = Number(order.shipping) || 0;
+  const tax = Number(order.tax) || 0;
+  return itemsSum + shipping + tax;
 }
+
+/* ========================= Item detail extraction ========================= */
+
+function safeParseJSON(input: unknown): Record<string, unknown> {
+  if (!input) return {};
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+      return {};
+    } catch {
+      return {};
+    }
+  }
+  if (typeof input === "object") return input as Record<string, unknown>;
+  return {};
+}
+
+function pickStr(o: unknown, keys: string[]): string | null {
+  if (!o || typeof o !== "object") return null;
+  const obj = o as Record<string, unknown>;
+  for (const k of keys) {
+    const v = obj[k];
+    if (v != null && String(v).trim() !== "") return String(v);
+  }
+  return null;
+}
+
+/* ✅ badges split (fix) */
+function splitBadgesString(s: string): string[] {
+  const raw = String(s ?? "").trim();
+  if (!raw) return [];
+  const parts = raw.split(/[,\n;|]+/g).map((x) => x.trim());
+  return parts.filter(Boolean);
+}
+
+function normalizeBadges(rawBadges: unknown): string[] {
+  if (!rawBadges) return [];
+
+  if (Array.isArray(rawBadges)) {
+    const out: string[] = [];
+    for (const v of rawBadges) {
+      if (v == null) continue;
+      if (typeof v === "string") out.push(...splitBadgesString(v));
+      else if (isRecord(v)) out.push(...splitBadgesString(Object.values(v).join(",")));
+      else out.push(...splitBadgesString(String(v)));
+    }
+    return out;
+  }
+
+  if (isRecord(rawBadges)) {
+    const out: string[] = [];
+    for (const v of Object.values(rawBadges)) {
+      if (v == null) continue;
+      if (typeof v === "string") out.push(...splitBadgesString(v));
+      else if (isRecord(v)) out.push(...splitBadgesString(Object.values(v).join(",")));
+      else out.push(...splitBadgesString(String(v)));
+    }
+    return out;
+  }
+
+  return splitBadgesString(String(rawBadges));
+}
+
+function extractPersonalization(
+  it: OrderItemRow,
+  snap: Record<string, unknown>,
+  optionsObj: Record<string, unknown>
+) {
+  const snapPers =
+    snap?.personalization && typeof snap.personalization === "object"
+      ? (snap.personalization as Record<string, unknown>)
+      : null;
+
+  const snapPersName = snapPers ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"]) : null;
+  const snapPersNumber = snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"]) : null;
+
+  const directName =
+    pickStr(it as any, ["personalizationName", "playerName", "custName", "nameOnShirt", "shirtName", "customName"]) ??
+    null;
+
+  const directNumber =
+    pickStr(it as any, ["personalizationNumber", "playerNumber", "custNumber", "numberOnShirt", "shirtNumber", "customNumber"]) ??
+    null;
+
+  const snapRootName = pickStr(snap as any, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ?? null;
+  const snapRootNumber = pickStr(snap as any, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ?? null;
+
+  const optName =
+    pickStr(optionsObj as any, ["custName", "playerName", "player_name", "shirtName", "shirt_name", "nameOnShirt"]) ??
+    null;
+
+  const optNumber =
+    pickStr(optionsObj as any, ["custNumber", "playerNumber", "player_number", "shirtNumber", "shirt_number", "numberOnShirt"]) ??
+    null;
+
+  const name =
+    (snapPersName ?? directName ?? snapRootName ?? optName ?? null)?.trim() || null;
+
+  const numRaw =
+    (snapPersNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() || "";
+
+  const onlyDigits = String(numRaw).replace(/\D/g, "");
+  const number = onlyDigits ? onlyDigits : null;
+
+  if (!name && !number) return null;
+  return { name, number };
+}
+
+function deriveItemDetails(it: OrderItemRow) {
+  const snap = safeParseJSON(it.snapshotJson);
+
+  const optionsObj =
+    safeParseJSON((snap as any)?.optionsJson) ||
+    safeParseJSON((snap as any)?.options) ||
+    safeParseJSON((snap as any)?.selected) ||
+    {};
+
+  const personalization = extractPersonalization(it, snap, optionsObj);
+
+  const size =
+    (optionsObj as any).size ??
+    (snap as any)?.size ??
+    pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
+    null;
+
+  const rawBadges =
+    (optionsObj as any).badges ??
+    (snap as any)?.badges ??
+    (optionsObj as any)["competition_badge"] ??
+    null;
+
+  const badgesFromSnap = normalizeBadges(rawBadges);
+  const badgesFromProduct = normalizeBadges(it.product?.badges);
+  const allBadges = Array.from(new Set([...badgesFromSnap, ...badgesFromProduct])).filter(Boolean);
+
+  const optionsPairs: Array<{ k: string; v: string }> = [];
+  for (const [k, v] of Object.entries(optionsObj)) {
+    if (v == null || v === "") continue;
+    if (k.toLowerCase().includes("json")) continue;
+
+    let vs = "";
+    if (Array.isArray(v)) vs = v.join(", ");
+    else if (isRecord(v)) vs = Object.values(v).join(", ");
+    else vs = String(v);
+
+    vs = vs.trim();
+    if (!vs) continue;
+
+    if (k.toLowerCase() === "badges") continue;
+    if (k.toLowerCase() === "size") continue;
+
+    optionsPairs.push({ k, v: vs });
+  }
+
+  return { size, personalization, badges: allBadges, optionsPairs };
+}
+
+function prettyKey(k: string) {
+  const map: Record<string, string> = {
+    custName: "Name",
+    custNumber: "Number",
+    nameOnShirt: "Name",
+    numberOnShirt: "Number",
+    playerName: "Name",
+    playerNumber: "Number",
+  };
+  if (map[k]) return map[k];
+
+  return k
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+/* ========================= Types (local DTO to fix TS) ========================= */
+
+type ProductMini = {
+  id: string;
+  name: string;
+  slug: string | null;
+  imageUrls: unknown;
+  badges: unknown;
+};
+
+type OrderItemRow = {
+  id: string;
+  name: string;
+  qty: number;
+  unitPrice: number | null; // may exist in db
+  totalPrice: number | null;
+  image: string | null;
+  snapshotJson: unknown;
+  product: ProductMini | null;
+};
+
+type OrderRow = {
+  id: string;
+  createdAt: Date;
+  paidAt: Date | null;
+  status: string;
+  paymentStatus: string | null;
+
+  currency: string | null;
+  subtotal: number | null;
+  shipping: number | null;
+  tax: number | null;
+  totalCents: number | null;
+  total: number | null;
+
+  shippingFullName: string | null;
+  shippingEmail: string | null;
+  shippingPhone: string | null;
+  shippingAddress1: string | null;
+  shippingAddress2: string | null;
+  shippingCity: string | null;
+  shippingRegion: string | null;
+  shippingPostalCode: string | null;
+  shippingCountry: string | null;
+  shippingJson: unknown;
+
+  items: OrderItemRow[];
+};
 
 /* ----------------------------- data load ----------------------------- */
 
-async function loadOrder(id: string) {
-  return prisma.order.findUnique({
+async function loadOrder(id: string): Promise<OrderRow | null> {
+  // ⚠️ use select and then cast to our DTO to avoid prisma/TS mismatch
+  const order = await prisma.order.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      createdAt: true,
+      paidAt: true,
+      status: true,
+      paymentStatus: true,
+
+      currency: true,
+      subtotal: true,
+      shipping: true,
+      tax: true,
+      totalCents: true,
+      total: true,
+
+      shippingFullName: true,
+      shippingEmail: true,
+      shippingPhone: true,
+      shippingAddress1: true,
+      shippingAddress2: true,
+      shippingCity: true,
+      shippingRegion: true,
+      shippingPostalCode: true,
+      shippingCountry: true,
+      shippingJson: true,
+
       items: {
         orderBy: { id: "asc" },
         select: {
           id: true,
           name: true,
           qty: true,
+          unitPrice: true, // se no teu schema existir, ótimo
           totalPrice: true,
           image: true,
+          snapshotJson: true,
           product: {
             select: {
+              id: true,
+              name: true,
+              slug: true,
               imageUrls: true,
+              badges: true,
             },
           },
         },
       },
     },
   });
+
+  return (order as unknown as OrderRow) ?? null;
 }
 
 /* ------------------------------ page ------------------------------ */
@@ -135,6 +484,11 @@ export default async function OrderPage({
       ? "bg-amber-100 text-amber-800 border border-amber-200"
       : "bg-gray-100 text-gray-700 border";
 
+  const itemsSubtotal =
+    (order.items || []).reduce((acc: number, it: OrderItemRow) => {
+      return acc + (Number(it.totalPrice) || 0);
+    }, 0) || 0;
+
   return (
     <main className="container-fw pt-12 pb-20">
       <div className="mb-6">
@@ -143,12 +497,10 @@ export default async function OrderPage({
         </Link>
       </div>
 
-      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
+      <div className="rounded-2xl border bg-white p-4 sm:p-6 shadow-sm space-y-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-2xl font-bold">Order details</h1>
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}
-          >
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>
             {order.status}
           </span>
         </div>
@@ -158,29 +510,113 @@ export default async function OrderPage({
           <section className="md:col-span-2 space-y-4">
             <div className="rounded-xl border">
               <div className="border-b px-4 py-3 font-semibold">Items</div>
+
               <ul className="divide-y">
-                {order.items.map((it: any) => {
+                {order.items.map((it: OrderItemRow) => {
                   const img = resolveItemImage(it);
+                  const title = it.name || it.product?.name || "Item";
+                  const productHref = it.product?.slug ? `/products/${it.product.slug}` : null;
+
+                  const details = deriveItemDetails(it);
+
+                  const unit =
+                    typeof it.unitPrice === "number" && it.unitPrice > 0
+                      ? it.unitPrice
+                      : typeof it.totalPrice === "number" && it.qty > 0
+                      ? Math.round(it.totalPrice / it.qty)
+                      : 0;
 
                   return (
-                    <li key={it.id} className="flex items-center gap-4 p-4">
-                      <OrderItemThumb
-                        src={img}
-                        alt={it.name}
-                        className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0"
-                        size={56}
-                      />
+                    <li key={it.id} className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <OrderItemThumb
+                            src={img}
+                            alt={title}
+                            className="relative h-14 w-14 rounded-md border bg-gray-50 overflow-hidden shrink-0"
+                            size={56}
+                          />
 
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{it.name}</div>
-                        <div className="text-sm text-gray-600">
-                          Qty: {it.qty}
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">
+                              {productHref ? (
+                                <Link href={productHref} className="hover:underline">
+                                  {title}
+                                </Link>
+                              ) : (
+                                title
+                              )}
+                            </div>
+
+                            <div className="text-sm text-gray-600">
+                              Qty: {it.qty}
+                              <span className="mx-2">·</span>
+                              {money(unit, currency)} each
+                            </div>
+                          </div>
                         </div>
+
+                        <div className="shrink-0 font-semibold">{money(it.totalPrice ?? 0, currency)}</div>
                       </div>
 
-                      <div className="shrink-0 font-semibold">
-                        {money(it.totalPrice, currency)}
-                      </div>
+                      {(details.size ||
+                        details.personalization?.name ||
+                        details.personalization?.number ||
+                        details.optionsPairs.length > 0 ||
+                        details.badges.length > 0) && (
+                        <div className="mt-3 pl-[68px] space-y-2">
+                          {(details.size ||
+                            details.personalization?.name ||
+                            details.personalization?.number) && (
+                            <div className="text-sm text-gray-700 space-y-0.5">
+                              {details.size ? (
+                                <div>
+                                  <span className="text-gray-500">Size:</span> {details.size}
+                                </div>
+                              ) : null}
+
+                              {details.personalization ? (
+                                <div>
+                                  <span className="text-gray-500">Personalization:</span>{" "}
+                                  {details.personalization.name ? details.personalization.name : "—"}
+                                  {details.personalization.number ? ` · #${details.personalization.number}` : ""}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+
+                          {details.optionsPairs.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {details.optionsPairs.map((p, idx) => (
+                                <span
+                                  key={`${p.k}-${idx}`}
+                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                  title={p.k}
+                                >
+                                  <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {details.badges.length > 0 && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
+                              <div className="flex flex-wrap gap-2">
+                                {details.badges.map((b, idx) => (
+                                  <span
+                                    key={`${b}-${idx}`}
+                                    className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                    title={b}
+                                  >
+                                    {humanizeBadge(b)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </li>
                   );
                 })}
@@ -192,15 +628,15 @@ export default async function OrderPage({
               <div className="mt-3 space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>{money(order.subtotal, currency)}</span>
+                  <span>{money(order.subtotal ?? itemsSubtotal, currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{money(order.shipping, currency)}</span>
+                  <span>{money(order.shipping ?? 0, currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax</span>
-                  <span>{money(order.tax, currency)}</span>
+                  <span>{money(order.tax ?? 0, currency)}</span>
                 </div>
                 <div className="mt-2 flex justify-between border-t pt-2 font-bold">
                   <span>Total</span>
@@ -223,6 +659,19 @@ export default async function OrderPage({
                   <span className="text-gray-500">Created:</span>{" "}
                   {new Date(order.createdAt).toLocaleString()}
                 </div>
+
+                {order.paidAt ? (
+                  <div>
+                    <span className="text-gray-500">Paid at:</span>{" "}
+                    {new Date(order.paidAt).toLocaleString()}
+                  </div>
+                ) : null}
+
+                {order.paymentStatus ? (
+                  <div>
+                    <span className="text-gray-500">Payment:</span> {order.paymentStatus}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -238,14 +687,10 @@ export default async function OrderPage({
                       {ship.address.line1 && <div>{ship.address.line1}</div>}
                       {ship.address.line2 && <div>{ship.address.line2}</div>}
                       <div>
-                        {[ship.address.postal_code, ship.address.city]
-                          .filter(Boolean)
-                          .join(" ")}
+                        {[ship.address.postal_code, ship.address.city].filter(Boolean).join(" ")}
                       </div>
                       <div>
-                        {[ship.address.state, ship.address.country]
-                          .filter(Boolean)
-                          .join(", ")}
+                        {[ship.address.state, ship.address.country].filter(Boolean).join(", ")}
                       </div>
                     </div>
                   )}
@@ -258,16 +703,10 @@ export default async function OrderPage({
             <div className="rounded-xl border p-4">
               <h2 className="font-semibold">Actions</h2>
               <div className="mt-2 flex flex-col gap-2">
-                <Link
-                  href="/"
-                  className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50"
-                >
+                <Link href="/" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
                   Continue shopping
                 </Link>
-                <Link
-                  href="/account"
-                  className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50"
-                >
+                <Link href="/account" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
                   Go to my account
                 </Link>
               </div>
