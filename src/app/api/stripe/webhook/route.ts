@@ -28,6 +28,14 @@ type ShippingJson =
             country?: string | null;
           }
         | null;
+
+      // ✅ suporta também fields "flatten" no ROOT (para o teu admin extractor)
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postal_code?: string | null;
+      country?: string | null;
     }
   | null;
 
@@ -36,13 +44,35 @@ const nz = (v: unknown) => {
   return s.length ? s : null;
 };
 
+type AnyObj = Record<string, any>;
+
+function safeObj(v: any): AnyObj {
+  if (!v) return {};
+  if (typeof v === "object") return v as AnyObj;
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return j && typeof j === "object" ? (j as AnyObj) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 function isEmptyShipping(s?: ShippingJson | null) {
   if (!s) return true;
-  const a = s.address ?? {};
+  const a = (s as any).address ?? {};
   return !(
-    s.name ||
-    s.phone ||
-    s.email ||
+    (s as any).name ||
+    (s as any).phone ||
+    (s as any).email ||
+    (s as any).line1 ||
+    (s as any).line2 ||
+    (s as any).city ||
+    (s as any).state ||
+    (s as any).postal_code ||
+    (s as any).country ||
     a.line1 ||
     a.line2 ||
     a.city ||
@@ -54,6 +84,7 @@ function isEmptyShipping(s?: ShippingJson | null) {
 
 function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
   if (!meta) return null;
+
   const address =
     meta.ship_line1 ||
     meta.ship_line2 ||
@@ -76,7 +107,16 @@ function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
     phone: nz(meta.ship_phone),
     email: nz(meta.ship_email),
     address,
+
+    // ✅ também no root (helps admin + evita perder fields)
+    line1: nz(meta.ship_line1),
+    line2: nz(meta.ship_line2),
+    city: nz(meta.ship_city),
+    state: nz(meta.ship_state),
+    postal_code: nz(meta.ship_postal),
+    country: nz(meta.ship_country),
   };
+
   return isEmptyShipping(out) ? null : out;
 }
 
@@ -109,7 +149,16 @@ function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
     phone: nz(cd.phone),
     email: nz(cd.email) ?? nz((session as any).customer_email),
     address,
+
+    // ✅ root flatten também
+    line1: nz(addr?.line1),
+    line2: nz(addr?.line2),
+    city: nz(addr?.city),
+    state: nz(addr?.state),
+    postal_code: nz(addr?.postal_code),
+    country: nz(addr?.country),
   };
+
   return isEmptyShipping(out) ? null : out;
 }
 
@@ -138,54 +187,155 @@ function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
     phone: nz(s?.phone),
     email: nz(pi.receipt_email),
     address,
+
+    // ✅ root flatten também
+    line1: nz(s?.address?.line1),
+    line2: nz(s?.address?.line2),
+    city: nz(s?.address?.city),
+    state: nz(s?.address?.state),
+    postal_code: nz(s?.address?.postal_code),
+    country: nz(s?.address?.country),
   };
+
   return isEmptyShipping(out) ? null : out;
 }
 
-function prefer<A>(
-  primary: A | null | undefined,
-  fallback: A | null | undefined
-): A | null {
-  return primary != null &&
-    !(typeof primary === "string" && primary.trim() === "")
-    ? (primary as A)
-    : fallback ?? null;
+function pickNonEmpty<T>(a: T, b: T) {
+  if (a == null) return b;
+  if (typeof a === "string" && a.trim() === "") return b;
+  return a;
 }
 
-/** Merge missing fields of base with add (base takes precedence). */
-function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
-  if (!base && !add) return null;
-  if (!base) return add ?? null;
-  if (!add) return base ?? null;
+/**
+ * ✅ NORMALIZA shipping para sempre ter root + address e manter ambos sincronizados
+ * - Se vier "flatten" no root, aproveita
+ * - Se vier só address, "sobe" para o root também
+ */
+function normalizeShipping(s: any): AnyObj {
+  const S = safeObj(s);
+  const addr = safeObj(S.address);
+
+  const line1 = pickNonEmpty(nz(S.line1), nz(addr.line1));
+  const line2 = pickNonEmpty(nz(S.line2), nz(addr.line2));
+  const city = pickNonEmpty(nz(S.city), nz(addr.city));
+  const state = pickNonEmpty(nz(S.state), nz(addr.state));
+  const postal_code = pickNonEmpty(nz(S.postal_code), nz(addr.postal_code));
+  const country = pickNonEmpty(nz(S.country), nz(addr.country));
 
   return {
-    name: prefer(base.name, add.name),
-    phone: prefer(base.phone, add.phone),
-    email: prefer(base.email, add.email),
+    name: nz(S.name),
+    phone: nz(S.phone),
+    email: nz(S.email),
+
+    // root flattened
+    line1,
+    line2,
+    city,
+    state,
+    postal_code,
+    country,
+
+    // nested
     address: {
-      line1: prefer(base.address?.line1 ?? null, add.address?.line1 ?? null),
-      line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
-      city: prefer(base.address?.city ?? null, add.address?.city ?? null),
-      state: prefer(base.address?.state ?? null, add.address?.state ?? null),
-      postal_code: prefer(
-        base.address?.postal_code ?? null,
-        add.address?.postal_code ?? null
-      ),
-      country: prefer(
-        base.address?.country ?? null,
-        add.address?.country ?? null
-      ),
+      line1,
+      line2,
+      city,
+      state,
+      postal_code,
+      country,
     },
   };
+}
+
+/**
+ * ✅ Merge "sem destruir dados":
+ * - base (DB) ganha
+ * - add só completa os campos em falta
+ * - preserva root + address (admin extractor não perde)
+ */
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+  if (!base) {
+    const I = normalizeShipping(add);
+    const out: ShippingJson = {
+      name: I.name,
+      phone: I.phone,
+      email: I.email,
+      address: I.address,
+      line1: I.line1,
+      line2: I.line2,
+      city: I.city,
+      state: I.state,
+      postal_code: I.postal_code,
+      country: I.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+  if (!add) {
+    const B = normalizeShipping(base);
+    const out: ShippingJson = {
+      name: B.name,
+      phone: B.phone,
+      email: B.email,
+      address: B.address,
+      line1: B.line1,
+      line2: B.line2,
+      city: B.city,
+      state: B.state,
+      postal_code: B.postal_code,
+      country: B.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  const B = normalizeShipping(base);
+  const A = normalizeShipping(add);
+
+  const merged: AnyObj = {
+    name: pickNonEmpty(B.name, A.name),
+    phone: pickNonEmpty(B.phone, A.phone),
+    email: pickNonEmpty(B.email, A.email),
+
+    line1: pickNonEmpty(B.line1, A.line1),
+    line2: pickNonEmpty(B.line2, A.line2),
+    city: pickNonEmpty(B.city, A.city),
+    state: pickNonEmpty(B.state, A.state),
+    postal_code: pickNonEmpty(B.postal_code, A.postal_code),
+    country: pickNonEmpty(B.country, A.country),
+  };
+
+  merged.address = {
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  const out: ShippingJson = {
+    name: merged.name ?? null,
+    phone: merged.phone ?? null,
+    email: merged.email ?? null,
+    address: merged.address,
+
+    // ✅ mantém root também
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  return isEmptyShipping(out) ? null : out;
 }
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
 /* -------------------- userId helpers -------------------- */
 
-function userIdFromCheckoutSession(
-  session: Stripe.Checkout.Session
-): string | null {
+function userIdFromCheckoutSession(session: Stripe.Checkout.Session): string | null {
   const metaUser = nz((session.metadata as any)?.userId);
   if (metaUser) return metaUser;
 
@@ -202,7 +352,21 @@ function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
 /* -------------------- email helpers -------------------- */
 
 function shippingAddressToString(s?: ShippingJson | null): string | null {
-  if (!s?.address) return null;
+  if (!s) return null;
+
+  // ✅ tenta root primeiro (porque o teu admin e alguns fluxos guardam flatten)
+  const partsRoot = [
+    (s as any).line1,
+    (s as any).line2,
+    (s as any).postal_code,
+    (s as any).city,
+    (s as any).state,
+    (s as any).country,
+  ].filter(Boolean) as string[];
+
+  if (partsRoot.length) return partsRoot.join(", ");
+
+  if (!s.address) return null;
   const a = s.address;
   const parts = [
     a.line1,
@@ -212,6 +376,7 @@ function shippingAddressToString(s?: ShippingJson | null): string | null {
     a.state,
     a.country,
   ].filter(Boolean) as string[];
+
   return parts.length ? parts.join(", ") : null;
 }
 
@@ -239,6 +404,7 @@ function orderEmail(order: any, mergedShipping?: ShippingJson | null): string | 
   return (
     nz(order?.shippingEmail) ||
     nz(order?.shippingJson?.email) ||
+    nz((order?.shippingJson as any)?.ship_email) ||
     nz(mergedShipping?.email) ||
     null
   );
@@ -248,6 +414,7 @@ function orderCustomerName(order: any, mergedShipping?: ShippingJson | null): st
   return (
     nz(order?.shippingFullName) ||
     nz(order?.shippingJson?.name) ||
+    nz((order?.shippingJson as any)?.ship_name) ||
     nz(mergedShipping?.name) ||
     null
   );
@@ -265,7 +432,9 @@ function orderShippingAddress(order: any, mergedShipping?: ShippingJson | null):
 
   if (parts.length) return parts.join(", ");
 
-  return shippingAddressToString((order?.shippingJson as ShippingJson) ?? mergedShipping ?? null);
+  return shippingAddressToString(
+    ((order?.shippingJson as any) as ShippingJson) ?? mergedShipping ?? null
+  );
 }
 
 /* ------------------------- status updaters ------------------------- */
@@ -296,17 +465,19 @@ async function markPaid(
     existing?.status === "shipped" ||
     existing?.status === "delivered";
 
+  // ✅ IMPORTANTE: existing (DB) ganha, Stripe só completa
   const mergedShipping = mergeShipping(
     existing?.shippingJson as ShippingJson,
     opts.shipping ?? null
   );
 
   const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)
-      ?.toString() || null;
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing?.shippingCountry ||
+      null)?.toString() || null;
 
   const updateData: any = {
-    // Link order to user for "My Orders"
     ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
 
     status: "paid",
@@ -316,12 +487,11 @@ async function markPaid(
     stripeSessionId: opts.sessionId ?? undefined,
     currency: upper(opts.currency) ?? undefined,
     totalCents: typeof opts.totalCents === "number" ? opts.totalCents : undefined,
+
     ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
     ...(country ? { shippingCountry: country } : {}),
   };
 
-  // ✅ Idempotência SEM mexer no schema:
-  // Só 1 request "ganha" a transição de pending -> paid
   let transitioned = false;
 
   if (!wasAlreadyFinal) {
@@ -335,7 +505,6 @@ async function markPaid(
 
     transitioned = claim.count === 1;
 
-    // Se alguém já atualizou em paralelo, garantimos ao menos que dados Stripe ficam atualizados
     if (!transitioned) {
       await prisma.order.update({
         where: { id: orderId },
@@ -343,7 +512,6 @@ async function markPaid(
       });
     }
   } else {
-    // Já estava final: só atualiza campos Stripe/shipping sem enviar email
     await prisma.order.update({
       where: { id: orderId },
       data: updateData,
@@ -353,7 +521,6 @@ async function markPaid(
   if (transitioned) {
     await finalizePaidOrder(orderId);
 
-    // ✅ Enviar email 1x (porque transitioned==true só acontece uma vez)
     try {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
@@ -409,8 +576,10 @@ async function markPending(
   );
 
   const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)
-      ?.toString() || null;
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing?.shippingCountry ||
+      null)?.toString() || null;
 
   await prisma.order.update({
     where: { id: orderId },
@@ -502,13 +671,16 @@ export const POST = async (req: NextRequest) => {
 
         if (!orderId) break;
 
+        // ✅ metadata + session, mas sem destruir o que já existe (isso é garantido dentro do markPaid/markPending)
         const shipping = mergeShipping(
           shippingFromMetadata(session.metadata ?? null),
           shippingFromSession(session)
         );
 
         const totalCents =
-          typeof session.amount_total === "number" ? session.amount_total : undefined;
+          typeof session.amount_total === "number"
+            ? session.amount_total
+            : undefined;
         const currency = session.currency ?? undefined;
 
         if (session.payment_status === "paid") {
@@ -623,7 +795,9 @@ export const POST = async (req: NextRequest) => {
           sessionId: null,
           currency: pi.currency ?? undefined,
           totalCents:
-            typeof pi.amount_received === "number" ? pi.amount_received : undefined,
+            typeof pi.amount_received === "number"
+              ? pi.amount_received
+              : undefined,
           shipping: shippingFromPaymentIntent(pi),
           userId,
         });
@@ -740,7 +914,8 @@ export const POST = async (req: NextRequest) => {
           const piId =
             typeof charge.payment_intent === "string"
               ? charge.payment_intent
-              : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
+              : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ??
+                null;
 
           const cents =
             typeof charge.amount_captured === "number"
