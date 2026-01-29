@@ -11,11 +11,9 @@ type OrderItem = {
   qty: number;
   totalPrice: number; // cents
 
-  // optional rich fields (from /api/account/orders/:id)
   unitPrice?: number | null; // cents
   image?: string | null;
   snapshotJson?: unknown;
-  personalizationJson?: unknown;
 
   product?: {
     id?: string;
@@ -28,10 +26,7 @@ type OrderItem = {
 
 type Order = {
   id: string;
-  createdAt?: string | Date;
-  paidAt?: string | Date | null;
   status: string;
-  paymentStatus?: string | null;
 
   currency?: string | null;
 
@@ -47,6 +42,7 @@ type Order = {
 type ApiResponse =
   | { order: Order }
   | { data: { order: Order } }
+  | { ok?: boolean; status?: string } // 202 response
   | { error: string }
   | Record<string, any>;
 
@@ -58,7 +54,7 @@ function moneyCents(cents: number | null | undefined, currency = "EUR") {
 const FINAL_STATUSES = new Set(["paid", "shipped", "delivered"]);
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/* ========================= Badge labels (same as OrderDetailsClient) ========================= */
+/* ========================= Badge labels ========================= */
 const BADGE_LABELS: Record<string, string> = {
   "premier-league-regular": "Premier League – League Badge",
   "premier-league-champions": "Premier League – Champions (Gold)",
@@ -146,7 +142,6 @@ function getCoverUrl(imageUrls: unknown): string {
         const candidate = getCoverUrl(v);
         if (candidate && candidate !== "/placeholder.png") return candidate;
       }
-      return "/placeholder.png";
     }
 
     return "/placeholder.png";
@@ -161,9 +156,6 @@ function getItemImageUrl(it: OrderItem) {
   return direct || cover || "/placeholder.png";
 }
 
-/**
- * External images: use <img> to avoid Next remotePatterns issues.
- */
 function ExternalImg({
   src,
   alt,
@@ -186,11 +178,7 @@ function ExternalImg({
       className={className}
       loading="lazy"
       referrerPolicy="no-referrer"
-      onError={() => {
-        setCurrent((prev) =>
-          prev === "/placeholder.png" ? prev : "/placeholder.png"
-        );
-      }}
+      onError={() => setCurrent("/placeholder.png")}
     />
   );
 }
@@ -240,17 +228,17 @@ function pickStr(o: unknown, keys: string[]): string | null {
   return null;
 }
 
-/* ✅ badges split */
 function splitBadgesString(s: string): string[] {
   const raw = String(s ?? "").trim();
   if (!raw) return [];
-  const parts = raw.split(/[,\n;|]+/g).map((x) => x.trim());
-  return parts.filter(Boolean);
+  return raw
+    .split(/[,\n;|]+/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 function normalizeBadges(rawBadges: unknown): string[] {
   if (!rawBadges) return [];
-
   if (Array.isArray(rawBadges)) {
     const out: string[] = [];
     for (const v of rawBadges) {
@@ -261,7 +249,6 @@ function normalizeBadges(rawBadges: unknown): string[] {
     }
     return out;
   }
-
   if (isRecord(rawBadges)) {
     const out: string[] = [];
     for (const v of Object.values(rawBadges)) {
@@ -272,82 +259,36 @@ function normalizeBadges(rawBadges: unknown): string[] {
     }
     return out;
   }
-
   return splitBadgesString(String(rawBadges));
 }
 
-function extractPersonalization(
-  it: OrderItem,
-  snap: Record<string, unknown>,
-  optionsObj: Record<string, unknown>
-) {
+function extractPersonalization(it: OrderItem, snap: Record<string, unknown>, optionsObj: Record<string, unknown>) {
   const snapPers =
-    snap?.personalization && typeof snap.personalization === "object"
-      ? (snap.personalization as Record<string, unknown>)
+    snap?.personalization && typeof (snap as any).personalization === "object"
+      ? ((snap as any).personalization as Record<string, unknown>)
       : null;
 
-  const snapPersName = snapPers
-    ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
-    : null;
-
-  const snapPersNumber = snapPers
-    ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"])
-    : null;
-
-  const snapPersJ = safeParseJSON((snap as any)?.personalizationJson);
-  const snapJName =
-    pickStr(snapPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
-  const snapJNumber =
-    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
-
-  const itPersJ = safeParseJSON((it as any)?.personalizationJson);
-  const itJName =
-    pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
-  const itJNumber =
-    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
+  const snapPersName = snapPers ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"]) : null;
+  const snapPersNumber = snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"]) : null;
 
   const directName =
-    pickStr(it as any, [
-      "personalizationName",
-      "playerName",
-      "custName",
-      "nameOnShirt",
-      "shirtName",
-      "customName",
-    ]) ?? null;
+    pickStr(it as any, ["personalizationName", "playerName", "custName", "nameOnShirt", "shirtName", "customName"]) ?? null;
 
   const directNumber =
-    pickStr(it as any, [
-      "personalizationNumber",
-      "playerNumber",
-      "custNumber",
-      "numberOnShirt",
-      "shirtNumber",
-      "customNumber",
-    ]) ?? null;
+    pickStr(it as any, ["personalizationNumber", "playerNumber", "custNumber", "numberOnShirt", "shirtNumber", "customNumber"]) ?? null;
 
-  const snapRootName =
-    pickStr(snap as any, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ??
-    null;
+  const snapRootName = pickStr(snap as any, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ?? null;
   const snapRootNumber =
-    pickStr(snap as any, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ??
-    null;
+    pickStr(snap as any, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ?? null;
 
   const optName =
-    pickStr(optionsObj as any, ["custName", "playerName", "player_name", "shirtName", "shirt_name", "nameOnShirt"]) ??
-    null;
+    pickStr(optionsObj as any, ["custName", "playerName", "player_name", "shirtName", "shirt_name", "nameOnShirt"]) ?? null;
 
   const optNumber =
-    pickStr(optionsObj as any, ["custNumber", "playerNumber", "player_number", "shirtNumber", "shirt_number", "numberOnShirt"]) ??
-    null;
+    pickStr(optionsObj as any, ["custNumber", "playerNumber", "player_number", "shirtNumber", "shirt_number", "numberOnShirt"]) ?? null;
 
-  const name =
-    (snapPersName ?? snapJName ?? itJName ?? directName ?? snapRootName ?? optName ?? null)?.trim() ||
-    null;
-
-  const numRaw =
-    (snapPersNumber ?? snapJNumber ?? itJNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() ||
-    "";
+  const name = (snapPersName ?? directName ?? snapRootName ?? optName ?? null)?.trim() || null;
+  const numRaw = (snapPersNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() || "";
 
   const onlyDigits = String(numRaw).replace(/\D/g, "");
   const number = onlyDigits ? onlyDigits : null;
@@ -356,8 +297,24 @@ function extractPersonalization(
   return { name, number };
 }
 
+function prettyKey(k: string) {
+  const map: Record<string, string> = {
+    custName: "Name",
+    custNumber: "Number",
+    nameOnShirt: "Name",
+    numberOnShirt: "Number",
+    playerName: "Name",
+    playerNumber: "Number",
+  };
+  if (map[k]) return map[k];
+  return k
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 function deriveItemDetails(it: OrderItem) {
-  const snap = safeParseJSON(it?.snapshotJson);
+  const snap = safeParseJSON(it.snapshotJson);
 
   const optionsObj =
     safeParseJSON((snap as any)?.optionsJson) ||
@@ -380,8 +337,8 @@ function deriveItemDetails(it: OrderItem) {
     null;
 
   const badgesFromSnap = normalizeBadges(rawBadges);
-  const badgesFromProduct = normalizeBadges(it?.product?.badges);
-  const allBadges = Array.from(new Set([...badgesFromSnap, ...badgesFromProduct])).filter(Boolean);
+  const badgesFromProduct = normalizeBadges(it.product?.badges);
+  const badges = Array.from(new Set([...badgesFromSnap, ...badgesFromProduct])).filter(Boolean);
 
   const optionsPairs: Array<{ k: string; v: string }> = [];
   for (const [k, v] of Object.entries(optionsObj)) {
@@ -402,24 +359,7 @@ function deriveItemDetails(it: OrderItem) {
     optionsPairs.push({ k, v: vs });
   }
 
-  return { size, personalization, badges: allBadges, optionsPairs };
-}
-
-function prettyKey(k: string) {
-  const map: Record<string, string> = {
-    custName: "Name",
-    custNumber: "Number",
-    nameOnShirt: "Name",
-    numberOnShirt: "Number",
-    playerName: "Name",
-    playerNumber: "Number",
-  };
-  if (map[k]) return map[k];
-
-  return k
-    .replace(/[_-]+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
+  return { size, personalization, badges, optionsPairs };
 }
 
 /* ========================= Component ========================= */
@@ -436,12 +376,11 @@ export default function SuccessClient() {
     return { orderId: id, provider: prov, sessionId: sess };
   }, [params]);
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingMsg, setLoadingMsg] = useState<string>("Loading your order…");
+  const [loading, setLoading] = useState(true);
+  const [loadingMsg, setLoadingMsg] = useState("Loading your order…");
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /** Confirma Stripe no servidor usando o session_id devolvido pelo Checkout */
   const confirmStripe = async (oid: string, sid: string) => {
     if (!oid || !sid || confirmingRef.current) return;
     confirmingRef.current = true;
@@ -452,9 +391,7 @@ export default function SuccessClient() {
     for (let i = 0; i < MAX_TRIES; i++) {
       try {
         const res = await fetch(
-          `/api/checkout/stripe/confirm?order=${encodeURIComponent(
-            oid
-          )}&session_id=${encodeURIComponent(sid)}`,
+          `/api/checkout/stripe/confirm?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
           { method: "POST" }
         );
 
@@ -476,10 +413,10 @@ export default function SuccessClient() {
   };
 
   /**
-   * ✅ Carrega a encomenda do MESMO endpoint "rico" que já funciona:
-   * /api/account/orders/:id
+   * ✅ Stripe success MUST use the public endpoint (no auth),
+   * and MUST handle 202 (processing) with retries.
    */
-  const fetchOrder = async (oid: string) => {
+  const fetchOrder = async (oid: string, sid: string) => {
     if (!oid) {
       setLoading(false);
       setOrder(null);
@@ -487,52 +424,85 @@ export default function SuccessClient() {
     }
 
     setLoading(true);
-    setLoadingMsg("Loading your order…");
     setError(null);
+    setLoadingMsg("Loading your order…");
 
     try {
-      const res = await fetch(`/api/account/orders/${encodeURIComponent(oid)}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      // If we have a session_id, always use the public endpoint
+      if (sid) {
+        const MAX_TRIES = 8;
+
+        for (let i = 0; i < MAX_TRIES; i++) {
+          const res = await fetch(
+            `/api/checkout/success/order?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+            { method: "GET", cache: "no-store" }
+          );
+
+          // 202 = still processing → wait and retry
+          if (res.status === 202) {
+            setLoadingMsg("Finalizing your payment…");
+            await wait(1200);
+            continue;
+          }
+
+          const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
+
+          if (!res.ok) {
+            setError((json as any)?.error || "Could not load the order.");
+            setOrder(null);
+            return;
+          }
+
+          const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
+
+          if (!o?.id) {
+            setError("Order not found.");
+            setOrder(null);
+            return;
+          }
+
+          setOrder(o);
+
+          // If order isn't final yet, try a couple more refreshes
+          if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
+            await wait(900);
+            continue;
+          }
+
+          return;
+        }
+
+        // If we exhausted tries, still show whatever we got (or an error)
+        if (!order) {
+          setError("Payment is still processing. Please check your order in your account in a moment.");
+        }
+        return;
+      }
+
+      // No session_id (non-stripe / legacy) → fallback to old endpoints (may require auth depending on your setup)
+      let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, { method: "GET", cache: "no-store" });
+
+      if (!res.ok) {
+        res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, { method: "GET", cache: "no-store" });
+      }
 
       const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
 
       if (!res.ok) {
-        const msg =
-          (json as any)?.error ||
-          "Could not load the order. Please check again in your account.";
-        setError(msg);
+        setError((json as any)?.error || "Could not load the order.");
         setOrder(null);
         return;
       }
 
       const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
 
-      if (o && o.id) {
-        setOrder(o);
-
-        // optional small refresh if still not final
-        if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
-          for (let i = 0; i < 2; i++) {
-            await wait(1500);
-            const again = await fetch(`/api/account/orders/${encodeURIComponent(oid)}`, {
-              cache: "no-store",
-            }).then((r) => r.json().catch(() => ({})));
-
-            const updated: Order | undefined =
-              (again as any)?.order ?? (again as any)?.data?.order;
-
-            if (updated?.id) {
-              setOrder(updated);
-              if (FINAL_STATUSES.has((updated.status || "").toLowerCase())) break;
-            }
-          }
-        }
-      } else {
+      if (!o?.id) {
         setError("Order not found.");
         setOrder(null);
+        return;
       }
+
+      setOrder(o);
     } catch {
       setError("Network error while loading the order.");
       setOrder(null);
@@ -556,7 +526,7 @@ export default function SuccessClient() {
       }
 
       if (!alive) return;
-      await fetchOrder(orderId);
+      await fetchOrder(orderId, provider === "stripe" ? sessionId : "");
     })();
 
     return () => {
@@ -572,28 +542,18 @@ export default function SuccessClient() {
     if (typeof order.totalCents === "number") return order.totalCents;
     if (typeof order.total === "number") return Math.round(order.total * 100);
 
-    const itemsSum =
-      order.items?.reduce((acc, it) => acc + (it.totalPrice || 0), 0) || 0;
-
-    const shipping = order.shipping || 0;
-    const tax = order.tax || 0;
-    return itemsSum + shipping + tax;
+    const itemsSum = order.items?.reduce((acc, it) => acc + (it.totalPrice || 0), 0) || 0;
+    return itemsSum + (order.shipping || 0) + (order.tax || 0);
   }, [order]);
 
   if (loading) {
-    return (
-      <div className="rounded-2xl border bg-white p-5 text-center">
-        {loadingMsg}
-      </div>
-    );
+    return <div className="rounded-2xl border bg-white p-5 text-center">{loadingMsg}</div>;
   }
 
   if (error) {
     return (
       <div className="rounded-2xl border bg-white p-5 space-y-4">
-        <p className="text-sm text-red-700 rounded-md border border-red-200 bg-red-50 px-3 py-2">
-          {error}
-        </p>
+        <p className="text-sm text-red-700 rounded-md border border-red-200 bg-red-50 px-3 py-2">{error}</p>
         <div className="flex gap-2">
           <button
             onClick={() => router.replace("/account")}
@@ -614,9 +574,7 @@ export default function SuccessClient() {
 
   return (
     <div className="rounded-2xl border bg-white p-5 space-y-4">
-      <p className="text-sm text-gray-800">
-        Your payment was successful{provider ? ` via ${provider}` : ""}.
-      </p>
+      <p className="text-sm text-gray-800">Your payment was successful{provider ? ` via ${provider}` : ""}.</p>
 
       {order ? (
         <>
@@ -636,8 +594,8 @@ export default function SuccessClient() {
                 typeof it.unitPrice === "number" && it.unitPrice > 0
                   ? it.unitPrice
                   : typeof it.totalPrice === "number" && it.qty > 0
-                    ? Math.round(it.totalPrice / it.qty)
-                    : 0;
+                  ? Math.round(it.totalPrice / it.qty)
+                  : 0;
 
               return (
                 <li key={it.id} className="p-4">
@@ -654,9 +612,7 @@ export default function SuccessClient() {
                       </div>
                     </div>
 
-                    <div className="font-semibold shrink-0">
-                      {moneyCents(it.totalPrice, currency)}
-                    </div>
+                    <div className="font-semibold shrink-0">{moneyCents(it.totalPrice, currency)}</div>
                   </div>
 
                   {(details.size ||
@@ -664,85 +620,69 @@ export default function SuccessClient() {
                     details.personalization?.number ||
                     details.optionsPairs.length > 0 ||
                     details.badges.length > 0) && (
-                      <div className="mt-3 pl-[68px] space-y-2">
-                        {(details.size ||
-                          details.personalization?.name ||
-                          details.personalization?.number) && (
-                            <div className="text-sm text-gray-700 space-y-0.5">
-                              {details.size ? (
-                                <div>
-                                  <span className="text-gray-500">Size:</span>{" "}
-                                  {details.size}
-                                </div>
-                              ) : null}
-
-                              {details.personalization ? (
-                                <div>
-                                  <span className="text-gray-500">
-                                    Personalization:
-                                  </span>{" "}
-                                  {details.personalization.name
-                                    ? details.personalization.name
-                                    : "—"}
-                                  {details.personalization.number
-                                    ? ` · #${details.personalization.number}`
-                                    : ""}
-                                </div>
-                              ) : null}
+                    <div className="mt-3 pl-[68px] space-y-2">
+                      {(details.size ||
+                        details.personalization?.name ||
+                        details.personalization?.number) && (
+                        <div className="text-sm text-gray-700 space-y-0.5">
+                          {details.size ? (
+                            <div>
+                              <span className="text-gray-500">Size:</span> {details.size}
                             </div>
-                          )}
+                          ) : null}
 
-                        {details.optionsPairs.length > 0 && (
+                          {details.personalization ? (
+                            <div>
+                              <span className="text-gray-500">Personalization:</span>{" "}
+                              {details.personalization.name ? details.personalization.name : "—"}
+                              {details.personalization.number ? ` · #${details.personalization.number}` : ""}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+
+                      {details.optionsPairs.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {details.optionsPairs.map((p, idx) => (
+                            <span
+                              key={`${p.k}-${idx}`}
+                              className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                              title={p.k}
+                            >
+                              <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {details.badges.length > 0 && (
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
                           <div className="flex flex-wrap gap-2">
-                            {details.optionsPairs.map((p, idx) => (
+                            {details.badges.map((b, idx) => (
                               <span
-                                key={`${p.k}-${idx}`}
+                                key={`${b}-${idx}`}
                                 className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
-                                title={p.k}
+                                title={b}
                               >
-                                <span className="text-gray-500">
-                                  {prettyKey(p.k)}:
-                                </span>{" "}
-                                {p.v}
+                                {humanizeBadge(b)}
                               </span>
                             ))}
                           </div>
-                        )}
-
-                        {details.badges.length > 0 && (
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 mb-1">
-                              Badges:
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {details.badges.map((b, idx) => (
-                                <span
-                                  key={`${b}-${idx}`}
-                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
-                                  title={b}
-                                >
-                                  {humanizeBadge(b)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}
           </ul>
 
-          <div className="text-right font-bold">
-            Total: {moneyCents(computedTotalCents, currency)}
-          </div>
+          <div className="text-right font-bold">Total: {moneyCents(computedTotalCents, currency)}</div>
 
           <div className="flex gap-2">
             <button
-              onClick={() =>
-                router.replace(`/orders/${encodeURIComponent(order.id)}`)
-              }
+              onClick={() => router.replace(`/orders/${encodeURIComponent(order.id)}`)}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               View order
