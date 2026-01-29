@@ -29,7 +29,7 @@ export default function SafeImage({
       src={currentSrc}
       alt={alt}
       onError={() => {
-        // evita loop infinito se o placeholder também falhar
+        // evita um loop infinito se o placeholder também falhar
         setCurrentSrc((prev) => (prev === fallbackSrc ? prev : fallbackSrc));
       }}
     />
