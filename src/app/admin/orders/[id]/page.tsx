@@ -40,27 +40,10 @@ function safeParseJSON(input: any): Record<string, any> {
       return {};
     }
   }
-  if (typeof input === "object") {
-    // Prisma JsonValue pode vir como object; garante que é serializável
-    try {
-      return JSON.parse(JSON.stringify(input));
-    } catch {
-      return input as Record<string, any>;
-    }
-  }
+  if (typeof input === "object") return input as Record<string, any>;
   return {};
 }
 
-function pickStr(o: any, keys: string[]): string | null {
-  if (!o || typeof o !== "object") return null;
-  for (const k of keys) {
-    const v = (o as any)?.[k];
-    if (v != null && String(v).trim() !== "") return String(v);
-  }
-  return null;
-}
-
-/** deep get: tenta vários caminhos (arrays de keys) */
 function getDeep(obj: any, paths: string[][]): string | undefined {
   for (const p of paths) {
     let cur: any = obj;
@@ -79,26 +62,28 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
   return undefined;
 }
 
-/** gera candidatos root + wrappers (shipping/address/delivery) */
 function candidates(keys: string[]) {
-  return [
-    keys,
-    ["shipping", ...keys],
-    ["address", ...keys],
-    ["delivery", ...keys],
-  ] as string[][];
+  // suporta root + nested típicos
+  return [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
+}
+
+function pickStr(o: any, keys: string[]): string | null {
+  if (!o || typeof o !== "object") return null;
+  for (const k of keys) {
+    const v = (o as any)?.[k];
+    if (v != null && String(v).trim() !== "") return String(v);
+  }
+  return null;
 }
 
 /**
- * ✅ Extract robusto (igual ao da lista)
- * - lê nested address
- * - lê flatten no root
- * - lê wrappers shipping/address/delivery
- * - lê ship_* (metadata)
+ * ✅ FIX REAL:
+ * O bug era "return cedo" se shippingCountry existisse (canonical).
+ * Agora fazemos MERGE: canonical tem prioridade, mas completamos com shippingJson.
  */
 function extractShipping(order: any) {
   try {
-    // 1) colunas canónicas (se existirem)
+    // 1) canonical (colunas no schema, se existirem)
     const canonical = {
       fullName: order?.shippingFullName ?? order?.user?.name ?? null,
       email: order?.shippingEmail ?? order?.user?.email ?? null,
@@ -111,44 +96,31 @@ function extractShipping(order: any) {
       country: order?.shippingCountry ?? null,
     };
 
-    if (
-      canonical.fullName ||
-      canonical.email ||
-      canonical.phone ||
-      canonical.address1 ||
-      canonical.city ||
-      canonical.postalCode ||
-      canonical.country
-    ) {
-      return canonical;
-    }
-
-    // 2) shippingJson (json)
+    // 2) shippingJson (ROOT ou nested address/shipping/delivery)
     const j = safeParseJSON(order?.shippingJson);
 
-    const fullName =
+    const fullNameJson =
       getDeep(j, candidates(["fullName"])) ??
       getDeep(j, candidates(["name"])) ??
       getDeep(j, candidates(["recipient"])) ??
       getDeep(j, candidates(["ship_name"])) ??
-      order?.user?.name ??
       null;
 
-    const email =
+    const emailJson =
       getDeep(j, candidates(["email"])) ??
       getDeep(j, candidates(["ship_email"])) ??
       getDeep(j, candidates(["customer_email"])) ??
-      order?.user?.email ??
+      getDeep(j, candidates(["customerEmail"])) ??
       null;
 
-    const phone =
+    const phoneJson =
       getDeep(j, candidates(["phone"])) ??
       getDeep(j, candidates(["telephone"])) ??
       getDeep(j, candidates(["ship_phone"])) ??
+      getDeep(j, candidates(["customerPhone"])) ??
       null;
 
-    // address line1 / line2 (tenta root + nested)
-    const address1 =
+    const address1Json =
       getDeep(j, candidates(["address1"])) ??
       getDeep(j, candidates(["addressLine1"])) ??
       getDeep(j, candidates(["line1"])) ??
@@ -156,7 +128,7 @@ function extractShipping(order: any) {
       getDeep(j, candidates(["ship_line1"])) ??
       null;
 
-    const address2 =
+    const address2Json =
       getDeep(j, candidates(["address2"])) ??
       getDeep(j, candidates(["addressLine2"])) ??
       getDeep(j, candidates(["line2"])) ??
@@ -164,21 +136,21 @@ function extractShipping(order: any) {
       getDeep(j, candidates(["ship_line2"])) ??
       null;
 
-    const city =
+    const cityJson =
       getDeep(j, candidates(["city"])) ??
       getDeep(j, candidates(["locality"])) ??
       getDeep(j, candidates(["town"])) ??
       getDeep(j, candidates(["ship_city"])) ??
       null;
 
-    const region =
+    const regionJson =
       getDeep(j, candidates(["region"])) ??
       getDeep(j, candidates(["state"])) ??
       getDeep(j, candidates(["province"])) ??
       getDeep(j, candidates(["ship_state"])) ??
       null;
 
-    const postalCode =
+    const postalCodeJson =
       getDeep(j, candidates(["postalCode"])) ??
       getDeep(j, candidates(["postal_code"])) ??
       getDeep(j, candidates(["postcode"])) ??
@@ -192,40 +164,50 @@ function extractShipping(order: any) {
       getDeep(j, candidates(["ship_postal"])) ??
       null;
 
-    const country =
+    const countryJson =
       getDeep(j, candidates(["country"])) ??
       getDeep(j, candidates(["countryCode"])) ??
       getDeep(j, candidates(["shippingCountry"])) ??
       getDeep(j, candidates(["ship_country"])) ??
       null;
 
-    // se ao menos 1 existir, devolve
-    if (fullName || email || phone || address1 || city || postalCode || country) {
+    // 3) MERGE final (canonical > json > null)
+    const out = {
+      fullName: canonical.fullName ?? fullNameJson ?? null,
+      email: canonical.email ?? emailJson ?? null,
+      phone: canonical.phone ?? phoneJson ?? null,
+      address1: canonical.address1 ?? address1Json ?? null,
+      address2: canonical.address2 ?? address2Json ?? null,
+      city: canonical.city ?? cityJson ?? null,
+      region: canonical.region ?? regionJson ?? null,
+      postalCode: canonical.postalCode ?? postalCodeJson ?? null,
+      country: canonical.country ?? countryJson ?? null,
+    };
+
+    // 4) Se ainda estiver tudo vazio, fallback para user
+    if (
+      !out.fullName &&
+      !out.email &&
+      !out.phone &&
+      !out.address1 &&
+      !out.city &&
+      !out.postalCode &&
+      !out.country
+    ) {
       return {
-        fullName,
-        email,
-        phone,
-        address1,
-        address2,
-        city,
-        region,
-        postalCode,
-        country,
+        fullName: order?.user?.name ?? null,
+        email: order?.user?.email ?? null,
+        phone: null,
+        address1: null,
+        address2: null,
+        city: null,
+        region: null,
+        postalCode: null,
+        country: null,
       };
     }
 
-    // 3) fallback final (user)
-    return {
-      fullName: order?.user?.name ?? null,
-      email: order?.user?.email ?? null,
-      phone: null,
-      address1: null,
-      address2: null,
-      city: null,
-      region: null,
-      postalCode: null,
-      country: null,
-    };
+    return out;
   } catch {
     return {
       fullName: order?.user?.name ?? null,
@@ -270,22 +252,20 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
-/* ========================= Personalization extraction ========================= */
+/* ========================= Personalization extraction (FIXED) ========================= */
 function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapPers =
     snap?.personalization && typeof snap.personalization === "object"
       ? snap.personalization
       : null;
 
-  const snapPersName =
-    snapPers
-      ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
-      : null;
+  const snapPersName = snapPers
+    ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
+    : null;
 
-  const snapPersNumber =
-    snapPers
-      ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"])
-      : null;
+  const snapPersNumber = snapPers
+    ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"])
+    : null;
 
   const snapPersJ = safeParseJSON(snap?.personalizationJson);
   const snapJName =
@@ -474,12 +454,13 @@ async function fetchOrder(id: string) {
 
     const shipping = extractShipping(order);
 
-    // ✅ DEBUG logs (Vercel logs)
-    try {
-      console.log("[admin/order] id:", String(order.id));
-      console.log("[admin/order] raw shippingJson:", JSON.stringify(order.shippingJson ?? null));
-      console.log("[admin/order] extracted shipping:", JSON.stringify(shipping));
-    } catch {}
+    // (opcional) logs úteis no Vercel para confirmar
+    console.info("[admin/order] id:", id);
+    console.info(
+      "[admin/order] raw shippingJson:",
+      typeof order?.shippingJson === "string" ? order.shippingJson : JSON.stringify(order?.shippingJson)
+    );
+    console.info("[admin/order] extracted shipping:", JSON.stringify(shipping));
 
     return {
       order: {
@@ -578,7 +559,11 @@ export default async function AdminOrderViewPage({
 
               <div className="mt-3 text-xs text-gray-500">Payment</div>
               <div className="text-sm">
-                {order.paidAt ? <span className="font-medium">Paid</span> : <span>Unpaid</span>}
+                {order.paidAt ? (
+                  <span className="font-medium">Paid</span>
+                ) : (
+                  <span>Unpaid</span>
+                )}
               </div>
 
               {order.stripePaymentIntentId && (
@@ -603,10 +588,10 @@ export default async function AdminOrderViewPage({
               )}
             </section>
 
-            {/* Customer copy */}
+            {/* ✅ Customer copy block */}
             <CustomerCopyCard shipping={order.shipping} />
 
-            {/* Fulfillment / Tracking */}
+            {/* ✅ Fulfillment / Tracking */}
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="font-semibold">Fulfillment / Tracking</div>
@@ -746,9 +731,7 @@ export default async function AdminOrderViewPage({
                 <div className="flex items-center gap-2 font-semibold">
                   <Package className="h-4 w-4" /> Items (Copy)
                 </div>
-                <div className="text-xs text-gray-500">
-                  Copy text / image individually
-                </div>
+                <div className="text-xs text-gray-500">Copy text / image individually</div>
               </div>
 
               {order.items.length === 0 ? (
