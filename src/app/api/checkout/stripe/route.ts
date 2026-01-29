@@ -66,7 +66,11 @@ async function getCheckoutBaseUrl(): Promise<string> {
 
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? process.env.VERCEL_URL ?? "localhost:3000";
+  const host =
+    h.get("x-forwarded-host") ??
+    h.get("host") ??
+    process.env.VERCEL_URL ??
+    "localhost:3000";
 
   return normalizeBaseUrl(`${proto}://${host}`);
 }
@@ -80,6 +84,26 @@ function toAbsoluteImage(url: string | null | undefined, APP: string): string | 
   return null;
 }
 
+function safeStr(v: any): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+function safeObj(v: any): Record<string, any> {
+  if (!v) return {};
+  if (typeof v === "object") return v as any;
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return typeof j === "object" && j ? (j as any) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 /**
  * ✅ Stripe metadata MUST be Record<string, string>
  * ❌ undefined values are NOT allowed
@@ -87,8 +111,9 @@ function toAbsoluteImage(url: string | null | undefined, APP: string): string | 
 function shippingToMetadata(s?: Shipping | null): Record<string, string> {
   const out: Record<string, string> = {};
 
-  const put = (key: string, value?: string) => {
-    if (value && value.trim()) out[key] = value.slice(0, 500);
+  const put = (key: string, value?: string | null) => {
+    const v = safeStr(value);
+    if (v) out[key] = v.slice(0, 500);
   };
 
   if (!s) return out;
@@ -105,6 +130,41 @@ function shippingToMetadata(s?: Shipping | null): Record<string, string> {
   put("ship_country", s.address?.country);
 
   return out;
+}
+
+/**
+ * ✅ IMPORTANTE:
+ * O teu admin extractor procura line1/city/postal_code no ROOT do JSON.
+ * Então aqui nós "flatten" o shipping para evitar ficar tudo dentro de address:{...}
+ */
+function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
+  if (!s) return null;
+
+  const addr = safeObj(s.address);
+  return {
+    // root fields
+    name: safeStr(s.name),
+    phone: safeStr(s.phone),
+    email: safeStr(s.email),
+
+    // flattened address (root)
+    line1: safeStr(addr.line1),
+    line2: safeStr(addr.line2),
+    city: safeStr(addr.city),
+    state: safeStr(addr.state),
+    postal_code: safeStr(addr.postal_code),
+    country: safeStr(addr.country),
+
+    // keep original too (optional, helps debugging)
+    address: {
+      line1: safeStr(addr.line1),
+      line2: safeStr(addr.line2),
+      city: safeStr(addr.city),
+      state: safeStr(addr.state),
+      postal_code: safeStr(addr.postal_code),
+      country: safeStr(addr.country),
+    },
+  };
 }
 
 /* ============================== ROUTE ============================== */
@@ -164,7 +224,10 @@ export async function POST(req: NextRequest) {
       totalPrice: (it as any).totalPrice ?? null,
     }));
 
-    const originalSubtotal = cartItems.reduce((acc, it) => acc + it.qty * it.unitPrice, 0);
+    const originalSubtotal = cartItems.reduce(
+      (acc, it) => acc + it.qty * it.unitPrice,
+      0
+    );
 
     // ✅ SINGLE SOURCE OF TRUTH: same as cart page
     const promo = applyPromotions(
@@ -193,9 +256,14 @@ export async function POST(req: NextRequest) {
     const rawShip = jar.get("ship")?.value;
     if (rawShip) {
       try {
-        shippingFromCookie = JSON.parse(Buffer.from(rawShip, "base64").toString("utf8"));
+        shippingFromCookie = JSON.parse(
+          Buffer.from(rawShip, "base64").toString("utf8")
+        );
       } catch {}
     }
+
+    // ✅ Store a flattened JSON so admin can read it reliably
+    const shippingJsonFlat = shippingToFlatJson(shippingFromCookie);
 
     /* -------- Create local order (PENDING) -------- */
     const orderItemsCreate = promo.lines.flatMap((line) => {
@@ -249,7 +317,9 @@ export async function POST(req: NextRequest) {
         tax: 0,
         total: totalCents,
 
-        shippingJson: shippingFromCookie as any,
+        // ✅ FIX: save flattened JSON (so admin extractor can find name/email/line1/city/postal_code/country)
+        shippingJson: shippingJsonFlat as any,
+
         items: { create: orderItemsCreate },
       },
       include: { items: true },
@@ -281,6 +351,8 @@ export async function POST(req: NextRequest) {
       discountCents: String(discountCents),
       maxFreeItemsCap: String(MAX_FREE_ITEMS_PER_ORDER),
       ...(userId ? { userId } : {}),
+
+      // ✅ keep shipping in metadata too (helps webhook fallback)
       ...shippingToMetadata(shippingFromCookie),
     };
 
@@ -303,7 +375,9 @@ export async function POST(req: NextRequest) {
       metadata,
 
       ...(userId ? { client_reference_id: userId } : {}),
-      ...(shippingFromCookie?.email ? { customer_email: shippingFromCookie.email.slice(0, 200) } : {}),
+      ...(shippingFromCookie?.email
+        ? { customer_email: shippingFromCookie.email.slice(0, 200) }
+        : {}),
     });
 
     await prisma.order.update({
@@ -317,6 +391,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);
-    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
+    return NextResponse.json(
+      { error: err?.message ?? "Stripe error" },
+      { status: 400 }
+    );
   }
 }
