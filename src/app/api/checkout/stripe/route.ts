@@ -1,9 +1,8 @@
 // src/app/api/checkout/stripe/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
-import { getServerBaseUrl } from "@/lib/origin";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { applyPromotions, MAX_FREE_ITEMS_PER_ORDER } from "@/lib/cartPromotions";
@@ -46,6 +45,31 @@ type CartItemRow = {
 };
 
 /* ============================== HELPERS ============================== */
+
+function normalizeBaseUrl(url: string) {
+  return url.trim().replace(/\/+$/, "");
+}
+
+/**
+ * ✅ Usa SEMPRE o domínio público (env) quando definido
+ * - NEXT_PUBLIC_SITE_URL (recomendado)
+ * - SITE_URL (alternativa)
+ * Fallback: host do request (dev/local)
+ */
+async function getCheckoutBaseUrl(): Promise<string> {
+  const env =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.SITE_URL?.trim() ||
+    "";
+
+  if (env) return normalizeBaseUrl(env);
+
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? process.env.VERCEL_URL ?? "localhost:3000";
+
+  return normalizeBaseUrl(`${proto}://${host}`);
+}
 
 function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
   if (!url) return null;
@@ -94,10 +118,11 @@ export async function POST(req: NextRequest) {
     const userId = (session?.user as any)?.id as string | undefined;
 
     const body = await req.json().catch(() => ({}));
-    const method = (body?.method ?? "automatic") as Method; // (mantido caso uses depois)
-    void method; // silence unused warning if not used yet
+    const method = (body?.method ?? "automatic") as Method;
+    void method;
 
-    const APP = await getServerBaseUrl();
+    // ✅ IMPORTANT: base URL canónico para redirecionamento do Stripe
+    const APP = await getCheckoutBaseUrl();
 
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
@@ -111,9 +136,7 @@ export async function POST(req: NextRequest) {
       include: {
         items: {
           include: {
-            product: {
-              select: { name: true, imageUrls: true },
-            },
+            product: { select: { name: true, imageUrls: true } },
           },
         },
       },
@@ -146,7 +169,7 @@ export async function POST(req: NextRequest) {
     // ✅ SINGLE SOURCE OF TRUTH: same as cart page
     const promo = applyPromotions(
       cartItems.map((it, idx) => ({
-        id: String(idx), // id local (index) para mapear de volta
+        id: String(idx),
         name: String(it.product?.name ?? "Item"),
         unitAmountCents: it.unitPrice,
         qty: it.qty,
@@ -154,7 +177,6 @@ export async function POST(req: NextRequest) {
       }))
     );
 
-    // Map promo result back to cartItems by index
     const paidSubtotal = promo.lines.reduce((acc, line) => {
       const idx = Number(line.id);
       const it = cartItems[idx];
@@ -163,7 +185,7 @@ export async function POST(req: NextRequest) {
     }, 0);
 
     const discountCents = Math.max(0, originalSubtotal - paidSubtotal);
-    const shippingCents = promo.shippingCents; // ✅ 500 when 1–2 items, 0 when 3+
+    const shippingCents = promo.shippingCents;
     const totalCents = paidSubtotal + shippingCents;
 
     /* -------- Shipping from cookie -------- */
@@ -222,10 +244,10 @@ export async function POST(req: NextRequest) {
         status: "pending",
         currency,
 
-        subtotal: originalSubtotal, // antes
+        subtotal: originalSubtotal,
         shipping: shippingCents,
         tax: 0,
-        total: totalCents, // a pagar
+        total: totalCents,
 
         shippingJson: shippingFromCookie as any,
         items: { create: orderItemsCreate },
@@ -236,14 +258,13 @@ export async function POST(req: NextRequest) {
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${APP}/cart`;
 
-    // ✅ line_items pagos + grátis (0€)
     const line_items = createdOrder.items.map((it) => {
       const img = toAbsoluteImage(it.image, APP);
       return {
         quantity: it.qty,
         price_data: {
           currency,
-          unit_amount: it.unitPrice, // 0 para FREE items
+          unit_amount: it.unitPrice,
           product_data: {
             name: it.name,
             ...(img ? { images: [img] } : {}),
@@ -252,7 +273,6 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    /* -------- METADATA (100% SAFE) -------- */
     const metadata: Record<string, string> = {
       orderId: createdOrder.id,
       promoName: String(promo.promoName ?? "NONE"),
@@ -264,7 +284,6 @@ export async function POST(req: NextRequest) {
       ...shippingToMetadata(shippingFromCookie),
     };
 
-    // ✅ Shipping no Stripe (5€ ou FREE)
     const shipping_options = [
       {
         shipping_rate_data: {
@@ -284,10 +303,7 @@ export async function POST(req: NextRequest) {
       metadata,
 
       ...(userId ? { client_reference_id: userId } : {}),
-
-      ...(shippingFromCookie?.email
-        ? { customer_email: shippingFromCookie.email.slice(0, 200) }
-        : {}),
+      ...(shippingFromCookie?.email ? { customer_email: shippingFromCookie.email.slice(0, 200) } : {}),
     });
 
     await prisma.order.update({
