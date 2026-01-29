@@ -31,6 +31,7 @@ function money(cents: number, currency: Currency = "EUR") {
   return (safe / 100).toLocaleString("en-US", { style: "currency", currency });
 }
 
+/* ---------- JSON helpers (same style as /admin/(panel)/orders) ---------- */
 function safeParseJSON(input: any): Record<string, any> {
   if (!input) return {};
   if (typeof input === "string") {
@@ -44,146 +45,169 @@ function safeParseJSON(input: any): Record<string, any> {
   return {};
 }
 
-function pickStr(o: any, keys: string[]): string | null {
-  if (!o || typeof o !== "object") return null;
-  for (const k of keys) {
-    const v = (o as any)?.[k];
-    if (v != null && String(v).trim() !== "") return String(v);
-  }
-  return null;
-}
-
-function pickDeepStr(...objs: any[]) {
-  return (keys: string[]) => {
-    for (const o of objs) {
-      const v = pickStr(o, keys);
-      if (v) return v;
+function getDeep(obj: any, paths: string[][]): string | undefined {
+  for (const p of paths) {
+    let cur: any = obj;
+    for (const k of p) {
+      if (cur && typeof cur === "object" && k in cur) cur = cur[k];
+      else {
+        cur = undefined;
+        break;
+      }
     }
-    return null;
-  };
+    if (cur != null) {
+      const s = String(cur).trim();
+      if (s !== "") return s;
+    }
+  }
+  return undefined;
 }
 
-/**
- * ✅ FIX REAL:
- * - teu shippingJson atual vem assim:
- *   { name,email,phone, address:{ line1, city, state, postal_code, country } }
- * - e às vezes pode vir também como:
- *   { ship_name, ship_email, ship_line1, ... } (metadata)
- */
+function candidates(keys: string[]) {
+  // root + nested variants
+  return [
+    keys,
+    ["shipping", ...keys],
+    ["address", ...keys],
+    ["delivery", ...keys],
+    ["customer", ...keys],
+    ["shippingAddress", ...keys],
+  ] as string[][];
+}
+
+function normalizeCountry(v?: string | null) {
+  const s = (v ?? "").trim();
+  return s || null;
+}
+
 function extractShipping(order: any) {
-  try {
-    // 1) Colunas canónicas (se existirem)
-    const canonical = {
-      fullName: order?.shippingFullName ?? null,
-      email: order?.shippingEmail ?? null,
+  // 1) Se tiver colunas canónicas, usa (muitos schemas têm isto)
+  const hasCanonical =
+    order?.shippingFullName ||
+    order?.shippingEmail ||
+    order?.shippingPhone ||
+    order?.shippingAddress1 ||
+    order?.shippingCity ||
+    order?.shippingPostalCode ||
+    order?.shippingCountry;
+
+  if (hasCanonical) {
+    return {
+      fullName: order?.shippingFullName ?? order?.user?.name ?? null,
+      email: order?.shippingEmail ?? order?.user?.email ?? null,
       phone: order?.shippingPhone ?? null,
       address1: order?.shippingAddress1 ?? null,
       address2: order?.shippingAddress2 ?? null,
       city: order?.shippingCity ?? null,
       region: order?.shippingRegion ?? null,
       postalCode: order?.shippingPostalCode ?? null,
-      country: order?.shippingCountry ?? null,
-    };
-
-    const canonicalHasAny =
-      canonical.fullName ||
-      canonical.email ||
-      canonical.phone ||
-      canonical.address1 ||
-      canonical.city ||
-      canonical.postalCode ||
-      canonical.country;
-
-    if (canonicalHasAny) return canonical;
-
-    // 2) shippingJson object/string
-    const j = safeParseJSON(order?.shippingJson);
-
-    // formatos possíveis dentro do JSON
-    const addr = safeParseJSON((j as any)?.address);
-    const ship = safeParseJSON((j as any)?.shipping);
-    const shipAddr = safeParseJSON((ship as any)?.address);
-
-    // pick root -> address -> shipping -> shipping.address
-    const g = pickDeepStr(j, addr, ship, shipAddr);
-
-    const fullName =
-      g(["fullName", "name", "recipient", "ship_name"]) ?? order?.user?.name ?? null;
-
-    const email =
-      g(["email", "ship_email", "customer_email", "customerEmail"]) ??
-      order?.user?.email ??
-      null;
-
-    const phone = g(["phone", "telephone", "ship_phone", "customerPhone"]) ?? null;
-
-    const address1 = g([
-      "address1",
-      "addressLine1",
-      "line1",
-      "ship_line1",
-      "street",
-    ]);
-
-    const address2 = g([
-      "address2",
-      "addressLine2",
-      "line2",
-      "ship_line2",
-      "street2",
-    ]);
-
-    const city = g(["city", "locality", "town", "ship_city"]);
-    const region = g(["region", "state", "province", "ship_state"]);
-
-    const postalCode = g([
-      "postalCode",
-      "postal_code",
-      "postcode",
-      "zip",
-      "zipCode",
-      "zipcode",
-      "codigoPostal",
-      "cep",
-      "pincode",
-      "eircode",
-      "ship_postal",
-    ]);
-
-    const country = g(["country", "countryCode", "shippingCountry", "ship_country"]);
-
-    return {
-      fullName,
-      email,
-      phone,
-      address1,
-      address2,
-      city,
-      region,
-      postalCode,
-      country,
-    };
-  } catch {
-    return {
-      fullName: order?.user?.name ?? null,
-      email: order?.user?.email ?? null,
-      phone: null,
-      address1: null,
-      address2: null,
-      city: null,
-      region: null,
-      postalCode: null,
-      country: null,
+      country: normalizeCountry(order?.shippingCountry ?? null),
     };
   }
+
+  // 2) shippingJson com busca profunda (igual à lista)
+  const j = safeParseJSON(order?.shippingJson);
+
+  const fullName =
+    getDeep(j, candidates(["fullName"])) ??
+    getDeep(j, candidates(["name"])) ??
+    getDeep(j, candidates(["recipient"])) ??
+    order?.user?.name ??
+    null;
+
+  const email =
+    getDeep(j, candidates(["email"])) ??
+    getDeep(j, candidates(["ship_email"])) ??
+    getDeep(j, candidates(["customer_email"])) ??
+    order?.user?.email ??
+    null;
+
+  const phone =
+    getDeep(j, candidates(["phone"])) ??
+    getDeep(j, candidates(["telephone"])) ??
+    getDeep(j, candidates(["ship_phone"])) ??
+    null;
+
+  const address1 =
+    getDeep(j, candidates(["address1"])) ??
+    getDeep(j, candidates(["addressLine1"])) ??
+    getDeep(j, candidates(["line1"])) ??
+    getDeep(j, candidates(["street"])) ??
+    getDeep(j, candidates(["ship_line1"])) ??
+    null;
+
+  const address2 =
+    getDeep(j, candidates(["address2"])) ??
+    getDeep(j, candidates(["addressLine2"])) ??
+    getDeep(j, candidates(["line2"])) ??
+    getDeep(j, candidates(["street2"])) ??
+    getDeep(j, candidates(["ship_line2"])) ??
+    null;
+
+  const city =
+    getDeep(j, candidates(["city"])) ??
+    getDeep(j, candidates(["locality"])) ??
+    getDeep(j, candidates(["town"])) ??
+    getDeep(j, candidates(["ship_city"])) ??
+    null;
+
+  const region =
+    getDeep(j, candidates(["region"])) ??
+    getDeep(j, candidates(["state"])) ??
+    getDeep(j, candidates(["province"])) ??
+    getDeep(j, candidates(["ship_state"])) ??
+    null;
+
+  const postalCode =
+    getDeep(j, candidates(["postalCode"])) ??
+    getDeep(j, candidates(["postal_code"])) ??
+    getDeep(j, candidates(["postcode"])) ??
+    getDeep(j, candidates(["zip"])) ??
+    getDeep(j, candidates(["zipCode"])) ??
+    getDeep(j, candidates(["zipcode"])) ??
+    getDeep(j, candidates(["codigoPostal"])) ??
+    getDeep(j, candidates(["cep"])) ??
+    getDeep(j, candidates(["pincode"])) ??
+    getDeep(j, candidates(["eircode"])) ??
+    getDeep(j, candidates(["ship_postal"])) ??
+    null;
+
+  const country =
+    normalizeCountry(
+      getDeep(j, candidates(["country"])) ??
+        getDeep(j, candidates(["countryCode"])) ??
+        getDeep(j, candidates(["shippingCountry"])) ??
+        getDeep(j, candidates(["ship_country"])) ??
+        null
+    ) ?? null;
+
+  return {
+    fullName,
+    email,
+    phone,
+    address1,
+    address2,
+    city,
+    region,
+    postalCode,
+    country,
+  };
 }
 
 function extractTracking(order: any) {
   const j = safeParseJSON(order?.shippingJson);
+
   const trackingCode =
-    pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
+    getDeep(j, candidates(["trackingCode"])) ??
+    getDeep(j, candidates(["tracking_code"])) ??
+    getDeep(j, candidates(["tracking"])) ??
+    null;
+
   const trackingUrl =
-    pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
+    getDeep(j, candidates(["trackingUrl"])) ??
+    getDeep(j, candidates(["tracking_url"])) ??
+    getDeep(j, candidates(["tracking_link"])) ??
+    null;
 
   const status = String(order?.status ?? "pending");
   const shippingStatus =
@@ -207,7 +231,16 @@ function fallbackId(idx: number, it: any) {
   return `${String(base)}-${idx}`;
 }
 
-/* ========================= Personalization extraction (FIXED) ========================= */
+/* ========================= Personalization extraction ========================= */
+function pickStr(o: any, keys: string[]): string | null {
+  if (!o || typeof o !== "object") return null;
+  for (const k of keys) {
+    const v = (o as any)?.[k];
+    if (v != null && String(v).trim() !== "") return String(v);
+  }
+  return null;
+}
+
 function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapPers =
     snap?.personalization && typeof snap.personalization === "object"
@@ -215,9 +248,7 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
       : null;
 
   const snapPersName =
-    snapPers
-      ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
-      : null;
+    snapPers ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"]) : null;
 
   const snapPersNumber =
     snapPers
@@ -228,15 +259,13 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapJName =
     pickStr(snapPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
   const snapJNumber =
-    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
-    null;
+    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
 
   const itPersJ = safeParseJSON(it?.personalizationJson);
   const itJName =
     pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
   const itJNumber =
-    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
-    null;
+    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ?? null;
 
   const directName =
     pickStr(it, [
@@ -263,33 +292,16 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
     null;
 
   const snapRootNumber =
-    pickStr(snap, [
-      "custNumber",
-      "customerNumber",
-      "numberOnShirt",
-      "shirtNumber",
-      "playerNumber",
-    ]) ?? null;
+    pickStr(snap, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ??
+    null;
 
   const optName =
-    pickStr(optionsObj, [
-      "custName",
-      "playerName",
-      "player_name",
-      "shirtName",
-      "shirt_name",
-      "nameOnShirt",
-    ]) ?? null;
+    pickStr(optionsObj, ["custName", "playerName", "player_name", "shirtName", "shirt_name", "nameOnShirt"]) ??
+    null;
 
   const optNumber =
-    pickStr(optionsObj, [
-      "custNumber",
-      "playerNumber",
-      "player_number",
-      "shirtNumber",
-      "shirt_number",
-      "numberOnShirt",
-    ]) ?? null;
+    pickStr(optionsObj, ["custNumber", "playerNumber", "player_number", "shirtNumber", "shirt_number", "numberOnShirt"]) ??
+    null;
 
   const name =
     (snapPersName ??
@@ -383,9 +395,7 @@ async function fetchOrder(id: string) {
       const image = it?.image ?? productImages[0] ?? "/placeholder.png";
 
       const unitPriceCents = Number(it?.unitPrice ?? 0);
-      const totalPriceCents = Number(
-        it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
-      );
+      const totalPriceCents = Number(it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1));
 
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsObj)) {
@@ -538,10 +548,9 @@ export default async function AdminOrderViewPage({
               )}
             </section>
 
-            {/* ✅ Customer copy block (new) */}
             <CustomerCopyCard shipping={order.shipping} />
 
-            {/* ✅ Fulfillment / Tracking */}
+            {/* Fulfillment / Tracking */}
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="font-semibold">Fulfillment / Tracking</div>
@@ -619,7 +628,11 @@ export default async function AdminOrderViewPage({
                     </div>
                     {order.tracking.trackingUrl ? (
                       <div className="break-all">
-                        <a href={order.tracking.trackingUrl} target="_blank" className="underline">
+                        <a
+                          href={order.tracking.trackingUrl}
+                          target="_blank"
+                          className="underline"
+                        >
                           {order.tracking.trackingUrl}
                         </a>
                       </div>
@@ -681,7 +694,9 @@ export default async function AdminOrderViewPage({
                 <div className="flex items-center gap-2 font-semibold">
                   <Package className="h-4 w-4" /> Items (Copy)
                 </div>
-                <div className="text-xs text-gray-500">Copy text / image individually</div>
+                <div className="text-xs text-gray-500">
+                  Copy text / image individually
+                </div>
               </div>
 
               {order.items.length === 0 ? (
@@ -710,8 +725,6 @@ function LabeledRow({
   label: string;
   value?: string | null;
 }) {
-  // ⚠️ IMPORTANTE: não ocultar quando for "—"
-  // (o teu UI chama com "—", então aqui tem de renderizar)
   return (
     <div className="flex items-baseline gap-2 text-sm">
       <span className="w-28 shrink-0 text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -733,9 +746,9 @@ function CustomerBlock({
 }) {
   return (
     <div className="space-y-1">
-      <LabeledRow label="Name" value={name ?? "—"} />
-      <LabeledRow label="Email" value={email ?? "—"} />
-      <LabeledRow label="Phone" value={phone ?? "—"} />
+      <LabeledRow label="Name" value={name} />
+      <LabeledRow label="Email" value={email} />
+      <LabeledRow label="Phone" value={phone} />
     </div>
   );
 }
@@ -752,11 +765,11 @@ function AddressBlock(props: {
 
   return (
     <div className="space-y-1">
-      <LabeledRow label="Address" value={props.address1 ?? "—"} />
+      <LabeledRow label="Address" value={props.address1} />
       {props.address2 ? <LabeledRow label="Address 2" value={props.address2} /> : null}
-      <LabeledRow label="City / Region" value={cityRegion || "—"} />
-      <LabeledRow label="Postal Code" value={props.postalCode ?? "—"} />
-      <LabeledRow label="Country" value={props.country ?? "—"} />
+      <LabeledRow label="City / Region" value={cityRegion || null} />
+      <LabeledRow label="Postal Code" value={props.postalCode} />
+      <LabeledRow label="Country" value={props.country} />
     </div>
   );
 }
