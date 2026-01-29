@@ -190,9 +190,7 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapPers =
     snap?.personalization && typeof snap.personalization === 'object' ? snap.personalization : null
 
-  const snapPersName = snapPers
-    ? pickStr(snapPers, ['name', 'playerName', 'customName', 'shirtName'])
-    : null
+  const snapPersName = snapPers ? pickStr(snapPers, ['name', 'playerName', 'customName', 'shirtName']) : null
 
   const snapPersNumber = snapPers
     ? pickStr(snapPers, ['number', 'playerNumber', 'customNumber', 'shirtNumber'])
@@ -229,12 +227,17 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapRootName =
     pickStr(snap, ['custName', 'customerName', 'nameOnShirt', 'shirtName', 'playerName']) ?? null
   const snapRootNumber =
-    pickStr(snap, ['custNumber', 'customerNumber', 'numberOnShirt', 'shirtNumber', 'playerNumber']) ??
-    null
+    pickStr(snap, ['custNumber', 'customerNumber', 'numberOnShirt', 'shirtNumber', 'playerNumber']) ?? null
 
   const optName =
-    pickStr(optionsObj, ['custName', 'playerName', 'player_name', 'shirtName', 'shirt_name', 'nameOnShirt']) ??
-    null
+    pickStr(optionsObj, [
+      'custName',
+      'playerName',
+      'player_name',
+      'shirtName',
+      'shirt_name',
+      'nameOnShirt',
+    ]) ?? null
 
   const optNumber =
     pickStr(optionsObj, [
@@ -250,8 +253,7 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
     (snapPersName ?? snapJName ?? itJName ?? directName ?? snapRootName ?? optName ?? null)?.trim() || null
 
   const numRaw =
-    (snapPersNumber ?? snapJNumber ?? itJNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() ||
-    ''
+    (snapPersNumber ?? snapJNumber ?? itJNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() || ''
 
   const onlyDigits = String(numRaw).replace(/\D/g, '')
   const number = onlyDigits ? onlyDigits : null
@@ -299,25 +301,13 @@ function normalizeBadges(rawBadges: any): string[] {
 function deriveItemDetails(it: OrderItemDTO) {
   const snap = safeParseJSON(it?.snapshotJson)
 
-  const optionsObj =
-    safeParseJSON(snap?.optionsJson) ||
-    safeParseJSON(snap?.options) ||
-    safeParseJSON(snap?.selected) ||
-    {}
+  const optionsObj = safeParseJSON(snap?.optionsJson) || safeParseJSON(snap?.options) || safeParseJSON(snap?.selected) || {}
 
   const personalization = extractPersonalization(it, snap, optionsObj)
 
-  const size =
-    (optionsObj as any).size ??
-    snap?.size ??
-    pickStr(snap, ['sizeLabel', 'variant', 'skuSize']) ??
-    null
+  const size = (optionsObj as any).size ?? snap?.size ?? pickStr(snap, ['sizeLabel', 'variant', 'skuSize']) ?? null
 
-  const rawBadges =
-    (optionsObj as any).badges ??
-    snap?.badges ??
-    (optionsObj as any)['competition_badge'] ??
-    null
+  const rawBadges = (optionsObj as any).badges ?? snap?.badges ?? (optionsObj as any)['competition_badge'] ?? null
 
   const badgesFromSnap = normalizeBadges(rawBadges)
   const badgesFromProduct = normalizeBadges(it?.product?.badges)
@@ -566,18 +556,21 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
-                          {/* ✅ badges with the SAME names as ProductConfigurator */}
+                          {/* ✅ badges with label */}
                           {details.badges.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {details.badges.map((b, idx) => (
-                                <span
-                                  key={`${b}-${idx}`}
-                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
-                                  title={b} // keep raw as tooltip
-                                >
-                                  {humanizeBadge(b)}
-                                </span>
-                              ))}
+                            <div className="mt-2">
+                              <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
+                              <div className="flex flex-wrap gap-2">
+                                {details.badges.map((b, idx) => (
+                                  <span
+                                    key={`${b}-${idx}`}
+                                    className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                    title={b} // keep raw as tooltip
+                                  >
+                                    {humanizeBadge(b)}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -619,18 +612,21 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           )}
 
-                          {/* ✅ badges with the SAME names as ProductConfigurator */}
+                          {/* ✅ badges with label */}
                           {details.badges.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {details.badges.map((b, idx) => (
-                                <span
-                                  key={`${b}-${idx}`}
-                                  className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
-                                  title={b}
-                                >
-                                  {humanizeBadge(b)}
-                                </span>
-                              ))}
+                            <div className="mt-2">
+                              <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
+                              <div className="flex flex-wrap gap-2">
+                                {details.badges.map((b, idx) => (
+                                  <span
+                                    key={`${b}-${idx}`}
+                                    className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                    title={b}
+                                  >
+                                    {humanizeBadge(b)}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -669,8 +665,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                 <h2 className="font-semibold">Meta</h2>
                 <div className="mt-2 text-sm text-gray-700 space-y-1">
                   <div>
-                    <span className="text-gray-500">ID:</span>{' '}
-                    <span className="font-mono break-all">{order.id}</span>
+                    <span className="text-gray-500">ID:</span> <span className="font-mono break-all">{order.id}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Created:</span> {new Date(order.createdAt).toLocaleString()}
