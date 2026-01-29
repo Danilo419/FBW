@@ -53,19 +53,29 @@ function pickStr(o: any, keys: string[]): string | null {
   return null;
 }
 
+function pickDeepStr(...objs: any[]) {
+  return (keys: string[]) => {
+    for (const o of objs) {
+      const v = pickStr(o, keys);
+      if (v) return v;
+    }
+    return null;
+  };
+}
+
 /**
- * ✅ FIX: suporta shippingJson no root e também nested:
- * {
- *   name, email, phone,
- *   address: { line1, city, state, postal_code, country }
- * }
+ * ✅ FIX REAL:
+ * - teu shippingJson atual vem assim:
+ *   { name,email,phone, address:{ line1, city, state, postal_code, country } }
+ * - e às vezes pode vir também como:
+ *   { ship_name, ship_email, ship_line1, ... } (metadata)
  */
 function extractShipping(order: any) {
   try {
-    // 1) Colunas "canónicas" (se existirem no teu schema)
+    // 1) Colunas canónicas (se existirem)
     const canonical = {
-      fullName: order?.shippingFullName ?? order?.user?.name ?? null,
-      email: order?.shippingEmail ?? order?.user?.email ?? null,
+      fullName: order?.shippingFullName ?? null,
+      email: order?.shippingEmail ?? null,
       phone: order?.shippingPhone ?? null,
       address1: order?.shippingAddress1 ?? null,
       address2: order?.shippingAddress2 ?? null,
@@ -75,57 +85,58 @@ function extractShipping(order: any) {
       country: order?.shippingCountry ?? null,
     };
 
-    if (
+    const canonicalHasAny =
       canonical.fullName ||
       canonical.email ||
       canonical.phone ||
       canonical.address1 ||
       canonical.city ||
       canonical.postalCode ||
-      canonical.country
-    ) {
-      return canonical;
-    }
+      canonical.country;
 
-    // 2) shippingJson (novo / atual)
+    if (canonicalHasAny) return canonical;
+
+    // 2) shippingJson object/string
     const j = safeParseJSON(order?.shippingJson);
-    const addr = safeParseJSON((j as any)?.address); // ✅ nested address
 
-    // helper: procura no root e depois no nested address
-    const g = (...alts: string[]) => pickStr(j, alts) ?? pickStr(addr, alts);
+    // formatos possíveis dentro do JSON
+    const addr = safeParseJSON((j as any)?.address);
+    const ship = safeParseJSON((j as any)?.shipping);
+    const shipAddr = safeParseJSON((ship as any)?.address);
+
+    // pick root -> address -> shipping -> shipping.address
+    const g = pickDeepStr(j, addr, ship, shipAddr);
 
     const fullName =
-      g("fullName", "name", "recipient") ?? order?.user?.name ?? null;
+      g(["fullName", "name", "recipient", "ship_name"]) ?? order?.user?.name ?? null;
 
     const email =
-      g("email", "ship_email", "customer_email", "customerEmail") ??
+      g(["email", "ship_email", "customer_email", "customerEmail"]) ??
       order?.user?.email ??
       null;
 
-    const phone =
-      g("phone", "telephone", "ship_phone", "customerPhone") ?? null;
+    const phone = g(["phone", "telephone", "ship_phone", "customerPhone"]) ?? null;
 
-    const address1 = g(
+    const address1 = g([
       "address1",
       "addressLine1",
       "line1",
+      "ship_line1",
       "street",
-      "ship_line1"
-    );
+    ]);
 
-    const address2 = g(
+    const address2 = g([
       "address2",
       "addressLine2",
       "line2",
+      "ship_line2",
       "street2",
-      "ship_line2"
-    );
+    ]);
 
-    const city = g("city", "locality", "town", "ship_city");
+    const city = g(["city", "locality", "town", "ship_city"]);
+    const region = g(["region", "state", "province", "ship_state"]);
 
-    const region = g("region", "state", "province", "ship_state");
-
-    const postalCode = g(
+    const postalCode = g([
       "postalCode",
       "postal_code",
       "postcode",
@@ -136,37 +147,21 @@ function extractShipping(order: any) {
       "cep",
       "pincode",
       "eircode",
-      "ship_postal"
-    );
+      "ship_postal",
+    ]);
 
-    const country = g("country", "countryCode", "shippingCountry", "ship_country");
+    const country = g(["country", "countryCode", "shippingCountry", "ship_country"]);
 
-    // Se ao menos um campo existir, devolve
-    if (fullName || email || phone || address1 || city || postalCode || country) {
-      return {
-        fullName,
-        email,
-        phone,
-        address1,
-        address2,
-        city,
-        region,
-        postalCode,
-        country,
-      };
-    }
-
-    // 3) fallback final (user)
     return {
-      fullName: order?.user?.name ?? null,
-      email: order?.user?.email ?? null,
-      phone: null,
-      address1: null,
-      address2: null,
-      city: null,
-      region: null,
-      postalCode: null,
-      country: null,
+      fullName,
+      email,
+      phone,
+      address1,
+      address2,
+      city,
+      region,
+      postalCode,
+      country,
     };
   } catch {
     return {
@@ -266,6 +261,7 @@ function extractPersonalization(it: any, snap: any, optionsObj: any) {
   const snapRootName =
     pickStr(snap, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ??
     null;
+
   const snapRootNumber =
     pickStr(snap, [
       "custNumber",
@@ -513,7 +509,11 @@ export default async function AdminOrderViewPage({
 
               <div className="mt-3 text-xs text-gray-500">Payment</div>
               <div className="text-sm">
-                {order.paidAt ? <span className="font-medium">Paid</span> : <span>Unpaid</span>}
+                {order.paidAt ? (
+                  <span className="font-medium">Paid</span>
+                ) : (
+                  <span>Unpaid</span>
+                )}
               </div>
 
               {order.stripePaymentIntentId && (
@@ -681,9 +681,7 @@ export default async function AdminOrderViewPage({
                 <div className="flex items-center gap-2 font-semibold">
                   <Package className="h-4 w-4" /> Items (Copy)
                 </div>
-                <div className="text-xs text-gray-500">
-                  Copy text / image individually
-                </div>
+                <div className="text-xs text-gray-500">Copy text / image individually</div>
               </div>
 
               {order.items.length === 0 ? (
@@ -712,13 +710,14 @@ function LabeledRow({
   label: string;
   value?: string | null;
 }) {
-  if (!value) return null;
+  // ⚠️ IMPORTANTE: não ocultar quando for "—"
+  // (o teu UI chama com "—", então aqui tem de renderizar)
   return (
     <div className="flex items-baseline gap-2 text-sm">
       <span className="w-28 shrink-0 text-xs font-semibold text-gray-600 uppercase tracking-wide">
         {label}
       </span>
-      <span className="break-all">{value}</span>
+      <span className="break-all">{value ?? "—"}</span>
     </div>
   );
 }
