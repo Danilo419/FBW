@@ -85,7 +85,7 @@ type OrderItemDTO = {
     id: string
     name: string
     slug?: string | null
-    imageUrls: string[]
+    imageUrls: any // ⬅️ keep flexible (string[] | string | json | etc.)
     badges: any
   }
 }
@@ -132,6 +132,51 @@ function safeParseJSON(input: any): Record<string, any> {
   }
   if (typeof input === 'object') return input as Record<string, any>
   return {}
+}
+
+/** ✅ normalize imageUrls that can arrive as string[] | string (JSON) | object (Prisma Json) */
+function normalizeImageUrls(raw: any): string[] {
+  if (!raw) return []
+
+  if (Array.isArray(raw)) {
+    return raw
+      .filter(Boolean)
+      .map((x) => String(x).trim())
+      .filter(Boolean)
+  }
+
+  if (typeof raw === 'string') {
+    const s = raw.trim()
+    if (!s) return []
+
+    // JSON-ish string
+    if (
+      (s.startsWith('[') && s.endsWith(']')) ||
+      (s.startsWith('{') && s.endsWith('}')) ||
+      (s.startsWith('"') && s.endsWith('"'))
+    ) {
+      try {
+        const parsed = JSON.parse(s)
+        return normalizeImageUrls(parsed)
+      } catch {
+        // fallback: treat as a single url
+        return [s]
+      }
+    }
+
+    // plain url
+    return [s]
+  }
+
+  if (typeof raw === 'object') {
+    // Prisma Json sometimes ends up as object with numeric keys or nested values
+    const vals = Object.values(raw)
+    const out: string[] = []
+    for (const v of vals) out.push(...normalizeImageUrls(v))
+    return out
+  }
+
+  return []
 }
 
 function pickStr(o: any, keys: string[]): string | null {
@@ -449,10 +494,11 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
 
                 <ul className="divide-y">
                   {order.items.map((it) => {
-                    const img = it.image || it.product?.imageUrls?.[0] || '/placeholder.png'
                     const title = it.name || it.product?.name || 'Item'
-
                     const details = deriveItemDetails(it)
+
+                    const imageUrls = normalizeImageUrls(it.product?.imageUrls)
+                    const img = it.image || imageUrls[0] || '/placeholder.png'
 
                     // ✅ match your real route: /products/[slug]
                     const productHref = it.product?.slug ? `/products/${it.product.slug}` : null
