@@ -77,7 +77,7 @@ async function getCheckoutBaseUrl(): Promise<string> {
 
 function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
   if (!url) return null;
-  const t = url.trim();
+  const t = String(url).trim();
   if (!t) return null;
   if (/^https?:\/\//i.test(t)) return t;
   if (t.startsWith("/")) return `${APP}${t}`;
@@ -102,6 +102,30 @@ function safeObj(v: any): Record<string, any> {
     }
   }
   return {};
+}
+
+/**
+ * Cookie "ship" pode vir:
+ * - base64(JSON)
+ * - JSON direto (em alguns browsers/setups)
+ */
+function parseShipCookie(raw: string): Shipping | null {
+  if (!raw) return null;
+
+  // 1) tenta base64(JSON)
+  try {
+    const txt = Buffer.from(raw, "base64").toString("utf8");
+    const j = JSON.parse(txt);
+    if (j && typeof j === "object") return j as Shipping;
+  } catch {}
+
+  // 2) tenta JSON direto
+  try {
+    const j = JSON.parse(raw);
+    if (j && typeof j === "object") return j as Shipping;
+  } catch {}
+
+  return null;
 }
 
 /**
@@ -155,7 +179,7 @@ function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
     postal_code: safeStr(addr.postal_code),
     country: safeStr(addr.country),
 
-    // keep original too (optional, helps debugging)
+    // keep original too (optional, helps debugging / future-proof)
     address: {
       line1: safeStr(addr.line1),
       line2: safeStr(addr.line2),
@@ -165,6 +189,32 @@ function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
       country: safeStr(addr.country),
     },
   };
+}
+
+/**
+ * ✅ Fallback: tenta ler shipping do BODY (caso passes do form no fetch)
+ * Isto evita depender 100% da cookie.
+ */
+function parseShippingFromBody(body: any): Shipping | null {
+  const b = body && typeof body === "object" ? body : {};
+  const s = b.shipping ?? b.ship ?? b.shippingFromCookie ?? null;
+  if (!s || typeof s !== "object") return null;
+
+  const addr = safeObj((s as any).address);
+  const out: Shipping = {
+    name: safeStr((s as any).name) ?? undefined,
+    phone: safeStr((s as any).phone) ?? undefined,
+    email: safeStr((s as any).email) ?? undefined,
+    address: {
+      line1: safeStr(addr.line1) ?? undefined,
+      line2: safeStr(addr.line2) ?? undefined,
+      city: safeStr(addr.city) ?? undefined,
+      state: safeStr(addr.state) ?? undefined,
+      postal_code: safeStr(addr.postal_code) ?? undefined,
+      country: safeStr(addr.country) ?? undefined,
+    },
+  };
+  return out;
 }
 
 /* ============================== ROUTE ============================== */
@@ -224,10 +274,7 @@ export async function POST(req: NextRequest) {
       totalPrice: (it as any).totalPrice ?? null,
     }));
 
-    const originalSubtotal = cartItems.reduce(
-      (acc, it) => acc + it.qty * it.unitPrice,
-      0
-    );
+    const originalSubtotal = cartItems.reduce((acc, it) => acc + it.qty * it.unitPrice, 0);
 
     // ✅ SINGLE SOURCE OF TRUTH: same as cart page
     const promo = applyPromotions(
@@ -251,19 +298,21 @@ export async function POST(req: NextRequest) {
     const shippingCents = promo.shippingCents;
     const totalCents = paidSubtotal + shippingCents;
 
-    /* -------- Shipping from cookie -------- */
-    let shippingFromCookie: Shipping | null = null;
-    const rawShip = jar.get("ship")?.value;
-    if (rawShip) {
-      try {
-        shippingFromCookie = JSON.parse(
-          Buffer.from(rawShip, "base64").toString("utf8")
-        );
-      } catch {}
+    /* -------- Shipping (cookie -> body fallback) -------- */
+    const rawShip = jar.get("ship")?.value ?? "";
+    let shippingFromCookie = rawShip ? parseShipCookie(rawShip) : null;
+
+    // fallback: se cookie não veio, tenta body.shipping (se o teu frontend enviar)
+    if (!shippingFromCookie) {
+      const fromBody = parseShippingFromBody(body);
+      if (fromBody) shippingFromCookie = fromBody;
     }
 
-    // ✅ Store a flattened JSON so admin can read it reliably
+    // ✅ Flatten para o admin ler sempre
     const shippingJsonFlat = shippingToFlatJson(shippingFromCookie);
+
+    // ✅ Log útil (Vercel) para diagnosticar rapidamente
+    console.log("[checkout/stripe] sid:", sid, "shipCookie:", Boolean(rawShip), "hasShipping:", Boolean(shippingFromCookie));
 
     /* -------- Create local order (PENDING) -------- */
     const orderItemsCreate = promo.lines.flatMap((line) => {
@@ -317,7 +366,7 @@ export async function POST(req: NextRequest) {
         tax: 0,
         total: totalCents,
 
-        // ✅ FIX: save flattened JSON (so admin extractor can find name/email/line1/city/postal_code/country)
+        // ✅ GUARANTE: admin consegue ler (root line1/city/postal_code/country)
         shippingJson: shippingJsonFlat as any,
 
         items: { create: orderItemsCreate },
@@ -391,9 +440,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);
-    return NextResponse.json(
-      { error: err?.message ?? "Stripe error" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
   }
 }
