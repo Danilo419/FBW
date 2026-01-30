@@ -1,4 +1,3 @@
-// src/components/admin/SupplierCopyCard.tsx
 "use client";
 
 import React from "react";
@@ -11,31 +10,54 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+/* ========================= types ========================= */
+
+type AnyObj = Record<string, any>;
+
 type Item = {
   id: string;
   name: string;
   slug: string | null;
   image?: string | null;
   qty: number;
-  unitPriceCents: number;
-  totalPriceCents: number;
+  unitPriceCents?: number;
+  totalPriceCents?: number;
+
+  // ✅ dados reais
+  snapshotJson?: unknown;
+  personalizationJson?: unknown;
+
+  // fallback (podem ou não existir)
   size?: string | null;
   options?: Record<string, string>;
   personalization?: { name?: string | null; number?: string | null } | null;
 };
 
-/* ================= utils ================= */
+/* ========================= utils ========================= */
+
+function safeParseJSON(input: unknown): AnyObj {
+  if (!input) return {};
+  if (typeof input === "object") return input as AnyObj;
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      if (parsed && typeof parsed === "object") return parsed as AnyObj;
+    } catch {}
+  }
+  return {};
+}
 
 function norm(v?: string | null) {
   const s = String(v ?? "").trim();
   return s.length ? s : null;
 }
 
-function pickFirst(obj: Record<string, string> | undefined, keys: string[]) {
-  if (!obj) return null;
+function pickStr(o: unknown, keys: string[]): string | null {
+  if (!o || typeof o !== "object") return null;
+  const obj = o as AnyObj;
   for (const k of keys) {
     const v = obj[k];
-    if (v && String(v).trim()) return String(v).trim();
+    if (v != null && String(v).trim()) return String(v).trim();
   }
   return null;
 }
@@ -44,45 +66,80 @@ function lc(s: string) {
   return s.trim().toLowerCase();
 }
 
+/* ========================= extraction ========================= */
+
+function extractFromSnapshot(item: Item) {
+  const snap = safeParseJSON(item.snapshotJson);
+
+  // -------- size --------
+  const size =
+    norm(
+      pickStr(snap, ["size", "sizeLabel", "variant", "skuSize"]) ??
+      item.size
+    ) ?? null;
+
+  // -------- badges --------
+  const badgesRaw =
+    pickStr(snap, ["badges", "competition_badge"]) ??
+    pickStr(item.options, ["badges"]) ??
+    null;
+
+  // -------- personalization --------
+  const persSnap =
+    typeof snap.personalization === "object" ? snap.personalization : {};
+
+  const persJson = safeParseJSON(item.personalizationJson);
+
+  const name =
+    norm(
+      pickStr(persSnap, ["name", "playerName", "customName", "shirtName"]) ??
+      pickStr(persJson, ["name", "playerName", "customName", "shirtName"]) ??
+      item.personalization?.name
+    ) ?? null;
+
+  const number =
+    norm(
+      pickStr(persSnap, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
+      pickStr(persJson, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
+      item.personalization?.number
+    ) ?? null;
+
+  return {
+    size,
+    badges: badgesRaw,
+    personalization: name || number ? { name, number } : null,
+  };
+}
+
+/* ========================= supplier text ========================= */
+
 function deriveVersion(item: Item) {
-  // Regra pedida
   if (lc(item.name).includes("player version")) return "player";
-
-  const opt = item.options ?? {};
-  const maybe =
-    pickFirst(opt, ["version", "kitVersion", "edition", "type", "variant"]) ??
-    pickFirst(opt, ["jerseyType", "shirtType", "model"]);
-
-  if (maybe) {
-    const m = lc(maybe);
-    if (m.includes("player")) return "player";
-    if (m.includes("fan")) return "fan";
-    return maybe;
-  }
-
   if (lc(item.name).includes("player")) return "player";
   if (lc(item.name).includes("fan")) return "fan";
-
   return "fan";
 }
 
 function buildSupplierText(item: Item) {
+  const extracted = extractFromSnapshot(item);
   const lines: string[] = [];
 
-  const name = norm(item.personalization?.name);
-  const number = norm(item.personalization?.number);
-  const badges = norm(item.options?.badges);
-  const size = norm(item.size);
+  if (extracted.personalization?.name)
+    lines.push(`Name : ${extracted.personalization.name}`);
 
-  if (name) lines.push(`Name : ${name}`);
-  if (number) lines.push(`Number : ${number}`);
-  if (badges) lines.push(`Badges : ${badges}`);
+  if (extracted.personalization?.number)
+    lines.push(`Number : ${extracted.personalization.number}`);
+
+  if (extracted.badges)
+    lines.push(`Badges : ${extracted.badges}`);
 
   lines.push(deriveVersion(item));
-  lines.push(`size : ${size ?? "—"}`);
+  lines.push(`size : ${extracted.size ?? "—"}`);
 
   return lines.join("\n");
 }
+
+/* ========================= helpers ========================= */
 
 function isRemoteUrl(u: string) {
   return /^https?:\/\//i.test(u);
@@ -102,13 +159,15 @@ function supportsImageClipboard() {
   );
 }
 
-/* ================= component ================= */
+/* ========================= component ========================= */
 
 export default function SupplierCopyCard({ item }: { item: Item }) {
   const [copiedText, setCopiedText] = React.useState(false);
   const [copiedImage, setCopiedImage] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [downloading, setDownloading] = React.useState(false);
+
+  const extracted = React.useMemo(() => extractFromSnapshot(item), [item]);
 
   const imageUrl = item.image || "/placeholder.png";
   const proxiedUrl = isRemoteUrl(imageUrl)
@@ -120,7 +179,7 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
   async function copyText() {
     setError(null);
     try {
-      await (navigator as any).clipboard.writeText(text);
+      await navigator.clipboard.writeText(text);
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 1200);
     } catch {
@@ -139,8 +198,8 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
     try {
       const blob = await fetchAsBlob(proxiedUrl);
       const type = blob.type || "image/png";
-      const item = new (window as any).ClipboardItem({ [type]: blob });
-      await (navigator as any).clipboard.write([item]);
+      const itemClip = new (window as any).ClipboardItem({ [type]: blob });
+      await (navigator as any).clipboard.write([itemClip]);
 
       setCopiedImage(true);
       setTimeout(() => setCopiedImage(false), 1200);
@@ -194,7 +253,7 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
             <div className="min-w-0">
               <div className="font-semibold truncate">{item.name}</div>
               <div className="text-xs text-gray-500">
-                Qty: {item.qty} • Size: {item.size || "—"}
+                Qty: {item.qty} • Size: {extracted.size ?? "—"}
               </div>
             </div>
 
