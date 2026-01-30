@@ -161,10 +161,10 @@ export default function Footer() {
 
             {/* Socials */}
             <div className="mt-4 flex items-center gap-3">
-              <Social href="https://instagram.com" label="Instagram">
+              <Social href="https://www.instagram.com/footballworld_store/" label="Instagram">
                 <Instagram className="h-4 w-4" />
               </Social>
-              <Social href="https://tiktok.com" label="TikTok">
+              <Social href="https://www.tiktok.com/@footballworld_store" label="TikTok">
                 <TikTokIcon className="h-4 w-4" />
               </Social>
             </div>
