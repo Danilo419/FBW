@@ -37,7 +37,9 @@ function safeParseJSON(input: any): Record<string, any> {
   if (!input) return {};
   if (typeof input === "string") {
     try {
-      return JSON.parse(input);
+      const parsed = JSON.parse(input);
+      if (parsed && typeof parsed === "object") return parsed as Record<string, any>;
+      return {};
     } catch {
       return {};
     }
@@ -224,6 +226,54 @@ function extractTracking(order: any) {
   return { trackingCode, shipmentImageUrl };
 }
 
+/* ------------------- image helpers (same idea as OrderDetailsClient) ------------------- */
+
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === "object" && !Array.isArray(x);
+}
+function normalizeUrl(u: string): string {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+function getCoverUrl(imageUrls: unknown): string {
+  try {
+    if (!imageUrls) return "/placeholder.png";
+
+    if (Array.isArray(imageUrls)) {
+      const first = String(imageUrls[0] ?? "").trim();
+      return normalizeUrl(first) || "/placeholder.png";
+    }
+
+    if (typeof imageUrls === "string") {
+      const s = imageUrls.trim();
+      if (!s) return "/placeholder.png";
+
+      if (s.startsWith("[") && s.endsWith("]")) {
+        const parsed: unknown = JSON.parse(s);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const first = String(parsed[0] ?? "").trim();
+          return normalizeUrl(first) || "/placeholder.png";
+        }
+      }
+
+      return normalizeUrl(s) || "/placeholder.png";
+    }
+
+    if (isRecord(imageUrls)) {
+      for (const v of Object.values(imageUrls)) {
+        const candidate = getCoverUrl(v);
+        if (candidate && candidate !== "/placeholder.png") return candidate;
+      }
+      return "/placeholder.png";
+    }
+
+    return "/placeholder.png";
+  } catch {
+    return "/placeholder.png";
+  }
+}
+
 function ensureArray<T>(v: any): T[] {
   return Array.isArray(v) ? v : [];
 }
@@ -243,8 +293,12 @@ async function fetchOrder(id: string) {
         user: { select: { name: true, email: true } },
         items: {
           orderBy: { id: "asc" },
+          // ✅ IMPORTANT: não uses select no item (assim vem snapshotJson/personalizationJson/etc)
           include: {
-            product: { select: { id: true, slug: true, imageUrls: true, name: true } },
+            // ✅ IMPORTANT: o client usa product.badges
+            product: {
+              select: { id: true, slug: true, imageUrls: true, name: true, badges: true },
+            },
           },
         },
       },
@@ -265,38 +319,39 @@ async function fetchOrder(id: string) {
 
     const itemsRaw = ensureArray<any>(order.items);
 
-    // ✅ IMPORTANT: manter fields originais (size/optionType/snapshotJson/etc)
+    // ✅ CRÍTICO: alinhar os nomes dos campos com o DTO do client:
+    // unitPrice, totalPrice, snapshotJson, personalizationJson, product.badges
     const items = itemsRaw.map((it, i) => {
-      const productImages = ensureArray<string>(it?.product?.imageUrls);
-      const image = it?.image ?? productImages[0] ?? "/placeholder.png";
+      const cover = getCoverUrl(it?.product?.imageUrls);
+      const image = normalizeUrl(String(it?.image ?? cover ?? "/placeholder.png")) || "/placeholder.png";
 
-      const unitPriceCents = Number(it?.unitPrice ?? 0);
-      const totalPriceCents = Number(
-        it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
-      );
+      const unitPrice = Number(it?.unitPrice ?? 0); // cents
+      const totalPrice =
+        typeof it?.totalPrice === "number" ? Number(it.totalPrice) : unitPrice * Number(it?.qty ?? 1);
 
       return {
-        // ids / base
-        id: fallbackId(i, it),
-        orderItemId: it?.id ?? null,
-
-        // display
+        // key & basics
+        id: String(it?.id ?? fallbackId(i, it)),
+        qty: Number(it?.qty ?? 1),
         name: String(it?.name ?? it?.product?.name ?? "Product"),
-        slug: it?.product?.slug ?? null,
         image,
 
-        // qty & pricing
-        qty: Number(it?.qty ?? 1),
-        unitPriceCents,
-        totalPriceCents,
+        // ✅ nomes esperados pelo teu código "que funciona"
+        unitPrice,
+        totalPrice,
 
-        // ✅ details (estes são os que normalmente alimentam o SupplierCopyCard)
-        size: it?.size ?? null,
-        optionType: it?.optionType ?? null,
+        // ✅ detalhes
         snapshotJson: it?.snapshotJson ?? null,
+        personalizationJson: it?.personalizationJson ?? null,
 
-        // manter também caso o SupplierCopyCard use
-        product: it?.product ?? null,
+        // ✅ product com badges (importantíssimo)
+        product: {
+          id: String(it?.product?.id ?? ""),
+          name: String(it?.product?.name ?? it?.name ?? "Product"),
+          slug: it?.product?.slug ?? null,
+          imageUrls: it?.product?.imageUrls ?? null,
+          badges: it?.product?.badges ?? null,
+        },
       };
     });
 
@@ -525,8 +580,8 @@ export default async function AdminOrderViewPage({
                 <div className="text-sm text-gray-500">No items.</div>
               ) : (
                 <div className="space-y-3">
-                  {order.items.map((it) => (
-                    <SupplierCopyCard key={it.id} item={it as any} />
+                  {order.items.map((it: any) => (
+                    <SupplierCopyCard key={it.id} item={it} />
                   ))}
                 </div>
               )}
