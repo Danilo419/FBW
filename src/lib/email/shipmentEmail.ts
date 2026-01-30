@@ -38,8 +38,10 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
   const imgBlock = p.shipmentImageUrl
     ? `
       <tr>
-        <td style="padding:0 24px 24px 24px;">
-          <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">Shipment image</div>
+        <td style="padding:0 24px 24px 24px;background:#ffffff;">
+          <div style="font-size:12px;color:#6b7280;margin-bottom:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+            Shipment image
+          </div>
           <a href="${escapeHtml(p.shipmentImageUrl)}" target="_blank" style="text-decoration:none;">
             <img
               src="${escapeHtml(p.shipmentImageUrl)}"
@@ -71,58 +73,6 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
       <td align="center" style="padding:32px 16px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:760px;">
 
-          <!-- HEADER (LOGO + BRAND) -->
-          <tr>
-            <td style="padding:10px 0 18px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-
-                  <!-- LOGO -->
-                  <td
-                    width="180"
-                    valign="middle"
-                    style="width:180px;min-width:180px;padding-right:16px;"
-                  >
-                    <img
-                      src="${LOGO_URL}"
-                      alt="${brand}"
-                      width="140"
-                      style="display:block;max-width:100%;height:auto;"
-                    />
-                  </td>
-
-                  <!-- BRAND TEXT -->
-                  <td valign="middle">
-                    <div
-                      style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                             font-weight:900;font-size:22px;color:#0b0b0f;line-height:1.1;">
-                      ${brand}
-                    </div>
-                    <div
-                      style="margin-top:4px;
-                             font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                             font-size:13px;color:rgba(0,0,0,.55);">
-                      Shipping Update
-                    </div>
-                  </td>
-
-                  <!-- RIGHT (LINK) -->
-                  <td
-                    align="right"
-                    valign="middle"
-                    style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                           font-size:13px;color:rgba(0,0,0,.55);white-space:nowrap;"
-                  >
-                    <a href="${siteUrl}" style="color:#0b0b0f;text-decoration:none;font-weight:800;">
-                      View store
-                    </a>
-                  </td>
-
-                </tr>
-              </table>
-            </td>
-          </tr>
-
           <!-- CARD -->
           <tr>
             <td>
@@ -130,17 +80,32 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
                 style="background:#0b0b0f;border-radius:22px;overflow:hidden;
                        box-shadow:0 18px 50px rgba(0,0,0,.12);">
 
-                <!-- TOP DARK HERO -->
+                <!-- HERO (BLACK) -->
                 <tr>
-                  <td style="padding:26px 24px;color:#fff;">
+                  <td style="padding:22px 24px 24px 24px;color:#fff;">
+                    <!-- LOGO INSIDE HERO -->
+                    <div style="padding-bottom:14px;">
+                      <img
+                        src="${LOGO_URL}"
+                        alt="${brand}"
+                        width="140"
+                        style="display:block;max-width:100%;height:auto;"
+                      />
+                    </div>
+
                     <div style="font-size:24px;line-height:1.2;font-weight:900;
                                 font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Your order is on the way 🚚
                     </div>
+
                     <div style="margin-top:10px;font-size:14px;line-height:1.7;opacity:.90;
                                 font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
-                      Hi, your order <strong>${orderShort}</strong> has been shipped and should arrive soon.
+                      Hi, your order <strong style="color:#fff;">${orderShort}</strong> has been shipped and should arrive soon.
                     </div>
+
+                    <!-- subtle divider glow -->
+                    <div style="margin-top:18px;height:2px;border-radius:999px;
+                                background:linear-gradient(90deg,rgba(43,155,255,.85),rgba(127,203,73,.85));"></div>
                   </td>
                 </tr>
 
