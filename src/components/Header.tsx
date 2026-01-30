@@ -64,7 +64,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
     };
   }, [mobileOpen, userOpen, showSearchMobile]);
 
-  // Dropdown user (DESKTOP + MOBILE refs)
+  // User dropdown (DESKTOP + MOBILE refs)
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const userBtnRef = useRef<HTMLButtonElement | null>(null);
   const userMenuMobileRef = useRef<HTMLDivElement | null>(null);
@@ -93,7 +93,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       }
     };
 
-    // pointerdown é melhor para touch do que mousedown
+    // pointerdown is better for touch than mousedown
     document.addEventListener("pointerdown", onDocPointerDown);
     document.addEventListener("keydown", onEsc);
     return () => {
@@ -103,7 +103,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   }, [userOpen]);
 
   /* ==========================================================
-     Mantém a sessão fresca para refletir a nova imagem
+     Keep the session fresh to reflect a new profile image
   ========================================================== */
   useEffect(() => {
     if (!update) return;
@@ -143,9 +143,9 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   return (
     <>
       {/* IMPORTANT FIX:
-          O MobileDrawer usa position:fixed. Se ele ficar DENTRO de um elemento com transform,
-          o fixed passa a ficar “preso” ao header (fica minúsculo e inutilizável no mobile).
-          Por isso o drawer está FORA do <header>, como “irmão”.
+          MobileDrawer uses position:fixed. If it lives INSIDE an element with transform,
+          fixed becomes “bound” to the header (it becomes tiny and unusable on mobile).
+          So the drawer is OUTSIDE the <header>, as a sibling.
       */}
       <header
         className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/80 backdrop-blur transition-transform duration-300 ${
@@ -389,7 +389,10 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         {/* Search row (mobile) */}
         {showSearchMobile && (
           <div className="md:hidden container-fw pb-3">
-            <SearchBar className="w-full" onSubmitted={() => setShowSearchMobile(false)} />
+            <SearchBar
+              className="w-full"
+              onSubmitted={() => setShowSearchMobile(false)}
+            />
           </div>
         )}
 
@@ -446,10 +449,14 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         )}
       </header>
 
-      {/* MOBILE DRAWER (FORA DO HEADER) */}
+      {/* MOBILE DRAWER (OUTSIDE HEADER) */}
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)}>
         <div className="px-4 pt-3 pb-6 border-b">
-          <Link href="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
+          <Link
+            href="/"
+            className="flex items-center gap-3"
+            onClick={() => setMobileOpen(false)}
+          >
             <Image
               src="/logo.png"
               alt="FootballWorld"
@@ -596,7 +603,9 @@ function SearchBar({
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
-        const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
+        const arr: ProductSearchItem[] = Array.isArray(data?.items)
+          ? data.items
+          : [];
 
         const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
         const narrowed = arr.filter((it) => {
@@ -610,7 +619,7 @@ function SearchBar({
       })
       .catch((err) => {
         if ((err as any).name === "AbortError") return;
-        setError("Falha a carregar resultados");
+        setError("Failed to load results");
         setItems([]);
         setOpen(true);
       })
@@ -720,11 +729,15 @@ function SearchBar({
           aria-label="Search suggestions"
           className="absolute z-50 mt-2 w-[min(30rem,92vw)] rounded-2xl border bg-white/95 backdrop-blur shadow-2xl ring-1 ring-black/5 overflow-hidden"
         >
-          {loading && <div className="p-4 text-sm text-gray-500">A procurar…</div>}
-          {!loading && error && <div className="p-4 text-sm text-red-600">{error}</div>}
+          {loading && (
+            <div className="p-4 text-sm text-gray-500">Searching…</div>
+          )}
+          {!loading && error && (
+            <div className="p-4 text-sm text-red-600">{error}</div>
+          )}
           {!loading && !error && term.trim().length >= 2 && items.length === 0 && (
             <div className="p-4 text-sm text-gray-600">
-              Sem resultados para “<span className="font-semibold">{term}</span>”.
+              No results for “<span className="font-semibold">{term}</span>”.
             </div>
           )}
           {!loading && !error && items.length > 0 && (
@@ -759,10 +772,16 @@ function SearchBar({
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="truncate text-sm font-medium">{it.name}</div>
-                      <div className="truncate text-xs text-gray-500">{it.clubName || "Product"}</div>
+                      <div className="truncate text-sm font-medium">
+                        {it.name}
+                      </div>
+                      <div className="truncate text-xs text-gray-500">
+                        {it.clubName || "Product"}
+                      </div>
                     </div>
-                    <div className="shrink-0 text-sm font-semibold">{formatPrice(it.price)}</div>
+                    <div className="shrink-0 text-sm font-semibold">
+                      {formatPrice(it.price)}
+                    </div>
                   </button>
                 </li>
               ))}
@@ -776,7 +795,7 @@ function SearchBar({
                   }}
                   className="flex items-center justify-center gap-2 p-2.5 text-sm font-medium hover:bg-gray-50"
                 >
-                  Ver todos os resultados para “{term.trim()}”
+                  View all results for “{term.trim()}”
                 </Link>
               </li>
             </ul>
@@ -789,7 +808,10 @@ function SearchBar({
 
 function formatPrice(price: number) {
   try {
-    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(price);
+    return new Intl.NumberFormat("pt-PT", {
+      style: "currency",
+      currency: "EUR",
+    }).format(price);
   } catch {
     return `${price}€`;
   }
@@ -842,7 +864,15 @@ function MenuButton({
   );
 }
 
-function Avatar({ src, name, size = 40 }: { src?: string; name?: string; size?: number }) {
+function Avatar({
+  src,
+  name,
+  size = 40,
+}: {
+  src?: string;
+  name?: string;
+  size?: number;
+}) {
   const initials = (name || "U")
     .split(" ")
     .map((p) => p[0])
@@ -886,7 +916,11 @@ function MobileLink({
   onClick?: () => void;
 }) {
   return (
-    <Link href={href} onClick={onClick} className="block rounded-xl px-3 py-3 hover:bg-gray-50">
+    <Link
+      href={href}
+      onClick={onClick}
+      className="block rounded-xl px-3 py-3 hover:bg-gray-50"
+    >
       {children}
     </Link>
   );
@@ -902,7 +936,7 @@ function MobileDrawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  // Opcional: trava o scroll do body quando o menu está aberto
+  // Optional: lock body scroll when the menu is open
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!open) return;
@@ -939,7 +973,7 @@ function MobileDrawer({
           </button>
         </div>
 
-        {/* Scroll real do menu */}
+        {/* Actual scroll area of the drawer */}
         <div className="overflow-y-auto">{children}</div>
       </aside>
     </>

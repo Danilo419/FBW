@@ -8,7 +8,7 @@ type UIProduct = {
   name: string;
   slug?: string;
   img?: string;
-  price?: number; // EUR (ex.: 34.99)
+  price?: number; // EUR (e.g.: 34.99)
   team?: string | null;
 };
 
@@ -63,12 +63,12 @@ function normalizeStr(s?: string | null) {
     .replace(/\s{2,}/g, " ")
     .trim()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, ""); // remove acentos
+    .replace(/[\u0300-\u036f]/g, ""); // remove accents
 }
 
 /**
- * Patterns só para os MAIS IMPORTANTES / QUE DÃO ERRO COM FREQUÊNCIA.
- * (o fallback garante sempre um label mesmo sem bater em patterns)
+ * Patterns only for the MOST IMPORTANT / THOSE THAT FREQUENTLY CAUSE ERRORS.
+ * (fallback always guarantees a label even if it doesn't match patterns)
  */
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\batletico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
@@ -97,7 +97,7 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   // ✅ Vitória SC -> Vitória de Guimarães
   [/\bvitoria\s*(sc)?\b/i, "Vitória de Guimarães"],
 
-  // seleções (algumas comuns)
+  // National teams (some common ones)
   [/\bportugal\b/i, "Portugal"],
   [/\bspain\b|\bespana\b/i, "Spain"],
   [/\bfrance\b/i, "France"],
@@ -118,7 +118,7 @@ function clubFromString(input?: string | null): string | null {
 }
 
 /**
- * Palavras que não fazem parte do “nome do clube” e aparecem depois do nome.
+ * Words that are not part of the “club name” and often appear after the name.
  */
 const CUT_WORDS_RE =
   /\b(Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Jersey|Kit|Kids|Kid|Women|Woman|Man|Men|Player|Version|Authentic|Fan|Retro|Vintage|Classic|Long|Sleeve|Short|Sleeve|Training|Pre-Match|Prematch|Warm-Up|Warmup|Tracksuit|Track\s*Suit|Tracksuits|Suit|Set|Pants|Trousers|Shorts|Jacket|Hoodie|Zip|Top|Edition|Special|Limited|Concept|World|Cup|UCL|Champions|League|Europa|Conference)\b/i;
@@ -227,7 +227,7 @@ function inferFromNameGuaranteed(p: UIProduct): string {
   return tokens.slice(0, 2).join(" ") || "Unknown";
 }
 
-/** ✅ final: nunca retorna "Club" */
+/** ✅ final: never returns "Club" */
 function getSafeClubLabel(p: UIProduct): string {
   const byTeam = clubFromString(p.team);
   if (byTeam) return byTeam;
@@ -241,7 +241,7 @@ function getSafeClubLabel(p: UIProduct): string {
   return "Unknown";
 }
 
-/* ============================ Paginação com "..." ============================ */
+/* ============================ Pagination with "..." ============================ */
 
 function buildPaginationRange(
   current: number,
@@ -268,7 +268,7 @@ function buildPaginationRange(
   return pages;
 }
 
-/* ============================ Componente ============================ */
+/* ============================ Component ============================ */
 
 export default function ResultsClient({
   initialQuery = "",
@@ -366,12 +366,10 @@ export default function ResultsClient({
 
   return (
     <>
-      {/* ✅ Grid com 2 por linha no mobile */}
+      {/* ✅ Grid with 2 per row on mobile */}
       <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
         {pageItems.length === 0 && (
-          <p className="text-gray-500 col-span-full">
-            Nenhum produto encontrado.
-          </p>
+          <p className="text-gray-500 col-span-full">No products found.</p>
         )}
 
         {pageItems.map((p) => {
@@ -479,7 +477,7 @@ export default function ResultsClient({
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
             className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-            aria-label="Página anterior"
+            aria-label="Previous page"
           >
             «
           </button>
@@ -522,7 +520,7 @@ export default function ResultsClient({
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-            aria-label="Próxima página"
+            aria-label="Next page"
           >
             »
           </button>
