@@ -32,7 +32,7 @@ export default function ShippingPage() {
         </h1>
         <p className="mt-3 text-gray-600 max-w-3xl">
           We ship worldwide with tracked delivery. There is a single delivery window:
-          <b> 7–9 business days after dispatch</b>. Below you’ll find handling times and how to
+          <b> 7–20 business days after dispatch</b>. Below you’ll find handling times and how to
           track your order once it’s on the way.
         </p>
       </header>
@@ -51,7 +51,7 @@ export default function ShippingPage() {
           </p>
           <DetailRow
             icon={<Timer className="h-4 w-4" />}
-            text="Typical transit: 7–9 business days"
+            text="Typical transit: 7–20 business days"
           />
           <DetailRow icon={<Globe2 className="h-4 w-4" />} text="Available worldwide" />
           <DetailRow icon={<BadgePercent className="h-4 w-4" />} text="Price shown at checkout" />
@@ -69,7 +69,7 @@ export default function ShippingPage() {
           </div>
           <ul className="mt-3 space-y-2 text-sm text-gray-700">
             <li>
-              • Our kits are made to order. Production time is typically <b>2–5 business days</b>.
+              • Our kits are made to order. Production time is typically <b>2–6 business days</b>.
             </li>
             <li>• Orders placed on weekends/holidays are processed the next business day.</li>
             <li>• You’ll receive an email with your tracking number immediately after dispatch.</li>
@@ -147,7 +147,7 @@ export default function ShippingPage() {
           <ul className="mt-3 space-y-2 text-sm text-gray-700">
             <li>• Weather, customs inspections and peak seasons can extend delivery times.</li>
             <li>
-              • If your tracking hasn’t updated for 10+ business days, please reach out — we’ll
+              • If your tracking hasn’t updated for 15+ business days, please reach out — we’ll
               investigate with the carrier.
             </li>
             <li>

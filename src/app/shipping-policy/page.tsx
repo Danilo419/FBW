@@ -106,15 +106,15 @@ export default function ShippingPolicyPage() {
           <Section id="processing" title="Processing Times">
             <List
               items={[
-                "Standard production: 3–7 business days for most items.",
-                "Personalized/custom products: usually 5–10 business days.",
+                "Standard production: 2–5 business days for most items.",
+                "Personalized/custom products: usually 3–6 business days.",
                 "Orders placed on weekends or holidays begin processing next business day.",
               ]}
             />
             <StatsRow
               stats={[
-                { label: "Standard production", value: "3–7 days" },
-                { label: "Personalized items", value: "5–10 days" },
+                { label: "Standard production", value: "2–5 days" },
+                { label: "Personalized items", value: "3–6 days" },
                 { label: "Cut-off", value: "Mon–Fri" },
               ]}
             />
@@ -321,7 +321,7 @@ export default function ShippingPolicyPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-              <StatMini label="Production" value="3–7 days" />
+              <StatMini label="Production" value="2–6 days" />
               <StatMini label="Worldwide" value="Yes" />
             </div>
           </div>

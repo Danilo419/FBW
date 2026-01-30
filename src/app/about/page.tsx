@@ -227,7 +227,7 @@ export default async function AboutPage() {
         <ol className="mt-4 grid gap-4 md:grid-cols-2">
           <Step
             icon={<Trophy className="h-5 w-5 text-blue-700" />}
-            title="September 2025 Kick-Off"
+            title="January 2026 Kick-Off"
             desc="FootBallWorld officially launches, offering football fans the best of both worlds: official football shirts and exclusive concept kits designed by us."
           />
           <Step

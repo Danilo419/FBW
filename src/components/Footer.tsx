@@ -155,7 +155,7 @@ export default function Footer() {
               <span className="sr-only">FootballWorld</span>
             </Link>
             <p className="mt-3 text-sm text-gray-600 max-w-xs">
-              Concept football kits with a focus on design and quality.
+              Authentic & Concept football kits with a focus on design and quality.
               Built-to-order, global tracked shipping and secure payments.
             </p>
 

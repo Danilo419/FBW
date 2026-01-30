@@ -36,6 +36,12 @@ const SUBJECT_MAX = 120;
 const MESSAGE_MAX = 1200;
 const TEXTAREA_MAX_H = 520;
 
+const SUPPORT_EMAIL = "myfootballworldstore@gmail.com";
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export default function ContactClient() {
   const searchParams = useSearchParams();
 
@@ -98,9 +104,27 @@ export default function ContactClient() {
     Math.round((form.message.length / MESSAGE_MAX) * 100)
   );
 
+  const canSubmit =
+    !pending &&
+    form.name.trim().length >= 2 &&
+    isValidEmail(form.email) &&
+    form.subject.trim().length > 0 &&
+    form.message.trim().length >= 5;
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (pending) return;
+
+    // validação básica no cliente (sem UX chata)
+    const name = form.name.trim();
+    const email = form.email.trim();
+    const subject = form.subject.trim();
+    const message = form.message.trim();
+
+    if (name.length < 2 || !isValidEmail(email) || !subject || message.length < 5) {
+      setStatus("err");
+      return;
+    }
 
     setPending(true);
     setStatus(null);
@@ -109,25 +133,42 @@ export default function ContactClient() {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          name,
+          email,
+          subject: subject.slice(0, SUBJECT_MAX),
+          message: message.slice(0, MESSAGE_MAX),
+        }),
       });
 
-      if (!res.ok) throw new Error("No endpoint");
+      if (!res.ok) {
+        // tenta ler erro para debug (sem estragar UX)
+        try {
+          const data = await res.json();
+          console.error("[contact] error:", data);
+        } catch {}
+        throw new Error("CONTACT_ENDPOINT_FAILED");
+      }
 
       setStatus("ok");
       setForm({ name: "", email: "", subject: "", message: "", order: "" });
-    } catch {
-      openMailApp();
-      setStatus("ok");
+    } catch (err) {
+      console.error(err);
+      // ✅ agora não fingimos sucesso
+      setStatus("err");
     } finally {
       setPending(false);
     }
   }
 
   function openMailApp() {
-    const to = "myfootballworldstore@gmail.com";
+    const to = SUPPORT_EMAIL;
     const subject = encodeURIComponent(
-      form.subject || `Support request from ${form.name || "customer"}`
+      (form.subject || `Support request from ${form.name || "customer"}`).slice(
+        0,
+        SUBJECT_MAX
+      )
     );
     const body = encodeURIComponent(
       [
@@ -139,6 +180,7 @@ export default function ContactClient() {
       ]
         .filter(Boolean)
         .join("\n")
+        .slice(0, 6000)
     );
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   }
@@ -149,7 +191,7 @@ export default function ContactClient() {
 
   async function copyEmail() {
     try {
-      await navigator.clipboard.writeText("myfootballworldstore@gmail.com");
+      await navigator.clipboard.writeText(SUPPORT_EMAIL);
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch {}
@@ -255,11 +297,7 @@ export default function ContactClient() {
                   name="email"
                   autoComplete="email"
                   required
-                  hint={
-                    <span className="text-[11px] text-gray-500">
-                      We never share it
-                    </span>
-                  }
+                  hint={<span className="text-[11px] text-gray-500">We never share it</span>}
                 />
               </div>
 
@@ -315,9 +353,7 @@ export default function ContactClient() {
                   placeholder="Write your message here…"
                   value={form.message}
                   maxLength={MESSAGE_MAX}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, message: e.target.value }))
-                  }
+                  onChange={(e) => setForm((s) => ({ ...s, message: e.target.value }))}
                   name="message"
                   required
                 />
@@ -335,7 +371,7 @@ export default function ContactClient() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   type="submit"
-                  disabled={pending}
+                  disabled={!canSubmit}
                   aria-busy={pending}
                   className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3.5 text-[15px] font-medium text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
                 >
@@ -456,7 +492,7 @@ export default function ContactClient() {
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <code className="rounded-xl border bg-white px-3 py-2 text-sm">
-                  myfootballworldstore@gmail.com
+                  {SUPPORT_EMAIL}
                 </code>
                 <button
                   type="button"
@@ -485,12 +521,8 @@ export default function ContactClient() {
                       <ShieldCheck className="h-5 w-5" />
                     </span>
                     <div>
-                      <div className="font-medium leading-tight">
-                        Privacy Policy
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        How we protect your data
-                      </p>
+                      <div className="font-medium leading-tight">Privacy Policy</div>
+                      <p className="text-xs text-gray-500">How we protect your data</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5" />
@@ -506,9 +538,7 @@ export default function ContactClient() {
                     </span>
                     <div>
                       <div className="font-medium leading-tight">Size Guide</div>
-                      <p className="text-xs text-gray-500">
-                        Find your perfect fit
-                      </p>
+                      <p className="text-xs text-gray-500">Find your perfect fit</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5" />
@@ -600,9 +630,7 @@ function Step({
           </span>
         </span>
         <div>
-          <div className="mb-0.5 text-sm font-semibold leading-tight">
-            {title}
-          </div>
+          <div className="mb-0.5 text-sm font-semibold leading-tight">{title}</div>
           <p className="leading-relaxed text-gray-600">{text}</p>
         </div>
       </div>
