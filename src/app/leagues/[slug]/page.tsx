@@ -5,9 +5,41 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { LEAGUES_CONFIG } from "@/lib/leaguesConfig";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { clubImg, slugFromTeamName, leagueClubs, type LeagueKey } from "@/lib/shop-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+// tenta mapear o slug da league (url) para um LeagueKey do shop-data
+function toLeagueKeyFromSlug(slug: string): LeagueKey | null {
+  const s = (slug || "").trim().toLowerCase();
+
+  // tenta match direto
+  if ((leagueClubs as any)[s]) return s as LeagueKey;
+
+  // aliases comuns (ajusta se o teu projeto tiver outros)
+  const ALIASES: Record<string, LeagueKey> = {
+    "primeira-liga": "primeira-liga" as LeagueKey,
+    "liga-portugal": "primeira-liga" as LeagueKey,
+    "liga-nos": "primeira-liga" as LeagueKey,
+    "portuguese-primeira-liga": "primeira-liga" as LeagueKey,
+  };
+
+  return ALIASES[s] ?? null;
+}
+
+// usa SEMPRE o slugFromTeamName + clubImg quando possível
+function resolveClubImage(leagueSlug: string, clubName: string, clubSlug?: string) {
+  const leagueKey = toLeagueKeyFromSlug(leagueSlug);
+  const normalizedSlug = slugFromTeamName(clubName || clubSlug || "");
+
+  if (leagueKey) {
+    return clubImg(leagueKey, normalizedSlug);
+  }
+
+  // fallback: tenta como tu fazias (mas com slug normalizado)
+  return `/assets/clubs/${leagueSlug}/${normalizedSlug}.png`;
+}
 
 // usamos any para evitar conflitos com o tipo gerado pelo Next 15
 export default async function LeagueDetailPage({ params }: any) {
@@ -44,7 +76,7 @@ export default async function LeagueDetailPage({ params }: any) {
           </Link>
         </div>
 
-        {/* Header (mesmo vibe/estrutura do ClubsPage) */}
+        {/* Header */}
         <div className="mb-6 md:mb-8 flex flex-col gap-4 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="relative h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm bg-white">
@@ -67,9 +99,7 @@ export default async function LeagueDetailPage({ params }: any) {
               </h1>
               <p className="mt-1 text-xs sm:text-sm text-slate-600 max-w-xl">
                 Select a club below to explore all{" "}
-                <span className="font-semibold text-emerald-600">
-                  FootballWorld
-                </span>{" "}
+                <span className="font-semibold text-emerald-600">FootballWorld</span>{" "}
                 products available for that team.
               </p>
             </div>
@@ -83,10 +113,10 @@ export default async function LeagueDetailPage({ params }: any) {
           </div>
         </div>
 
-        {/* Grid de cartões — igual ao visual do ClubsPage */}
+        {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
           {clubsToShow.map((club) => {
-            const clubImageSrc = `/assets/clubs/${league.slug}/${club.slug}.png`;
+            const clubImageSrc = resolveClubImage(league.slug, club.name, club.slug);
 
             return (
               <Link
@@ -103,8 +133,9 @@ export default async function LeagueDetailPage({ params }: any) {
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 20vw, 16vw"
                   />
 
+                  {/* fallback visual se a imagem falhar/for lenta */}
+                  <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="pointer-events-none absolute inset-0 ring-0 group-hover:ring-2 group-hover:ring-emerald-500/40 transition" />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition">
                     <div className="flex items-center justify-between text-white text-[11px] sm:text-xs md:text-sm">
