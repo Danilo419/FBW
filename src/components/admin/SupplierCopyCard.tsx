@@ -26,7 +26,6 @@ type Item = {
   snapshotJson?: unknown;
   personalizationJson?: unknown;
 
-  // fallback (podem ou não existir)
   size?: string | null;
   options?: Record<string, string>;
   personalization?: { name?: string | null; number?: string | null } | null;
@@ -38,10 +37,8 @@ function safeParseJSON(input: unknown): AnyObj {
   if (!input) return {};
   if (typeof input === "object") return input as AnyObj;
   if (typeof input === "string") {
-    const s = input.trim();
-    if (!s) return {};
     try {
-      const parsed = JSON.parse(s);
+      const parsed = JSON.parse(input);
       if (parsed && typeof parsed === "object") return parsed as AnyObj;
     } catch {}
   }
@@ -69,9 +66,7 @@ function lc(s: string) {
 
 /* ========================= extraction ========================= */
 
-/** tenta obter um objeto de opções dentro do snapshot */
 function extractOptionsObj(snap: AnyObj): AnyObj {
-  // ordem parecida ao teu OrderDetailsClient
   const a = safeParseJSON((snap as any)?.optionsJson);
   if (Object.keys(a).length) return a;
 
@@ -81,7 +76,6 @@ function extractOptionsObj(snap: AnyObj): AnyObj {
   const c = safeParseJSON((snap as any)?.selected);
   if (Object.keys(c).length) return c;
 
-  // às vezes vem com "customization"/"customize"
   const d = safeParseJSON((snap as any)?.customization);
   if (Object.keys(d).length) return d;
 
@@ -91,18 +85,15 @@ function extractOptionsObj(snap: AnyObj): AnyObj {
   return {};
 }
 
-function extractPersonalizationFromEverywhere(item: Item, snap: AnyObj, optionsObj: AnyObj) {
-  // 1) personalization object dentro do snapshot
+function extractPersonalization(item: Item, snap: AnyObj, optionsObj: AnyObj) {
   const snapPers =
     snap?.personalization && typeof snap.personalization === "object"
       ? (snap.personalization as AnyObj)
       : {};
 
-  // 2) personalizationJson (pode estar no item ou no snap)
   const itPersJ = safeParseJSON(item.personalizationJson);
   const snapPersJ = safeParseJSON((snap as any)?.personalizationJson);
 
-  // 3) possíveis chaves espalhadas (client-style)
   const NAME_KEYS = [
     "name",
     "playerName",
@@ -112,9 +103,6 @@ function extractPersonalizationFromEverywhere(item: Item, snap: AnyObj, optionsO
     "customerName",
     "nameOnShirt",
     "name_on_shirt",
-    "custom_name",
-    "customizeName",
-    "customize_name",
   ];
 
   const NUMBER_KEYS = [
@@ -126,12 +114,8 @@ function extractPersonalizationFromEverywhere(item: Item, snap: AnyObj, optionsO
     "customerNumber",
     "numberOnShirt",
     "number_on_shirt",
-    "custom_number",
-    "customizeNumber",
-    "customize_number",
   ];
 
-  // prioridade: snap.personalization -> snap.personalizationJson -> item.personalizationJson -> optionsObj -> raiz snap -> fallback do item.personalization
   const name =
     norm(
       pickStr(snapPers, NAME_KEYS) ??
@@ -139,8 +123,7 @@ function extractPersonalizationFromEverywhere(item: Item, snap: AnyObj, optionsO
         pickStr(itPersJ, NAME_KEYS) ??
         pickStr(optionsObj, NAME_KEYS) ??
         pickStr(snap, NAME_KEYS) ??
-        item.personalization?.name ??
-        null
+        item.personalization?.name
     ) ?? null;
 
   const numberRaw =
@@ -150,14 +133,12 @@ function extractPersonalizationFromEverywhere(item: Item, snap: AnyObj, optionsO
         pickStr(itPersJ, NUMBER_KEYS) ??
         pickStr(optionsObj, NUMBER_KEYS) ??
         pickStr(snap, NUMBER_KEYS) ??
-        item.personalization?.number ??
-        null
+        item.personalization?.number
     ) ?? null;
 
-  // mantém como o user escreveu, mas se vier "Number: 7" ou "#7", tenta limpar um pouco
   const number =
     numberRaw != null
-      ? (String(numberRaw).trim().match(/\d+/)?.[0] ?? String(numberRaw).trim())
+      ? String(numberRaw).trim().match(/\d+/)?.[0] ?? String(numberRaw).trim()
       : null;
 
   if (!name && !number) return null;
@@ -168,7 +149,6 @@ function extractFromSnapshot(item: Item) {
   const snap = safeParseJSON(item.snapshotJson);
   const optionsObj = extractOptionsObj(snap);
 
-  // size: optionsObj.size ou snap.size
   const size =
     norm(
       pickStr(optionsObj, ["size", "sizeLabel", "variant", "skuSize"]) ??
@@ -176,44 +156,51 @@ function extractFromSnapshot(item: Item) {
         item.size
     ) ?? null;
 
-  // badges: optionsObj.badges ou snap.badges
-  const badgesRaw =
+  const badges =
     pickStr(optionsObj, ["badges", "competition_badge"]) ??
     pickStr(snap, ["badges", "competition_badge"]) ??
     pickStr(item.options, ["badges"]) ??
     null;
 
-  const personalization = extractPersonalizationFromEverywhere(item, snap, optionsObj);
+  const personalization = extractPersonalization(item, snap, optionsObj);
 
-  return {
-    size,
-    badges: badgesRaw,
-    personalization,
-  };
+  return { size, badges, personalization };
 }
 
 /* ========================= supplier text ========================= */
 
 function deriveVersion(item: Item) {
-  // Regra pedida
   if (lc(item.name).includes("player version")) return "player";
-
-  const nameL = lc(item.name);
-  if (nameL.includes("player")) return "player";
-  if (nameL.includes("fan")) return "fan";
+  if (lc(item.name).includes("player")) return "player";
+  if (lc(item.name).includes("fan")) return "fan";
   return "fan";
 }
 
+/** ✅ ORDEM FINAL PEDIDA */
 function buildSupplierText(item: Item) {
   const extracted = extractFromSnapshot(item);
   const lines: string[] = [];
 
-  if (extracted.personalization?.name) lines.push(`Name : ${extracted.personalization.name}`);
-  if (extracted.personalization?.number) lines.push(`Number : ${extracted.personalization.number}`);
-  if (extracted.badges) lines.push(`Badges : ${extracted.badges}`);
-
+  // 1️⃣ versão
   lines.push(deriveVersion(item));
+
+  // 2️⃣ tamanho
   lines.push(`size : ${extracted.size ?? "—"}`);
+
+  // 3️⃣ nome
+  if (extracted.personalization?.name) {
+    lines.push(`Name : ${extracted.personalization.name}`);
+  }
+
+  // 4️⃣ número
+  if (extracted.personalization?.number) {
+    lines.push(`Number : ${extracted.personalization.number}`);
+  }
+
+  // 5️⃣ badges
+  if (extracted.badges) {
+    lines.push(`Badges : ${extracted.badges}`);
+  }
 
   return lines.join("\n");
 }
@@ -334,20 +321,6 @@ export default function SupplierCopyCard({ item }: { item: Item }) {
               <div className="text-xs text-gray-500">
                 Qty: {item.qty} • Size: {extracted.size ?? "—"}
               </div>
-
-              {(extracted.personalization?.name || extracted.personalization?.number) ? (
-                <div className="text-xs text-gray-500 mt-1">
-                  {extracted.personalization?.name ? (
-                    <>Name: <span className="font-semibold">{extracted.personalization.name}</span></>
-                  ) : null}
-                  {extracted.personalization?.number ? (
-                    <>
-                      {extracted.personalization?.name ? " • " : null}
-                      Number: <span className="font-semibold">#{extracted.personalization.number}</span>
-                    </>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
