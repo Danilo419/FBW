@@ -20,7 +20,7 @@ import {
 import { PrintButton } from "@/components/admin/PrintButton";
 import SupplierCopyCard from "@/components/admin/SupplierCopyCard";
 import CustomerCopyCard from "@/components/admin/CustomerCopyCard";
-import { sendShipmentEmailAction } from "./actions"; // ✅ FIX: era "../actions"
+import { sendShipmentEmailAction } from "./actions";
 
 /* ========================= Helpers ========================= */
 
@@ -265,21 +265,38 @@ async function fetchOrder(id: string) {
 
     const itemsRaw = ensureArray<any>(order.items);
 
+    // ✅ IMPORTANT: manter fields originais (size/optionType/snapshotJson/etc)
     const items = itemsRaw.map((it, i) => {
       const productImages = ensureArray<string>(it?.product?.imageUrls);
       const image = it?.image ?? productImages[0] ?? "/placeholder.png";
 
       const unitPriceCents = Number(it?.unitPrice ?? 0);
-      const totalPriceCents = Number(it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1));
+      const totalPriceCents = Number(
+        it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
+      );
 
       return {
+        // ids / base
         id: fallbackId(i, it),
+        orderItemId: it?.id ?? null,
+
+        // display
         name: String(it?.name ?? it?.product?.name ?? "Product"),
         slug: it?.product?.slug ?? null,
         image,
+
+        // qty & pricing
         qty: Number(it?.qty ?? 1),
         unitPriceCents,
         totalPriceCents,
+
+        // ✅ details (estes são os que normalmente alimentam o SupplierCopyCard)
+        size: it?.size ?? null,
+        optionType: it?.optionType ?? null,
+        snapshotJson: it?.snapshotJson ?? null,
+
+        // manter também caso o SupplierCopyCard use
+        product: it?.product ?? null,
       };
     });
 
@@ -366,10 +383,9 @@ export default async function AdminOrderViewPage({
         <div className="grid gap-6 lg:grid-cols-5">
           {/* LEFT */}
           <div className="space-y-4 lg:col-span-2">
-            {/* ✅ Customer copy block */}
             <CustomerCopyCard shipping={order.shipping} />
 
-            {/* ✅ Simplified Shipment Email */}
+            {/* Shipment Email */}
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="font-semibold flex items-center gap-2">
