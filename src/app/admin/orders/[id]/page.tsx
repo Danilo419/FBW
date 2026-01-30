@@ -14,11 +14,13 @@ import {
   AlertTriangle,
   Printer,
   Mail,
+  Truck,
+  Image as ImageIcon,
 } from "lucide-react";
-import { PrintButton } from "@/components/admin/PrintButton"; // client component
-import { updateOrderTrackingAction } from "../actions";
+import { PrintButton } from "@/components/admin/PrintButton";
 import SupplierCopyCard from "@/components/admin/SupplierCopyCard";
 import CustomerCopyCard from "@/components/admin/CustomerCopyCard";
+import { sendShipmentEmailAction } from "./actions"; // ✅ FIX: era "../actions"
 
 /* ========================= Helpers ========================= */
 
@@ -63,7 +65,6 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
 }
 
 function candidates(keys: string[]) {
-  // suporta root + nested típicos
   return [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
 }
 
@@ -76,14 +77,8 @@ function pickStr(o: any, keys: string[]): string | null {
   return null;
 }
 
-/**
- * ✅ FIX REAL:
- * O bug era "return cedo" se shippingCountry existisse (canonical).
- * Agora fazemos MERGE: canonical tem prioridade, mas completamos com shippingJson.
- */
 function extractShipping(order: any) {
   try {
-    // 1) canonical (colunas no schema, se existirem)
     const canonical = {
       fullName: order?.shippingFullName ?? order?.user?.name ?? null,
       email: order?.shippingEmail ?? order?.user?.email ?? null,
@@ -96,7 +91,6 @@ function extractShipping(order: any) {
       country: order?.shippingCountry ?? null,
     };
 
-    // 2) shippingJson (ROOT ou nested address/shipping/delivery)
     const j = safeParseJSON(order?.shippingJson);
 
     const fullNameJson =
@@ -171,7 +165,6 @@ function extractShipping(order: any) {
       getDeep(j, candidates(["ship_country"])) ??
       null;
 
-    // 3) MERGE final (canonical > json > null)
     const out = {
       fullName: canonical.fullName ?? fullNameJson ?? null,
       email: canonical.email ?? emailJson ?? null,
@@ -184,7 +177,6 @@ function extractShipping(order: any) {
       country: canonical.country ?? countryJson ?? null,
     };
 
-    // 4) Se ainda estiver tudo vazio, fallback para user
     if (
       !out.fullName &&
       !out.email &&
@@ -225,22 +217,11 @@ function extractShipping(order: any) {
 
 function extractTracking(order: any) {
   const j = safeParseJSON(order?.shippingJson);
-  const trackingCode =
-    pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
-  const trackingUrl =
-    pickStr(j, ["trackingUrl", "tracking_url", "tracking_link"]) ?? null;
+  const trackingCode = pickStr(j, ["trackingCode", "tracking_code", "tracking"]) ?? null;
+  const shipmentImageUrl =
+    pickStr(j, ["shipmentImageUrl", "shipment_image_url", "shippingImageUrl", "imageUrl"]) ?? null;
 
-  const status = String(order?.status ?? "pending");
-  const shippingStatus =
-    status === "delivered"
-      ? "DELIVERED"
-      : status === "shipped"
-      ? "SHIPPED"
-      : status === "paid"
-      ? "PROCESSING"
-      : "PENDING";
-
-  return { trackingCode, trackingUrl, shippingStatus };
+  return { trackingCode, shipmentImageUrl };
 }
 
 function ensureArray<T>(v: any): T[] {
@@ -250,112 +231,6 @@ function ensureArray<T>(v: any): T[] {
 function fallbackId(idx: number, it: any) {
   const base = it?.id ?? it?.orderId ?? it?.productId ?? it?.name ?? "item";
   return `${String(base)}-${idx}`;
-}
-
-/* ========================= Personalization extraction (FIXED) ========================= */
-function extractPersonalization(it: any, snap: any, optionsObj: any) {
-  const snapPers =
-    snap?.personalization && typeof snap.personalization === "object"
-      ? snap.personalization
-      : null;
-
-  const snapPersName = snapPers
-    ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
-    : null;
-
-  const snapPersNumber = snapPers
-    ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"])
-    : null;
-
-  const snapPersJ = safeParseJSON(snap?.personalizationJson);
-  const snapJName =
-    pickStr(snapPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
-  const snapJNumber =
-    pickStr(snapPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
-    null;
-
-  const itPersJ = safeParseJSON(it?.personalizationJson);
-  const itJName =
-    pickStr(itPersJ, ["name", "playerName", "customName", "shirtName"]) ?? null;
-  const itJNumber =
-    pickStr(itPersJ, ["number", "playerNumber", "customNumber", "shirtNumber"]) ??
-    null;
-
-  const directName =
-    pickStr(it, [
-      "personalizationName",
-      "playerName",
-      "custName",
-      "nameOnShirt",
-      "shirtName",
-      "customName",
-    ]) ?? null;
-
-  const directNumber =
-    pickStr(it, [
-      "personalizationNumber",
-      "playerNumber",
-      "custNumber",
-      "numberOnShirt",
-      "shirtNumber",
-      "customNumber",
-    ]) ?? null;
-
-  const snapRootName =
-    pickStr(snap, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ??
-    null;
-  const snapRootNumber =
-    pickStr(snap, [
-      "custNumber",
-      "customerNumber",
-      "numberOnShirt",
-      "shirtNumber",
-      "playerNumber",
-    ]) ?? null;
-
-  const optName =
-    pickStr(optionsObj, [
-      "custName",
-      "playerName",
-      "player_name",
-      "shirtName",
-      "shirt_name",
-      "nameOnShirt",
-    ]) ?? null;
-
-  const optNumber =
-    pickStr(optionsObj, [
-      "custNumber",
-      "playerNumber",
-      "player_number",
-      "shirtNumber",
-      "shirt_number",
-      "numberOnShirt",
-    ]) ?? null;
-
-  const name =
-    (snapPersName ??
-      snapJName ??
-      itJName ??
-      directName ??
-      snapRootName ??
-      optName ??
-      null)?.trim() || null;
-
-  const numRaw =
-    (snapPersNumber ??
-      snapJNumber ??
-      itJNumber ??
-      directNumber ??
-      snapRootNumber ??
-      optNumber ??
-      null)?.trim() || "";
-
-  const onlyDigits = String(numRaw).replace(/\D/g, "");
-  const number = onlyDigits ? onlyDigits : null;
-
-  if (!name && !number) return null;
-  return { name, number };
 }
 
 /* ========================= Data ========================= */
@@ -369,9 +244,7 @@ async function fetchOrder(id: string) {
         items: {
           orderBy: { id: "asc" },
           include: {
-            product: {
-              select: { id: true, slug: true, imageUrls: true, name: true },
-            },
+            product: { select: { id: true, slug: true, imageUrls: true, name: true } },
           },
         },
       },
@@ -393,50 +266,11 @@ async function fetchOrder(id: string) {
     const itemsRaw = ensureArray<any>(order.items);
 
     const items = itemsRaw.map((it, i) => {
-      const snap = safeParseJSON(it?.snapshotJson);
-
-      const optionsObj =
-        safeParseJSON(snap?.optionsJson) ||
-        safeParseJSON(snap?.options) ||
-        safeParseJSON(snap?.selected) ||
-        {};
-
-      const personalization = extractPersonalization(it, snap, optionsObj);
-
-      const size =
-        (optionsObj as any).size ??
-        snap?.size ??
-        pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
-        null;
-
-      let badges: string | null = null;
-      const rawBadges =
-        (optionsObj as any).badges ??
-        snap?.badges ??
-        (optionsObj as any)["competition_badge"] ??
-        null;
-
-      if (Array.isArray(rawBadges)) badges = rawBadges.join(", ");
-      else if (rawBadges && typeof rawBadges === "object") {
-        badges = Object.values(rawBadges).join(", ");
-      } else if (rawBadges) badges = String(rawBadges);
-
       const productImages = ensureArray<string>(it?.product?.imageUrls);
       const image = it?.image ?? productImages[0] ?? "/placeholder.png";
 
       const unitPriceCents = Number(it?.unitPrice ?? 0);
-      const totalPriceCents = Number(
-        it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1)
-      );
-
-      const options: Record<string, string> = {};
-      for (const [k, v] of Object.entries(optionsObj)) {
-        if (v == null || v === "") continue;
-        if (Array.isArray(v)) options[k] = v.join(", ");
-        else if (typeof v === "object") options[k] = Object.values(v as any).join(", ");
-        else options[k] = String(v);
-      }
-      if (badges) options.badges = badges;
+      const totalPriceCents = Number(it?.totalPrice ?? unitPriceCents * Number(it?.qty ?? 1));
 
       return {
         id: fallbackId(i, it),
@@ -446,21 +280,10 @@ async function fetchOrder(id: string) {
         qty: Number(it?.qty ?? 1),
         unitPriceCents,
         totalPriceCents,
-        size,
-        options,
-        personalization,
       };
     });
 
     const shipping = extractShipping(order);
-
-    // (opcional) logs úteis no Vercel para confirmar
-    console.info("[admin/order] id:", id);
-    console.info(
-      "[admin/order] raw shippingJson:",
-      typeof order?.shippingJson === "string" ? order.shippingJson : JSON.stringify(order?.shippingJson)
-    );
-    console.info("[admin/order] extracted shipping:", JSON.stringify(shipping));
 
     return {
       order: {
@@ -475,11 +298,6 @@ async function fetchOrder(id: string) {
         user: order.user ?? null,
         shipping,
         tracking: extractTracking(order),
-        stripeSessionId: order.stripeSessionId ?? null,
-        stripePaymentIntentId: order.stripePaymentIntentId ?? null,
-        paypalOrderId: order.paypalOrderId ?? null,
-        paypalCaptureId: order.paypalCaptureId ?? null,
-        paidAt: order.paidAt ?? null,
         items,
       },
       error: null,
@@ -510,10 +328,7 @@ export default async function AdminOrderViewPage({
           </h1>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href="/admin"
-            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-          >
+          <Link href="/admin" className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
             <span className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Back to dashboard
             </span>
@@ -526,9 +341,7 @@ export default async function AdminOrderViewPage({
       </div>
 
       <p className="text-sm text-gray-500">
-        {order?.createdAt
-          ? `Created ${new Date(order.createdAt).toLocaleString("en-GB")}`
-          : "Created —"}
+        {order?.createdAt ? `Created ${new Date(order.createdAt).toLocaleString("en-GB")}` : "Created —"}
         {" • "}
         Status: <span className="font-medium">{order?.status ?? "—"}</span>
       </p>
@@ -553,48 +366,16 @@ export default async function AdminOrderViewPage({
         <div className="grid gap-6 lg:grid-cols-5">
           {/* LEFT */}
           <div className="space-y-4 lg:col-span-2">
-            <section className="rounded-2xl border bg-white p-4">
-              <div className="text-xs text-gray-500">Order ID</div>
-              <div className="font-mono text-sm break-all">{order.id}</div>
-
-              <div className="mt-3 text-xs text-gray-500">Payment</div>
-              <div className="text-sm">
-                {order.paidAt ? (
-                  <span className="font-medium">Paid</span>
-                ) : (
-                  <span>Unpaid</span>
-                )}
-              </div>
-
-              {order.stripePaymentIntentId && (
-                <div className="text-xs text-gray-500 break-all">
-                  Stripe PI: {order.stripePaymentIntentId}
-                </div>
-              )}
-              {order.stripeSessionId && (
-                <div className="text-xs text-gray-500 break-all">
-                  Stripe Session: {order.stripeSessionId}
-                </div>
-              )}
-              {order.paypalOrderId && (
-                <div className="text-xs text-gray-500 break-all">
-                  PayPal Order: {order.paypalOrderId}
-                </div>
-              )}
-              {order.paypalCaptureId && (
-                <div className="text-xs text-gray-500 break-all">
-                  PayPal Capture: {order.paypalCaptureId}
-                </div>
-              )}
-            </section>
-
             {/* ✅ Customer copy block */}
             <CustomerCopyCard shipping={order.shipping} />
 
-            {/* ✅ Fulfillment / Tracking */}
+            {/* ✅ Simplified Shipment Email */}
             <section className="rounded-2xl border bg-white p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="font-semibold">Fulfillment / Tracking</div>
+                <div className="font-semibold flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Shipment email
+                </div>
                 <span className="text-xs text-gray-500">Stored in shippingJson</span>
               </div>
 
@@ -603,35 +384,18 @@ export default async function AdminOrderViewPage({
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     <span>
-                      When you click <strong>Save</strong>, the customer will be emailed automatically at{" "}
-                      <span className="font-semibold">{customerEmail}</span>.
+                      This will email the customer at <span className="font-semibold">{customerEmail}</span>.
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="mb-3 rounded-xl border bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  Customer email not found — the update can be saved, but no email can be sent.
+                  Customer email not found — you can still save, but the email can’t be sent.
                 </div>
               )}
 
-              <form action={updateOrderTrackingAction} className="space-y-3">
+              <form action={sendShipmentEmailAction} className="space-y-3">
                 <input type="hidden" name="orderId" value={order.id} />
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Shipping status
-                  </label>
-                  <select
-                    name="shippingStatus"
-                    defaultValue={order.tracking.shippingStatus}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-                  >
-                    <option value="PENDING">PENDING</option>
-                    <option value="PROCESSING">PROCESSING</option>
-                    <option value="SHIPPED">SHIPPED</option>
-                    <option value="DELIVERED">DELIVERED</option>
-                  </select>
-                </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -642,35 +406,42 @@ export default async function AdminOrderViewPage({
                     defaultValue={order.tracking.trackingCode ?? ""}
                     placeholder="e.g. RR123456789PT"
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                    required
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    The email will include a 17track link automatically.
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Tracking URL (optional)
+                    Shipment image
                   </label>
-                  <input
-                    name="trackingUrl"
-                    defaultValue={order.tracking.trackingUrl ?? ""}
-                    placeholder="https://..."
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-                  />
+                  <div className="mt-1 flex items-center gap-2 rounded-xl border px-3 py-2">
+                    <ImageIcon className="h-4 w-4 text-gray-500" />
+                    <input type="file" name="shipmentImage" accept="image/*" className="w-full text-sm" />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Optional, but recommended (label / parcel photo / proof).
+                  </p>
                 </div>
 
                 <button className="w-full rounded-xl bg-black px-3 py-2 text-sm font-semibold text-white">
-                  Save
+                  Send shipment email
                 </button>
 
-                {(order.tracking.trackingCode || order.tracking.trackingUrl) && (
-                  <div className="text-xs text-gray-600">
+                {(order.tracking.trackingCode || order.tracking.shipmentImageUrl) && (
+                  <div className="rounded-xl border bg-gray-50 p-3 text-xs text-gray-700">
+                    <div className="font-semibold mb-1">Current saved</div>
                     <div>
-                      <span className="font-semibold">Current:</span>{" "}
-                      {order.tracking.trackingCode ?? "—"}
+                      <span className="text-gray-500">Tracking:</span>{" "}
+                      <span className="font-mono">{order.tracking.trackingCode ?? "—"}</span>
                     </div>
-                    {order.tracking.trackingUrl ? (
+                    {order.tracking.shipmentImageUrl ? (
                       <div className="break-all">
-                        <a href={order.tracking.trackingUrl} target="_blank" className="underline">
-                          {order.tracking.trackingUrl}
+                        <span className="text-gray-500">Image:</span>{" "}
+                        <a href={order.tracking.shipmentImageUrl} target="_blank" className="underline">
+                          {order.tracking.shipmentImageUrl}
                         </a>
                       </div>
                     ) : null}
@@ -739,7 +510,7 @@ export default async function AdminOrderViewPage({
               ) : (
                 <div className="space-y-3">
                   {order.items.map((it) => (
-                    <SupplierCopyCard key={it.id} item={it} />
+                    <SupplierCopyCard key={it.id} item={it as any} />
                   ))}
                 </div>
               )}
@@ -753,13 +524,7 @@ export default async function AdminOrderViewPage({
 
 /* ========================= UI Bits ========================= */
 
-function LabeledRow({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | null;
-}) {
+function LabeledRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div className="flex items-baseline gap-2 text-sm">
@@ -798,7 +563,6 @@ function AddressBlock(props: {
   country?: string | null;
 }) {
   const cityRegion = [props.city, props.region].filter(Boolean).join(", ");
-
   return (
     <div className="space-y-1">
       <LabeledRow label="Address" value={props.address1 ?? "—"} />
