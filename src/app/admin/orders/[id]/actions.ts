@@ -5,7 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { put } from "@vercel/blob";
-import { sendFulfillmentUpdateEmail } from "@/lib/email";
+
+/**
+ * ✅ IMPORTANT:
+ * We now use the shared template file:
+ *   src/lib/email/shipmentEmail.ts
+ * This guarantees the logo/hero layout you are editing is the one actually sent.
+ */
+import { shipmentEmailHtml } from "@/lib/email/shipmentEmail";
 
 /* ------------------------------- helpers ------------------------------- */
 
@@ -92,95 +99,30 @@ function mapShippingStatusToOrderStatus(shippingStatus: string) {
 /* -------------------- email helpers -------------------- */
 
 function emailFrom() {
-  // ✅ DOMÍNIO OFICIAL E CORRETO
+  // ✅ DOMÍNIO OFICIAL
   return "FootballWorld <orders@myfootballworldstore.com>";
 }
 
 function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || "myfootballworldstore.com";
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || "https://myfootballworldstore.com";
+  // garante https://
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  return `https://${raw}`;
 }
 
-function escapeHtml(s: string) {
-  return (s || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function supportEmail() {
+  return "support@myfootballworldstore.com";
 }
 
-/* -------------------- premium shipment email -------------------- */
-
-function shipmentEmailHtml(params: {
-  orderShort: string;
-  customerName?: string | null;
-  trackingCode: string;
-  track17Url: string;
-  shipmentImageUrl?: string | null;
-}) {
-  const orderShort = escapeHtml(params.orderShort);
-  const tracking = escapeHtml(params.trackingCode);
-  const track17 = escapeHtml(params.track17Url);
-  const name = params.customerName ? escapeHtml(params.customerName) : "";
-
-  const greeting = name ? `Hi ${name},` : "Hi,";
-
-  const imgBlock = params.shipmentImageUrl
-    ? `
-      <tr>
-        <td style="padding:0 24px 24px 24px;">
-          <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">Shipment image</div>
-          <img src="${escapeHtml(params.shipmentImageUrl)}"
-               style="width:100%;max-width:560px;border-radius:16px;border:1px solid #e5e7eb;display:block;" />
-        </td>
-      </tr>`
-    : "";
-
-  return `
-<!doctype html>
-<html>
-<body style="margin:0;background:#f6f7fb;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial">
-<div style="padding:32px">
-<table style="max-width:640px;margin:auto;background:#0b0b0f;border-radius:22px;color:#fff">
-<tr>
-<td style="padding:28px">
-<h1 style="margin:0;font-size:26px">Your order is on the way 🚚</h1>
-<p style="opacity:.9">${greeting} Your order <strong>${orderShort}</strong> has been shipped.</p>
-</td>
-</tr>
-
-<tr>
-<td style="background:#fff;color:#000;padding:24px">
-<p style="font-size:12px;color:#6b7280">TRACKING CODE</p>
-<div style="font-family:monospace;font-size:16px;margin-bottom:12px">${tracking}</div>
-<a href="${track17}" style="display:inline-block;background:#000;color:#fff;
-padding:10px 16px;border-radius:14px;text-decoration:none;font-weight:700">
-Track on 17TRACK
-</a>
-<p style="margin-top:12px;font-size:13px;color:#374151">
-Go to 17track.net and paste your tracking code to see the delivery status.
-</p>
-</td>
-</tr>
-
-${imgBlock}
-
-<tr>
-<td style="background:#fff;padding:24px;border-top:1px solid #e5e7eb">
-<p style="font-size:12px;color:#6b7280">
-Need help? Contact <a href="mailto:support@myfootballworldstore.com">support@myfootballworldstore.com</a><br/>
-FootballWorld · <a href="${siteUrl()}">${siteUrl()}</a>
-</p>
-</td>
-</tr>
-</table>
-</div>
-</body>
-</html>`;
+function brandName() {
+  return "FootballWorld";
 }
 
 /* ------------------------------- LEGACY ACTION ------------------------------- */
-
+/**
+ * Mantido para compatibilidade (se ainda tens algum form antigo).
+ * Se já não usas, podes apagar mais tarde.
+ */
 export async function updateOrderTrackingAction(formData: FormData) {
   const orderId = safeString(formData.get("orderId"));
   if (!orderId) throw new Error("Missing orderId");
@@ -231,7 +173,7 @@ export async function updateOrderTrackingAction(formData: FormData) {
  * ✅ USADO NA UI NOVA
  * - trackingCode obrigatório
  * - shipmentImage opcional
- * - envia email premium
+ * - envia email premium (template em src/lib/email/shipmentEmail.ts)
  */
 export async function sendShipmentEmailAction(formData: FormData) {
   const orderId = safeString(formData.get("orderId"));
@@ -257,38 +199,30 @@ export async function sendShipmentEmailAction(formData: FormData) {
 
   const prevJson = safeParseJSON(order.shippingJson);
 
-  const to =
-    extractCustomerEmail({ ...order, shippingJson: prevJson }) ||
-    (() => {
-      throw new Error("Customer email not found");
-    })();
+  const to = extractCustomerEmail({ ...order, shippingJson: prevJson });
+  if (!to) throw new Error("Customer email not found");
 
-  const customerName =
-    extractCustomerName({ ...order, shippingJson: prevJson }) || null;
+  const customerName = extractCustomerName({ ...order, shippingJson: prevJson }) || null;
 
-  /* -------- upload image -------- */
+  /* -------- upload image (optional) -------- */
   let shipmentImageUrl: string | null = null;
 
-  if (file && file.size > 0) {
+  if (file && typeof file === "object" && "size" in file && file.size > 0) {
     const token = process.env.BLOB_READ_WRITE_TOKEN;
     if (!token) throw new Error("Missing BLOB_READ_WRITE_TOKEN");
 
-    const ext = file.type.includes("png")
-      ? "png"
-      : file.type.includes("webp")
-      ? "webp"
-      : "jpg";
+    const mime = (file as File).type || "";
+    const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
 
-    const uploaded = await put(
-      `shipments/${orderId}/${Date.now()}.${ext}`,
-      file,
-      { access: "public", token }
-    );
+    const uploaded = await put(`shipments/${orderId}/${Date.now()}.${ext}`, file, {
+      access: "public",
+      token,
+    });
 
     shipmentImageUrl = uploaded.url;
   }
 
-  /* -------- persist -------- */
+  /* -------- persist shippingJson + status -------- */
   await prisma.order.update({
     where: { id: orderId },
     data: {
@@ -306,20 +240,29 @@ export async function sendShipmentEmailAction(formData: FormData) {
   /* -------- email -------- */
   const resend = new Resend(process.env.RESEND_API_KEY);
 
+  // ⚠️ No teu screenshot o subject usa #cmkzwn5 (sem slice).
+  // Mantemos o padrão que já aparece no Gmail (o id curto).
   const orderShort = `#${orderId.slice(0, 7)}`;
+
+  // Link direto para a página com o tracking preenchido
   const track17Url = `https://www.17track.net/en?nums=${encodeURIComponent(trackingCode)}`;
+
+  // ✅ Usa o template partilhado (onde estás a mexer na logo)
+  const html = shipmentEmailHtml({
+    brandName: brandName(),
+    orderShort,
+    trackingCode,
+    track17Url,
+    shipmentImageUrl,
+    supportEmail: supportEmail(),
+    siteUrl: siteUrl(),
+  });
 
   await resend.emails.send({
     from: emailFrom(),
     to,
     subject: `Your order ${orderShort} has been shipped 🚚`,
-    html: shipmentEmailHtml({
-      orderShort,
-      customerName,
-      trackingCode,
-      track17Url,
-      shipmentImageUrl,
-    }),
+    html,
   });
 
   revalidatePath(`/admin/orders/${orderId}`);
