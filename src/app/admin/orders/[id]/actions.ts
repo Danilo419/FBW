@@ -97,7 +97,7 @@ function emailFrom() {
 }
 
 function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_SITE_URL || "myfootballworldstore.com";
 }
 
 function escapeHtml(s: string) {
