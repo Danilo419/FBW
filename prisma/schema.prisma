@@ -122,6 +122,9 @@ model Product {
   // Flag para controlar a secção "Name & Number"
   allowNameNumber Boolean @default(true)
 
+  // ✅ NEW: Visibilidade do produto na loja (visível/invisível)
+  isVisible Boolean @default(true)
+
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
   cartItems  CartItem[]
@@ -135,6 +138,7 @@ model Product {
   @@index([teamType])       // ✅ ADDED
   @@index([season])
   @@index([teamType, team]) // ✅ ADDED (útil p/ lists por clubs/nations)
+  @@index([isVisible])      // ✅ NEW
 }
 
 model SizeStock {
@@ -157,7 +161,7 @@ model OptionGroup {
   type      OptionType
   required  Boolean @default(false)
 
-  product Product       @relation("ProductOptions", fields: [productId], references: [id])
+  product Product      @relation("ProductOptions", fields: [productId], references: [id])
   values  OptionValue[]
 
   @@index([productId])

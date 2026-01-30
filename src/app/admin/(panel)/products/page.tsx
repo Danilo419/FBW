@@ -1,4 +1,4 @@
-// src/app/admin/products/page.tsx
+// src/app/admin/(panel)/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
-import { Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon, Eye, EyeOff } from "lucide-react";
 import DeleteButton from "./DeleteButton";
 
 /* ---------- helpers ---------- */
@@ -35,6 +35,26 @@ async function deleteProductAction(formData: FormData) {
     await tx.orderItem.deleteMany({ where: { productId: id } });
     await tx.review.deleteMany({ where: { productId: id } });
     await tx.product.delete({ where: { id } });
+  });
+
+  revalidatePath("/admin/products");
+}
+
+/* ---------- server action: toggle visible/invisible ---------- */
+async function toggleVisibilityAction(formData: FormData) {
+  "use server";
+
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+
+  const current = String(formData.get("isVisible") || "");
+  const isVisibleNow = current === "1" || current === "true";
+  const next = !isVisibleNow;
+
+  await prisma.product.update({
+    where: { id },
+    data: { isVisible: next },
+    select: { id: true },
   });
 
   revalidatePath("/admin/products");
@@ -81,6 +101,8 @@ export default async function ProductsPage({
       imageUrls: true,
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
+
+      isVisible: true, // ✅ NEW
     },
     skip: (page - 1) * LIMIT,
     take: LIMIT,
@@ -158,6 +180,7 @@ export default async function ProductsPage({
                 <th className="py-2 pr-3">Season</th>
                 <th className="py-2 pr-3">Price</th>
                 <th className="py-2 pr-3">Sizes</th>
+                <th className="py-2 pr-3">Status</th>
                 <th className="py-2 pr-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -165,15 +188,16 @@ export default async function ProductsPage({
             <tbody>
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-3 text-gray-500 text-center">
+                  <td colSpan={8} className="py-3 text-gray-500 text-center">
                     No products found.
                   </td>
                 </tr>
               )}
 
               {products.map((p) => {
-                const img = p.imageUrls?.[0] ?? "";
+                const img = (p.imageUrls as unknown as string[])?.[0] ?? "";
                 const availableCount = p.sizes.filter((s) => s.available).length;
+                const isVisible = !!p.isVisible;
 
                 return (
                   <tr key={p.id} className="border-b last:border-0 align-top">
@@ -200,8 +224,23 @@ export default async function ProductsPage({
                     <td className="py-2 pr-3">{p.team}</td>
                     <td className="py-2 pr-3">{p.season ?? "—"}</td>
                     <td className="py-2 pr-3">{formatMoneyFromCents(p.basePrice)}</td>
+
                     <td className="py-2 pr-3">
                       {p.sizes.length} ({availableCount} available)
+                    </td>
+
+                    <td className="py-2 pr-3">
+                      {isVisible ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 border border-green-200">
+                          <Eye className="h-3.5 w-3.5" />
+                          Visible
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 border">
+                          <EyeOff className="h-3.5 w-3.5" />
+                          Hidden
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-2 pr-3 text-right">
@@ -213,11 +252,34 @@ export default async function ProductsPage({
                           Edit
                         </Link>
 
-                        <DeleteButton
-                          id={p.id}
-                          name={p.name}
-                          action={deleteProductAction}
-                        />
+                        {/* Toggle visible / invisible */}
+                        <form action={toggleVisibilityAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <input type="hidden" name="isVisible" value={isVisible ? "1" : "0"} />
+                          <button
+                            type="submit"
+                            className={
+                              isVisible
+                                ? "inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                                : "inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs bg-black text-white hover:bg-gray-900"
+                            }
+                            title={isVisible ? "Hide product" : "Make product visible"}
+                          >
+                            {isVisible ? (
+                              <>
+                                <EyeOff className="h-4 w-4" />
+                                Hide
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-4 w-4" />
+                                Show
+                              </>
+                            )}
+                          </button>
+                        </form>
+
+                        <DeleteButton id={p.id} name={p.name} action={deleteProductAction} />
                       </div>
                     </td>
                   </tr>
@@ -229,10 +291,7 @@ export default async function ProductsPage({
 
         {/* ---------- pagination ---------- */}
         {totalPages > 1 && (
-          <nav
-            aria-label="Pagination"
-            className="mt-4 flex items-center justify-between gap-3"
-          >
+          <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3">
             {/* Previous */}
             <div>
               {hasPrev ? (
@@ -251,20 +310,20 @@ export default async function ProductsPage({
 
             {/* Page numbers (max 5 visible) */}
             <ul className="flex flex-wrap items-center gap-1">
-              {pageNumbers.map((p) =>
-                p === page ? (
-                  <li key={p}>
+              {pageNumbers.map((pn) =>
+                pn === page ? (
+                  <li key={pn}>
                     <span className="inline-flex min-w-9 justify-center rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white">
-                      {p}
+                      {pn}
                     </span>
                   </li>
                 ) : (
-                  <li key={p}>
+                  <li key={pn}>
                     <Link
-                      href={queryForLink(p)}
+                      href={queryForLink(pn)}
                       className="inline-flex min-w-9 justify-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
-                      {p}
+                      {pn}
                     </Link>
                   </li>
                 )
