@@ -28,12 +28,13 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
   const siteUrl = escapeHtml(p.siteUrl);
 
   /**
-   * ✅ Same logo approach as Reset Password email:
+   * ✅ Gmail-safe:
+   * - FORCE PNG (avoid f_auto serving AVIF/WEBP)
    * - c_fit keeps aspect ratio
-   * - ONLY width is set (no forced height)
+   * - ONLY width is set
    */
   const LOGO_URL =
-    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_140,c_fit,f_auto,q_auto/logo_r0vd15.png";
+    "https://res.cloudinary.com/dqw7ccro3/image/upload/w_140,c_fit,f_png,q_auto/logo_r0vd15.png";
 
   const imgBlock = p.shipmentImageUrl
     ? `
@@ -46,7 +47,9 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
             <img
               src="${escapeHtml(p.shipmentImageUrl)}"
               alt="Shipment image"
-              style="width:100%;max-width:560px;border-radius:16px;border:1px solid #e5e7eb;display:block;height:auto;"
+              width="560"
+              style="width:100%;max-width:560px;border-radius:16px;border:1px solid #e5e7eb;display:block;height:auto;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;"
+              border="0"
             />
           </a>
         </td>
@@ -73,67 +76,60 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
       <td align="center" style="padding:32px 16px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:760px;">
 
-          <!-- CARD -->
           <tr>
             <td>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                style="background:#0b0b0f;border-radius:22px;overflow:hidden;
-                       box-shadow:0 18px 50px rgba(0,0,0,.12);">
+                style="background:#0b0b0f;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.12);">
 
                 <!-- HERO (BLACK) -->
                 <tr>
                   <td style="padding:22px 24px 24px 24px;color:#fff;">
-                    <!-- LOGO INSIDE HERO -->
-                    <div style="padding-bottom:14px;">
-                      <img
-                        src="${LOGO_URL}"
-                        alt="${brand}"
-                        width="140"
-                        style="display:block;max-width:100%;height:auto;"
-                      />
-                    </div>
+                    <!-- LOGO INSIDE HERO (TABLE = Gmail safe) -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 14px 0;">
+                      <tr>
+                        <td align="left" valign="middle">
+                          <img
+                            src="${LOGO_URL}"
+                            alt="${brand}"
+                            width="140"
+                            style="display:block;width:140px;max-width:140px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;"
+                            border="0"
+                          />
+                        </td>
+                      </tr>
+                    </table>
 
-                    <div style="font-size:24px;line-height:1.2;font-weight:900;
-                                font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                    <div style="font-size:24px;line-height:1.2;font-weight:900;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Your order is on the way 🚚
                     </div>
 
-                    <div style="margin-top:10px;font-size:14px;line-height:1.7;opacity:.90;
-                                font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                    <div style="margin-top:10px;font-size:14px;line-height:1.7;opacity:.90;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Hi, your order <strong style="color:#fff;">${orderShort}</strong> has been shipped and should arrive soon.
                     </div>
 
-                    <!-- subtle divider glow -->
-                    <div style="margin-top:18px;height:2px;border-radius:999px;
-                                background:linear-gradient(90deg,rgba(43,155,255,.85),rgba(127,203,73,.85));"></div>
+                    <div style="margin-top:18px;height:2px;border-radius:999px;background:linear-gradient(90deg,rgba(43,155,255,.85),rgba(127,203,73,.85));"></div>
                   </td>
                 </tr>
 
                 <!-- WHITE CONTENT -->
                 <tr>
                   <td style="background:#ffffff;padding:22px 24px;">
-                    <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;
-                                font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                    <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Tracking code
                     </div>
 
-                    <div style="margin-top:10px;font-size:18px;font-weight:900;color:#0b0b0f;
-                                font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;">
+                    <div style="margin-top:10px;font-size:18px;font-weight:900;color:#0b0b0f;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;">
                       ${tracking}
                     </div>
 
                     <div style="margin-top:14px;">
                       <a href="${track17}" target="_blank"
-                        style="display:inline-block;padding:12px 18px;border-radius:999px;
-                               background:#0b0b0f;color:#fff;text-decoration:none;
-                               font-weight:900;font-size:14px;
-                               font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                        style="display:inline-block;padding:12px 18px;border-radius:999px;background:#0b0b0f;color:#fff;text-decoration:none;font-weight:900;font-size:14px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                         Track on 17TRACK
                       </a>
                     </div>
 
-                    <div style="margin-top:14px;font-size:13px;color:#374151;line-height:1.65;
-                                font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                    <div style="margin-top:14px;font-size:13px;color:#374151;line-height:1.65;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Go to <a href="${track17}" target="_blank" style="color:#0b0b0f;font-weight:900;text-decoration:underline;">17track.net</a>
                       and paste your tracking code to see the delivery status.
                     </div>
@@ -145,8 +141,7 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
                 <!-- FOOTER -->
                 <tr>
                   <td style="background:#ffffff;padding:0 24px 24px 24px;">
-                    <div style="border-top:1px solid #e5e7eb;padding-top:18px;font-size:12px;color:#6b7280;line-height:1.6;
-                                font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+                    <div style="border-top:1px solid #e5e7eb;padding-top:18px;font-size:12px;color:#6b7280;line-height:1.6;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                       Need help? Contact us at
                       <a href="mailto:${support}" style="color:#0b0b0f;font-weight:900;text-decoration:none;">${support}</a>.
                       <br />
@@ -157,8 +152,7 @@ export function shipmentEmailHtml(p: ShipmentEmailParams) {
 
               </table>
 
-              <div style="max-width:760px;margin:14px auto 0 auto;color:#9ca3af;font-size:11px;text-align:center;
-                          font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+              <div style="max-width:760px;margin:14px auto 0 auto;color:#9ca3af;font-size:11px;text-align:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
                 If you didn’t place this order, please ignore this email.
               </div>
 
