@@ -10,27 +10,57 @@ function toUrl(req: NextRequest, path: string) {
   return new URL(path, req.url);
 }
 
+/** Encaminha cookies + headers úteis para o /create conseguir ver o carrinho do cliente */
+function forwardHeaders(req: NextRequest) {
+  const h: Record<string, string> = {
+    "content-type": "application/json",
+  };
+
+  const cookie = req.headers.get("cookie");
+  if (cookie) h.cookie = cookie;
+
+  // úteis em deploys/proxies (Vercel, Cloudflare, etc.)
+  const xfProto = req.headers.get("x-forwarded-proto");
+  const xfHost = req.headers.get("x-forwarded-host");
+  const xfFor = req.headers.get("x-forwarded-for");
+
+  if (xfProto) h["x-forwarded-proto"] = xfProto;
+  if (xfHost) h["x-forwarded-host"] = xfHost;
+  if (xfFor) h["x-forwarded-for"] = xfFor;
+
+  return h;
+}
+
 /** Chama o nosso criador de ordem (/api/checkout/paypal/create) e devolve a resposta já validada */
 async function callCreate(
   req: NextRequest,
   body?: unknown
-): Promise<{ url: string; orderId: string; paypalOrderId?: string }> {
+): Promise<{ url: string; approveUrl?: string; orderId: string; paypalOrderId?: string }> {
   const createUrl = toUrl(req, "/api/checkout/paypal/create");
+
   const res = await fetch(createUrl, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: forwardHeaders(req),
+    body: body ? JSON.stringify(body) : JSON.stringify({}),
     cache: "no-store",
   });
 
   const data = (await res.json().catch(() => ({}))) as any;
 
-  if (!res.ok || !data?.url) {
+  // Aceita tanto "url" quanto "approveUrl" (para compatibilidade)
+  const approve = data?.approveUrl || data?.url;
+
+  if (!res.ok || !approve) {
     const msg = data?.error || `create_failed_${res.status ?? "unknown"}`;
     throw new Error(String(msg));
   }
 
-  return data as { url: string; orderId: string; paypalOrderId?: string };
+  // devolve "url" e "approveUrl" para não quebrares nada no client
+  return {
+    ...data,
+    url: String(approve),
+    approveUrl: String(approve),
+  };
 }
 
 /**
@@ -50,9 +80,8 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST → cria a ordem e devolve JSON ({ url, orderId, paypalOrderId }).
+ * POST → cria a ordem e devolve JSON ({ url, approveUrl, orderId, paypalOrderId }).
  * Útil quando queres controlar o redirect no cliente.
- * O body recebido é repassado para o /create (ex.: preferências futuras).
  */
 export async function POST(req: NextRequest) {
   try {
