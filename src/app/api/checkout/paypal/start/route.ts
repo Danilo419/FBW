@@ -12,50 +12,56 @@ function toUrl(req: NextRequest, path: string) {
 
 /** Encaminha cookies + headers úteis para o /create conseguir ver o carrinho do cliente */
 function forwardHeaders(req: NextRequest) {
-  const h: Record<string, string> = {
+  const headers: Record<string, string> = {
     "content-type": "application/json",
   };
 
+  // 🔑 MUITO IMPORTANTE: reenviar cookies (cartId, session, etc.)
   const cookie = req.headers.get("cookie");
-  if (cookie) h.cookie = cookie;
+  if (cookie) headers.cookie = cookie;
 
-  // úteis em deploys/proxies (Vercel, Cloudflare, etc.)
+  // Headers úteis em Vercel / proxies
   const xfProto = req.headers.get("x-forwarded-proto");
   const xfHost = req.headers.get("x-forwarded-host");
   const xfFor = req.headers.get("x-forwarded-for");
 
-  if (xfProto) h["x-forwarded-proto"] = xfProto;
-  if (xfHost) h["x-forwarded-host"] = xfHost;
-  if (xfFor) h["x-forwarded-for"] = xfFor;
+  if (xfProto) headers["x-forwarded-proto"] = xfProto;
+  if (xfHost) headers["x-forwarded-host"] = xfHost;
+  if (xfFor) headers["x-forwarded-for"] = xfFor;
 
-  return h;
+  return headers;
 }
 
-/** Chama o nosso criador de ordem (/api/checkout/paypal/create) e devolve a resposta já validada */
+/** Chama o criador de ordem (/api/checkout/paypal/create) */
 async function callCreate(
   req: NextRequest,
   body?: unknown
-): Promise<{ url: string; approveUrl?: string; orderId: string; paypalOrderId?: string }> {
+): Promise<{
+  url: string;
+  approveUrl: string;
+  orderId: string;
+  paypalOrderId?: string;
+}> {
   const createUrl = toUrl(req, "/api/checkout/paypal/create");
 
   const res = await fetch(createUrl, {
     method: "POST",
     headers: forwardHeaders(req),
-    body: body ? JSON.stringify(body) : JSON.stringify({}),
+    body: JSON.stringify(body ?? {}),
     cache: "no-store",
   });
 
   const data = (await res.json().catch(() => ({}))) as any;
 
-  // Aceita tanto "url" quanto "approveUrl" (para compatibilidade)
+  // Aceita tanto "approveUrl" como "url"
   const approve = data?.approveUrl || data?.url;
 
   if (!res.ok || !approve) {
-    const msg = data?.error || `create_failed_${res.status ?? "unknown"}`;
+    const msg = data?.error || `paypal_create_failed_${res.status}`;
     throw new Error(String(msg));
   }
 
-  // devolve "url" e "approveUrl" para não quebrares nada no client
+  // Devolve ambos para compatibilidade total com o client
   return {
     ...data,
     url: String(approve),
@@ -64,8 +70,7 @@ async function callCreate(
 }
 
 /**
- * GET → cria a ordem e faz redirect direto para a página de aprovação do PayPal.
- * Útil para iniciar o fluxo via link/botão simples.
+ * GET → cria a ordem e faz redirect direto para o PayPal
  */
 export async function GET(req: NextRequest) {
   try {
@@ -74,14 +79,14 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     const msg = e?.message || "paypal_start_error";
     return NextResponse.redirect(
-      toUrl(req, `/cart?paypal_error=${encodeURIComponent(String(msg))}`)
+      toUrl(req, `/cart?paypal_error=${encodeURIComponent(msg)}`)
     );
   }
 }
 
 /**
- * POST → cria a ordem e devolve JSON ({ url, approveUrl, orderId, paypalOrderId }).
- * Útil quando queres controlar o redirect no cliente.
+ * POST → cria a ordem e devolve JSON
+ * Usado pelo CheckoutClient
  */
 export async function POST(req: NextRequest) {
   try {
