@@ -9,6 +9,7 @@ import {
   MapPin,
   ArrowUp,
   Instagram,
+  Youtube,
   ShieldCheck,
   Truck,
   BadgePercent,
@@ -161,11 +162,25 @@ export default function Footer() {
 
             {/* Socials */}
             <div className="mt-4 flex items-center gap-3">
-              <Social href="https://www.instagram.com/footballworld_store/" label="Instagram">
+              <Social
+                href="https://www.instagram.com/footballworld_store/"
+                label="Instagram"
+              >
                 <Instagram className="h-4 w-4" />
               </Social>
-              <Social href="https://www.tiktok.com/@footballworld_store" label="TikTok">
+              <Social
+                href="https://www.tiktok.com/@footballworld_store"
+                label="TikTok"
+              >
                 <TikTokIcon className="h-4 w-4" />
+              </Social>
+
+              {/* ✅ YouTube */}
+              <Social
+                href="https://www.youtube.com/@FootBallWorld_Store"
+                label="YouTube"
+              >
+                <Youtube className="h-4 w-4" />
               </Social>
             </div>
           </div>
