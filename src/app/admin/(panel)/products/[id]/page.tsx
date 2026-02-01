@@ -91,7 +91,7 @@ async function addAdultSizeAction(formData: FormData): Promise<void> {
         sizes: {
           create: {
             size,
-            available: false, // começa indisponível (para “selecionar tamanhos não disponíveis”)
+            available: false, // começa indisponível
           },
         },
       },
@@ -113,7 +113,6 @@ async function removeSizeAction(formData: FormData): Promise<void> {
   const sizeId = String(formData.get("sizeId") || "").trim();
   if (!productId || !sizeId) return;
 
-  // nested delete (funciona independentemente do nome real do model no schema)
   try {
     await prisma.product.update({
       where: { id: productId },
@@ -124,7 +123,6 @@ async function removeSizeAction(formData: FormData): Promise<void> {
       },
     });
   } catch (e) {
-    // se já foi removido ou não existir, só dá refresh na mesma
     console.error(e);
   }
 
@@ -195,7 +193,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     ],
   },
 
-  /* ✅ National Teams (NO women / NO youth) */
   {
     title: "National Teams – FIFA",
     items: [
@@ -284,8 +281,8 @@ export default async function ProductEditPage({
     where: { id },
     include: {
       sizes: true,
+      // ✅ precisamos das options todas para detectar CUSTOMIZATION + continuar a ler SIZE
       options: {
-        where: { type: "SIZE" as OptionType },
         include: { values: { select: { value: true, label: true } } },
       },
     },
@@ -294,12 +291,14 @@ export default async function ProductEditPage({
 
   const selectedInitial: string[] = (product as any).badges ?? [];
 
-  const sizeGroup = product.options[0] ?? null;
+  // ✅ encontrar o grupo SIZE (em vez de options[0])
+  const sizeGroup = (product.options || []).find((o: any) => o?.type === ("SIZE" as OptionType)) ?? null;
+
   const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
       ? new Set(
           sizeGroup.values
-            .map((v) => normalizeAdultSizeLabel(v.label || v.value || ""))
+            .map((v: any) => normalizeAdultSizeLabel(v.label || v.value || ""))
             .filter((x) => x && isAllowedAdultSize(x))
         )
       : null;
@@ -327,6 +326,17 @@ export default async function ProductEditPage({
 
   /* ✅ valor atual do teamType para prefill */
   const currentTeamType: TeamTypeLocal = ((product as any).teamType as TeamTypeLocal) ?? "CLUB";
+
+  /* ✅ detectar estado atual do "disableCustomization"
+     - se existir campo boolean no Product, usa-o
+     - senão, tenta inferir por um option group CUSTOMIZATION com 0 values
+  */
+  const customizationGroup =
+    (product.options || []).find((o: any) => String(o?.type) === "CUSTOMIZATION") ?? null;
+
+  const disableCustomizationInitial: boolean =
+    (product as any).disableCustomization === true ||
+    (!!customizationGroup && Array.isArray(customizationGroup.values) && customizationGroup.values.length === 0);
 
   return (
     <div className="space-y-6" data-product-id={product.id}>
@@ -357,7 +367,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* ====== Form principal: dados + imagens ====== */}
+        {/* ====== Form principal: dados + imagens + personalization ====== */}
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
 
@@ -456,6 +466,35 @@ section .images-editor [placeholder*="Paste an image URL"] {
               initialImages={(product as any).imageUrls ?? []}
               alt={product.name}
             />
+          </div>
+
+          {/* ✅ Personalization (igual ao Create Product) */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Personalization</label>
+
+            {/* garante que sempre envia um valor */}
+            <input type="hidden" name="disableCustomization" value="false" />
+
+            <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
+              <input
+                id="disableCustomization"
+                name="disableCustomization"
+                type="checkbox"
+                value="true"
+                defaultChecked={disableCustomizationInitial}
+                className="mt-1"
+              />
+              <div>
+                <label htmlFor="disableCustomization" className="font-medium">
+                  Remove “Customization” section on product page
+                </label>
+                <p className="text-xs text-gray-600 mt-1">
+                  Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
+                  This sets <code>disableCustomization=true</code> in the request; the API creates a customization option
+                  group with <strong>no values</strong>, and the product page will not render that block.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div>
