@@ -472,9 +472,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
           <div className="space-y-3">
             <label className="text-sm font-medium">Personalization</label>
 
-            {/* garante que sempre envia um valor */}
-            <input type="hidden" name="disableCustomization" value="false" />
-
             <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
               <input
                 id="disableCustomization"
@@ -484,6 +481,13 @@ section .images-editor [placeholder*="Paste an image URL"] {
                 defaultChecked={disableCustomizationInitial}
                 className="mt-1"
               />
+
+              {/* ✅ IMPORTANT FIX:
+                  hidden vem DEPOIS do checkbox para que FormData.get("disableCustomization")
+                  devolva "true" quando estiver marcado, e "false" quando não estiver.
+              */}
+              <input type="hidden" name="disableCustomization" value="false" />
+
               <div>
                 <label htmlFor="disableCustomization" className="font-medium">
                   Remove “Customization” section on product page
