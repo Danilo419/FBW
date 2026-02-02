@@ -29,7 +29,7 @@ type SizeUI = {
   id: string;
   size: string;
   available: boolean;
-  stock?: number | null; // opcional para futura compat
+  stock?: number | null; // optional for future compat
 };
 
 type ProductUI = {
@@ -39,11 +39,19 @@ type ProductUI = {
   team?: string | null;
   description?: string | null;
   basePrice: number; // cents
-  images: string[]; // mapeado de imageUrls
-  sizes: SizeUI[]; // apenas os que existem na BD
+  images: string[]; // mapped from imageUrls
+  sizes: SizeUI[]; // only those that exist in DB
   optionGroups: OptionGroupUI[];
-  /** ✅ novo: array de badges guardados diretamente no produto */
+
+  /** Saved directly on Product */
   badges?: string[];
+
+  /**
+   * ✅ IMPORTANT:
+   * Comes from Prisma (Product.allowNameNumber).
+   * If missing (old products), ProductConfigurator defaults to true.
+   */
+  allowNameNumber?: boolean | null;
 };
 
 /* ===================== Helpers ===================== */
@@ -55,10 +63,8 @@ function ensureArray<T>(arr: T[] | null | undefined): T[] {
   return Array.isArray(arr) ? arr : [];
 }
 
-/** Converte SizeStock -> UI Size */
-function toUISizes(
-  rows: { id: string | number; size: string; available: boolean }[]
-): SizeUI[] {
+/** Converts SizeStock -> UI Size */
+function toUISizes(rows: { id: string | number; size: string; available: boolean }[]): SizeUI[] {
   return rows.map((s) => ({
     id: String(s.id),
     size: String(s.size).toUpperCase(),
@@ -67,7 +73,7 @@ function toUISizes(
   }));
 }
 
-/** Agrupa OptionValue por groupId */
+/** Groups OptionValue by groupId */
 function mapValuesByGroup(values: {
   id: string | number;
   groupId: string | number;
@@ -122,14 +128,10 @@ export async function generateStaticParams() {
 }
 
 /* ===================== Page ===================== */
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // 1) Core do produto (✅ já inclui badges)
+  // 1) Core product fields (✅ now includes allowNameNumber)
   const core = await prisma.product.findUnique({
     where: { slug },
     select: {
@@ -140,12 +142,16 @@ export default async function ProductPage({
       description: true,
       basePrice: true,
       imageUrls: true,
-      badges: true, // <<<<<<<<<<<<<< inclui badges do produto
+      badges: true,
+
+      // ✅ THIS IS THE FIX: pass the DB flag to the ProductConfigurator
+      allowNameNumber: true,
     },
   });
+
   if (!core) notFound();
 
-  // 2) Relations em queries separadas
+  // 2) Relations in separate queries
   const [sizesDb, groupsDb, valuesDb] = await Promise.all([
     prisma.sizeStock.findMany({
       where: { productId: core.id },
@@ -164,22 +170,21 @@ export default async function ProductPage({
     }),
   ]);
 
-  // 3) Converter para UI
+  // 3) Convert to UI
   const sizes = toUISizes(sizesDb);
   const valuesByGroup = mapValuesByGroup(valuesDb);
   let optionGroups = toUIGroups(groupsDb, valuesByGroup);
 
-  // Se não existir grupo 'badges' com valores, limpamos entradas "badge" do grupo 'customization'
-  // (o ProductConfigurator já cria um grupo virtual com base em product.badges)
-  const hasBadgesGroup = optionGroups.some(
-    (g) => g.key === "badges" && (g.values?.length ?? 0) > 0
-  );
+  // If there is no 'badges' group with values, remove "badge" entries from 'customization'
+  // (ProductConfigurator can create a virtual badges group from product.badges)
+  const hasBadgesGroup = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
+
   if (!hasBadgesGroup) {
     optionGroups = optionGroups.map((g) => {
       if (g.key !== "customization") return g;
-      const filtered = g.values.filter(
-        (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
-      );
+
+      const filtered = g.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+
       return {
         ...g,
         values:
@@ -200,8 +205,11 @@ export default async function ProductPage({
     images: ensureArray(core.imageUrls),
     sizes,
     optionGroups,
-    /** ✅ passa o array guardado na BD para o Configurator gerar o grupo virtual */
+
     badges: ensureArray(core.badges),
+
+    // ✅ pass DB flag (true/false)
+    allowNameNumber: core.allowNameNumber,
   };
 
   return (
