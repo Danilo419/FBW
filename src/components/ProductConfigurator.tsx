@@ -8,9 +8,9 @@ import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 
-/* ====================== MAPA DE DESCONTOS ======================
- * chave  = preço atual (EUROS, como aparece no site, ex: "34.99")
- * valor  = preço ORIGINAL antes do desconto (em euros)
+/* ====================== DISCOUNT MAP ======================
+ * key   = current price (EUR, as shown on site, e.g. "34.99")
+ * value = ORIGINAL price before discount (EUR)
  */
 const SALE_MAP_EUR: Record<string, number> = {
   "29.99": 70,
@@ -24,6 +24,7 @@ const SALE_MAP_EUR: Record<string, number> = {
 
 /* ====================== UI Types ====================== */
 type OptionValueUI = { id: string; value: string; label: string; priceDelta: number };
+
 type OptionGroupUI = {
   id: string;
   key: string;
@@ -32,7 +33,9 @@ type OptionGroupUI = {
   required: boolean;
   values: OptionValueUI[];
 };
+
 type SizeUI = { id: string; size: string; stock?: number | null; available?: boolean | null };
+
 type ProductUI = {
   id: string;
   slug: string;
@@ -45,8 +48,10 @@ type ProductUI = {
   sizes?: SizeUI[];
   badges?: string[];
 
-  // ✅ IMPORTANT: vem do Prisma (Product.allowNameNumber)
-  // Se não vier, assumimos true para não quebrar produtos antigos
+  /**
+   * IMPORTANT: Comes from Prisma (Product.allowNameNumber).
+   * If missing, we default to true so old products do not break.
+   */
   allowNameNumber?: boolean | null;
 };
 
@@ -55,6 +60,7 @@ type Props = { product: ProductUI };
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
+
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -123,11 +129,11 @@ type FlyState = {
 
 /* ====================== Unicode helpers ====================== */
 /**
- * ✅ Mantém letras com acentos (Unicode), espaços e . ' -
- * - remove números/símbolos (para o nome)
- * - colapsa espaços
- * - uppercase
- * - corta a 14 (igual ao teu comportamento anterior)
+ * Keeps accented letters (Unicode), spaces and . ' -
+ * - removes numbers/symbols (for the name)
+ * - collapses spaces
+ * - uppercases
+ * - trims to maxLen (14 by default)
  */
 function sanitizeNameUnicode(input: string, maxLen = 14) {
   return input
@@ -139,12 +145,26 @@ function sanitizeNameUnicode(input: string, maxLen = 14) {
 }
 
 /**
- * ✅ Agora aceita 3 dígitos (0–999)
- * - mantém só números
- * - limita a 3 chars
+ * Accepts up to 3 digits (0–999)
+ * - keeps only digits
+ * - limits length
  */
 function sanitizeNumber(input: string, maxLen = 3) {
   return input.replace(/\D/g, "").slice(0, maxLen);
+}
+
+/** True if a customization option looks like "Name & Number" */
+function isNameNumberValue(v?: string | null, label?: string | null) {
+  const a = String(v ?? "").toLowerCase();
+  const b = String(label ?? "").toLowerCase();
+
+  // your system uses "name-number" in the value
+  if (a.includes("name-number")) return true;
+
+  // extra safety for labels like "Name & Number"
+  if (b.includes("name") && b.includes("number")) return true;
+
+  return false;
 }
 
 export default function ProductConfigurator({ product }: Props) {
@@ -158,17 +178,20 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // ✅ new fly animation state (Framer Motion)
+  // Fly animation state (Framer Motion)
   const [fly, setFly] = useState<FlyState | null>(null);
   const flyKeyRef = useRef(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  // ✅ Source of truth: DB flag (default true)
+  /**
+   * Source of truth: DB flag.
+   * If undefined/null (old products), default to true.
+   */
   const allowNameNumber = product.allowNameNumber !== false;
 
-  /* ---------- DESCONTO ---------- */
+  /* ---------- Discount ---------- */
   const rawUnitPrice = product.basePrice;
   const candidateEur1 = rawUnitPrice;
   const candidateEur2 = rawUnitPrice / 100;
@@ -202,7 +225,7 @@ export default function ProductConfigurator({ product }: Props) {
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbs ---------- */
+  /* ---------- Thumbnails ---------- */
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -229,6 +252,8 @@ export default function ProductConfigurator({ product }: Props) {
         available: s.available ?? true,
       }));
     }
+
+    // fallback sizes if there is no DB size list
     const fallback = (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
       id: s,
       size: s,
@@ -295,26 +320,34 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
+  /**
+   * IMPORTANT:
+   * - If there is no badges group, remove any "badge" customization values.
+   * - If allowNameNumber is false, remove any "name-number" customization values.
+   * This guarantees there is NO path to show the Name/Number block.
+   */
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
     const original = customizationGroupFromDb;
 
-    // ✅ 1) remove "badge" customization options if there is no badges group
+    // 1) If there is no badges group, remove badge-related customization items
     let filtered = badgesGroup
       ? original.values
-      : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+      : original.values.filter(
+          (v) =>
+            !String(v.value || "").toLowerCase().includes("badge") &&
+            !String(v.label || "").toLowerCase().includes("badge")
+        );
 
-    // ✅ 2) HARD RULE: if allowNameNumber is false, remove any "name-number" customization value
+    // 2) If allowNameNumber is false, remove name-number options (value/label)
     if (!allowNameNumber) {
-      filtered = filtered.filter(
-        (v) =>
-          !String(v.value || "").toLowerCase().includes("name-number") &&
-          !String(v.label || "").toLowerCase().includes("name") // opcional: evita labels tipo "Name & Number"
-      );
+      filtered = filtered.filter((v) => !isNameNumberValue(v.value, v.label));
     }
 
+    // If nothing remains, hide the entire customization block
     if ((filtered?.length ?? 0) === 0) return undefined;
+
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
 
@@ -324,35 +357,44 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // ✅ if customization group disappears, clear selection
+  // If customization block disappears, clear selection
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // ✅ if no badges group, avoid "badge" customization selection
+  // If there is no badges group, prevent choosing a "badge" customization option
   useEffect(() => {
-    if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
+    if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
   }, [badgesGroup, customization]);
 
-  // ✅ HARD RULE: when allowNameNumber is false, purge "name-number" selection + inputs
+  /**
+   * HARD RULE:
+   * If allowNameNumber is false, we also purge:
+   * - any current selection that would show name-number
+   * - the inputs for name/number
+   */
   useEffect(() => {
     if (allowNameNumber) return;
 
-    // clear selected customization if it contains name-number
     if (typeof customization === "string" && customization.toLowerCase().includes("name-number")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
 
-    // clear inputs
     if (custName) setCustName("");
     if (custNumber) setCustNumber("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowNameNumber]);
 
+  /**
+   * The Name/Number UI must ONLY appear if:
+   * - allowNameNumber is true
+   * - customization group exists
+   * - selected customization includes name-number
+   */
   const showNameNumber =
     allowNameNumber &&
     !!effectiveCustomizationGroup &&
@@ -364,8 +406,7 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) =>
-    setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -398,6 +439,7 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
+        // keep only one per competition
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -415,21 +457,21 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize (✅ supports accents) ---------- */
+  /* ---------- Sanitize (supports accents) ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
-    ).filter((el) => {
+
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
       return visible && style.visibility !== "hidden" && style.opacity !== "0";
     });
+
     if (anchors.length === 0) return null;
 
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
@@ -440,16 +482,18 @@ export default function ProductConfigurator({ product }: Props) {
 
     let best = anchors[0];
     let bestDist = Infinity;
+
     for (const el of anchors) {
       const r = el.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      const d = Math.hypot(cx - imgCx, cy - imgCy);
+      const cx0 = r.left + r.width / 2;
+      const cy0 = r.top + r.height / 2;
+      const d = Math.hypot(cx0 - imgCx, cy0 - imgCy);
       if (d < bestDist) {
         bestDist = d;
         best = el;
       }
     }
+
     return best.getBoundingClientRect();
   }
 
@@ -464,8 +508,8 @@ export default function ProductConfigurator({ product }: Props) {
     if (typeof window === "undefined") return;
 
     const prefersReduced =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     if (prefersReduced) {
       pulseCart();
       return;
@@ -473,6 +517,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     const start = imgWrapRef.current?.getBoundingClientRect();
     const end = getCartTargetRect();
+
     if (!start || !end) {
       pulseCart();
       return;
@@ -480,16 +525,12 @@ export default function ProductConfigurator({ product }: Props) {
 
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from: FlyRect = {
-      left: start.left,
-      top: start.top,
-      width: start.width,
-      height: start.height,
-    };
+    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
     const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height)));
+
     const to: FlyRect = {
       left: endCx - targetSize / 2,
       top: endCy - targetSize / 2,
@@ -501,7 +542,7 @@ export default function ProductConfigurator({ product }: Props) {
     setFly({ key: flyKeyRef.current, src, from, to });
   }
 
-  /* ---------- Navegação ---------- */
+  /* ---------- Navigation ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
 
@@ -532,10 +573,7 @@ export default function ProductConfigurator({ product }: Props) {
     }
 
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [
-        k,
-        Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null,
-      ])
+      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
     );
 
     startTransition(async () => {
@@ -544,7 +582,7 @@ export default function ProductConfigurator({ product }: Props) {
         qty,
         options: optionsForCart,
 
-        // ✅ hard rule: only send personalization if showNameNumber is true
+        // Hard rule: only send personalization if Name/Number is actually shown
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
@@ -566,7 +604,7 @@ export default function ProductConfigurator({ product }: Props) {
           {showToast ? "Item added to cart." : ""}
         </div>
 
-        {/* ✅ Fly-to-cart overlay */}
+        {/* Fly-to-cart overlay */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -709,20 +747,10 @@ export default function ProductConfigurator({ product }: Props) {
                         )}
                       >
                         {isActive && (
-                          <span
-                            aria-hidden
-                            className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
-                          />
+                          <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image
-                            src={src}
-                            alt={`thumb ${i + 1}`}
-                            fill
-                            className="object-contain"
-                            sizes="42px"
-                            unoptimized
-                          />
+                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
                         </span>
                       </button>
                     );
@@ -740,9 +768,7 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
-                <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                  {money(originalUnitPriceForMoney)}
-                </span>
+                <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
               )}
               <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
             </div>
@@ -806,7 +832,7 @@ export default function ProductConfigurator({ product }: Props) {
             />
           )}
 
-          {/* Personalization */}
+          {/* Personalization (Name & Number) */}
           {showNameNumber && (
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700">
@@ -815,6 +841,7 @@ export default function ProductConfigurator({ product }: Props) {
                   FREE
                 </span>
               </div>
+
               <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
                 <label className="block">
                   <span className="text-[11px] sm:text-xs text-gray-600">Name (uppercase)</span>
@@ -839,6 +866,7 @@ export default function ProductConfigurator({ product }: Props) {
                   />
                 </label>
               </div>
+
               <p className="text-[11px] sm:text-xs text-gray-500">
                 Personalization will be printed in the club’s official style.
               </p>
@@ -859,13 +887,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Other groups */}
           {otherGroups.map((g) => (
-            <GroupBlock
-              key={g.id}
-              group={g}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-            />
+            <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
           ))}
 
           {/* Qty + Total */}
@@ -941,10 +963,7 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">Item added to cart</div>
                   <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
-                <button
-                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                  onClick={() => setShowToast(false)}
-                >
+                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
                   Close
                 </button>
               </div>
@@ -1014,8 +1033,7 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) =>
-    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
+  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
@@ -1061,13 +1079,7 @@ function GroupBlock({
 /* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      className={cx("h-5 w-5", props.className)}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M20 7L9 18l-5-5"
         stroke="currentColor"
@@ -1078,47 +1090,31 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className={cx(
-        "mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform",
-        props.className
-      )}
+      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
       fill="none"
       aria-hidden="true"
     >
-      <path
-        d="M15 6l-6 6 6 6"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
+
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className={cx(
-        "mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform",
-        props.className
-      )}
+      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
       fill="none"
       aria-hidden="true"
     >
-      <path
-        d="M9 6l6 6-6 6"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
