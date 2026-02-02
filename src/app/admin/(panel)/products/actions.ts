@@ -14,7 +14,6 @@ function toNullableString(v: unknown): string | null {
 /** Converts "39.90" -> 3990; invalid values become 0 */
 function toCents(v: unknown): number {
   if (v == null) return 0;
-  // accepts comma or dot
   const n = Number(String(v).replace(",", "."));
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100);
@@ -26,17 +25,13 @@ function parseImagesText(input: unknown): string[] {
   const raw = String(input).trim();
   if (!raw) return [];
 
-  // try JSON first
   try {
     const j = JSON.parse(raw);
-    if (Array.isArray(j)) {
-      return j.map((x) => String(x)).filter(Boolean);
-    }
+    if (Array.isArray(j)) return j.map((x) => String(x)).filter(Boolean);
   } catch {
     // ignore JSON error and fallback
   }
 
-  // fallback: split by newline or comma
   return raw
     .split(/\r?\n|,/g)
     .map((s) => s.trim())
@@ -91,25 +86,17 @@ function revalidatePublicProduct(meta?: {
   if (!meta) return;
 
   // Public product page
-  if (meta.slug) {
-    revalidatePath(`/products/${meta.slug}`);
-  }
+  if (meta.slug) revalidatePath(`/products/${meta.slug}`);
 
   // Revalidate correct listings (CLUB vs NATION)
   const t = String(meta.teamType ?? "CLUB").toUpperCase();
   const base = t === "NATION" ? "/nations" : "/clubs";
 
-  if (meta.team) {
-    revalidatePath(`${base}/${slugify(meta.team)}`);
-  }
+  if (meta.team) revalidatePath(`${base}/${slugify(meta.team)}`);
 
   // Optional aggregated listings (if your app has them)
-  if (meta.team) {
-    revalidatePath(`/products/team/${slugify(meta.team)}`);
-  }
-  if (meta.season) {
-    revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
-  }
+  if (meta.team) revalidatePath(`/products/team/${slugify(meta.team)}`);
+  if (meta.season) revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
 
   // Optional general listing pages
   revalidatePath("/products");
@@ -138,6 +125,38 @@ async function ensureBadgesGroup(productId: string) {
   return group;
 }
 
+/**
+ * Resolve allowNameNumber robustly.
+ *
+ * Priority:
+ *  1) allowNameNumber (recommended hidden field / explicit flag)
+ *  2) disableCustomization (legacy checkbox; inverted)
+ *  3) fallback to existing DB value (so it never "flips" by accident)
+ */
+async function resolveAllowNameNumber(productId: string, formData: FormData): Promise<boolean> {
+  const allowRaw = formData.get("allowNameNumber");
+  if (allowRaw !== null) {
+    // allowNameNumber="true"/"false"/"1"/"0"/"on"/...
+    return parseBool(allowRaw, true);
+  }
+
+  const disableRaw = formData.get("disableCustomization");
+  if (disableRaw !== null) {
+    // disableCustomization=true means "do NOT allow"
+    const disable = parseBool(disableRaw, false);
+    return !disable;
+  }
+
+  // If neither field was submitted, keep current DB value to avoid unintended resets
+  const existing = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { allowNameNumber: true },
+  });
+
+  // Default true for very old rows where the column might be null
+  return existing?.allowNameNumber !== false;
+}
+
 /* ========================= Actions ========================= */
 
 /**
@@ -145,7 +164,10 @@ async function ensureBadgesGroup(productId: string) {
  * Expects FormData:
  *  - id, name, team, teamType, season?, description?, price (EUR)
  *  - imagesText? (JSON, lines or commas)
- *  - disableCustomization? ("true"/"false") -> stored as Product.allowNameNumber (inverted)
+ *
+ * Customization flag (any one of these):
+ *  - allowNameNumber? ("true"/"false")  ✅ recommended
+ *  - disableCustomization? ("true"/"false") -> stored as Product.allowNameNumber (inverted) (legacy)
  */
 export async function updateProduct(formData: FormData) {
   const id = String(formData.get("id") || "");
@@ -153,8 +175,6 @@ export async function updateProduct(formData: FormData) {
 
   const name = String(formData.get("name") || "").trim();
   const team = String(formData.get("team") || "").trim();
-
-  // NEW: teamType from <select name="teamType">
   const teamType = parseTeamType(formData.get("teamType"));
 
   const season = toNullableString(formData.get("season"));
@@ -163,10 +183,8 @@ export async function updateProduct(formData: FormData) {
 
   const imageUrls = parseImagesText(formData.get("imagesText"));
 
-  // Admin checkbox:
-  // disableCustomization=true means "do NOT allow Name & Number"
-  const disableCustomization = parseBool(formData.get("disableCustomization"), false);
-  const allowNameNumber = !disableCustomization;
+  // ✅ Robust persistence: will not reset accidentally when checkbox sends nothing
+  const allowNameNumber = await resolveAllowNameNumber(id, formData);
 
   const updated = await prisma.product.update({
     where: { id },
@@ -178,8 +196,6 @@ export async function updateProduct(formData: FormData) {
       description,
       basePrice,
       imageUrls,
-
-      // This is what controls the Name/Number block
       allowNameNumber,
     },
     select: { id: true, slug: true, team: true, season: true, teamType: true },
@@ -207,9 +223,7 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
   });
 
   revalidatePath("/admin/products");
-  if (updated?.productId) {
-    revalidatePath(`/admin/products/${updated.productId}`);
-  }
+  if (updated?.productId) revalidatePath(`/admin/products/${updated.productId}`);
 }
 
 /**
@@ -225,9 +239,7 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
  */
 export async function saveBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "");
-  if (!productId) {
-    return { ok: false, error: "Missing productId." };
-  }
+  if (!productId) return { ok: false, error: "Missing productId." };
 
   const existingIds = getAllStrings(formData.getAll("badgeIds[]"));
   const newLabels = getAllStrings(formData.getAll("newBadges[]"));
@@ -235,10 +247,8 @@ export async function saveBadges(formData: FormData) {
 
   try {
     const group = await prisma.$transaction(async (tx) => {
-      // 1) ensure "badges" group
       const group = await ensureBadgesGroup(productId);
 
-      // 2) attach existing OptionValues
       if (existingIds.length) {
         await tx.optionValue.updateMany({
           where: { id: { in: existingIds } },
@@ -246,7 +256,6 @@ export async function saveBadges(formData: FormData) {
         });
       }
 
-      // 3) create new OptionValues
       for (let i = 0; i < newLabels.length; i++) {
         const label = newLabels[i];
         if (!label) continue;
@@ -262,12 +271,7 @@ export async function saveBadges(formData: FormData) {
         const priceDelta = i < newPricesEur.length ? toCents(newPricesEur[i]) : 0;
 
         await tx.optionValue.create({
-          data: {
-            groupId: group.id,
-            value,
-            label,
-            priceDelta,
-          },
+          data: { groupId: group.id, value, label, priceDelta },
         });
       }
 
@@ -304,9 +308,7 @@ export async function saveBadges(formData: FormData) {
  */
 export async function setSelectedBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "");
-  if (!productId) {
-    return { ok: false, error: "Missing productId." };
-  }
+  if (!productId) return { ok: false, error: "Missing productId." };
 
   const selected = getAllStrings(formData.getAll("selectedBadges[]"));
 

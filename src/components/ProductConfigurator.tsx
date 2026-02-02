@@ -48,8 +48,10 @@ type ProductUI = {
   sizes?: SizeUI[];
   badges?: string[];
 
-  // Comes from Prisma: Product.allowNameNumber
-  // If missing, default to true so old products don't break
+  /**
+   * IMPORTANT: Comes from Prisma (Product.allowNameNumber).
+   * If missing, we default to true so old products do not break.
+   */
   allowNameNumber?: boolean | null;
 };
 
@@ -134,17 +136,18 @@ function sanitizeNumber(input: string, maxLen = 3) {
   return input.replace(/\D/g, "").slice(0, maxLen);
 }
 
-/** Detects ONLY the Name/Number customization option (safe + non-destructive) */
-function isNameNumberCustomization(v?: string | null, label?: string | null) {
-  const vv = String(v ?? "").toLowerCase();
-  const ll = String(label ?? "").toLowerCase();
-
-  // Your system uses "name-number" in the value
-  if (vv.includes("name-number")) return true;
-
-  // If label literally says Name & Number (both words)
-  if (ll.includes("name") && ll.includes("number")) return true;
-
+/**
+ * ✅ SAFE detection of "Name & Number" option.
+ * We only treat it as name-number if:
+ * - the value contains "name-number"
+ * OR
+ * - the label contains BOTH "name" and "number"
+ */
+function isNameNumberOption(v?: string | null, label?: string | null) {
+  const a = String(v ?? "").toLowerCase();
+  const b = String(label ?? "").toLowerCase();
+  if (a.includes("name-number")) return true;
+  if (b.includes("name") && b.includes("number")) return true;
   return false;
 }
 
@@ -159,13 +162,17 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  // Fly animation state (Framer Motion)
   const [fly, setFly] = useState<FlyState | null>(null);
   const flyKeyRef = useRef(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  // ✅ Source of truth from DB (default true for old products)
+  /**
+   * Source of truth: DB flag.
+   * If undefined/null (old products), default to true.
+   */
   const allowNameNumber = product.allowNameNumber !== false;
 
   /* ---------- Discount ---------- */
@@ -271,7 +278,14 @@ export default function ProductConfigurator({ product }: Props) {
       label: humanizeBadge(v),
       priceDelta: 0,
     }));
-    return { id: "badges-virtual", key: "badges", label: "Badges", type: "ADDON", required: false, values };
+    return {
+      id: "badges-virtual",
+      key: "badges",
+      label: "Badges",
+      type: "ADDON",
+      required: false,
+      values,
+    };
   }, [product.badges]);
 
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
@@ -283,7 +297,9 @@ export default function ProductConfigurator({ product }: Props) {
     if (!real && virtual) return virtual;
 
     const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
-    for (const v of virtual!.values) if (!map.has(v.value)) map.set(v.value, v);
+    for (const v of virtual!.values) {
+      if (!map.has(v.value)) map.set(v.value, v);
+    }
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
@@ -292,7 +308,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     const original = customizationGroupFromDb;
 
-    // 1) remove badge-related customization if there is no badges group
+    // 1) If there is no badges group, remove badge customization items
     let filtered = badgesGroup
       ? original.values
       : original.values.filter(
@@ -301,9 +317,9 @@ export default function ProductConfigurator({ product }: Props) {
             !String(v.label || "").toLowerCase().includes("badge")
         );
 
-    // 2) ONLY remove the Name/Number option when allowNameNumber is false (SAFE!)
+    // 2) If allowNameNumber is false, remove name/number customization items safely
     if (!allowNameNumber) {
-      filtered = filtered.filter((v) => !isNameNumberCustomization(v.value, v.label));
+      filtered = filtered.filter((v) => !isNameNumberOption(v.value, v.label));
     }
 
     if ((filtered?.length ?? 0) === 0) return undefined;
@@ -323,20 +339,23 @@ export default function ProductConfigurator({ product }: Props) {
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // If no badges group, avoid selecting a badge customization option
+  // If there is no badges group, avoid selecting a badge customization option
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
   }, [badgesGroup, customization]);
 
-  // HARD RULE: if allowNameNumber is false, purge any Name/Number selection + inputs
+  // HARD RULE: if allowNameNumber is false, purge any name/number selection + inputs
   useEffect(() => {
     if (allowNameNumber) return;
 
+    // If user had name-number selected, force to "none"
     if (typeof customization === "string" && customization.toLowerCase().includes("name-number")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
+
+    // Clear inputs
     if (custName) setCustName("");
     if (custNumber) setCustNumber("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -387,6 +406,7 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
+        // only one per competition
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -404,7 +424,7 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize ---------- */
+  /* ---------- Sanitize (supports accents) ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
@@ -455,7 +475,8 @@ export default function ProductConfigurator({ product }: Props) {
     if (typeof window === "undefined") return;
 
     const prefersReduced =
-      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (prefersReduced) {
       pulseCart();
@@ -464,7 +485,6 @@ export default function ProductConfigurator({ product }: Props) {
 
     const start = imgWrapRef.current?.getBoundingClientRect();
     const end = getCartTargetRect();
-
     if (!start || !end) {
       pulseCart();
       return;
@@ -472,7 +492,12 @@ export default function ProductConfigurator({ product }: Props) {
 
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
+    const from: FlyRect = {
+      left: start.left,
+      top: start.top,
+      width: start.width,
+      height: start.height,
+    };
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
@@ -532,7 +557,7 @@ export default function ProductConfigurator({ product }: Props) {
         qty,
         options: optionsForCart,
 
-        // Only send personalization if it is really enabled + selected
+        // ✅ Never send personalization if it is not actually shown/allowed
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
@@ -697,7 +722,14 @@ export default function ProductConfigurator({ product }: Props) {
                           <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
+                          <Image
+                            src={src}
+                            alt={`thumb ${i + 1}`}
+                            fill
+                            className="object-contain"
+                            sizes="42px"
+                            unoptimized
+                          />
                         </span>
                       </button>
                     );
@@ -725,7 +757,9 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
 
             {product.description && (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
+                {product.description}
+              </p>
             )}
           </header>
 
@@ -783,7 +817,7 @@ export default function ProductConfigurator({ product }: Props) {
             />
           )}
 
-          {/* Personalization */}
+          {/* Personalization (Name & Number) */}
           {showNameNumber && (
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700">
@@ -993,7 +1027,8 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
+  const isActive = (value: string) =>
+    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
@@ -1039,7 +1074,13 @@ function GroupBlock({
 /* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      className={cx("h-5 w-5", props.className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
