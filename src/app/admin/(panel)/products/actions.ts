@@ -85,20 +85,16 @@ function revalidatePublicProduct(meta?: {
 }) {
   if (!meta) return;
 
-  // Public product page
   if (meta.slug) revalidatePath(`/products/${meta.slug}`);
 
-  // Revalidate correct listings (CLUB vs NATION)
   const t = String(meta.teamType ?? "CLUB").toUpperCase();
   const base = t === "NATION" ? "/nations" : "/clubs";
 
   if (meta.team) revalidatePath(`${base}/${slugify(meta.team)}`);
 
-  // Optional aggregated listings (if your app has them)
   if (meta.team) revalidatePath(`/products/team/${slugify(meta.team)}`);
   if (meta.season) revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
 
-  // Optional general listing pages
   revalidatePath("/products");
   revalidatePath("/clubs");
   revalidatePath("/nations");
@@ -126,34 +122,31 @@ async function ensureBadgesGroup(productId: string) {
 }
 
 /**
- * Resolve allowNameNumber robustly.
+ * Resolves allowNameNumber robustly.
  *
  * Priority:
- *  1) allowNameNumber (recommended hidden field / explicit flag)
+ *  1) allowNameNumber (recommended explicit flag)
  *  2) disableCustomization (legacy checkbox; inverted)
- *  3) fallback to existing DB value (so it never "flips" by accident)
+ *  3) fallback to existing DB value (so it never flips by accident)
  */
 async function resolveAllowNameNumber(productId: string, formData: FormData): Promise<boolean> {
-  const allowRaw = formData.get("allowNameNumber");
-  if (allowRaw !== null) {
-    // allowNameNumber="true"/"false"/"1"/"0"/"on"/...
-    return parseBool(allowRaw, true);
+  // If your form submits allowNameNumber directly
+  if (formData.has("allowNameNumber")) {
+    return parseBool(formData.get("allowNameNumber"), true);
   }
 
-  const disableRaw = formData.get("disableCustomization");
-  if (disableRaw !== null) {
-    // disableCustomization=true means "do NOT allow"
-    const disable = parseBool(disableRaw, false);
+  // Legacy admin checkbox: disableCustomization (true => do NOT allow)
+  if (formData.has("disableCustomization")) {
+    const disable = parseBool(formData.get("disableCustomization"), false);
     return !disable;
   }
 
-  // If neither field was submitted, keep current DB value to avoid unintended resets
+  // Nothing submitted => preserve DB value (never reset)
   const existing = await prisma.product.findUnique({
     where: { id: productId },
     select: { allowNameNumber: true },
   });
 
-  // Default true for very old rows where the column might be null
   return existing?.allowNameNumber !== false;
 }
 
@@ -165,7 +158,7 @@ async function resolveAllowNameNumber(productId: string, formData: FormData): Pr
  *  - id, name, team, teamType, season?, description?, price (EUR)
  *  - imagesText? (JSON, lines or commas)
  *
- * Customization flag (any one of these):
+ * Customization flag (either one):
  *  - allowNameNumber? ("true"/"false")  ✅ recommended
  *  - disableCustomization? ("true"/"false") -> stored as Product.allowNameNumber (inverted) (legacy)
  */
@@ -271,7 +264,12 @@ export async function saveBadges(formData: FormData) {
         const priceDelta = i < newPricesEur.length ? toCents(newPricesEur[i]) : 0;
 
         await tx.optionValue.create({
-          data: { groupId: group.id, value, label, priceDelta },
+          data: {
+            groupId: group.id,
+            value,
+            label,
+            priceDelta,
+          },
         });
       }
 
