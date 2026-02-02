@@ -170,57 +170,8 @@ async function resolveAllowNameNumber(productId: string, formData: FormData): Pr
   return existing?.allowNameNumber !== false;
 }
 
-/**
- * ✅ Filters/cleans selected badges BEFORE saving in Product.badges:
- * - trims
- * - removes duplicates
- * - removes empty
- * - removes badges that do not exist anymore in OptionValue (badges group),
- *   so "deleted badges" can’t keep showing on product page.
- */
-async function sanitizeSelectedBadges(productId: string, selected: string[]): Promise<string[]> {
-  const cleaned = Array.from(
-    new Set(
-      (selected || [])
-        .map((s) => String(s ?? "").trim())
-        .filter(Boolean)
-    )
-  );
-
-  if (cleaned.length === 0) return [];
-
-  // Find the badges group id (if it exists)
-  const group = await prisma.optionGroup.findFirst({
-    where: { productId, key: "badges" },
-    select: { id: true },
-  });
-
-  // If there is no badges group, keep cleaned (you are using Product.badges as virtual badges)
-  if (!group) return cleaned;
-
-  // Keep only values that still exist in DB for this product's badges group
-  const existing = await prisma.optionValue.findMany({
-    where: { groupId: group.id, value: { in: cleaned } },
-    select: { value: true },
-  });
-
-  const allowed = new Set(existing.map((r) => r.value));
-  return cleaned.filter((v) => allowed.has(v));
-}
-
 /* ========================= Actions ========================= */
 
-/**
- * Updates main product fields, including images.
- *
- * Expects FormData:
- *  - id, name, team, teamType, season?, description?, price (EUR)
- *  - imagesText? (JSON, lines or commas)
- *
- * Customization flag:
- *  - allowNameNumber? ("true"/"false") ✅ recommended
- *  - OR disableCustomization? ("true"/"false") (legacy; inverted)
- */
 export async function updateProduct(formData: FormData) {
   const id = String(formData.get("id") || "").trim();
   if (!id) throw new Error("Missing product id");
@@ -235,7 +186,6 @@ export async function updateProduct(formData: FormData) {
 
   const imageUrls = parseImagesText(formData.get("imagesText"));
 
-  // ✅ This is the key fix: correct boolean reading even with hidden+checkbox
   const allowNameNumber = await resolveAllowNameNumber(id, formData);
 
   const updated = await prisma.product.update({
@@ -277,26 +227,34 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
 }
 
 /**
- * Creates/assigns badges to the product "badges" OptionGroup.
+ * ✅ SYNC badges OptionGroup:
+ * - keep selected existing values
+ * - create new ones
+ * - REMOVE values that were removed in the UI
+ * - ALSO clean Product.badges removing values that no longer exist
  */
 export async function saveBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
   if (!productId) return { ok: false, error: "Missing productId." };
 
-  const existingIds = getAllStrings(formData.getAll("badgeIds[]"));
+  const keepExistingIds = getAllStrings(formData.getAll("badgeIds[]"));
   const newLabels = getAllStrings(formData.getAll("newBadges[]"));
   const newPricesEur = getAllStrings(formData.getAll("newBadgePrices[]"));
 
   try {
-    const group = await prisma.$transaction(async (tx) => {
-      const group = await ensureBadgesGroup(productId);
+    const result = await prisma.$transaction(async (tx) => {
+      const group = await (async () => {
+        let g = await tx.optionGroup.findFirst({ where: { productId, key: "badges" } });
+        if (!g) {
+          g = await tx.optionGroup.create({
+            data: { productId, key: "badges", label: "Badges", type: "ADDON", required: false },
+          });
+        }
+        return g;
+      })();
 
-      if (existingIds.length) {
-        await tx.optionValue.updateMany({
-          where: { id: { in: existingIds } },
-          data: { groupId: group.id },
-        });
-      }
+      // 1) Create new values (if any) and collect their ids
+      const createdIds: string[] = [];
 
       for (let i = 0; i < newLabels.length; i++) {
         const label = newLabels[i];
@@ -312,15 +270,63 @@ export async function saveBadges(formData: FormData) {
 
         const priceDelta = i < newPricesEur.length ? toCents(newPricesEur[i]) : 0;
 
-        await tx.optionValue.create({
+        const created = await tx.optionValue.create({
           data: { groupId: group.id, value, label, priceDelta },
+          select: { id: true },
+        });
+        createdIds.push(created.id);
+      }
+
+      // 2) Ensure any "existingIds" are attached to this group (safety)
+      if (keepExistingIds.length) {
+        await tx.optionValue.updateMany({
+          where: { id: { in: keepExistingIds } },
+          data: { groupId: group.id },
         });
       }
 
-      return tx.optionGroup.findUnique({
+      // 3) REMOVE values that were removed in the UI:
+      // keep = ids user kept + ids we just created
+      const keepIds = Array.from(new Set([...keepExistingIds, ...createdIds]));
+
+      // Delete all optionValues in this group NOT in keepIds
+      // (if keepIds empty -> delete all)
+      await tx.optionValue.deleteMany({
+        where: {
+          groupId: group.id,
+          ...(keepIds.length ? { id: { notIn: keepIds } } : {}),
+        },
+      });
+
+      // 4) Clean Product.badges so removed values stop appearing
+      // We only keep product.badges that still exist as optionValue.value
+      const remaining = await tx.optionValue.findMany({
+        where: { groupId: group.id },
+        select: { value: true },
+      });
+      const allowedValues = new Set(remaining.map((r) => r.value));
+
+      const prod = await tx.product.findUnique({
+        where: { id: productId },
+        select: { badges: true },
+      });
+
+      const currentBadges = Array.isArray(prod?.badges) ? prod!.badges : [];
+      const cleanedBadges = currentBadges.filter((b) => allowedValues.has(String(b)));
+
+      if (cleanedBadges.length !== currentBadges.length) {
+        await tx.product.update({
+          where: { id: productId },
+          data: { badges: cleanedBadges },
+        });
+      }
+
+      const fullGroup = await tx.optionGroup.findUnique({
         where: { id: group.id },
         include: { values: true },
       });
+
+      return { group: fullGroup };
     });
 
     revalidatePath(`/admin/products/${productId}`);
@@ -332,7 +338,7 @@ export async function saveBadges(formData: FormData) {
     });
     revalidatePublicProduct(meta || undefined);
 
-    return { ok: true, group };
+    return { ok: true, group: result.group };
   } catch (e: any) {
     console.error("saveBadges error:", e);
     return { ok: false, error: e?.message ?? "Unexpected error while saving badges." };
@@ -341,21 +347,14 @@ export async function saveBadges(formData: FormData) {
 
 /**
  * Saves which badges are selected on the product (Product.badges column).
- *
- * ✅ FIX:
- * Before saving, we sanitize and (optionally) validate against existing OptionValue records,
- * so removed/deleted badges can’t keep showing on the product page.
  */
 export async function setSelectedBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
   if (!productId) return { ok: false, error: "Missing productId." };
 
-  const selectedRaw = getAllStrings(formData.getAll("selectedBadges[]"));
+  const selected = getAllStrings(formData.getAll("selectedBadges[]"));
 
   try {
-    // ✅ sanitize + validate
-    const selected = await sanitizeSelectedBadges(productId, selectedRaw);
-
     const updated = await prisma.product.update({
       where: { id: productId },
       data: { badges: selected },
@@ -365,7 +364,6 @@ export async function setSelectedBadges(formData: FormData) {
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
-    // ✅ Revalidate product page + listings
     revalidatePublicProduct(updated);
 
     return { ok: true };
