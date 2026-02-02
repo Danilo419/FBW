@@ -48,10 +48,8 @@ type ProductUI = {
   sizes?: SizeUI[];
   badges?: string[];
 
-  /**
-   * IMPORTANT: Comes from Prisma (Product.allowNameNumber).
-   * If missing, we default to true so old products do not break.
-   */
+  // Comes from Prisma: Product.allowNameNumber
+  // If missing, default to true so old products don't break
   allowNameNumber?: boolean | null;
 };
 
@@ -120,21 +118,9 @@ function competitionKey(value: string, label?: string) {
 
 /* ====================== Fly types ====================== */
 type FlyRect = { left: number; top: number; width: number; height: number };
-type FlyState = {
-  key: number;
-  src: string;
-  from: FlyRect;
-  to: FlyRect;
-};
+type FlyState = { key: number; src: string; from: FlyRect; to: FlyRect };
 
 /* ====================== Unicode helpers ====================== */
-/**
- * Keeps accented letters (Unicode), spaces and . ' -
- * - removes numbers/symbols (for the name)
- * - collapses spaces
- * - uppercases
- * - trims to maxLen (14 by default)
- */
 function sanitizeNameUnicode(input: string, maxLen = 14) {
   return input
     .trim()
@@ -144,25 +130,20 @@ function sanitizeNameUnicode(input: string, maxLen = 14) {
     .slice(0, maxLen);
 }
 
-/**
- * Accepts up to 3 digits (0–999)
- * - keeps only digits
- * - limits length
- */
 function sanitizeNumber(input: string, maxLen = 3) {
   return input.replace(/\D/g, "").slice(0, maxLen);
 }
 
-/** True if a customization option looks like "Name & Number" */
-function isNameNumberValue(v?: string | null, label?: string | null) {
-  const a = String(v ?? "").toLowerCase();
-  const b = String(label ?? "").toLowerCase();
+/** Detects ONLY the Name/Number customization option (safe + non-destructive) */
+function isNameNumberCustomization(v?: string | null, label?: string | null) {
+  const vv = String(v ?? "").toLowerCase();
+  const ll = String(label ?? "").toLowerCase();
 
-  // your system uses "name-number" in the value
-  if (a.includes("name-number")) return true;
+  // Your system uses "name-number" in the value
+  if (vv.includes("name-number")) return true;
 
-  // extra safety for labels like "Name & Number"
-  if (b.includes("name") && b.includes("number")) return true;
+  // If label literally says Name & Number (both words)
+  if (ll.includes("name") && ll.includes("number")) return true;
 
   return false;
 }
@@ -178,17 +159,13 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // Fly animation state (Framer Motion)
   const [fly, setFly] = useState<FlyState | null>(null);
   const flyKeyRef = useRef(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  /**
-   * Source of truth: DB flag.
-   * If undefined/null (old products), default to true.
-   */
+  // ✅ Source of truth from DB (default true for old products)
   const allowNameNumber = product.allowNameNumber !== false;
 
   /* ---------- Discount ---------- */
@@ -253,7 +230,6 @@ export default function ProductConfigurator({ product }: Props) {
       }));
     }
 
-    // fallback sizes if there is no DB size list
     const fallback = (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
       id: s,
       size: s,
@@ -295,14 +271,7 @@ export default function ProductConfigurator({ product }: Props) {
       label: humanizeBadge(v),
       priceDelta: 0,
     }));
-    return {
-      id: "badges-virtual",
-      key: "badges",
-      label: "Badges",
-      type: "ADDON",
-      required: false,
-      values,
-    };
+    return { id: "badges-virtual", key: "badges", label: "Badges", type: "ADDON", required: false, values };
   }, [product.badges]);
 
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
@@ -314,24 +283,16 @@ export default function ProductConfigurator({ product }: Props) {
     if (!real && virtual) return virtual;
 
     const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
-    for (const v of virtual!.values) {
-      if (!map.has(v.value)) map.set(v.value, v);
-    }
+    for (const v of virtual!.values) if (!map.has(v.value)) map.set(v.value, v);
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
-  /**
-   * IMPORTANT:
-   * - If there is no badges group, remove any "badge" customization values.
-   * - If allowNameNumber is false, remove any "name-number" customization values.
-   * This guarantees there is NO path to show the Name/Number block.
-   */
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
     const original = customizationGroupFromDb;
 
-    // 1) If there is no badges group, remove badge-related customization items
+    // 1) remove badge-related customization if there is no badges group
     let filtered = badgesGroup
       ? original.values
       : original.values.filter(
@@ -340,14 +301,12 @@ export default function ProductConfigurator({ product }: Props) {
             !String(v.label || "").toLowerCase().includes("badge")
         );
 
-    // 2) If allowNameNumber is false, remove name-number options (value/label)
+    // 2) ONLY remove the Name/Number option when allowNameNumber is false (SAFE!)
     if (!allowNameNumber) {
-      filtered = filtered.filter((v) => !isNameNumberValue(v.value, v.label));
+      filtered = filtered.filter((v) => !isNameNumberCustomization(v.value, v.label));
     }
 
-    // If nothing remains, hide the entire customization block
     if ((filtered?.length ?? 0) === 0) return undefined;
-
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
 
@@ -357,44 +316,32 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // If customization block disappears, clear selection
+  // If customization group disappears, clear selection
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // If there is no badges group, prevent choosing a "badge" customization option
+  // If no badges group, avoid selecting a badge customization option
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
   }, [badgesGroup, customization]);
 
-  /**
-   * HARD RULE:
-   * If allowNameNumber is false, we also purge:
-   * - any current selection that would show name-number
-   * - the inputs for name/number
-   */
+  // HARD RULE: if allowNameNumber is false, purge any Name/Number selection + inputs
   useEffect(() => {
     if (allowNameNumber) return;
 
     if (typeof customization === "string" && customization.toLowerCase().includes("name-number")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
-
     if (custName) setCustName("");
     if (custNumber) setCustNumber("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowNameNumber]);
 
-  /**
-   * The Name/Number UI must ONLY appear if:
-   * - allowNameNumber is true
-   * - customization group exists
-   * - selected customization includes name-number
-   */
   const showNameNumber =
     allowNameNumber &&
     !!effectiveCustomizationGroup &&
@@ -406,7 +353,8 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) =>
+    setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -439,7 +387,6 @@ export default function ProductConfigurator({ product }: Props) {
       const newKey = competitionKey(value, newV?.label);
 
       if (checked) {
-        // keep only one per competition
         arr = arr.filter((v) => {
           const vv = mapByValue.get(v);
           const k = competitionKey(v, vv?.label);
@@ -457,7 +404,7 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize (supports accents) ---------- */
+  /* ---------- Sanitize ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
@@ -573,7 +520,10 @@ export default function ProductConfigurator({ product }: Props) {
     }
 
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
+      Object.entries(selected).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null,
+      ])
     );
 
     startTransition(async () => {
@@ -582,7 +532,7 @@ export default function ProductConfigurator({ product }: Props) {
         qty,
         options: optionsForCart,
 
-        // Hard rule: only send personalization if Name/Number is actually shown
+        // Only send personalization if it is really enabled + selected
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
@@ -634,10 +584,7 @@ export default function ProductConfigurator({ product }: Props) {
                     filter: "blur(1px)",
                   }}
                   exit={{ opacity: 0 }}
-                  transition={{
-                    duration: 0.65,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
+                  transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
                   onAnimationComplete={() => {
                     setFly(null);
                     pulseCart();
@@ -768,9 +715,13 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
-                <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
+                <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+                  {money(originalUnitPriceForMoney)}
+                </span>
               )}
-              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
+              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
+                {money(rawUnitPrice)}
+              </span>
             </div>
 
             {product.description && (
@@ -832,7 +783,7 @@ export default function ProductConfigurator({ product }: Props) {
             />
           )}
 
-          {/* Personalization (Name & Number) */}
+          {/* Personalization */}
           {showNameNumber && (
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700">
@@ -887,7 +838,13 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Other groups */}
           {otherGroups.map((g) => (
-            <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
+            <GroupBlock
+              key={g.id}
+              group={g}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+            />
           ))}
 
           {/* Qty + Total */}
@@ -963,7 +920,10 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">Item added to cart</div>
                   <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
-                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
+                <button
+                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                  onClick={() => setShowToast(false)}
+                >
                   Close
                 </button>
               </div>
@@ -1080,13 +1040,7 @@ function GroupBlock({
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M20 7L9 18l-5-5"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
