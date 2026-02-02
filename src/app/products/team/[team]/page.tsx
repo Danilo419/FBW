@@ -134,18 +134,35 @@ function normKey(s: string) {
 }
 
 /**
- * ✅ OVERRIDES para casos ambíguos/curtos:
+ * ✅ OVERRIDES (match exato com o que está na BD)
  * Aqui definimos exatamente quais valores do campo `team`
  * são permitidos para um dado slug.
  *
- * Como tu disseste: AC Milan está guardado como "Milan".
+ * Tu disseste que na BD tens:
+ * Ajax, Braga, Lyon, Porto, PSG, PSV, Roma, Sporting
  */
 const TEAM_QUERY_OVERRIDES: Record<string, string[]> = {
+  // Milan / Inter
   "milan": ["Milan"],
   "ac-milan": ["Milan"],
-
-  // se na tua BD o Inter está mesmo "Inter Milan"
   "inter-milan": ["Inter Milan"],
+
+  // ✅ os que estavam a falhar (iguais na BD)
+  "ajax": ["Ajax"],
+  "braga": ["Braga"],
+  "lyon": ["Lyon"],
+  "porto": ["Porto"],
+  "psg": ["PSG"],
+  "psv": ["PSV"],
+  "roma": ["Roma"],
+  "sporting": ["Sporting"],
+
+  // (opcional, mas ajuda se por acaso os teus slugs forem diferentes)
+  "as-roma": ["Roma"],
+  "psv-eindhoven": ["PSV"],
+  "paris-saint-germain": ["PSG"],
+  "olympique-lyonnais": ["Lyon"],
+  "afc-ajax": ["Ajax"],
 };
 
 /**
@@ -247,7 +264,9 @@ export default async function TeamProductsPage({
           .map((s) => s.trim())
           .filter(Boolean)
           // remove lixo demasiado curto/genérico do exact
-          .filter((s) => normKey(s).length >= 3 && !CONTAINS_BLOCKLIST.has(normKey(s)))
+          .filter(
+            (s) => normKey(s).length >= 3 && !CONTAINS_BLOCKLIST.has(normKey(s))
+          )
       )
     );
 
@@ -330,6 +349,13 @@ const TEAM_MAP_FALLBACK: Record<string, string> = {
   // ✅ UI (mas na BD está "Milan")
   "milan": "AC Milan",
   "ac-milan": "AC Milan",
+
+  // ✅ UI para os que estavam a falhar
+  "ajax": "Ajax",
+  "lyon": "Lyon",
+  "psg": "PSG",
+  "psv": "PSV",
+  "roma": "Roma",
 };
 
 /* ============================ UI ============================ */
