@@ -56,7 +56,7 @@ type ProductUI = {
 
 /* ===================== Helpers ===================== */
 function toUIGroupType(t: string): "SIZE" | "RADIO" | "ADDON" {
-  return t === "SIZE" || t === "RADIO" || t === "ADDON" ? t : "RADIO";
+  return t === "SIZE" || t === "RADIO" || t === "ADDON" ? (t as any) : "RADIO";
 }
 
 function ensureArray<T>(arr: T[] | null | undefined): T[] {
@@ -78,8 +78,8 @@ function mapValuesByGroup(values: {
   id: string | number;
   groupId: string | number;
   value: string;
-  label: string;
-  priceDelta: number;
+  label: string | null;
+  priceDelta: number | null;
 }[]): Map<string, OptionValueUI[]> {
   const by = new Map<string, OptionValueUI[]>();
   for (const v of values) {
@@ -142,6 +142,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       description: true,
       basePrice: true,
       imageUrls: true,
+
+      // ✅ Selected badges saved on Product (SOURCE OF TRUTH for product page)
       badges: true,
 
       // ✅ Pass DB flag to ProductConfigurator
@@ -176,13 +178,34 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   let optionGroups = toUIGroups(groupsDb, valuesByGroup);
 
   /**
-   * ✅ IMPORTANT CHANGE:
-   * If there is NO 'badges' group with values, remove "badge" entries from 'customization'.
-   * AND if 'customization' becomes empty, REMOVE the group entirely
-   * (so the "Customization" section disappears and leaves no empty space).
+   * ✅ FIX REAL:
+   * On the product page, "badges available" must be ONLY the badges selected on Product.badges.
+   * The OptionGroup "badges" in the DB is just a catalog (can exist forever).
    */
+  const selectedBadges = ensureArray(core.badges);
+
+  // 1) Filter badges group to selected badges only (or remove it)
+  optionGroups = optionGroups
+    .map((g) => {
+      if (g.key !== "badges") return g;
+
+      // no selected badges -> hide the entire badges group
+      if (selectedBadges.length === 0) return { ...g, values: [] };
+
+      // keep only selected badge values
+      const filteredValues = (g.values ?? []).filter((v) => selectedBadges.includes(v.value));
+      return { ...g, values: filteredValues };
+    })
+    // remove empty badges group
+    .filter((g) => !(g.key === "badges" && (g.values?.length ?? 0) === 0));
+
+  // 2) Now decide if badges are available based on the filtered result
   const hasBadgesGroup = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
 
+  /**
+   * If there is NO badges group with values (after filtering),
+   * remove "badge" entries from customization, and remove customization entirely if it becomes empty.
+   */
   if (!hasBadgesGroup) {
     optionGroups = optionGroups
       .map((g) => {
@@ -194,7 +217,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         return { ...g, values: filtered };
       })
-      // ✅ Remove customization group if it has no values
       .filter((g) => !(g.key === "customization" && (g.values?.length ?? 0) === 0));
   }
 
@@ -208,7 +230,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     images: ensureArray(core.imageUrls),
     sizes,
     optionGroups,
-    badges: ensureArray(core.badges),
+
+    // ✅ pass selected badges to ProductConfigurator too
+    badges: selectedBadges,
+
     allowNameNumber: core.allowNameNumber,
   };
 

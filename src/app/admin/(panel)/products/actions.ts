@@ -172,6 +172,9 @@ async function resolveAllowNameNumber(productId: string, formData: FormData): Pr
 
 /* ========================= Actions ========================= */
 
+/**
+ * Updates main product fields, including images + allowNameNumber.
+ */
 export async function updateProduct(formData: FormData) {
   const id = String(formData.get("id") || "").trim();
   if (!id) throw new Error("Missing product id");
@@ -206,6 +209,7 @@ export async function updateProduct(formData: FormData) {
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
 
+  // ✅ public pages
   revalidatePublicProduct(updated);
 }
 
@@ -232,6 +236,9 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
  * - create new ones
  * - REMOVE values that were removed in the UI
  * - ALSO clean Product.badges removing values that no longer exist
+ *
+ * NOTE: This action edits the *catalog* of possible badge values (OptionGroup "badges")
+ * and also cleans the product's selected badges accordingly.
  */
 export async function saveBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
@@ -289,8 +296,6 @@ export async function saveBadges(formData: FormData) {
       // keep = ids user kept + ids we just created
       const keepIds = Array.from(new Set([...keepExistingIds, ...createdIds]));
 
-      // Delete all optionValues in this group NOT in keepIds
-      // (if keepIds empty -> delete all)
       await tx.optionValue.deleteMany({
         where: {
           groupId: group.id,
@@ -298,7 +303,7 @@ export async function saveBadges(formData: FormData) {
         },
       });
 
-      // 4) Clean Product.badges so removed values stop appearing
+      // 4) Clean Product.badges so removed values stop appearing:
       // We only keep product.badges that still exist as optionValue.value
       const remaining = await tx.optionValue.findMany({
         where: { groupId: group.id },
@@ -329,9 +334,11 @@ export async function saveBadges(formData: FormData) {
       return { group: fullGroup };
     });
 
+    // ✅ revalidate admin
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
+    // ✅ revalidate public (slug/team/season/listings)
     const meta = await prisma.product.findUnique({
       where: { id: productId },
       select: { slug: true, team: true, season: true, teamType: true },
@@ -346,7 +353,11 @@ export async function saveBadges(formData: FormData) {
 }
 
 /**
- * Saves which badges are selected on the product (Product.badges column).
+ * ✅ Saves which badges are selected on the product (Product.badges column).
+ *
+ * IMPORTANT FIX for your issue:
+ * - We MUST revalidate the PUBLIC product page route (/products/[slug])
+ * - and related listings, otherwise the ProductConfigurator may keep showing stale cached data.
  */
 export async function setSelectedBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
@@ -355,16 +366,23 @@ export async function setSelectedBadges(formData: FormData) {
   const selected = getAllStrings(formData.getAll("selectedBadges[]"));
 
   try {
+    // ✅ Update DB
     const updated = await prisma.product.update({
       where: { id: productId },
       data: { badges: selected },
-      select: { slug: true, team: true, season: true, teamType: true },
+      select: { id: true, slug: true, team: true, season: true, teamType: true },
     });
 
+    // ✅ Revalidate admin
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
+    // ✅ Revalidate PUBLIC (this is what fixes the “badge removed but still shows”)
     revalidatePublicProduct(updated);
+
+    // Extra safety: also revalidate the exact product page (already covered by revalidatePublicProduct)
+    // but kept here explicitly to avoid regressions if someone changes revalidatePublicProduct later.
+    if (updated.slug) revalidatePath(`/products/${updated.slug}`);
 
     return { ok: true };
   } catch (e: any) {
