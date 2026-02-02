@@ -104,6 +104,7 @@ function revalidatePublicProduct(meta?: {
 }) {
   if (!meta) return;
 
+  // ✅ product page (your route is /products/[slug])
   if (meta.slug) revalidatePath(`/products/${meta.slug}`);
 
   const t = String(meta.teamType ?? "CLUB").toUpperCase();
@@ -111,6 +112,7 @@ function revalidatePublicProduct(meta?: {
 
   if (meta.team) revalidatePath(`${base}/${slugify(meta.team)}`);
 
+  // other listings
   if (meta.team) revalidatePath(`/products/team/${slugify(meta.team)}`);
   if (meta.season) revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
 
@@ -182,7 +184,7 @@ async function resolveAllowNameNumber(productId: string, formData: FormData): Pr
  *  - OR disableCustomization? ("true"/"false") (legacy; inverted)
  */
 export async function updateProduct(formData: FormData) {
-  const id = String(formData.get("id") || "");
+  const id = String(formData.get("id") || "").trim();
   if (!id) throw new Error("Missing product id");
 
   const name = String(formData.get("name") || "").trim();
@@ -240,7 +242,7 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
  * Creates/assigns badges to the product "badges" OptionGroup.
  */
 export async function saveBadges(formData: FormData) {
-  const productId = String(formData.get("productId") || "");
+  const productId = String(formData.get("productId") || "").trim();
   if (!productId) return { ok: false, error: "Missing productId." };
 
   const existingIds = getAllStrings(formData.getAll("badgeIds[]"));
@@ -303,7 +305,7 @@ export async function saveBadges(formData: FormData) {
  * Saves which badges are selected on the product (Product.badges column).
  */
 export async function setSelectedBadges(formData: FormData) {
-  const productId = String(formData.get("productId") || "");
+  const productId = String(formData.get("productId") || "").trim();
   if (!productId) return { ok: false, error: "Missing productId." };
 
   const selected = getAllStrings(formData.getAll("selectedBadges[]"));
@@ -318,6 +320,7 @@ export async function setSelectedBadges(formData: FormData) {
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
+    // ✅ Revalidate product page + listings
     revalidatePublicProduct(updated);
 
     return { ok: true };

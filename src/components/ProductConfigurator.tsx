@@ -42,10 +42,12 @@ type ProductUI = {
   name: string;
   team?: string | null;
   description?: string | null;
-  basePrice: number;
+  basePrice: number; // can be cents (typical) or EUR in some older data
   images: string[];
   optionGroups: OptionGroupUI[];
   sizes?: SizeUI[];
+
+  /** Saved directly on Product */
   badges?: string[];
 
   /**
@@ -168,6 +170,13 @@ function isNoCustomizationValue(value?: string | null, label?: string | null) {
   return false;
 }
 
+/** basic but safe: some products store cents, some store euros */
+function normalizeUnitPriceCentsLike(raw: number) {
+  // if it's clearly cents (e.g., 3499), keep; if it's EUR (34.99), convert
+  if (!Number.isFinite(raw)) return 0;
+  return raw > 100 ? raw : Math.round(raw * 100);
+}
+
 export default function ProductConfigurator({ product }: Props) {
   const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
@@ -193,32 +202,25 @@ export default function ProductConfigurator({ product }: Props) {
   const allowNameNumber = product.allowNameNumber !== false;
 
   /* ---------- Discount ---------- */
-  const rawUnitPrice = product.basePrice;
-  const candidateEur1 = rawUnitPrice;
-  const candidateEur2 = rawUnitPrice / 100;
+  // money() in your project usually expects cents.
+  // We'll compute discount percent based on a EUR view, but display price using money(cents).
+  const rawUnitPrice = Number(product.basePrice ?? 0);
+  const unitPriceCents = normalizeUnitPriceCentsLike(rawUnitPrice);
 
-  let salePriceEur: number;
-  if (SALE_MAP_EUR[candidateEur1.toFixed(2)]) {
-    salePriceEur = candidateEur1;
-  } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
-    salePriceEur = candidateEur2;
-  } else {
-    salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
-  }
+  // For matching SALE_MAP_EUR, we need EUR value (e.g., 34.99)
+  const unitPriceEur = unitPriceCents / 100;
 
-  const saleKey = salePriceEur.toFixed(2);
+  const saleKey = unitPriceEur.toFixed(2);
   const originalPriceEur = SALE_MAP_EUR[saleKey];
 
-  let originalUnitPriceForMoney: number | undefined;
-  if (typeof originalPriceEur === "number") {
-    const factor = rawUnitPrice / salePriceEur;
-    originalUnitPriceForMoney = originalPriceEur * factor;
-  }
+  // Convert original EUR to cents for money()
+  const originalUnitPriceCents = typeof originalPriceEur === "number" ? Math.round(originalPriceEur * 100) : null;
 
-  const hasDiscount = typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
+  const hasDiscount =
+    typeof originalPriceEur === "number" && originalPriceEur > 0 && originalPriceEur > unitPriceEur;
 
   const discountPercent = hasDiscount
-    ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
+    ? Math.round(((originalPriceEur - unitPriceEur) / originalPriceEur) * 100)
     : 0;
 
   /* ---------- Images ---------- */
@@ -287,14 +289,22 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
+  /**
+   * ✅ IMPORTANT for your "badge removed but still shows":
+   * ProductConfigurator MUST ONLY use product.badges (from Product.badges column) as the source of truth.
+   * If it's empty, we do NOT render any virtual badges.
+   */
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
-    if (!product.badges || product.badges.length === 0) return undefined;
-    const values: OptionValueUI[] = product.badges.map((v) => ({
+    const list = Array.isArray(product.badges) ? product.badges.filter(Boolean) : [];
+    if (list.length === 0) return undefined;
+
+    const values: OptionValueUI[] = list.map((v) => ({
       id: v,
       value: v,
       label: humanizeBadge(v),
       priceDelta: 0,
     }));
+
     return {
       id: "badges-virtual",
       key: "badges",
@@ -313,6 +323,7 @@ export default function ProductConfigurator({ product }: Props) {
     if (real && !virtual) return real;
     if (!real && virtual) return virtual;
 
+    // merge without duplicates (prefer real meta if exists)
     const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
     for (const v of virtual!.values) {
       if (!map.has(v.value)) map.set(v.value, v);
@@ -473,7 +484,7 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   /* ---------- Price ---------- */
-  const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
+  const unitJerseyPrice = useMemo(() => unitPriceCents, [unitPriceCents]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
   /* ---------- Sanitize (supports accents) ---------- */
@@ -590,12 +601,16 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
+    // Build options exactly like your cart expects: strings (or null)
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
+      Object.entries(selected).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? (v.length ? v.join(",") : null) : (v as string | null) ?? null,
+      ])
     );
 
-    // If customization isn't shown, keep it null
-    // If it IS shown and user hasn't selected, default to "none" (safe + explicit)
+    // If customization isn't shown, keep it null.
+    // If it IS shown and user hasn't selected, default to "none" (explicit)
     if (effectiveCustomizationGroup) {
       const cur = optionsForCart["customization"];
       if (cur == null || cur === "") optionsForCart["customization"] = "none";
@@ -794,10 +809,10 @@ export default function ProductConfigurator({ product }: Props) {
             <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight">{product.name}</h1>
 
             <div className="flex items-baseline gap-2">
-              {hasDiscount && originalUnitPriceForMoney && (
-                <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
+              {hasDiscount && originalUnitPriceCents != null && (
+                <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceCents)}</span>
               )}
-              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
+              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(unitPriceCents)}</span>
             </div>
 
             {product.description && (
@@ -842,7 +857,9 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                Ages are approximate. If in between, we recommend sizing up.
+              </p>
             )}
           </div>
 
@@ -862,7 +879,9 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700">
                 Personalization{" "}
-                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">FREE</span>
+                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                  FREE
+                </span>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
@@ -890,7 +909,9 @@ export default function ProductConfigurator({ product }: Props) {
                 </label>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+              <p className="text-[11px] sm:text-xs text-gray-500">
+                Personalization will be printed in the club’s official style.
+              </p>
             </div>
           )}
 
@@ -919,6 +940,7 @@ export default function ProductConfigurator({ product }: Props) {
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 aria-label="Decrease quantity"
                 disabled={pending}
+                type="button"
               >
                 −
               </button>
@@ -928,6 +950,7 @@ export default function ProductConfigurator({ product }: Props) {
                 onClick={() => setQty((q) => q + 1)}
                 aria-label="Increase quantity"
                 disabled={pending}
+                type="button"
               >
                 +
               </button>
@@ -949,6 +972,7 @@ export default function ProductConfigurator({ product }: Props) {
             disabled={pending || !selectedSize || qty < 1}
             animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
             transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
+            type="button"
           >
             {justAdded ? (
               <>
@@ -984,7 +1008,11 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">Item added to cart</div>
                   <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
-                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
+                <button
+                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                  onClick={() => setShowToast(false)}
+                  type="button"
+                >
                   Close
                 </button>
               </div>
@@ -1040,8 +1068,11 @@ function GroupBlock({
                   />
                   <span className="text-sm">{v.label}</span>
                 </div>
+
                 {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                    FREE
+                  </span>
                 ) : null}
               </label>
             );
@@ -1059,6 +1090,7 @@ function GroupBlock({
       <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
         {group.label} {group.required && <span className="text-red-500">*</span>}
       </div>
+
       <div className="grid gap-2">
         {group.values.map((v) => {
           const active = isActive(v.value);
@@ -1082,6 +1114,7 @@ function GroupBlock({
                 />
                 <span className="text-sm">{v.label}</span>
               </div>
+
               {forceFree ? (
                 <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
               ) : null}
