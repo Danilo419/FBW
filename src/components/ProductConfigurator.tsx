@@ -138,16 +138,33 @@ function sanitizeNumber(input: string, maxLen = 3) {
 
 /**
  * ✅ SAFE detection of "Name & Number" option.
- * We only treat it as name-number if:
- * - the value contains "name-number"
- * OR
- * - the label contains BOTH "name" and "number"
  */
 function isNameNumberOption(v?: string | null, label?: string | null) {
   const a = String(v ?? "").toLowerCase();
   const b = String(label ?? "").toLowerCase();
   if (a.includes("name-number")) return true;
   if (b.includes("name") && b.includes("number")) return true;
+  return false;
+}
+
+/**
+ * ✅ Detects "no-op" customization options that shouldn't create UI space.
+ * If Customization only contains these, we hide the entire block.
+ */
+function isNoopCustomizationValue(value?: string | null, label?: string | null) {
+  const v = String(value ?? "").trim().toLowerCase();
+  const l = String(label ?? "").trim().toLowerCase();
+
+  // common "none" variants in your system
+  const noopValues = new Set(["none", "no", "no-customization", "nocustomization", "default"]);
+  if (noopValues.has(v)) return true;
+
+  // label-based safety
+  if (l === "none" || l === "no customization" || l === "no customisation" || l === "default") return true;
+
+  // sometimes it comes as "c-none"
+  if (v.includes("none") && (l.includes("no") || l.includes("custom"))) return true;
+
   return false;
 }
 
@@ -303,6 +320,13 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
+  /**
+   * ✅ Build customization group but HIDE it completely if it becomes a no-op group.
+   * - removes badge items when no badges group exists
+   * - removes name-number items when allowNameNumber is false
+   * - removes "none/no customization/default" options from the UI
+   * - if nothing real remains => return undefined (no space in UI)
+   */
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
@@ -322,7 +346,12 @@ export default function ProductConfigurator({ product }: Props) {
       filtered = filtered.filter((v) => !isNameNumberOption(v.value, v.label));
     }
 
+    // 3) Remove pure "none/default" options from UI (they create useless space)
+    filtered = filtered.filter((v) => !isNoopCustomizationValue(v.value, v.label));
+
+    // If nothing meaningful remains, hide the whole block
     if ((filtered?.length ?? 0) === 0) return undefined;
+
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
 
@@ -332,7 +361,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // If customization group disappears, clear selection
+  // If customization group disappears, clear selection (prevents leftover spacing logic)
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
@@ -342,7 +371,7 @@ export default function ProductConfigurator({ product }: Props) {
   // If there is no badges group, avoid selecting a badge customization option
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
-      setSelected((s) => ({ ...s, customization: "none" }));
+      setSelected((s) => ({ ...s, customization: null }));
     }
   }, [badgesGroup, customization]);
 
@@ -350,17 +379,21 @@ export default function ProductConfigurator({ product }: Props) {
   useEffect(() => {
     if (allowNameNumber) return;
 
-    // If user had name-number selected, force to "none"
     if (typeof customization === "string" && customization.toLowerCase().includes("name-number")) {
-      setSelected((s) => ({ ...s, customization: "none" }));
+      setSelected((s) => ({ ...s, customization: null }));
     }
 
-    // Clear inputs
     if (custName) setCustName("");
     if (custNumber) setCustNumber("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowNameNumber]);
 
+  /**
+   * Name/Number UI only if:
+   * - allowNameNumber is true
+   * - customization group exists (meaningful)
+   * - user selected name-number (still comes from selection, even if group hidden)
+   */
   const showNameNumber =
     allowNameNumber &&
     !!effectiveCustomizationGroup &&
@@ -372,8 +405,7 @@ export default function ProductConfigurator({ product }: Props) {
     customization.toLowerCase().includes("badge") &&
     !!badgesGroup;
 
-  const setRadio = (key: string, value: string) =>
-    setSelected((s) => ({ ...s, [key]: value || null }));
+  const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
@@ -475,8 +507,7 @@ export default function ProductConfigurator({ product }: Props) {
     if (typeof window === "undefined") return;
 
     const prefersReduced =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (prefersReduced) {
       pulseCart();
@@ -492,12 +523,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from: FlyRect = {
-      left: start.left,
-      top: start.top,
-      width: start.width,
-      height: start.height,
-    };
+    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
@@ -545,10 +571,7 @@ export default function ProductConfigurator({ product }: Props) {
     }
 
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [
-        k,
-        Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null,
-      ])
+      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
     );
 
     startTransition(async () => {
@@ -556,8 +579,6 @@ export default function ProductConfigurator({ product }: Props) {
         productId: product.id,
         qty,
         options: optionsForCart,
-
-        // ✅ Never send personalization if it is not actually shown/allowed
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
@@ -722,14 +743,7 @@ export default function ProductConfigurator({ product }: Props) {
                           <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image
-                            src={src}
-                            alt={`thumb ${i + 1}`}
-                            fill
-                            className="object-contain"
-                            sizes="42px"
-                            unoptimized
-                          />
+                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
                         </span>
                       </button>
                     );
@@ -747,19 +761,13 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
-                <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                  {money(originalUnitPriceForMoney)}
-                </span>
+                <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
               )}
-              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
-                {money(rawUnitPrice)}
-              </span>
+              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
             </div>
 
             {product.description && (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
-                {product.description}
-              </p>
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
             )}
           </header>
 
@@ -800,21 +808,13 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
-                Ages are approximate. If in between, we recommend sizing up.
-              </p>
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
             )}
           </div>
 
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock
-              group={effectiveCustomizationGroup}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              forceFree
-            />
+            <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
           )}
 
           {/* Personalization (Name & Number) */}
@@ -822,9 +822,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700">
                 Personalization{" "}
-                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                  FREE
-                </span>
+                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">FREE</span>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
@@ -852,53 +850,28 @@ export default function ProductConfigurator({ product }: Props) {
                 </label>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-gray-500">
-                Personalization will be printed in the club’s official style.
-              </p>
+              <p className="text-[11px] sm:text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
             </div>
           )}
 
           {/* Badges */}
           {showBadgePicker && badgesGroup && (
-            <GroupBlock
-              group={badgesGroup}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              onToggleBadge={toggleBadge}
-              forceFree
-            />
+            <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} onToggleBadge={toggleBadge} forceFree />
           )}
 
           {/* Other groups */}
           {otherGroups.map((g) => (
-            <GroupBlock
-              key={g.id}
-              group={g}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-            />
+            <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
           ))}
 
           {/* Qty + Total */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <button
-                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
-                disabled={pending}
-              >
+              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={pending}>
                 −
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
-              <button
-                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                onClick={() => setQty((q) => q + 1)}
-                aria-label="Increase quantity"
-                disabled={pending}
-              >
+              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={pending}>
                 +
               </button>
             </div>
@@ -912,10 +885,7 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Add to cart */}
           <motion.button
             onClick={addToCart}
-            className={cx(
-              "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
-              justAdded && "bg-green-600 hover:bg-green-600"
-            )}
+            className={cx("btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base", justAdded && "bg-green-600 hover:bg-green-600")}
             disabled={pending || !selectedSize || qty < 1}
             animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
             transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
@@ -954,10 +924,7 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">Item added to cart</div>
                   <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
-                <button
-                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                  onClick={() => setShowToast(false)}
-                >
+                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
                   Close
                 </button>
               </div>
@@ -1004,20 +971,10 @@ function GroupBlock({
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={group.key}
-                    className="accent-blue-600"
-                    checked={!!active}
-                    onChange={() => onPickRadio(group.key, v.value)}
-                  />
+                  <input type="radio" name={group.key} className="accent-blue-600" checked={!!active} onChange={() => onPickRadio(group.key, v.value)} />
                   <span className="text-sm">{v.label}</span>
                 </div>
-                {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                    FREE
-                  </span>
-                ) : null}
+                {forceFree ? <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span> : null}
               </label>
             );
           })}
@@ -1027,8 +984,7 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) =>
-    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
+  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
@@ -1051,18 +1007,12 @@ function GroupBlock({
                   className="accent-blue-600"
                   checked={!!active}
                   onChange={(e) =>
-                    group.key === "badges" && onToggleBadge
-                      ? onToggleBadge(group, v.value, e.target.checked)
-                      : onToggleAddon(group.key, v.value, e.target.checked)
+                    group.key === "badges" && onToggleBadge ? onToggleBadge(group, v.value, e.target.checked) : onToggleAddon(group.key, v.value, e.target.checked)
                   }
                 />
                 <span className="text-sm">{v.label}</span>
               </div>
-              {forceFree ? (
-                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                  FREE
-                </span>
-              ) : null}
+              {forceFree ? <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span> : null}
             </label>
           );
         })}
@@ -1074,13 +1024,7 @@ function GroupBlock({
 /* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      className={cx("h-5 w-5", props.className)}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
