@@ -131,7 +131,7 @@ export async function generateStaticParams() {
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // 1) Core product fields (✅ now includes allowNameNumber)
+  // 1) Core product fields (✅ includes allowNameNumber)
   const core = await prisma.product.findUnique({
     where: { slug },
     select: {
@@ -144,7 +144,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       imageUrls: true,
       badges: true,
 
-      // ✅ THIS IS THE FIX: pass the DB flag to the ProductConfigurator
+      // ✅ Pass DB flag to ProductConfigurator
       allowNameNumber: true,
     },
   });
@@ -175,24 +175,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const valuesByGroup = mapValuesByGroup(valuesDb);
   let optionGroups = toUIGroups(groupsDb, valuesByGroup);
 
-  // If there is no 'badges' group with values, remove "badge" entries from 'customization'
-  // (ProductConfigurator can create a virtual badges group from product.badges)
+  /**
+   * ✅ IMPORTANT CHANGE:
+   * If there is NO 'badges' group with values, remove "badge" entries from 'customization'.
+   * AND if 'customization' becomes empty, REMOVE the group entirely
+   * (so the "Customization" section disappears and leaves no empty space).
+   */
   const hasBadgesGroup = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
 
   if (!hasBadgesGroup) {
-    optionGroups = optionGroups.map((g) => {
-      if (g.key !== "customization") return g;
+    optionGroups = optionGroups
+      .map((g) => {
+        if (g.key !== "customization") return g;
 
-      const filtered = g.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+        const filtered = (g.values ?? []).filter(
+          (v) => !/badge/i.test(v.value) && !/badge/i.test(v.label)
+        );
 
-      return {
-        ...g,
-        values:
-          filtered.length > 0
-            ? filtered
-            : [{ id: "c-none", value: "none", label: "No customization", priceDelta: 0 }],
-      };
-    });
+        return { ...g, values: filtered };
+      })
+      // ✅ Remove customization group if it has no values
+      .filter((g) => !(g.key === "customization" && (g.values?.length ?? 0) === 0));
   }
 
   const uiProduct: ProductUI = {
@@ -205,10 +208,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     images: ensureArray(core.imageUrls),
     sizes,
     optionGroups,
-
     badges: ensureArray(core.badges),
-
-    // ✅ pass DB flag (true/false)
     allowNameNumber: core.allowNameNumber,
   };
 
