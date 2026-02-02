@@ -148,22 +148,22 @@ function isNameNumberOption(v?: string | null, label?: string | null) {
 }
 
 /**
- * ✅ Detects "no-op" customization options that shouldn't create UI space.
- * If Customization only contains these, we hide the entire block.
+ * Normalize / detect "no customization" variants.
+ * We keep ONE canonical option:
+ *   value: "none"
+ *   label: "No Customization"
  */
-function isNoopCustomizationValue(value?: string | null, label?: string | null) {
+function isNoCustomizationValue(value?: string | null, label?: string | null) {
   const v = String(value ?? "").trim().toLowerCase();
   const l = String(label ?? "").trim().toLowerCase();
 
-  // common "none" variants in your system
-  const noopValues = new Set(["none", "no", "no-customization", "nocustomization", "default"]);
-  if (noopValues.has(v)) return true;
+  // common variants in DB
+  if (["none", "no", "no-customization", "nocustomization", "default", "c-none"].includes(v)) return true;
 
-  // label-based safety
-  if (l === "none" || l === "no customization" || l === "no customisation" || l === "default") return true;
-
-  // sometimes it comes as "c-none"
-  if (v.includes("none") && (l.includes("no") || l.includes("custom"))) return true;
+  // label variants
+  if (l === "none") return true;
+  if (l.includes("no customization") || l.includes("no customisation")) return true;
+  if (l === "default") return true;
 
   return false;
 }
@@ -321,18 +321,18 @@ export default function ProductConfigurator({ product }: Props) {
   }, [product.optionGroups, badgesGroupVirtual]);
 
   /**
-   * ✅ Build customization group but HIDE it completely if it becomes a no-op group.
-   * - removes badge items when no badges group exists
-   * - removes name-number items when allowNameNumber is false
-   * - removes "none/no customization/default" options from the UI
-   * - if nothing real remains => return undefined (no space in UI)
+   * ✅ Customization group rules (fixed):
+   * - remove badge radio options if there is NO badgesGroup available
+   * - remove name-number option if allowNameNumber is false
+   * - ALWAYS add "No Customization" when there is at least one REAL customization option to choose from
+   * - If after filtering there is nothing meaningful (besides none) => hide the entire block (no space)
    */
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
     const original = customizationGroupFromDb;
 
-    // 1) If there is no badges group, remove badge customization items
+    // 1) badge-related items removed if badges are not available
     let filtered = badgesGroup
       ? original.values
       : original.values.filter(
@@ -341,18 +341,30 @@ export default function ProductConfigurator({ product }: Props) {
             !String(v.label || "").toLowerCase().includes("badge")
         );
 
-    // 2) If allowNameNumber is false, remove name/number customization items safely
+    // 2) remove name-number when disabled
     if (!allowNameNumber) {
       filtered = filtered.filter((v) => !isNameNumberOption(v.value, v.label));
     }
 
-    // 3) Remove pure "none/default" options from UI (they create useless space)
-    filtered = filtered.filter((v) => !isNoopCustomizationValue(v.value, v.label));
+    // 3) remove any existing "none/default" variants (we’ll insert canonical one)
+    const meaningful = filtered.filter((v) => !isNoCustomizationValue(v.value, v.label));
 
-    // If nothing meaningful remains, hide the whole block
-    if ((filtered?.length ?? 0) === 0) return undefined;
+    // If nothing meaningful remains, hide customization completely (this removes the space)
+    if (meaningful.length === 0) return undefined;
 
-    return { ...original, values: filtered };
+    // 4) prepend canonical "No Customization" option
+    const noneOption: OptionValueUI = {
+      id: "c-none",
+      value: "none",
+      label: "No Customization",
+      priceDelta: 0,
+    };
+
+    return {
+      ...original,
+      // keep radio order stable: NONE first, then the rest
+      values: [noneOption, ...meaningful],
+    };
   }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
 
   const otherGroups = product.optionGroups.filter(
@@ -361,17 +373,31 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // If customization group disappears, clear selection (prevents leftover spacing logic)
+  // If customization group disappears, clear selection
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
+  // If we DO have customization group, ensure selection is never an invalid legacy "no customization" variant
+  useEffect(() => {
+    if (!effectiveCustomizationGroup) return;
+
+    const cur = selected["customization"];
+    if (typeof cur !== "string" || !cur) return;
+
+    // Normalize to "none" if user had an old variant selected
+    if (isNoCustomizationValue(cur, cur)) {
+      setSelected((s) => ({ ...s, customization: "none" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveCustomizationGroup]);
+
   // If there is no badges group, avoid selecting a badge customization option
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
-      setSelected((s) => ({ ...s, customization: null }));
+      setSelected((s) => ({ ...s, customization: "none" }));
     }
   }, [badgesGroup, customization]);
 
@@ -380,7 +406,7 @@ export default function ProductConfigurator({ product }: Props) {
     if (allowNameNumber) return;
 
     if (typeof customization === "string" && customization.toLowerCase().includes("name-number")) {
-      setSelected((s) => ({ ...s, customization: null }));
+      setSelected((s) => ({ ...s, customization: "none" }));
     }
 
     if (custName) setCustName("");
@@ -388,12 +414,6 @@ export default function ProductConfigurator({ product }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowNameNumber]);
 
-  /**
-   * Name/Number UI only if:
-   * - allowNameNumber is true
-   * - customization group exists (meaningful)
-   * - user selected name-number (still comes from selection, even if group hidden)
-   */
   const showNameNumber =
     allowNameNumber &&
     !!effectiveCustomizationGroup &&
@@ -574,6 +594,13 @@ export default function ProductConfigurator({ product }: Props) {
       Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
     );
 
+    // If customization isn't shown, keep it null
+    // If it IS shown and user hasn't selected, default to "none" (safe + explicit)
+    if (effectiveCustomizationGroup) {
+      const cur = optionsForCart["customization"];
+      if (cur == null || cur === "") optionsForCart["customization"] = "none";
+    }
+
     startTransition(async () => {
       await addToCartAction({
         productId: product.id,
@@ -743,7 +770,14 @@ export default function ProductConfigurator({ product }: Props) {
                           <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
+                          <Image
+                            src={src}
+                            alt={`thumb ${i + 1}`}
+                            fill
+                            className="object-contain"
+                            sizes="42px"
+                            unoptimized
+                          />
                         </span>
                       </button>
                     );
@@ -814,7 +848,13 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
+            <GroupBlock
+              group={effectiveCustomizationGroup}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              forceFree
+            />
           )}
 
           {/* Personalization (Name & Number) */}
@@ -856,7 +896,14 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Badges */}
           {showBadgePicker && badgesGroup && (
-            <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} onToggleBadge={toggleBadge} forceFree />
+            <GroupBlock
+              group={badgesGroup}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              onToggleBadge={toggleBadge}
+              forceFree
+            />
           )}
 
           {/* Other groups */}
@@ -867,11 +914,21 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Qty + Total */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={pending}>
+              <button
+                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                aria-label="Decrease quantity"
+                disabled={pending}
+              >
                 −
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
-              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={pending}>
+              <button
+                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => setQty((q) => q + 1)}
+                aria-label="Increase quantity"
+                disabled={pending}
+              >
                 +
               </button>
             </div>
@@ -885,7 +942,10 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Add to cart */}
           <motion.button
             onClick={addToCart}
-            className={cx("btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base", justAdded && "bg-green-600 hover:bg-green-600")}
+            className={cx(
+              "btn-primary w-full sm:w-auto disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
+              justAdded && "bg-green-600 hover:bg-green-600"
+            )}
             disabled={pending || !selectedSize || qty < 1}
             animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
             transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
@@ -971,10 +1031,18 @@ function GroupBlock({
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <input type="radio" name={group.key} className="accent-blue-600" checked={!!active} onChange={() => onPickRadio(group.key, v.value)} />
+                  <input
+                    type="radio"
+                    name={group.key}
+                    className="accent-blue-600"
+                    checked={!!active}
+                    onChange={() => onPickRadio(group.key, v.value)}
+                  />
                   <span className="text-sm">{v.label}</span>
                 </div>
-                {forceFree ? <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span> : null}
+                {forceFree ? (
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+                ) : null}
               </label>
             );
           })}
@@ -1007,12 +1075,16 @@ function GroupBlock({
                   className="accent-blue-600"
                   checked={!!active}
                   onChange={(e) =>
-                    group.key === "badges" && onToggleBadge ? onToggleBadge(group, v.value, e.target.checked) : onToggleAddon(group.key, v.value, e.target.checked)
+                    group.key === "badges" && onToggleBadge
+                      ? onToggleBadge(group, v.value, e.target.checked)
+                      : onToggleAddon(group.key, v.value, e.target.checked)
                   }
                 />
                 <span className="text-sm">{v.label}</span>
               </div>
-              {forceFree ? <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span> : null}
+              {forceFree ? (
+                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+              ) : null}
             </label>
           );
         })}
