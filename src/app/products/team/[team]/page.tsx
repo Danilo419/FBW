@@ -2,8 +2,13 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { slugFromTeamName, teamNamesForQuery, teamNameFromSlug } from "@/lib/shop-data";
+import {
+  slugFromTeamName,
+  teamNamesForQuery,
+  teamNameFromSlug,
+} from "@/lib/shop-data";
 
 /* ============================ Config ============================ */
 export const revalidate = 60;
@@ -240,6 +245,17 @@ function List({
       </div>
 
       <div className="container-fw py-8 sm:py-10">
+        {/* ✅ Back (igual ao “pill”) */}
+        <div className="mb-6">
+          <Link
+            href="/clubs"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700"
+          >
+            <span aria-hidden="true">←</span>
+            Back to Clubs
+          </Link>
+        </div>
+
         {/* Grid de produtos (2 por linha no mobile) */}
         <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
@@ -340,7 +356,11 @@ function List({
             <ul className="flex items-center gap-3">
               <li>
                 <PaginationPill
-                  href={currentPage > 1 ? `/products/team/${teamSlug}?page=1` : undefined}
+                  href={
+                    currentPage > 1
+                      ? `/products/team/${teamSlug}?page=1`
+                      : undefined
+                  }
                   label="Primeira página"
                 >
                   &laquo;
@@ -350,7 +370,11 @@ function List({
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                 <li key={n}>
                   <PaginationPill
-                    href={n === currentPage ? undefined : `/products/team/${teamSlug}?page=${n}`}
+                    href={
+                      n === currentPage
+                        ? undefined
+                        : `/products/team/${teamSlug}?page=${n}`
+                    }
                     active={n === currentPage}
                     label={`Página ${n}`}
                   >
@@ -361,7 +385,11 @@ function List({
 
               <li>
                 <PaginationPill
-                  href={currentPage < totalPages ? `/products/team/${teamSlug}?page=${totalPages}` : undefined}
+                  href={
+                    currentPage < totalPages
+                      ? `/products/team/${teamSlug}?page=${totalPages}`
+                      : undefined
+                  }
                   label="Última página"
                 >
                   &raquo;
