@@ -52,20 +52,6 @@ function slugify(s: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-/* ========================= teamType (CLUB vs NATION) ========================= */
-
-/**
- * NOTE:
- * - We do NOT import TeamType from Prisma Client to avoid "no exported member" issues.
- * - We only store "CLUB" | "NATION" in Product.teamType.
- */
-type TeamTypeLocal = "CLUB" | "NATION";
-
-function parseTeamType(v: unknown): TeamTypeLocal {
-  const raw = String(v ?? "").trim().toUpperCase();
-  return raw === "NATION" ? "NATION" : "CLUB";
-}
-
 /** Robust boolean parser */
 function parseBool(v: unknown, fallback = false): boolean {
   if (typeof v === "boolean") return v;
@@ -74,6 +60,39 @@ function parseBool(v: unknown, fallback = false): boolean {
   if (["1", "true", "yes", "on"].includes(s)) return true;
   if (["0", "false", "no", "off"].includes(s)) return false;
   return fallback;
+}
+
+/**
+ * ✅ IMPORTANT: If the form sends multiple values for the same key
+ * (hidden input + checkbox), we must take the LAST one.
+ */
+function getLastFormValue(formData: FormData, key: string): FormDataEntryValue | null {
+  const all = formData.getAll(key);
+  if (!all || all.length === 0) return null;
+
+  // take the last non-empty string if possible
+  for (let i = all.length - 1; i >= 0; i--) {
+    const v = all[i];
+    if (typeof v === "string") {
+      const t = v.trim();
+      if (t !== "") return t;
+    } else {
+      // File or other value
+      return v;
+    }
+  }
+
+  // fallback to the last
+  return all[all.length - 1] ?? null;
+}
+
+/* ========================= teamType (CLUB vs NATION) ========================= */
+
+type TeamTypeLocal = "CLUB" | "NATION";
+
+function parseTeamType(v: unknown): TeamTypeLocal {
+  const raw = String(v ?? "").trim().toUpperCase();
+  return raw === "NATION" ? "NATION" : "CLUB";
 }
 
 /** Revalidates public routes related to a product */
@@ -122,26 +141,25 @@ async function ensureBadgesGroup(productId: string) {
 }
 
 /**
- * Resolves allowNameNumber robustly.
+ * ✅ Resolve allowNameNumber robustly and correctly with hidden-input + checkbox forms.
  *
  * Priority:
- *  1) allowNameNumber (recommended explicit flag)
- *  2) disableCustomization (legacy checkbox; inverted)
+ *  1) allowNameNumber (explicit flag, recommended)
+ *  2) disableCustomization (legacy flag; inverted)
  *  3) fallback to existing DB value (so it never flips by accident)
  */
 async function resolveAllowNameNumber(productId: string, formData: FormData): Promise<boolean> {
-  // If your form submits allowNameNumber directly
-  if (formData.has("allowNameNumber")) {
-    return parseBool(formData.get("allowNameNumber"), true);
+  const allowRaw = getLastFormValue(formData, "allowNameNumber");
+  if (allowRaw !== null) {
+    return parseBool(allowRaw, true);
   }
 
-  // Legacy admin checkbox: disableCustomization (true => do NOT allow)
-  if (formData.has("disableCustomization")) {
-    const disable = parseBool(formData.get("disableCustomization"), false);
+  const disableRaw = getLastFormValue(formData, "disableCustomization");
+  if (disableRaw !== null) {
+    const disable = parseBool(disableRaw, false);
     return !disable;
   }
 
-  // Nothing submitted => preserve DB value (never reset)
   const existing = await prisma.product.findUnique({
     where: { id: productId },
     select: { allowNameNumber: true },
@@ -154,13 +172,14 @@ async function resolveAllowNameNumber(productId: string, formData: FormData): Pr
 
 /**
  * Updates main product fields, including images.
+ *
  * Expects FormData:
  *  - id, name, team, teamType, season?, description?, price (EUR)
  *  - imagesText? (JSON, lines or commas)
  *
- * Customization flag (either one):
- *  - allowNameNumber? ("true"/"false")  ✅ recommended
- *  - disableCustomization? ("true"/"false") -> stored as Product.allowNameNumber (inverted) (legacy)
+ * Customization flag:
+ *  - allowNameNumber? ("true"/"false") ✅ recommended
+ *  - OR disableCustomization? ("true"/"false") (legacy; inverted)
  */
 export async function updateProduct(formData: FormData) {
   const id = String(formData.get("id") || "");
@@ -176,7 +195,7 @@ export async function updateProduct(formData: FormData) {
 
   const imageUrls = parseImagesText(formData.get("imagesText"));
 
-  // ✅ Robust persistence: will not reset accidentally when checkbox sends nothing
+  // ✅ This is the key fix: correct boolean reading even with hidden+checkbox
   const allowNameNumber = await resolveAllowNameNumber(id, formData);
 
   const updated = await prisma.product.update({
@@ -194,11 +213,9 @@ export async function updateProduct(formData: FormData) {
     select: { id: true, slug: true, team: true, season: true, teamType: true },
   });
 
-  // Admin
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
 
-  // Public
   revalidatePublicProduct(updated);
 }
 
@@ -221,14 +238,6 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
 
 /**
  * Creates/assigns badges to the product "badges" OptionGroup.
- *
- * FormData:
- *  - productId: string
- *  - badgeIds[]: ids of existing OptionValue to attach to the group
- *  - newBadges[]: labels to create new OptionValue (value = slug(label))
- *  - newBadgePrices[] (optional): aligned by index with newBadges[] (EUR)
- *
- * Note: This creates/attaches option values. The selected badges saved on Product are handled by `setSelectedBadges`.
  */
 export async function saveBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "");
@@ -264,12 +273,7 @@ export async function saveBadges(formData: FormData) {
         const priceDelta = i < newPricesEur.length ? toCents(newPricesEur[i]) : 0;
 
         await tx.optionValue.create({
-          data: {
-            groupId: group.id,
-            value,
-            label,
-            priceDelta,
-          },
+          data: { groupId: group.id, value, label, priceDelta },
         });
       }
 
@@ -279,11 +283,9 @@ export async function saveBadges(formData: FormData) {
       });
     });
 
-    // Admin
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
-    // Public
     const meta = await prisma.product.findUnique({
       where: { id: productId },
       select: { slug: true, team: true, season: true, teamType: true },
@@ -299,10 +301,6 @@ export async function saveBadges(formData: FormData) {
 
 /**
  * Saves which badges are selected on the product (Product.badges column).
- *
- * FormData:
- *  - productId: string
- *  - selectedBadges[]: array of values/keys to keep in Product.badges
  */
 export async function setSelectedBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "");
@@ -317,11 +315,9 @@ export async function setSelectedBadges(formData: FormData) {
       select: { slug: true, team: true, season: true, teamType: true },
     });
 
-    // Admin
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
-    // Public
     revalidatePublicProduct(updated);
 
     return { ok: true };
