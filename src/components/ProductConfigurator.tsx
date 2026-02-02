@@ -265,8 +265,7 @@ export default function ProductConfigurator({ product }: Props) {
     return fallback;
   }, [product.sizes, kid]);
 
-  const isUnavailable = (s: SizeUI) =>
-    s.available === false || (typeof s.stock === "number" && s.stock <= 0);
+  const isUnavailable = (s: SizeUI) => s.available === false || (typeof s.stock === "number" && s.stock <= 0);
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
@@ -290,11 +289,15 @@ export default function ProductConfigurator({ product }: Props) {
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
   /**
-   * ✅ IMPORTANT for your "badge removed but still shows":
-   * ProductConfigurator MUST ONLY use product.badges (from Product.badges column) as the source of truth.
-   * If it's empty, we do NOT render any virtual badges.
+   * ✅ FIX do badge "removido mas continua a aparecer":
+   * - Se existir grupo REAL "badges" (OptionGroup), usamos APENAS esse.
+   * - Só usamos Product.badges como fallback quando NÃO existe grupo real.
+   * - Não fazemos merge, porque Product.badges pode conter valores antigos.
    */
-  const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
+  const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
+    const real = product.optionGroups.find((g) => g.key === "badges");
+    if (real) return real;
+
     const list = Array.isArray(product.badges) ? product.badges.filter(Boolean) : [];
     if (list.length === 0) return undefined;
 
@@ -313,23 +316,7 @@ export default function ProductConfigurator({ product }: Props) {
       required: false,
       values,
     };
-  }, [product.badges]);
-
-  const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
-    const real = product.optionGroups.find((g) => g.key === "badges");
-    const virtual = badgesGroupVirtual;
-
-    if (!real && !virtual) return undefined;
-    if (real && !virtual) return real;
-    if (!real && virtual) return virtual;
-
-    // merge without duplicates (prefer real meta if exists)
-    const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
-    for (const v of virtual!.values) {
-      if (!map.has(v.value)) map.set(v.value, v);
-    }
-    return { ...real!, values: Array.from(map.values()) };
-  }, [product.optionGroups, badgesGroupVirtual]);
+  }, [product.optionGroups, product.badges]);
 
   /**
    * ✅ Customization group rules (fixed):
@@ -785,14 +772,7 @@ export default function ProductConfigurator({ product }: Props) {
                           <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image
-                            src={src}
-                            alt={`thumb ${i + 1}`}
-                            fill
-                            className="object-contain"
-                            sizes="42px"
-                            unoptimized
-                          />
+                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
                         </span>
                       </button>
                     );
