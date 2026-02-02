@@ -131,15 +131,36 @@ export default async function TeamProductsPage({
 }: PageProps) {
   const { team } = await params;
 
-  // ✅ slug "oficial" (com aliases) — ex: "Vitória de Guimarães" -> "vitoria-sc"
-  const slug = slugFromTeamName(decodeURIComponent(team || ""));
+  // param vindo do URL (normalmente é slug: "inter-milan")
+  const rawParam = decodeURIComponent(team || "").trim();
+
+  // normaliza para slug (se já for slug, fica igual)
+  const slug = slugFromTeamName(rawParam);
+
+  // resolve um nome canónico a partir do slug (para bater com a BD)
+  const canonicalName =
+    teamNameFromSlug(slug) || TEAM_MAP_FALLBACK[slug] || fallbackTitle(slug);
 
   // ✅ nomes possíveis para bater com o que está na BD (robusto)
-  const namesForQuery = teamNamesForQuery(team);
+  // - gera variações a partir do nome canónico (o mais importante)
+  // - inclui também variações do rawParam (caso venham nomes em vez de slug)
+  // - inclui o próprio slug como fallback (se alguém guardou team como slug)
+  const namesForQuery = Array.from(
+    new Set(
+      [
+        canonicalName,
+        rawParam,
+        slug,
+        ...teamNamesForQuery(canonicalName),
+        ...teamNamesForQuery(rawParam),
+      ]
+        .map((s) => String(s || "").trim())
+        .filter(Boolean)
+    )
+  );
 
   // ✅ título para UI (não interfere na query)
-  const teamTitle =
-    teamNameFromSlug(slug) || TEAM_MAP_FALLBACK[slug] || fallbackTitle(slug);
+  const teamTitle = canonicalName;
 
   const sp = (await searchParams) ?? {};
   const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
@@ -154,8 +175,6 @@ export default async function TeamProductsPage({
     or.push({ team: { equals: clean } });
     or.push({ team: { contains: clean, mode: "insensitive" } });
   }
-  // fallback extra: o próprio slug (se alguém guardou team como slug por engano)
-  or.push({ team: { contains: slug, mode: "insensitive" } });
 
   const where: Prisma.ProductWhereInput = { OR: or };
 
@@ -213,6 +232,9 @@ const TEAM_MAP_FALLBACK: Record<string, string> = {
 
   // ✅ aqui não interessa se na BD é "Vitória de Guimarães" — é só título
   "vitoria-sc": "Vitória de Guimarães",
+
+  // ✅ adiciona Inter (garante que o slug vira nome canónico)
+  "inter-milan": "Inter Milan",
 };
 
 /* ============================ UI ============================ */
