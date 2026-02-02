@@ -124,6 +124,76 @@ function labelFromName(name?: string | null): string | null {
   return cleanSpaces(s) || null;
 }
 
+/* ============================ Matching rules ============================ */
+function normKey(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+/**
+ * ✅ OVERRIDES para casos ambíguos/curtos:
+ * Aqui definimos exatamente quais valores do campo `team`
+ * são permitidos para um dado slug.
+ *
+ * Como tu disseste: AC Milan está guardado como "Milan".
+ */
+const TEAM_QUERY_OVERRIDES: Record<string, string[]> = {
+  "milan": ["Milan"],
+  "ac-milan": ["Milan"],
+
+  // se na tua BD o Inter está mesmo "Inter Milan"
+  "inter-milan": ["Inter Milan"],
+};
+
+/**
+ * contains só quando for "seguro" (não ambíguo).
+ * Nota: para slugs com override, NUNCA usamos contains.
+ */
+const CONTAINS_BLOCKLIST = new Set(
+  [
+    "milan",
+    "inter",
+    "city",
+    "united",
+    "athletic",
+    "sporting",
+    "real",
+    "fc",
+    "sc",
+    "ac",
+    "cf",
+    "cd",
+    "bc",
+    "sv",
+    "st",
+    "saint",
+    "borussia",
+    "dynamo",
+    "dinamo",
+    "lokomotiv",
+    "loko",
+    "racing",
+    "atletico",
+    "atlético",
+  ].map((s) => s.toLowerCase())
+);
+
+function shouldUseContains(term: string) {
+  const t = normKey(term);
+  if (!t) return false;
+
+  // muito curto => arriscado
+  if (t.length < 6) return false;
+
+  // palavra única "genérica" => arriscado
+  if (!t.includes(" ") && CONTAINS_BLOCKLIST.has(t)) return false;
+
+  return true;
+}
+
 /* ============================ Page ============================ */
 export default async function TeamProductsPage({
   params,
@@ -131,52 +201,74 @@ export default async function TeamProductsPage({
 }: PageProps) {
   const { team } = await params;
 
-  // param vindo do URL (normalmente é slug: "inter-milan")
   const rawParam = decodeURIComponent(team || "").trim();
 
   // normaliza para slug (se já for slug, fica igual)
   const slug = slugFromTeamName(rawParam);
 
-  // resolve um nome canónico a partir do slug (para bater com a BD)
+  // resolve um nome canónico a partir do slug (para UI)
   const canonicalName =
     teamNameFromSlug(slug) || TEAM_MAP_FALLBACK[slug] || fallbackTitle(slug);
 
-  // ✅ nomes possíveis para bater com o que está na BD (robusto)
-  // - gera variações a partir do nome canónico (o mais importante)
-  // - inclui também variações do rawParam (caso venham nomes em vez de slug)
-  // - inclui o próprio slug como fallback (se alguém guardou team como slug)
-  const namesForQuery = Array.from(
-    new Set(
-      [
-        canonicalName,
-        rawParam,
-        slug,
-        ...teamNamesForQuery(canonicalName),
-        ...teamNamesForQuery(rawParam),
-      ]
-        .map((s) => String(s || "").trim())
-        .filter(Boolean)
-    )
-  );
-
-  // ✅ título para UI (não interfere na query)
+  // ✅ título para UI
   const teamTitle = canonicalName;
 
   const sp = (await searchParams) ?? {};
   const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  // ✅ WHERE robusto:
-  // - tenta equals (mais rápido)
-  // - tenta contains (caso existam variações no texto)
-  const or: Prisma.ProductWhereInput[] = [];
-  for (const nm of namesForQuery) {
-    const clean = (nm || "").trim();
-    if (!clean) continue;
-    or.push({ team: { equals: clean } });
-    or.push({ team: { contains: clean, mode: "insensitive" } });
-  }
+  /* ----------------------- WHERE seguro ----------------------- */
 
-  const where: Prisma.ProductWhereInput = { OR: or };
+  // ✅ Se existe override, usamos só match exato (IN) e pronto.
+  const override = TEAM_QUERY_OVERRIDES[slug];
+
+  let where: Prisma.ProductWhereInput;
+
+  if (override && override.length) {
+    where = { team: { in: override } };
+  } else {
+    // fallback robusto para outros clubes
+    const namesForQuery = Array.from(
+      new Set(
+        [
+          canonicalName,
+          rawParam,
+          slug,
+          ...teamNamesForQuery(canonicalName),
+          ...teamNamesForQuery(rawParam),
+        ]
+          .map((s) => String(s || "").trim())
+          .filter(Boolean)
+      )
+    );
+
+    const exactNames = Array.from(
+      new Set(
+        namesForQuery
+          .map((s) => s.trim())
+          .filter(Boolean)
+          // remove lixo demasiado curto/genérico do exact
+          .filter((s) => normKey(s).length >= 3 && !CONTAINS_BLOCKLIST.has(normKey(s)))
+      )
+    );
+
+    const or: Prisma.ProductWhereInput[] = [];
+
+    if (exactNames.length) {
+      or.push({ team: { in: exactNames } });
+    } else {
+      or.push({ team: { equals: canonicalName } });
+    }
+
+    // contains só quando seguro
+    for (const nm of namesForQuery) {
+      const clean = (nm || "").trim();
+      if (!clean) continue;
+      if (!shouldUseContains(clean)) continue;
+      or.push({ team: { contains: clean, mode: "insensitive" } });
+    }
+
+    where = { OR: or };
+  }
 
   const totalCount = await prisma.product.count({ where });
   if (!totalCount) notFound();
@@ -230,11 +322,14 @@ const TEAM_MAP_FALLBACK: Record<string, string> = {
   "sporting": "Sporting CP",
   "braga": "SC Braga",
 
-  // ✅ aqui não interessa se na BD é "Vitória de Guimarães" — é só título
   "vitoria-sc": "Vitória de Guimarães",
 
-  // ✅ adiciona Inter (garante que o slug vira nome canónico)
+  // UI
   "inter-milan": "Inter Milan",
+
+  // ✅ UI (mas na BD está "Milan")
+  "milan": "AC Milan",
+  "ac-milan": "AC Milan",
 };
 
 /* ============================ UI ============================ */
