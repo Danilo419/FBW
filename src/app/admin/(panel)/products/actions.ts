@@ -25,13 +25,17 @@ function parseImagesText(input: unknown): string[] {
   const raw = String(input).trim();
   if (!raw) return [];
 
+  // tenta JSON primeiro
   try {
     const j = JSON.parse(raw);
-    if (Array.isArray(j)) return j.map((x) => String(x)).filter(Boolean);
+    if (Array.isArray(j)) {
+      return j.map((x) => String(x)).filter(Boolean);
+    }
   } catch {
-    // ignore
+    // ignora erro de JSON e tenta fallback
   }
 
+  // fallback: separar por linha ou vírgula
   return raw
     .split(/\r?\n|,/g)
     .map((s) => s.trim())
@@ -53,7 +57,7 @@ function slugify(s: string) {
 }
 
 /**
- * ✅ Lê boolean de FormData mesmo quando existem inputs duplicados (ex.: checkbox + hidden)
+ * ✅ Lê boolean de FormData mesmo quando existem inputs duplicados (checkbox + hidden)
  * - Se qualquer valor for "true"/"1"/"on"/"yes" => true
  * - Caso contrário => false
  */
@@ -85,6 +89,7 @@ function revalidatePublicProduct(meta?: {
 }) {
   if (!meta) return;
 
+  // página pública do produto
   if (meta.slug) revalidatePath(`/products/${meta.slug}`);
 
   const t = String(meta.teamType ?? "CLUB").toUpperCase();
@@ -92,9 +97,11 @@ function revalidatePublicProduct(meta?: {
 
   if (meta.team) revalidatePath(`${base}/${slugify(meta.team)}`);
 
+  // (Opcional) listagens agregadas
   if (meta.team) revalidatePath(`/products/team/${slugify(meta.team)}`);
   if (meta.season) revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
 
+  // (Opcional) páginas index
   revalidatePath("/products");
   revalidatePath("/clubs");
   revalidatePath("/nations");
@@ -121,83 +128,14 @@ async function ensureBadgesGroup(productId: string) {
   return group;
 }
 
-/** ✅ Garante que existe um OptionGroup "CUSTOMIZATION" para o produto */
-async function ensureCustomizationGroup(productId: string) {
-  // tenta achar por type
-  let group = await prisma.optionGroup.findFirst({
-    where: { productId, type: "CUSTOMIZATION" as any },
-    include: { values: true },
-  });
-
-  // fallback: tentar por key (caso uses key="customization")
-  if (!group) {
-    group = await prisma.optionGroup.findFirst({
-      where: { productId, key: "customization" },
-      include: { values: true },
-    });
-  }
-
-  if (!group) {
-    group = await prisma.optionGroup.create({
-      data: {
-        productId,
-        key: "customization",
-        label: "Customization",
-        type: "CUSTOMIZATION" as any,
-        required: false,
-      },
-      include: { values: true },
-    });
-  }
-
-  return group;
-}
-
-/**
- * ✅ Aplica o "disableCustomization" via OptionGroup:
- * - true  => group com 0 values (limpa todos)
- * - false => se estiver vazio, recria valores padrão
- */
-async function applyDisableCustomization(productId: string, disableCustomization: boolean) {
-  const group = await ensureCustomizationGroup(productId);
-
-  if (disableCustomization) {
-    // deixa o group sem values
-    if (group.values?.length) {
-      await prisma.optionValue.deleteMany({ where: { groupId: group.id } });
-    }
-    return;
-  }
-
-  // enable: se já tem values, não mexe
-  const currentCount = group.values?.length ?? 0;
-  if (currentCount > 0) return;
-
-  // recriar defaults (o suficiente para o teu UI "Name+number")
-  // Ajusta labels/values caso no teu store uses nomes diferentes.
-  const defaults = [
-    { value: "name-number", label: "Name & Number", priceDelta: 0 },
-    { value: "name-number-badge", label: "Name & Number + Badge", priceDelta: 0 },
-  ];
-
-  await prisma.optionValue.createMany({
-    data: defaults.map((d) => ({
-      groupId: group.id,
-      value: d.value,
-      label: d.label,
-      priceDelta: d.priceDelta,
-    })),
-  });
-}
-
 /* ========================= actions ========================= */
 
 /**
- * Atualiza campos principais do produto, incluindo imagens + personalization.
+ * Atualiza campos principais do produto, incluindo imagens.
  * Espera no FormData:
- *  - id, name, team, teamType, season?, description?, price (EUR)
+ *  - id, name, team, teamType, season?, description?, price (em EUR)
  *  - imagesText?
- *  - disableCustomization ("true"/"false") (checkbox + hidden)
+ *  - disableCustomization (checkbox + hidden) -> converte para Product.allowNameNumber
  */
 export async function updateProduct(formData: FormData) {
   const id = String(formData.get("id") || "").trim();
@@ -205,46 +143,35 @@ export async function updateProduct(formData: FormData) {
 
   const name = String(formData.get("name") || "").trim();
   const team = String(formData.get("team") || "").trim();
-  const teamType = parseTeamType(formData.get("teamType"));
 
+  const teamType = parseTeamType(formData.get("teamType"));
   const season = toNullableString(formData.get("season"));
   const description = toNullableString(formData.get("description"));
   const basePrice = toCents(formData.get("price"));
+
   const imageUrls = parseImagesText(formData.get("imagesText"));
 
-  // ✅ NOVO: ler personalization
+  // ✅ Personalization:
+  // checkbox "disableCustomization" significa REMOVER Name & Number => allowNameNumber = false
   const disableCustomization = readBool(formData, "disableCustomization");
+  const allowNameNumber = !disableCustomization;
 
-  // ✅ importante: fazer tudo numa transação
-  const updated = await prisma.$transaction(async (tx) => {
-    // atualiza produto
-    const p = await tx.product.update({
-      where: { id },
-      // usamos "as any" para não quebrar caso o campo não exista no schema
-      data: {
-        name,
-        team,
-        teamType,
-        season,
-        description,
-        basePrice,
-        imageUrls,
-        ...( { disableCustomization } as any ),
-      } as any,
-      select: { id: true, slug: true, team: true, season: true, teamType: true },
-    });
+  const updated = await prisma.product.update({
+    where: { id },
+    data: {
+      name,
+      team,
+      teamType,
+      season,
+      description,
+      basePrice,
+      imageUrls,
 
-    // aplica o estado no option group CUSTOMIZATION (o que realmente controla o bloco na página do produto)
-    // NOTE: usamos prisma global aqui? melhor usar o tx para consistência
-    // mas como helpers usam prisma, fazemos a lógica aqui dentro usando tx diretamente:
-    // -- replicar ensureCustomizationGroup + apply --
-    // Para manter simples/robusto, chamamos functions fora, mas elas usam prisma.
-    // Como é tudo na mesma request, ok. Se quiser 100% dentro do tx, posso reescrever.
-    return p;
+      // ✅ o campo certo do teu schema
+      allowNameNumber,
+    },
+    select: { id: true, slug: true, team: true, season: true, teamType: true },
   });
-
-  // ✅ aplica a lógica do customization group fora (mantém simples e funciona)
-  await applyDisableCustomization(id, disableCustomization);
 
   // Painel
   revalidatePath("/admin/products");

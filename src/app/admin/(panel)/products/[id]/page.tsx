@@ -59,7 +59,9 @@ function completeAdultsWithGhosts<T extends { id?: string; size: string; availab
   return ADULT_ALLOWED_ORDER.map((sz) => {
     const hit = by.get(sz);
     if (hit) return { ...hit, __ghost: false as const };
-    return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & { __ghost: true };
+    return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & {
+      __ghost: true;
+    };
   });
 }
 
@@ -281,7 +283,7 @@ export default async function ProductEditPage({
     where: { id },
     include: {
       sizes: true,
-      // ✅ precisamos das options todas para detectar CUSTOMIZATION + continuar a ler SIZE
+      // ✅ precisamos das options todas para encontrar SIZE
       options: {
         include: { values: { select: { value: true, label: true } } },
       },
@@ -292,7 +294,8 @@ export default async function ProductEditPage({
   const selectedInitial: string[] = (product as any).badges ?? [];
 
   // ✅ encontrar o grupo SIZE (em vez de options[0])
-  const sizeGroup = (product.options || []).find((o: any) => o?.type === ("SIZE" as OptionType)) ?? null;
+  const sizeGroup =
+    (product.options || []).find((o: any) => o?.type === ("SIZE" as OptionType)) ?? null;
 
   const allowedFromGroup =
     sizeGroup && sizeGroup.values.length > 0
@@ -327,24 +330,19 @@ export default async function ProductEditPage({
   /* ✅ valor atual do teamType para prefill */
   const currentTeamType: TeamTypeLocal = ((product as any).teamType as TeamTypeLocal) ?? "CLUB";
 
-  /* ✅ detectar estado atual do "disableCustomization"
-     - se existir campo boolean no Product, usa-o
-     - senão, tenta inferir por um option group CUSTOMIZATION com 0 values
-  */
-  const customizationGroup =
-    (product.options || []).find((o: any) => String(o?.type) === "CUSTOMIZATION") ?? null;
-
-  const disableCustomizationInitial: boolean =
-    (product as any).disableCustomization === true ||
-    (!!customizationGroup && Array.isArray(customizationGroup.values) && customizationGroup.values.length === 0);
+  /**
+   * ✅ FIX REAL (de acordo com o teu schema):
+   * - no Prisma tu tens Product.allowNameNumber
+   * - checkbox "disableCustomization" significa "remover Name & Number" => allowNameNumber=false
+   * Logo: disableCustomizationInitial = !allowNameNumber
+   */
+  const disableCustomizationInitial: boolean = product.allowNameNumber === false;
 
   return (
     <div className="space-y-6" data-product-id={product.id}>
       <header className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-extrabold">Edit product</h1>
-        <p className="text-sm text-gray-500">
-          Update general information, images, badges and size availability.
-        </p>
+        <p className="text-sm text-gray-500">Update general information, images, badges and size availability.</p>
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
@@ -461,16 +459,15 @@ section .images-editor [placeholder*="Paste an image URL"] {
               </div>
             </div>
 
-            <ImagesEditor
-              name="imagesText"
-              initialImages={(product as any).imageUrls ?? []}
-              alt={product.name}
-            />
+            <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
-          {/* ✅ Personalization (igual ao Create Product) */}
+          {/* ✅ Personalization (de acordo com Product.allowNameNumber) */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Personalization</label>
+
+            {/* ✅ GARANTE que sempre envia algum valor (quando checkbox não está marcado) */}
+            <input type="hidden" name="disableCustomization" value="false" />
 
             <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
               <input
@@ -481,31 +478,20 @@ section .images-editor [placeholder*="Paste an image URL"] {
                 defaultChecked={disableCustomizationInitial}
                 className="mt-1"
               />
-
-              {/* ✅ IMPORTANT FIX:
-                  hidden vem DEPOIS do checkbox para que FormData.get("disableCustomization")
-                  devolva "true" quando estiver marcado, e "false" quando não estiver.
-              */}
-              <input type="hidden" name="disableCustomization" value="false" />
-
               <div>
                 <label htmlFor="disableCustomization" className="font-medium">
                   Remove “Customization” section on product page
                 </label>
                 <p className="text-xs text-gray-600 mt-1">
                   Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
-                  This sets <code>disableCustomization=true</code> in the request; the API creates a customization option
-                  group with <strong>no values</strong>, and the product page will not render that block.
+                  This will set <code>allowNameNumber=false</code> in the database (via the server action).
                 </p>
               </div>
             </div>
           </div>
 
           <div>
-            <button
-              type="submit"
-              className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
-            >
+            <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
               Save product
             </button>
           </div>
@@ -541,8 +527,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
           <label className="text-sm font-medium">Badges (optional)</label>
           <p className="text-xs text-gray-500">
-            Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if
-            hidden by the filter.
+            Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if hidden by the filter.
           </p>
 
           <input
@@ -570,10 +555,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
           <div id="badge-hidden-inputs" className="hidden" />
 
           <div className="pt-2">
-            <button
-              type="submit"
-              className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
-            >
+            <button type="submit" className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50">
               Save badges
             </button>
           </div>
@@ -756,16 +738,11 @@ section .images-editor [placeholder*="Paste an image URL"] {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data || !data.url) {
       throw new Error(data && data.error ? data.error : "Upload failed");
     }
-
     return data.url;
   }
 
