@@ -170,6 +170,44 @@ async function resolveAllowNameNumber(productId: string, formData: FormData): Pr
   return existing?.allowNameNumber !== false;
 }
 
+/**
+ * ✅ Filters/cleans selected badges BEFORE saving in Product.badges:
+ * - trims
+ * - removes duplicates
+ * - removes empty
+ * - removes badges that do not exist anymore in OptionValue (badges group),
+ *   so "deleted badges" can’t keep showing on product page.
+ */
+async function sanitizeSelectedBadges(productId: string, selected: string[]): Promise<string[]> {
+  const cleaned = Array.from(
+    new Set(
+      (selected || [])
+        .map((s) => String(s ?? "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (cleaned.length === 0) return [];
+
+  // Find the badges group id (if it exists)
+  const group = await prisma.optionGroup.findFirst({
+    where: { productId, key: "badges" },
+    select: { id: true },
+  });
+
+  // If there is no badges group, keep cleaned (you are using Product.badges as virtual badges)
+  if (!group) return cleaned;
+
+  // Keep only values that still exist in DB for this product's badges group
+  const existing = await prisma.optionValue.findMany({
+    where: { groupId: group.id, value: { in: cleaned } },
+    select: { value: true },
+  });
+
+  const allowed = new Set(existing.map((r) => r.value));
+  return cleaned.filter((v) => allowed.has(v));
+}
+
 /* ========================= Actions ========================= */
 
 /**
@@ -303,14 +341,21 @@ export async function saveBadges(formData: FormData) {
 
 /**
  * Saves which badges are selected on the product (Product.badges column).
+ *
+ * ✅ FIX:
+ * Before saving, we sanitize and (optionally) validate against existing OptionValue records,
+ * so removed/deleted badges can’t keep showing on the product page.
  */
 export async function setSelectedBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
   if (!productId) return { ok: false, error: "Missing productId." };
 
-  const selected = getAllStrings(formData.getAll("selectedBadges[]"));
+  const selectedRaw = getAllStrings(formData.getAll("selectedBadges[]"));
 
   try {
+    // ✅ sanitize + validate
+    const selected = await sanitizeSelectedBadges(productId, selectedRaw);
+
     const updated = await prisma.product.update({
       where: { id: productId },
       data: { badges: selected },
