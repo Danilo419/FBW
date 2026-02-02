@@ -44,6 +44,10 @@ type ProductUI = {
   optionGroups: OptionGroupUI[];
   sizes?: SizeUI[];
   badges?: string[];
+
+  // ✅ IMPORTANT: vem do Prisma (Product.allowNameNumber)
+  // Se não vier, assumimos true para não quebrar produtos antigos
+  allowNameNumber?: boolean | null;
 };
 
 type SelectedState = Record<string, string | string[] | null>;
@@ -160,6 +164,9 @@ export default function ProductConfigurator({ product }: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // ✅ Source of truth: DB flag (default true)
+  const allowNameNumber = product.allowNameNumber !== false;
 
   /* ---------- DESCONTO ---------- */
   const rawUnitPrice = product.basePrice;
@@ -292,13 +299,24 @@ export default function ProductConfigurator({ product }: Props) {
     if (!customizationGroupFromDb) return undefined;
 
     const original = customizationGroupFromDb;
-    const filtered = badgesGroup
+
+    // ✅ 1) remove "badge" customization options if there is no badges group
+    let filtered = badgesGroup
       ? original.values
       : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
 
+    // ✅ 2) HARD RULE: if allowNameNumber is false, remove any "name-number" customization value
+    if (!allowNameNumber) {
+      filtered = filtered.filter(
+        (v) =>
+          !String(v.value || "").toLowerCase().includes("name-number") &&
+          !String(v.label || "").toLowerCase().includes("name") // opcional: evita labels tipo "Name & Number"
+      );
+    }
+
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
-  }, [customizationGroupFromDb, badgesGroup]);
+  }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
 
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
@@ -306,19 +324,37 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
+  // ✅ if customization group disappears, clear selection
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
+  // ✅ if no badges group, avoid "badge" customization selection
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && /badge/i.test(customization)) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
   }, [badgesGroup, customization]);
 
+  // ✅ HARD RULE: when allowNameNumber is false, purge "name-number" selection + inputs
+  useEffect(() => {
+    if (allowNameNumber) return;
+
+    // clear selected customization if it contains name-number
+    if (typeof customization === "string" && customization.toLowerCase().includes("name-number")) {
+      setSelected((s) => ({ ...s, customization: "none" }));
+    }
+
+    // clear inputs
+    if (custName) setCustName("");
+    if (custNumber) setCustNumber("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowNameNumber]);
+
   const showNameNumber =
+    allowNameNumber &&
     !!effectiveCustomizationGroup &&
     typeof customization === "string" &&
     customization.toLowerCase().includes("name-number");
@@ -507,6 +543,8 @@ export default function ProductConfigurator({ product }: Props) {
         productId: product.id,
         qty,
         options: optionsForCart,
+
+        // ✅ hard rule: only send personalization if showNameNumber is true
         personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
       });
 
@@ -522,9 +560,7 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- UI ---------- */
   return (
-    // ✅ MOBILE FULL WIDTH: remove "justify-center" + remove max-w tiny constraints
     <div className="w-full overflow-x-hidden px-3 sm:px-4">
-      {/* ✅ same behavior as Ratings section: full width, centered container */}
       <div className="relative w-full max-w-6xl mx-auto flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {showToast ? "Item added to cart." : ""}
@@ -583,7 +619,6 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
         {/* ===== GALLERY ===== */}
-        {/* ✅ Ensure gallery uses full width in mobile */}
         <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
           <div className="flex items-center gap-2 sm:gap-3">
             {images.length > 1 ? (
@@ -599,11 +634,7 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="h-10 w-10 shrink-0 hidden lg:block" />
             )}
 
-            {/* ✅ remove max-w that was shrinking the image area on mobile */}
-            <div
-              ref={imgWrapRef}
-              className="relative aspect-[3/4] w-full mx-auto overflow-hidden rounded-xl bg-white"
-            >
+            <div ref={imgWrapRef} className="relative aspect-[3/4] w-full mx-auto overflow-hidden rounded-xl bg-white">
               <Image
                 src={activeSrc}
                 alt={product.name}
@@ -660,7 +691,6 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="mt-3">
               <div
                 ref={thumbsRef}
-                // ✅ full width, centered; no artificial max-w
                 className="w-full overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -704,12 +734,9 @@ export default function ProductConfigurator({ product }: Props) {
         </div>
 
         {/* ===== CONFIGURATOR ===== */}
-        {/* ✅ guarantee full width, no hidden max-width */}
         <div className="card w-full p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 min-w-0">
           <header className="space-y-1">
-            <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight">
-              {product.name}
-            </h1>
+            <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight">{product.name}</h1>
 
             <div className="flex items-baseline gap-2">
               {hasDiscount && originalUnitPriceForMoney && (
@@ -717,15 +744,11 @@ export default function ProductConfigurator({ product }: Props) {
                   {money(originalUnitPriceForMoney)}
                 </span>
               )}
-              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
-                {money(rawUnitPrice)}
-              </span>
+              <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
             </div>
 
             {product.description && (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
-                {product.description}
-              </p>
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
             )}
           </header>
 
@@ -752,9 +775,7 @@ export default function ProductConfigurator({ product }: Props) {
                         "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
                         unavailable && "opacity-50 line-through cursor-not-allowed",
                         !unavailable && !isActive && "hover:bg-gray-50",
-                        isActive &&
-                          !unavailable &&
-                          "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                        isActive && !unavailable && "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
                       )}
                       aria-pressed={isActive}
                     >
@@ -777,7 +798,7 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
             <GroupBlock
-              group={effectiveCustomizationGroup!}
+              group={effectiveCustomizationGroup}
               selected={selected}
               onPickRadio={setRadio}
               onToggleAddon={toggleAddon}
@@ -827,7 +848,7 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Badges */}
           {showBadgePicker && badgesGroup && (
             <GroupBlock
-              group={badgesGroup!}
+              group={badgesGroup}
               selected={selected}
               onPickRadio={setRadio}
               onToggleAddon={toggleAddon}
