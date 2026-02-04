@@ -165,6 +165,13 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
     ],
   },
+
+  /* ✅ NEW: Coppa Italia winners badge (coccarda tricolore) */
+  {
+    title: "Domestic Cups",
+    items: [{ value: "coppa-italia-winners", label: "Coppa Italia – Winners (Coccarda)" }],
+  },
+
   {
     title: "Domestic Leagues – Others mentioned",
     items: [
@@ -272,11 +279,7 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
 /* ✅ TeamType local (não depende do Prisma Client) */
 type TeamTypeLocal = "CLUB" | "NATION";
 
-export default async function ProductEditPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function ProductEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const product = await prisma.product.findUnique({
@@ -527,13 +530,14 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
           <label className="text-sm font-medium">Badges (optional)</label>
           <p className="text-xs text-gray-500">
-            Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if hidden by the filter.
+            Type to search patches (league, champion, UEFA, cups, etc.). Selected badges are kept even if hidden by the
+            filter.
           </p>
 
           <input
             id="badge-query"
             type="text"
-            placeholder="Search badges…"
+            placeholder="Search badges… (try: coppa, coccarda, italy)"
             className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
             autoComplete="off"
           />

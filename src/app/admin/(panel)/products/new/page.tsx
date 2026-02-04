@@ -6,9 +6,16 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL"];
-const KID_SIZES = ["2-3y", "3-4y", "4-5y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y"].filter(
-  (v, i, a) => a.indexOf(v) === i
-);
+const KID_SIZES = [
+  "2-3y",
+  "3-4y",
+  "4-5y",
+  "4-5y",
+  "6-7y",
+  "8-9y",
+  "10-11y",
+  "12-13y",
+].filter((v, i, a) => a.indexOf(v) === i);
 
 /** ---- Badge catalog (values/labels in EN) ---- */
 type BadgeOption = { value: string; label: string };
@@ -42,6 +49,15 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
     ],
   },
+
+  /* ✅ NEW: Coppa Italia winners badge (coccarda tricolore) */
+  {
+    title: "Domestic Cups",
+    items: [
+      { value: "coppa-italia-winners", label: "Coppa Italia – Winners (Coccarda)" },
+    ],
+  },
+
   {
     title: "Domestic Leagues – Others mentioned",
     items: [
@@ -646,8 +662,8 @@ export default function NewProductPage() {
                   Remove “Customization” section on product page
                 </label>
                 <p className="text-xs text-gray-600 mt-1">
-                  Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
-                  This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
+                  Use for products without any personalization (no name/number, no “Name &amp; Number + Badge”
+                  option). This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
                   <code>customization</code> option group with <strong>no values</strong>, and the product page will not
                   render that block.
                 </p>
@@ -659,15 +675,15 @@ export default function NewProductPage() {
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
-              Type to search patches (league, champion, UEFA, etc.). Selected badges are kept even if they are hidden by
-              the filter.
+              Type to search patches (league, champion, UEFA, cups, etc.). Selected badges are kept even if they are
+              hidden by the filter.
             </p>
 
             <input
               type="text"
               value={badgeQuery}
               onChange={(e) => setBadgeQuery(e.target.value)}
-              placeholder="Search badges…"
+              placeholder="Search badges… (try: coppa, coccarda, italy)"
               className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
             />
 
