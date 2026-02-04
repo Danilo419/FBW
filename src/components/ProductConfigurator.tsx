@@ -416,6 +416,9 @@ export default function ProductConfigurator({ product }: Props) {
     typeof customization === "string" &&
     customization.toLowerCase().includes("name-number");
 
+  // ✅ When user picked "Name & Number + Competition Badge", show Name&Number block ABOVE badges block
+  const shouldNameNumberBeAboveBadges = showNameNumber && showBadgePicker;
+
   const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
 
   function toggleAddon(key: string, value: string, checked: boolean) {
@@ -762,14 +765,7 @@ export default function ProductConfigurator({ product }: Props) {
                           <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image
-                            src={src}
-                            alt={`thumb ${i + 1}`}
-                            fill
-                            className="object-contain"
-                            sizes="42px"
-                            unoptimized
-                          />
+                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
                         </span>
                       </button>
                     );
@@ -853,6 +849,47 @@ export default function ProductConfigurator({ product }: Props) {
             />
           )}
 
+          {/* ✅ If user chose "Name & Number + Competition Badge", show Name&Number ABOVE badges */}
+          {shouldNameNumberBeAboveBadges && (
+            <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
+              <div className="text-sm text-gray-700">
+                Personalization{" "}
+                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                  FREE
+                </span>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                <label className="block">
+                  <span className="text-[11px] sm:text-xs text-gray-600">Name (uppercase)</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. BELLINGHAM"
+                    value={custName}
+                    onChange={(e) => setCustName(e.target.value.slice(0, 14))}
+                    maxLength={14}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-[11px] sm:text-xs text-gray-600">Number (0–999)</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 5"
+                    value={custNumber}
+                    onChange={(e) => setCustNumber(e.target.value)}
+                    inputMode="numeric"
+                    maxLength={3}
+                  />
+                </label>
+              </div>
+
+              <p className="text-[11px] sm:text-xs text-gray-500">
+                Personalization will be printed in the team’s official style.
+              </p>
+            </div>
+          )}
+
           {/* Competition Badge (✅ ONLY when user selected badge customization) */}
           {showBadgePicker && competitionBadgesGroup && competitionBadgesGroup.values.length > 0 && (
             <GroupBlock
@@ -865,8 +902,8 @@ export default function ProductConfigurator({ product }: Props) {
             />
           )}
 
-          {/* Personalization (Name & Number) */}
-          {showNameNumber && (
+          {/* Personalization (Name & Number) - normal position (below badges) */}
+          {showNameNumber && !shouldNameNumberBeAboveBadges && (
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700">
                 Personalization{" "}
