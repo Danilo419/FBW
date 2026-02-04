@@ -131,7 +131,7 @@ export async function generateStaticParams() {
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // 1) Core product fields (✅ includes allowNameNumber)
+  // 1) Core product fields
   const core = await prisma.product.findUnique({
     where: { slug },
     select: {
@@ -143,7 +143,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       basePrice: true,
       imageUrls: true,
 
-      // ✅ Selected badges saved on Product (SOURCE OF TRUTH for product page)
+      // ✅ Selected badges saved on Product (SOURCE OF TRUTH)
       badges: true,
 
       // ✅ Pass DB flag to ProductConfigurator
@@ -178,13 +178,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   let optionGroups = toUIGroups(groupsDb, valuesByGroup);
 
   /**
-   * ✅ FIX REAL:
-   * On the product page, "badges available" must be ONLY the badges selected on Product.badges.
-   * The OptionGroup "badges" in the DB is just a catalog (can exist forever).
+   * ✅ REAL FIX:
+   * "Badges available" MUST be based on Product.badges (selectedBadges),
+   * NOT on whether the catalog OptionGroup contains that badge.
    */
   const selectedBadges = ensureArray(core.badges);
 
-  // 1) Filter badges group to selected badges only (or remove it)
+  // ✅ If you still want the "badges" option group to exist on product page:
+  // Filter it to selected badges, BUT do NOT use this to decide if badges exist.
   optionGroups = optionGroups
     .map((g) => {
       if (g.key !== "badges") return g;
@@ -192,21 +193,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       // no selected badges -> hide the entire badges group
       if (selectedBadges.length === 0) return { ...g, values: [] };
 
-      // keep only selected badge values
+      // keep only values that match selected badges (if present in catalog)
       const filteredValues = (g.values ?? []).filter((v) => selectedBadges.includes(v.value));
+
+      // Important: even if filteredValues is empty, we keep the group empty,
+      // because the UI can still show Included Badges from product.badges.
       return { ...g, values: filteredValues };
     })
-    // remove empty badges group
     .filter((g) => !(g.key === "badges" && (g.values?.length ?? 0) === 0));
 
-  // 2) Now decide if badges are available based on the filtered result
-  const hasBadgesGroup = optionGroups.some((g) => g.key === "badges" && (g.values?.length ?? 0) > 0);
+  /**
+   * ✅ This is the key change:
+   * badgesExist is TRUE if Product.badges has items.
+   * (even if the catalog doesn't contain the optionValue)
+   */
+  const badgesExist = selectedBadges.length > 0;
 
   /**
-   * If there is NO badges group with values (after filtering),
+   * If badges do NOT exist (no selected badges),
    * remove "badge" entries from customization, and remove customization entirely if it becomes empty.
    */
-  if (!hasBadgesGroup) {
+  if (!badgesExist) {
     optionGroups = optionGroups
       .map((g) => {
         if (g.key !== "customization") return g;
@@ -231,7 +238,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     sizes,
     optionGroups,
 
-    // ✅ pass selected badges to ProductConfigurator too
+    // ✅ pass selected badges to ProductConfigurator (so "Included badges" appears)
     badges: selectedBadges,
 
     allowNameNumber: core.allowNameNumber,

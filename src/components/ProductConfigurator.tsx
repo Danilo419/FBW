@@ -75,7 +75,7 @@ const BADGE_LABELS: Record<string, string> = {
   "serie-a-regular": "Serie A – League Badge",
   "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
 
-  // ✅ NEW: Coppa Italia winners badge
+  // ✅ Coppa Italia
   "coppa-italia-winners": "Coppa Italia – Winners (Coccarda)",
 
   "bundesliga-regular": "Bundesliga – League Badge",
@@ -156,7 +156,7 @@ function isNameNumberOption(v?: string | null, label?: string | null) {
 
 /**
  * Normalize / detect "no customization" variants.
- * We keep ONE canonical option:
+ * Canonical:
  *   value: "none"
  *   label: "No Customization"
  */
@@ -164,10 +164,8 @@ function isNoCustomizationValue(value?: string | null, label?: string | null) {
   const v = String(value ?? "").trim().toLowerCase();
   const l = String(label ?? "").trim().toLowerCase();
 
-  // common variants in DB
   if (["none", "no", "no-customization", "nocustomization", "default", "c-none"].includes(v)) return true;
 
-  // label variants
   if (l === "none") return true;
   if (l.includes("no customization") || l.includes("no customisation")) return true;
   if (l === "default") return true;
@@ -177,9 +175,12 @@ function isNoCustomizationValue(value?: string | null, label?: string | null) {
 
 /** basic but safe: some products store cents, some store euros */
 function normalizeUnitPriceCentsLike(raw: number) {
-  // if it's clearly cents (e.g., 3499), keep; if it's EUR (34.99), convert
   if (!Number.isFinite(raw)) return 0;
   return raw > 100 ? raw : Math.round(raw * 100);
+}
+
+function ensureArr<T>(v: T[] | null | undefined): T[] {
+  return Array.isArray(v) ? v : [];
 }
 
 export default function ProductConfigurator({ product }: Props) {
@@ -289,19 +290,24 @@ export default function ProductConfigurator({ product }: Props) {
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
   /**
-   * ✅ FIX do badge "removido mas continua a aparecer":
-   * - Se existir grupo REAL "badges" (OptionGroup), usamos APENAS esse.
-   * - Só usamos Product.badges como fallback quando NÃO existe grupo real.
-   * - Não fazemos merge, porque Product.badges pode conter valores antigos.
+   * ✅ SOURCE OF TRUTH on product page:
+   * Product.badges are "included badges".
+   */
+  const includedBadges = useMemo(() => ensureArr(product.badges).filter(Boolean), [product.badges]);
+  const hasIncludedBadges = includedBadges.length > 0;
+
+  /**
+   * ✅ Badge catalog group (optional):
+   * Use it ONLY for picking when customization requires badge selection.
+   * If DB group doesn't exist, create virtual from included badges.
    */
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
     const real = product.optionGroups.find((g) => g.key === "badges");
     if (real) return real;
 
-    const list = Array.isArray(product.badges) ? product.badges.filter(Boolean) : [];
-    if (list.length === 0) return undefined;
+    if (!hasIncludedBadges) return undefined;
 
-    const values: OptionValueUI[] = list.map((v) => ({
+    const values: OptionValueUI[] = includedBadges.map((v) => ({
       id: v,
       value: v,
       label: humanizeBadge(v),
@@ -316,22 +322,22 @@ export default function ProductConfigurator({ product }: Props) {
       required: false,
       values,
     };
-  }, [product.optionGroups, product.badges]);
+  }, [product.optionGroups, includedBadges, hasIncludedBadges]);
 
   /**
-   * ✅ Customization group rules (fixed):
-   * - remove badge radio options if there is NO badgesGroup available
+   * ✅ Customization group rules:
+   * - remove badge-related options ONLY when there are NO included badges (Product.badges empty)
    * - remove name-number option if allowNameNumber is false
-   * - ALWAYS add "No Customization" when there is at least one REAL customization option to choose from
-   * - If after filtering there is nothing meaningful (besides none) => hide the entire block (no space)
+   * - ALWAYS add "No Customization" if any meaningful customization exists
+   * - If nothing meaningful remains => hide the block
    */
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
 
     const original = customizationGroupFromDb;
 
-    // 1) badge-related items removed if badges are not available
-    let filtered = badgesGroup
+    // remove badge options if there are no included badges at all
+    let filtered = hasIncludedBadges
       ? original.values
       : original.values.filter(
           (v) =>
@@ -339,18 +345,16 @@ export default function ProductConfigurator({ product }: Props) {
             !String(v.label || "").toLowerCase().includes("badge")
         );
 
-    // 2) remove name-number when disabled
+    // remove name-number if disabled
     if (!allowNameNumber) {
       filtered = filtered.filter((v) => !isNameNumberOption(v.value, v.label));
     }
 
-    // 3) remove any existing "none/default" variants (we’ll insert canonical one)
+    // remove old "none/default" variants
     const meaningful = filtered.filter((v) => !isNoCustomizationValue(v.value, v.label));
 
-    // If nothing meaningful remains, hide customization completely (this removes the space)
     if (meaningful.length === 0) return undefined;
 
-    // 4) prepend canonical "No Customization" option
     const noneOption: OptionValueUI = {
       id: "c-none",
       value: "none",
@@ -362,7 +366,7 @@ export default function ProductConfigurator({ product }: Props) {
       ...original,
       values: [noneOption, ...meaningful],
     };
-  }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
+  }, [customizationGroupFromDb, hasIncludedBadges, allowNameNumber]);
 
   const otherGroups = product.optionGroups.filter(
     (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
@@ -370,12 +374,14 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
+  // If customization group disappears, clear selection
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
+  // Normalize legacy no-customization value
   useEffect(() => {
     if (!effectiveCustomizationGroup) return;
 
@@ -388,12 +394,7 @@ export default function ProductConfigurator({ product }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCustomizationGroup]);
 
-  useEffect(() => {
-    if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
-      setSelected((s) => ({ ...s, customization: "none" }));
-    }
-  }, [badgesGroup, customization]);
-
+  // If allowNameNumber is false, purge any name/number selection + inputs
   useEffect(() => {
     if (allowNameNumber) return;
 
@@ -412,10 +413,14 @@ export default function ProductConfigurator({ product }: Props) {
     typeof customization === "string" &&
     customization.toLowerCase().includes("name-number");
 
+  /**
+   * ✅ Badge picker shows ONLY when the chosen customization mentions badge
+   * AND there are included badges (Product.badges) to pick from / or badgesGroup exists.
+   */
   const showBadgePicker =
     typeof customization === "string" &&
     customization.toLowerCase().includes("badge") &&
-    !!badgesGroup;
+    (hasIncludedBadges || !!badgesGroup);
 
   const setRadio = (key: string, value: string) => setSelected((s) => ({ ...s, [key]: value || null }));
 
@@ -468,7 +473,7 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => unitPriceCents, [unitPriceCents]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize (supports accents) ---------- */
+  /* ---------- Sanitize ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
@@ -589,6 +594,7 @@ export default function ProductConfigurator({ product }: Props) {
       ])
     );
 
+    // If customization exists but user didn't pick, default to "none"
     if (effectiveCustomizationGroup) {
       const cur = optionsForCart["customization"];
       if (cur == null || cur === "") optionsForCart["customization"] = "none";
@@ -791,6 +797,29 @@ export default function ProductConfigurator({ product }: Props) {
             )}
           </header>
 
+          {/* ✅ INCLUDED BADGES (ALWAYS SHOW if product.badges has items) */}
+          {hasIncludedBadges && (
+            <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+              <div className="mb-2 text-[11px] sm:text-sm text-gray-700">Included badges</div>
+
+              <div className="flex flex-wrap gap-2">
+                {includedBadges.map((b) => (
+                  <span
+                    key={b}
+                    className="inline-flex items-center rounded-full border bg-white px-2.5 py-1 text-[11px] sm:text-xs"
+                    title={b}
+                  >
+                    {humanizeBadge(b)}
+                  </span>
+                ))}
+              </div>
+
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                These patches are included with this jersey (no extra cost).
+              </p>
+            </div>
+          )}
+
           {/* Size */}
           <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
             <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
@@ -880,13 +909,11 @@ export default function ProductConfigurator({ product }: Props) {
                 </label>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-gray-500">
-                Personalization will be printed in the club’s official style.
-              </p>
+              <p className="text-[11px] sm:text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
             </div>
           )}
 
-          {/* Badges */}
+          {/* Badges picker (only when customization mentions badge) */}
           {showBadgePicker && badgesGroup && (
             <GroupBlock
               group={badgesGroup}
@@ -979,11 +1006,7 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">Item added to cart</div>
                   <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
-                <button
-                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                  onClick={() => setShowToast(false)}
-                  type="button"
-                >
+                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)} type="button">
                   Close
                 </button>
               </div>
@@ -1030,20 +1053,12 @@ function GroupBlock({
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={group.key}
-                    className="accent-blue-600"
-                    checked={!!active}
-                    onChange={() => onPickRadio(group.key, v.value)}
-                  />
+                  <input type="radio" name={group.key} className="accent-blue-600" checked={!!active} onChange={() => onPickRadio(group.key, v.value)} />
                   <span className="text-sm">{v.label}</span>
                 </div>
 
                 {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                    FREE
-                  </span>
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
                 ) : null}
               </label>
             );
