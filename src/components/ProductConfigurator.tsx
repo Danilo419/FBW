@@ -1030,6 +1030,7 @@ function GroupBlock({
         <div className="grid gap-2">
           {group.values.map((v) => {
             const active = selected[group.key] === v.value;
+            const display = group.key === "badges" ? humanizeBadge(v.value) : v.label;
             return (
               <label
                 key={v.id}
@@ -1045,7 +1046,7 @@ function GroupBlock({
                     checked={!!active}
                     onChange={() => onPickRadio(group.key, v.value)}
                   />
-                  <span className="text-sm">{v.label}</span>
+                  <span className="text-sm">{display}</span>
                 </div>
 
                 {forceFree ? (
@@ -1073,6 +1074,8 @@ function GroupBlock({
       <div className="grid gap-2">
         {group.values.map((v) => {
           const active = isActive(v.value);
+          const display = group.key === "badges" ? humanizeBadge(v.value) : v.label;
+
           return (
             <label
               key={v.id}
@@ -1091,7 +1094,7 @@ function GroupBlock({
                       : onToggleAddon(group.key, v.value, e.target.checked)
                   }
                 />
-                <span className="text-sm">{v.label}</span>
+                <span className="text-sm">{display}</span>
               </div>
 
               {forceFree ? (
