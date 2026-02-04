@@ -74,6 +74,10 @@ const BADGE_LABELS: Record<string, string> = {
   "la-liga-champions": "La Liga – Champion",
   "serie-a-regular": "Serie A – League Badge",
   "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
+
+  // ✅ NEW: Coppa Italia winners badge
+  "coppa-italia-winners": "Coppa Italia – Winners (Coccarda)",
+
   "bundesliga-regular": "Bundesliga – League Badge",
   "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
   "ligue1-regular": "Ligue 1 – League Badge",
@@ -99,6 +103,7 @@ const BADGE_LABELS: Record<string, string> = {
   "uecl-regular": "UEFA Europa Conference League – Badge",
   "uecl-winners": "UEFA Europa Conference League – Winners Badge",
   "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
+  "intercontinental-cup-champions": "FIFA Intercontinental Cup – Champions Badge",
 };
 
 function humanizeBadge(value: string) {
@@ -202,18 +207,13 @@ export default function ProductConfigurator({ product }: Props) {
   const allowNameNumber = product.allowNameNumber !== false;
 
   /* ---------- Discount ---------- */
-  // money() in your project usually expects cents.
-  // We'll compute discount percent based on a EUR view, but display price using money(cents).
   const rawUnitPrice = Number(product.basePrice ?? 0);
   const unitPriceCents = normalizeUnitPriceCentsLike(rawUnitPrice);
 
-  // For matching SALE_MAP_EUR, we need EUR value (e.g., 34.99)
   const unitPriceEur = unitPriceCents / 100;
-
   const saleKey = unitPriceEur.toFixed(2);
   const originalPriceEur = SALE_MAP_EUR[saleKey];
 
-  // Convert original EUR to cents for money()
   const originalUnitPriceCents = typeof originalPriceEur === "number" ? Math.round(originalPriceEur * 100) : null;
 
   const hasDiscount =
@@ -360,7 +360,6 @@ export default function ProductConfigurator({ product }: Props) {
 
     return {
       ...original,
-      // keep radio order stable: NONE first, then the rest
       values: [noneOption, ...meaningful],
     };
   }, [customizationGroupFromDb, badgesGroup, allowNameNumber]);
@@ -371,35 +370,30 @@ export default function ProductConfigurator({ product }: Props) {
 
   const customization = selected["customization"] ?? "";
 
-  // If customization group disappears, clear selection
   useEffect(() => {
     if (!effectiveCustomizationGroup && customization) {
       setSelected((s) => ({ ...s, customization: null }));
     }
   }, [effectiveCustomizationGroup, customization]);
 
-  // If we DO have customization group, ensure selection is never an invalid legacy "no customization" variant
   useEffect(() => {
     if (!effectiveCustomizationGroup) return;
 
     const cur = selected["customization"];
     if (typeof cur !== "string" || !cur) return;
 
-    // Normalize to "none" if user had an old variant selected
     if (isNoCustomizationValue(cur, cur)) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCustomizationGroup]);
 
-  // If there is no badges group, avoid selecting a badge customization option
   useEffect(() => {
     if (!badgesGroup && typeof customization === "string" && customization.toLowerCase().includes("badge")) {
       setSelected((s) => ({ ...s, customization: "none" }));
     }
   }, [badgesGroup, customization]);
 
-  // HARD RULE: if allowNameNumber is false, purge any name/number selection + inputs
   useEffect(() => {
     if (allowNameNumber) return;
 
@@ -588,7 +582,6 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
-    // Build options exactly like your cart expects: strings (or null)
     const optionsForCart: Record<string, string | null> = Object.fromEntries(
       Object.entries(selected).map(([k, v]) => [
         k,
@@ -596,8 +589,6 @@ export default function ProductConfigurator({ product }: Props) {
       ])
     );
 
-    // If customization isn't shown, keep it null.
-    // If it IS shown and user hasn't selected, default to "none" (explicit)
     if (effectiveCustomizationGroup) {
       const cur = optionsForCart["customization"];
       if (cur == null || cur === "") optionsForCart["customization"] = "none";
