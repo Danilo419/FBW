@@ -2,13 +2,22 @@
 import MetricChart from "@/components/analytics/MetricChart";
 import LiveVisitorsBadge from "@/components/analytics/LiveVisitorsBadge";
 
-// Tipos iguais aos usados dentro do MetricChart (não exportados de lá)
-type Metric = "visitors" | "sales" | "profit" | "orders" | "conversion";
+// 🔹 Tipos alinhados com o MetricChart atualizado
+type Metric = "pageviews" | "visitors" | "sales" | "profit" | "orders" | "conversion";
 type Period = "today" | "7d" | "30d" | "90d" | "custom";
 
 type SP = Record<string, string | string[]>;
 
-const METRICS = ["visitors", "sales", "profit", "orders", "conversion"] as const;
+// 🔹 Ordem importa (tabs aparecem nesta ordem)
+const METRICS = [
+  "pageviews",
+  "visitors",
+  "sales",
+  "profit",
+  "orders",
+  "conversion",
+] as const;
+
 const PERIODS = ["today", "7d", "30d", "90d", "custom"] as const;
 
 function toMetric(value: unknown, fallback: Metric): Metric {
@@ -28,7 +37,8 @@ export default async function AnalyticsPage({
 }) {
   const sp = (await searchParams) ?? {};
 
-  const metric: Metric = toMetric(sp.metric, "visitors");
+  // ✅ DEFAULT AGORA É PAGEVIEWS (comportamento antigo, mas nome correto)
+  const metric: Metric = toMetric(sp.metric, "pageviews");
   const period: Period = toPeriod(sp.period, "30d");
 
   return (

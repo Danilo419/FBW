@@ -14,11 +14,25 @@ import {
   ReferenceLine,
 } from "recharts";
 
-type Metric = "visitors" | "sales" | "profit" | "orders" | "conversion";
+/**
+ * ✅ IMPORTANT (compat):
+ * - Antes, "visitors" aqui estava a mostrar *pageviews* (count de visits).
+ * - Agora:
+ *   - "pageviews" = page views (o que tu tinhas como "Visitors" no Analytics)
+ *   - "visitors"  = unique visitors (o "Visitors" real do Dashboard)
+ *
+ * Para NÃO quebrar caso a tua API ainda esteja a devolver só `visitors`:
+ * - pageviews usa fallback: series.pageviews ?? series.visitors
+ * - visitors (uniques) tenta: series.visitorsUnique/uniqueVisitors/uniques
+ *   (se ainda não existir, vai mostrar 0 até atualizares a API)
+ */
+
+type Metric = "pageviews" | "visitors" | "sales" | "profit" | "orders" | "conversion";
 type Period = "today" | "7d" | "30d" | "90d" | "custom";
 
 const METRICS: { key: Metric; label: string }[] = [
-  { key: "visitors", label: "Visitors" },
+  { key: "pageviews", label: "Page views" }, // ✅ era "Visitors" (na verdade pageviews)
+  { key: "visitors", label: "Visitors" }, // ✅ uniques reais
   { key: "sales", label: "Sales (€)" },
   { key: "profit", label: "Profit (€)" }, // ✅ entre Sales e Orders
   { key: "orders", label: "Orders" },
@@ -59,14 +73,12 @@ function parseISOToTs(isoYYYYMMDD: string) {
 function formatDateTick(ts: number) {
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return "";
-  // Premium: "25 Dec" (limpo e consistente)
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
 function formatDateTooltip(ts: number) {
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return "";
-  // Premium: "Thu, 23 Jan 2026"
   return d.toLocaleDateString("en-GB", {
     weekday: "short",
     day: "2-digit",
@@ -142,6 +154,35 @@ function buildEvenTimeTicks(minTs: number, maxTs: number, count = 6) {
 }
 
 /* ===========================
+   Helpers: payload compat
+=========================== */
+function pickNumber(obj: any, keys: string[], fallback = 0) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+  }
+  return fallback;
+}
+
+function pickSeries(obj: any, keys: string[]) {
+  for (const k of keys) {
+    const arr = obj?.[k];
+    if (Array.isArray(arr)) return arr;
+  }
+  return [];
+}
+
+function metricTitle(metric: Metric) {
+  if (metric === "pageviews") return "Page views";
+  if (metric === "visitors") return "Visitors";
+  if (metric === "sales") return "Sales";
+  if (metric === "profit") return "Profit";
+  if (metric === "orders") return "Orders";
+  if (metric === "conversion") return "Conversion";
+  return "Metric";
+}
+
+/* ===========================
    Premium tooltip
 =========================== */
 function TooltipCard({
@@ -164,26 +205,15 @@ function TooltipCard({
     metric === "sales" || metric === "profit"
       ? formatEUR(Number.isFinite(v) ? v : 0)
       : metric === "conversion"
-        ? formatPercent(Number.isFinite(v) ? v : 0)
-        : formatInt(Number.isFinite(v) ? v : 0);
-
-  const title =
-    metric === "sales"
-      ? "Sales"
-      : metric === "profit"
-        ? "Profit"
-        : metric === "orders"
-          ? "Orders"
-          : metric === "conversion"
-            ? "Conversion"
-            : "Visitors";
+      ? formatPercent(Number.isFinite(v) ? v : 0)
+      : formatInt(Number.isFinite(v) ? v : 0);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur px-3 py-2">
       <div className="text-[11px] text-gray-500">{formatDateTooltip(ts)}</div>
       <div className="mt-1 flex items-baseline gap-2">
         <div className="text-sm font-semibold text-gray-900">{valueText}</div>
-        <div className="text-[11px] text-gray-500">{title}</div>
+        <div className="text-[11px] text-gray-500">{metricTitle(metric)}</div>
       </div>
     </div>
   );
@@ -203,15 +233,12 @@ export default function MetricChart({
   const [to, setTo] = useState<string>("");
 
   const [loading, setLoading] = useState(true);
+
+  // Mantém o type “flexível” para compat com a API antiga
   const [payload, setPayload] = useState<{
     labels: string[];
-    series: Record<Metric, number[]>;
-    totals: {
-      sales: number;
-      profit: number;
-      orders: number;
-      visitors: number;
-    };
+    series: Record<string, number[]>;
+    totals: Record<string, number>;
     range?: { from: string; to: string };
   } | null>(null);
 
@@ -249,11 +276,28 @@ export default function MetricChart({
   }, [qs]);
 
   const labels = payload?.labels ?? [];
-  const series = payload?.series ?? ({} as any);
+  const series = payload?.series ?? {};
+  const totals = payload?.totals ?? {};
+
+  // ✅ aqui é onde fazemos a troca: pageviews != visitors
+  const metricSeries = useMemo(() => {
+    if (metric === "pageviews") {
+      // API antiga: series.visitors (na verdade pageviews)
+      return pickSeries(series, ["pageviews", "views", "pageViews", "visitors"]);
+    }
+    if (metric === "visitors") {
+      // tenta vários nomes comuns para uniques
+      return pickSeries(series, ["visitors", "uniqueVisitors", "visitorsUnique", "uniques", "uniqVisitors"]);
+    }
+    if (metric === "sales") return pickSeries(series, ["sales"]);
+    if (metric === "profit") return pickSeries(series, ["profit"]);
+    if (metric === "orders") return pickSeries(series, ["orders"]);
+    if (metric === "conversion") return pickSeries(series, ["conversion"]);
+    return [];
+  }, [series, metric]);
 
   const chartData = useMemo(() => {
-    const s = series?.[metric];
-    const arr = Array.isArray(s) ? s : [];
+    const arr = Array.isArray(metricSeries) ? metricSeries : [];
     return labels
       .map((label, i) => ({
         label,
@@ -262,7 +306,7 @@ export default function MetricChart({
       }))
       .filter((p) => Number.isFinite(p.ts))
       .sort((a, b) => a.ts - b.ts);
-  }, [labels, series, metric]);
+  }, [labels, metricSeries]);
 
   const xTicks = useMemo(() => {
     if (chartData.length === 0) return undefined as any;
@@ -291,7 +335,6 @@ export default function MetricChart({
       return { yDomain: undefined as any, yTicks: undefined as any };
     }
 
-    // Premium: money sempre com baseline 0 visível
     if (metric === "sales" || metric === "profit") {
       min = Math.min(0, min);
       max = Math.max(0, max);
@@ -301,7 +344,6 @@ export default function MetricChart({
       return { yDomain: domain, yTicks: ticks };
     }
 
-    // Conversion %
     if (metric === "conversion") {
       min = Math.min(0, min);
       max = Math.max(0, max);
@@ -314,24 +356,37 @@ export default function MetricChart({
     return { yDomain: undefined as any, yTicks: undefined as any };
   }, [chartData, metric]);
 
+  const totalsPageviews = useMemo(() => {
+    // API antiga: totals.visitors (na verdade pageviews)
+    return pickNumber(totals, ["pageviews", "views", "pageViews", "visitors"], 0);
+  }, [totals]);
+
+  const totalsVisitorsUnique = useMemo(() => {
+    // tenta nomes para uniques; se ainda não existir na API, fica 0 (até atualizares a API)
+    return pickNumber(totals, ["visitors", "uniqueVisitors", "visitorsUnique", "uniques", "uniqVisitors"], 0);
+  }, [totals]);
+
+  const totalsOrders = useMemo(() => pickNumber(totals, ["orders"], 0), [totals]);
+  const totalsSales = useMemo(() => pickNumber(totals, ["sales"], 0), [totals]);
+  const totalsProfit = useMemo(() => pickNumber(totals, ["profit"], 0), [totals]);
+
   const totalValue = useMemo(() => {
     if (!payload) return 0;
 
-    const totalVisitors = payload.totals?.visitors ?? 0;
-    const totalOrders = payload.totals?.orders ?? 0;
-
-    if (metric === "visitors") return totalVisitors;
-    if (metric === "orders") return totalOrders;
-    if (metric === "sales") return payload.totals?.sales ?? 0;
-    if (metric === "profit") return payload.totals?.profit ?? 0;
+    if (metric === "pageviews") return totalsPageviews;
+    if (metric === "visitors") return totalsVisitorsUnique;
+    if (metric === "orders") return totalsOrders;
+    if (metric === "sales") return totalsSales;
+    if (metric === "profit") return totalsProfit;
 
     if (metric === "conversion") {
-      if (totalVisitors <= 0) return 0;
-      return (totalOrders / totalVisitors) * 100;
+      // Conversion deve usar VISITORS (uniques), não pageviews
+      if (totalsVisitorsUnique <= 0) return 0;
+      return (totalsOrders / totalsVisitorsUnique) * 100;
     }
 
     return 0;
-  }, [payload, metric]);
+  }, [payload, metric, totalsPageviews, totalsVisitorsUnique, totalsOrders, totalsSales, totalsProfit]);
 
   const totalText = useMemo(() => {
     if (metric === "sales" || metric === "profit") return formatEUR(totalValue);
@@ -339,8 +394,7 @@ export default function MetricChart({
     return formatInt(totalValue);
   }, [metric, totalValue]);
 
-  const activeMetricLabel =
-    METRICS.find((m) => m.key === metric)?.label ?? metric;
+  const activeMetricLabel = METRICS.find((m) => m.key === metric)?.label ?? metric;
 
   const yTickFormatter = useMemo(() => {
     if (metric === "sales" || metric === "profit") return (v: number) => eurTickLabel(v);
@@ -424,13 +478,11 @@ export default function MetricChart({
         </div>
       )}
 
-      {/* Total box (premium spacing) */}
+      {/* Total box */}
       <div className="mt-4">
         <div className="w-full md:w-[360px] rounded-2xl border p-4 shadow-sm">
           <div className="text-xs text-gray-500">Total</div>
-          <div className="text-2xl font-extrabold tracking-tight">
-            {loading ? "…" : totalText}
-          </div>
+          <div className="text-2xl font-extrabold tracking-tight">{loading ? "…" : totalText}</div>
           <div className="mt-1 text-xs text-gray-500">{activeMetricLabel}</div>
         </div>
       </div>
@@ -448,11 +500,7 @@ export default function MetricChart({
         ) : (
           <div className="h-full rounded-2xl border p-2 md:p-3">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData}
-                margin={{ top: 16, right: 20, left: 22, bottom: 22 }}
-              >
-                {/* premium: line gradient */}
+              <LineChart data={chartData} margin={{ top: 16, right: 20, left: 22, bottom: 22 }}>
                 <defs>
                   <linearGradient id="fwLine" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#2563eb" stopOpacity={0.95} />
@@ -460,10 +508,8 @@ export default function MetricChart({
                   </linearGradient>
                 </defs>
 
-                {/* premium grid */}
                 <CartesianGrid strokeDasharray="4 8" stroke="#e5e7eb" />
 
-                {/* premium x axis: 6 evenly spaced ticks, equal distances */}
                 <XAxis
                   dataKey="ts"
                   type="number"
@@ -478,7 +524,6 @@ export default function MetricChart({
                   tickLine={false}
                 />
 
-                {/* premium y axis */}
                 <YAxis
                   tickFormatter={yTickFormatter as any}
                   domain={yDomain as any}
@@ -490,12 +535,10 @@ export default function MetricChart({
                   tickLine={false}
                 />
 
-                {/* premium: baseline 0 para Profit/Sales */}
                 {(metric === "profit" || metric === "sales") && (
                   <ReferenceLine y={0} stroke="#e5e7eb" strokeWidth={1} />
                 )}
 
-                {/* premium tooltip */}
                 <Tooltip
                   cursor={{ stroke: "#cbd5e1", strokeDasharray: "6 6" }}
                   content={(props: any) => <TooltipCard {...props} metric={metric} />}

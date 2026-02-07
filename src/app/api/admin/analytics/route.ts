@@ -4,7 +4,15 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-type Metric = "visitors" | "sales" | "profit" | "orders" | "conversion";
+/**
+ * ✅ IMPORTANT:
+ * - Antes: "visitors" aqui era na verdade PAGEVIEWS (count de rows em Visit).
+ * - Agora:
+ *   - pageviews = page views (total de visitas/entradas)
+ *   - visitors  = unique visitors (distinct visitorId)
+ * - Conversion (%) passa a usar UNIQUE VISITORS (igual lógica certa do Dashboard).
+ */
+type Metric = "pageviews" | "visitors" | "sales" | "profit" | "orders" | "conversion";
 
 /* ======================================================================================
    Helpers: dates
@@ -57,10 +65,9 @@ function supplierUnitCostFromName(productName: string): number {
   const n = nrm(productName);
 
   // ===== Windbreakers =====
-  if (n.includes("windbreaker") && (n.includes("with cap") || n.includes("cap")))
-    return 28; // Windbreaker with cap
+  if (n.includes("windbreaker") && (n.includes("with cap") || n.includes("cap"))) return 28;
   if (n.includes("windbreaker") && (n.includes("front and back") || n.includes("front/back")))
-    return 32; // Front and back windbreakers
+    return 32;
   if (n.includes("windbreaker")) return 26;
 
   // ===== F1 / NBA =====
@@ -78,46 +85,40 @@ function supplierUnitCostFromName(productName: string): number {
   if (n.includes("training pants")) return 16;
 
   // ===== Socks / Shorts =====
-  if (n.includes("football socks") || (n.includes("socks") && n.includes("football")))
-    return 3;
+  if (n.includes("football socks") || (n.includes("socks") && n.includes("football"))) return 3;
   if (n.includes("shorts")) return 8;
 
   // ===== Sets =====
-  if (n.includes("kids kit") || (n.includes("kids") && n.includes("kit")) || (n.includes("children") && n.includes("set")))
-    return 12; // Children's set
+  if (
+    n.includes("kids kit") ||
+    (n.includes("kids") && n.includes("kit")) ||
+    (n.includes("children") && n.includes("set"))
+  )
+    return 12;
 
   if (n.includes("adult set")) return 13;
 
-  // Training tracksuit / training suit set (top+pants)
-  if ((n.includes("training tracksuit") || n.includes("training tracksuits") || n.includes("training suit")) && n.includes("set"))
+  if (
+    (n.includes("training tracksuit") ||
+      n.includes("training tracksuits") ||
+      n.includes("training suit")) &&
+    n.includes("set")
+  )
     return 16;
 
-  // Training sleeveless set (tank + shorts)
   if (n.includes("training sleeveless set") || (n.includes("sleeveless") && n.includes("set")))
-    return 16; // Tank top training suit
+    return 16;
 
   // ===== Jerseys =====
-  // Retro long sleeve (no teu site aparece “Retro ... Long Sleeve Jersey”)
-  // Na tua tabela: "Vintage long sleeves: 16€" -> uso aqui para retro long sleeve.
-  if (n.includes("retro") && (n.includes("long sleeve") || n.includes("long sleeves")))
-    return 16;
-
-  // Retro normal
+  if (n.includes("retro") && (n.includes("long sleeve") || n.includes("long sleeves"))) return 16;
   if (n.includes("retro")) return 13;
 
-  // Long sleeves (player e fan long sleeves)
   if (n.includes("long sleeve") || n.includes("long sleeves")) return 14;
-
-  // Player version (short sleeve)
   if (n.includes("player version")) return 12;
-
-  // Crop top -> não tinhas na lista; como é basicamente jersey fan, trato como Fans (9€)
   if (n.includes("crop top")) return 9;
 
-  // Fan / standard jerseys
   if (n.includes("fan") || n.includes("fans") || n.includes("jersey")) return 9;
 
-  // fallback seguro
   return 12;
 }
 
@@ -133,18 +134,18 @@ function toCentsFromOrder(o: {
 }): number {
   if (typeof o.totalCents === "number" && Number.isFinite(o.totalCents)) return o.totalCents;
   if (typeof o.total === "number" && Number.isFinite(o.total)) return Math.round(o.total * 100);
-  // fallback: soma subtotal + shipping + tax (tudo em cents)
   return (o.subtotal ?? 0) + (o.shipping ?? 0) + (o.tax ?? 0);
 }
 
-function isPaidLike(o: { status: string; paymentStatus: string | null; paidAt: Date | null; paypalCaptured: boolean | null }) {
+function isPaidLike(o: {
+  status: string;
+  paymentStatus: string | null;
+  paidAt: Date | null;
+  paypalCaptured: boolean | null;
+}) {
   const s = (o.status ?? "").toLowerCase();
   const ps = (o.paymentStatus ?? "").toLowerCase();
 
-  // ✅ regra simples e robusta:
-  // - se paidAt existe -> conta
-  // - ou status é "paid"/"shipped"/"delivered"
-  // - ou paymentStatus é "paid"/"succeeded"/"captured"
   if (o.paidAt) return true;
   if (["paid", "shipped", "delivered"].includes(s)) return true;
   if (["paid", "succeeded", "captured"].includes(ps)) return true;
@@ -187,10 +188,13 @@ export async function GET(req: Request) {
   const labels: string[] = [];
   for (let i = 0; i < totalDays; i++) labels.push(addDays(from, i).toISOString().slice(0, 10));
 
-  const visitorsByDay = Array(totalDays).fill(0);
+  // ✅ Pageviews vs Unique Visitors
+  const pageviewsByDay = Array(totalDays).fill(0);
+  const visitorsUniqueByDay = Array(totalDays).fill(0);
+
   const ordersByDay = Array(totalDays).fill(0);
-  const salesByDayEur = Array(totalDays).fill(0);  // euros
-  const profitByDayEur = Array(totalDays).fill(0); // euros
+  const salesByDayEur = Array(totalDays).fill(0);
+  const profitByDayEur = Array(totalDays).fill(0);
   const conversionByDay = Array(totalDays).fill(0);
 
   function dayIndex(date: Date) {
@@ -200,21 +204,38 @@ export async function GET(req: Request) {
     return idx >= 0 && idx < totalDays ? idx : -1;
   }
 
-  // 1) Visitors (Visit table)
+  // 1) Traffic (Visit table)
+  // - pageviews = count de rows
+  // - visitors  = distinct visitorId
   const visits = await prisma.visit.findMany({
     where: { createdAt: { gte: from, lt: toExclusive } },
-    select: { createdAt: true },
+    select: { createdAt: true, visitorId: true },
   });
+
+  const uniqSetsByDay: Array<Set<string>> = Array.from({ length: totalDays }, () => new Set());
+  const uniqAll = new Set<string>();
 
   for (const v of visits) {
     const idx = dayIndex(v.createdAt);
-    if (idx !== -1) visitorsByDay[idx] += 1;
+    if (idx === -1) continue;
+
+    pageviewsByDay[idx] += 1;
+
+    const vid = String((v as any).visitorId ?? "");
+    if (vid) {
+      uniqSetsByDay[idx].add(vid);
+      uniqAll.add(vid);
+    }
+  }
+
+  for (let i = 0; i < totalDays; i++) {
+    visitorsUniqueByDay[i] = uniqSetsByDay[i].size;
   }
 
   // 2) Orders + Profit
   const orders = await prisma.order.findMany({
     where: { createdAt: { gte: from, lt: toExclusive } },
-    include: { items: true }, // OrderItem[]
+    include: { items: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -232,7 +253,6 @@ export async function GET(req: Request) {
       tax: o.tax ?? 0,
     });
 
-    // custos fornecedor
     let supplierItemsCostEur = 0;
     let shipQty = 0;
 
@@ -254,25 +274,27 @@ export async function GET(req: Request) {
     profitByDayEur[idx] += profitEur;
   }
 
-  // 3) Conversion (%)
+  // 3) Conversion (%) — ✅ agora usa VISITORS (uniques), não pageviews
   for (let i = 0; i < totalDays; i++) {
-    const v = visitorsByDay[i];
+    const u = visitorsUniqueByDay[i];
     const o = ordersByDay[i];
-    conversionByDay[i] = v > 0 ? (o / v) * 100 : 0;
+    conversionByDay[i] = u > 0 ? (o / u) * 100 : 0;
   }
 
   const totals = {
     sales: salesByDayEur.reduce((a: number, b: number) => a + b, 0),
     profit: profitByDayEur.reduce((a: number, b: number) => a + b, 0),
     orders: ordersByDay.reduce((a: number, b: number) => a + b, 0),
-    visitors: visitorsByDay.reduce((a: number, b: number) => a + b, 0),
+    pageviews: pageviewsByDay.reduce((a: number, b: number) => a + b, 0),
+    visitors: uniqAll.size, // ✅ total unique visitors no range
   };
 
   return NextResponse.json({
     range: { from: from.toISOString(), to: toExclusive.toISOString() },
     labels,
     series: {
-      visitors: visitorsByDay,
+      pageviews: pageviewsByDay,
+      visitors: visitorsUniqueByDay,
       sales: salesByDayEur,
       profit: profitByDayEur,
       orders: ordersByDay,
