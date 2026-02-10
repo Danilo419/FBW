@@ -1659,7 +1659,7 @@ export default function Home() {
               {
                 icon: <Truck className="h-5 w-5 text-blue-600" />,
                 t: 'Global shipping',
-                s: 'Worldwide delivery in 5–7 business days, with tracking on every order.',
+                s: 'Worldwide delivery in 7–20 business days, with tracking on every order.',
               },
             ].map((f, i) => (
               <motion.div
