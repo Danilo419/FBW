@@ -93,7 +93,7 @@ export default async function AboutPage() {
         <div className="flex items-center gap-2 text-xs">
           <span className="inline-flex items-center gap-1 rounded-full border bg-white/80 px-2.5 py-1">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            Designed with passion since 2024
+            Designed with passion since 2026
           </span>
         </div>
 
