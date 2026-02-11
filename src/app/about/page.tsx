@@ -101,9 +101,9 @@ export default async function AboutPage() {
           About FootballWorld
         </h1>
         <p className="mt-2 max-w-3xl text-gray-600">
-          We’re a small, design-first studio crafting <strong>authentic</strong> and{" "}
+          We’re a design-first studio crafting <strong>authentic</strong> and{" "}
           <strong>concept</strong> football jerseys. Made-to-order quality, fair pricing, and
-          reliable worldwide shipping — so you can wear the game your way.
+          reliable worldwide shipping, so you can wear the game your way.
         </p>
 
         {/* trust badges */}
