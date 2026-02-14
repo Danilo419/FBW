@@ -1714,7 +1714,7 @@ export default function Home() {
               </ul>
             </div>
             <div className="flex md:justify-end items-center gap-3">
-              <MagneticButton href="/products">
+              <MagneticButton href="/clubs">
                 Get started <Zap className="h-4 w-4" />
               </MagneticButton>
               <a href="#faq" className="btn-outline">
