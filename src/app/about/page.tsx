@@ -31,34 +31,17 @@ export const revalidate = 0; // sem cache
 
 /* ---------- carrega estatísticas no servidor ---------- */
 async function loadInitialStats() {
-  // Orders shipped = encomendas pagas
-  const shippedOrders = await prisma.order.count({
-    where: {
-      OR: [
-        { paidAt: { not: null } },
-        { status: { in: ["paid", "shipped", "delivered"] } as any },
-      ],
-    },
-  });
+  // ✅ Mantemos apenas as estatísticas que fazem sentido mostrar agora:
+  // - Community
+  // - Rating médio (+ contagem)
+  //
+  // ❌ Temporariamente NÃO mostramos:
+  // - Orders shipped
+  // - Countries served
+  //
+  // Mesmo assim devolvemos valores (0) para manter compatibilidade com o componente LiveStats,
+  // caso ele espere essas props obrigatórias.
 
-  // Countries served = países distintos (shippingCountry) em encomendas pagas
-  const paidRows = await prisma.order.findMany({
-    where: {
-      OR: [
-        { paidAt: { not: null } },
-        { status: { in: ["paid", "shipped", "delivered"] } as any },
-      ],
-      shippingCountry: { not: null },
-    },
-    select: { shippingCountry: true },
-  });
-  const distinctCountries = new Set(
-    paidRows
-      .map((r) => (r.shippingCountry ?? "").trim().toLowerCase())
-      .filter(Boolean)
-  ).size;
-
-  // Community e rating médio
   const [usersCount, reviewAgg] = await Promise.all([
     prisma.user.count(),
     prisma.review.aggregate({ _avg: { rating: true }, _count: { _all: true } }),
@@ -66,8 +49,8 @@ async function loadInitialStats() {
 
   return {
     initialCommunity: usersCount,
-    initialOrders: shippedOrders,
-    initialCountries: distinctCountries,
+    initialOrders: 0,
+    initialCountries: 0,
     initialAverage: Number(reviewAgg._avg.rating ?? 0),
     initialRatingsCount: Number(reviewAgg._count._all ?? 0),
   };
@@ -123,14 +106,14 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* STATS – ordem: Rating, Community, Orders, Countries */}
+      {/* STATS – TEMP: apenas Rating + Community */}
       <LiveStats
         initialOrders={s.initialOrders}
         initialCountries={s.initialCountries}
         initialCommunity={s.initialCommunity}
         initialAverage={s.initialAverage}
         initialRatingsCount={s.initialRatingsCount}
-        cardOrder={["rating", "community", "orders", "countries"]}
+        cardOrder={["rating", "community"]}
       />
 
       {/* WHAT WE DO */}
