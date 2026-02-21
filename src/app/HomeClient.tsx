@@ -32,6 +32,8 @@ import {
   HeartHandshake,
   Clock,
   Shirt,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -171,7 +173,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal8.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal9.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
-  { src: '/images/players/Arsenal/Arsenal11.png', alt: 'Arsenal jersey' },
+  { src: '/images/players/Arsenal/Arenal11.png', alt: 'Arsenal jersey' } as any,
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
   {
     src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
@@ -720,6 +722,114 @@ function ImageSpaces() {
 }
 
 /* ======================================================================================
+   ✅ FROM OUR CUSTOMERS (2 REVIEWS)
+====================================================================================== */
+
+type CustomerReview = {
+  id: string
+  img: string
+  name: string
+  handle: string
+  rating: number
+  text: string
+}
+
+const CUSTOMER_REVIEWS: CustomerReview[] = [
+  {
+    id: '1',
+    // ✅ imagem vertical (frente da camisola) — coloca aqui o ficheiro final
+    img: '/images/reviews/review1.jpg',
+    name: 'Cristiano Silva',
+    handle: '@criscristiano.silva',
+    rating: 5,
+    text: 'Excellent quality, secure shipping, and fast service, it exceeded my expectations and I will definitely buy again!',
+  },
+  {
+    id: '2',
+    // ✅ imagem vertical (costas da camisola) — coloca aqui o ficheiro final
+    img: '/images/reviews/review2.jpg',
+    name: 'João Silvestre',
+    handle: '@_j.silvestre._',
+    rating: 4,
+    text: 'Very good quality and great price, it just took a little longer to arrive than I expected, but the wait was worth it and I recommend the store.',
+  },
+]
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span
+          key={i}
+          className={`text-sm ${
+            i < rating ? 'text-yellow-500' : 'text-gray-300'
+          }`}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function FromOurCustomers() {
+  return (
+    <div className="mt-12">
+      <div className="rounded-3xl bg-white ring-1 ring-black/5 p-5 sm:p-8">
+        <div className="text-center">
+          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-[0.18em] uppercase">
+            From Our Customers
+          </h3>
+          <p className="mt-2 text-sm text-slate-500">
+            Want to be featured? Send us your review and a photo via Instagram
+            DM at @footballworld_store for a chance to appear here.
+          </p>
+        </div>
+
+        <div className="mt-6 grid md:grid-cols-2 gap-4 sm:gap-6">
+          {CUSTOMER_REVIEWS.map((review) => (
+            <div
+              key={review.id}
+              className="rounded-3xl border border-slate-100 bg-slate-50/60 p-5 hover:shadow-lg transition"
+            >
+              <div className="flex items-start gap-4">
+                {/* ✅ imagem "normal" na vertical */}
+                <div className="h-28 w-20 sm:h-32 sm:w-24 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white shrink-0">
+                  <img
+                    src={review.img}
+                    alt={`Review by ${review.name}`}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement
+                      if ((img as any)._fallbackApplied) return
+                      ;(img as any)._fallbackApplied = true
+                      img.src = FALLBACK_IMG
+                    }}
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="font-semibold">{review.name}</div>
+                  <div className="text-xs text-slate-500">{review.handle}</div>
+                  <div className="mt-1">
+                    <Stars rating={review.rating} />
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm text-slate-600 leading-relaxed">
+                {review.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ======================================================================================
    Helpers for products
 ====================================================================================== */
 
@@ -860,18 +970,15 @@ function nameU(p: HomeProduct): string {
   return normalizeUpper((p?.name ?? '') as string)
 }
 
-/** garante que TODAS as palavras existem (em qualquer ordem) */
 function hasWords(p: HomeProduct, words: string[]) {
   const n = nameU(p)
   return words.every((w) => n.includes(normalizeUpper(w)))
 }
 
-/** aceita várias opções (OR) */
 function hasAnyWords(p: HomeProduct, listOfWordSets: string[][]) {
   return listOfWordSets.some((ws) => hasWords(p, ws))
 }
 
-/** útil para coisas tipo "25/26" que têm "/" */
 function hasTermRaw(p: HomeProduct, term: string): boolean {
   const raw = ((p?.name ?? '') as string).toUpperCase()
   return raw.includes(term.toUpperCase())
@@ -918,12 +1025,10 @@ function isTrainingSleevelessSet(p: HomeProduct): boolean {
 ====================================================================================== */
 
 function isTrainingTracksuit(p: HomeProduct): boolean {
-  // só entra se tiver exatamente TRAINING + TRACKSUIT (independente de order/pontuação)
   return hasWords(p, ['TRAINING', 'TRACKSUIT'])
 }
 
 function isTracksuitNonTraining(p: HomeProduct): boolean {
-  // tem TRACKSUIT, mas não tem TRAINING TRACKSUIT
   return hasWords(p, ['TRACKSUIT']) && !isTrainingTracksuit(p)
 }
 
@@ -935,7 +1040,6 @@ function isWorldCup2026(p: HomeProduct): boolean {
   return hasWords(p, ['WORLD', 'CUP', '2026'])
 }
 
-// "jersey-like" (para não puxar sets/shorts/tracksuits/crop tops/kids kits)
 function isJerseyLikeProduct(p: HomeProduct): boolean {
   if (isTrainingSleevelessSet(p)) return false
   if (isTrainingTracksuit(p)) return false
@@ -1176,7 +1280,6 @@ export default function Home() {
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
-      // ✅ NOVO (para aparecer logo em primeiro, vamos renderizar fora dos grupos)
       worldCup2026: mk((p) => isWorldCup2026(p) && isJerseyLikeProduct(p)),
 
       currentSeason: mk(
@@ -1208,12 +1311,10 @@ export default function Home() {
         (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
 
-      // ✅ MUDANÇA 1
       trainingTracksuit: mk(
         (p) => isTrainingTracksuit(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
 
-      // ✅ MUDANÇA 2 (novo)
       tracksuits: mk(
         (p) => isTracksuitNonTraining(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
@@ -1232,7 +1333,6 @@ export default function Home() {
     href: string
     group: string
   }[] = [
-    // Jerseys
     {
       key: 'currentSeason',
       title: 'Current season 25/26',
@@ -1269,7 +1369,6 @@ export default function Home() {
       group: 'Jerseys',
     },
 
-    // Retro
     {
       key: 'retro',
       title: 'Retro Jerseys',
@@ -1285,7 +1384,6 @@ export default function Home() {
       group: 'Retro',
     },
 
-    // Concept & Special
     {
       key: 'conceptKits',
       title: 'Concept Kits',
@@ -1301,8 +1399,6 @@ export default function Home() {
       group: 'Concept & Special',
     },
 
-    // ✅ AQUI ESTÁ O QUE PEDISTE:
-    // "Tracksuits for Casual Wear" dentro de "Concept & Special" em baixo de "Pre-Match Jerseys"
     {
       key: 'tracksuits',
       title: 'Tracksuits',
@@ -1311,7 +1407,6 @@ export default function Home() {
       group: 'Concept & Special',
     },
 
-    // Training
     {
       key: 'trainingSleeveless',
       title: 'Training Sleeveless Sets',
@@ -1327,7 +1422,6 @@ export default function Home() {
       group: 'Training',
     },
 
-    // Kids & Woman
     {
       key: 'kidsKits',
       title: 'Kids Kits',
@@ -1352,7 +1446,6 @@ export default function Home() {
     'Kids & Woman',
   ]
 
-  // ✅ link reservado para quando pedires a página
   const WORLD_CUP_2026_HREF = '/products/fifa-world-cup-2026-jerseys'
 
   return (
@@ -1545,7 +1638,6 @@ export default function Home() {
 
             {!loadingHomeProducts && categories && (
               <div className="space-y-10">
-                {/* ✅ NOVO: logo em primeiro */}
                 {categories.worldCup2026 && categories.worldCup2026.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-baseline justify-between gap-2">
@@ -1631,6 +1723,9 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* ✅ NEW SECTION: FROM OUR CUSTOMERS */}
+        <FromOurCustomers />
       </section>
 
       {/* HOW IT WORKS */}
@@ -1763,7 +1858,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* FAQ : */}
       <section id="faq" className="container-fw pb-24 pt-16">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
           Frequently asked questions
