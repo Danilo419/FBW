@@ -729,6 +729,7 @@ type CustomerReview = {
   id: string
   img: string
   name: string
+  handle: string
   rating: number
   text: string
 }
@@ -736,15 +737,19 @@ type CustomerReview = {
 const CUSTOMER_REVIEWS: CustomerReview[] = [
   {
     id: '1',
+    // ✅ imagem vertical (frente da camisola) — coloca aqui o ficheiro final
     img: '/images/reviews/review1.jpg',
-    name: 'Verified Customer',
+    name: 'Cristiano Silva',
+    handle: '@criscristiano.silva',
     rating: 5,
     text: 'Excellent quality, secure shipping, and fast service, it exceeded my expectations and I will definitely buy again!',
   },
   {
     id: '2',
+    // ✅ imagem vertical (costas da camisola) — coloca aqui o ficheiro final
     img: '/images/reviews/review2.jpg',
-    name: 'Verified Customer',
+    name: 'João Silvestre',
+    handle: '@_j.silvestre._',
     rating: 4,
     text: 'Very good quality and great price, it just took a little longer to arrive than I expected, but the wait was worth it and I recommend the store.',
   },
@@ -756,7 +761,9 @@ function Stars({ rating }: { rating: number }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <span
           key={i}
-          className={`text-sm ${i < rating ? 'text-yellow-500' : 'text-gray-300'}`}
+          className={`text-sm ${
+            i < rating ? 'text-yellow-500' : 'text-gray-300'
+          }`}
         >
           ★
         </span>
@@ -774,7 +781,8 @@ function FromOurCustomers() {
             From Our Customers
           </h3>
           <p className="mt-2 text-sm text-slate-500">
-            Want to be featured? Send us your review and a photo via Instagram DM at @footballworld_store for a chance to appear here.
+            Want to be featured? Send us your review and a photo via Instagram
+            DM at @footballworld_store for a chance to appear here.
           </p>
         </div>
 
@@ -784,11 +792,12 @@ function FromOurCustomers() {
               key={review.id}
               className="rounded-3xl border border-slate-100 bg-slate-50/60 p-5 hover:shadow-lg transition"
             >
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
+              <div className="flex items-start gap-4">
+                {/* ✅ imagem "normal" na vertical */}
+                <div className="h-28 w-20 sm:h-32 sm:w-24 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white shrink-0">
                   <img
                     src={review.img}
-                    alt="Customer review"
+                    alt={`Review by ${review.name}`}
                     className="h-full w-full object-cover"
                     loading="lazy"
                     onError={(e) => {
@@ -799,9 +808,13 @@ function FromOurCustomers() {
                     }}
                   />
                 </div>
-                <div>
+
+                <div className="min-w-0">
                   <div className="font-semibold">{review.name}</div>
-                  <Stars rating={review.rating} />
+                  <div className="text-xs text-slate-500">{review.handle}</div>
+                  <div className="mt-1">
+                    <Stars rating={review.rating} />
+                  </div>
                 </div>
               </div>
 
@@ -1711,7 +1724,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ✅ NEW SECTION: FROM OUR CUSTOMERS (logo abaixo do último espaço com produtos) */}
+        {/* ✅ NEW SECTION: FROM OUR CUSTOMERS */}
         <FromOurCustomers />
       </section>
 
