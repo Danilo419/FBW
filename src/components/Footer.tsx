@@ -10,6 +10,7 @@ import {
   ArrowUp,
   Instagram,
   Youtube,
+  Facebook, // ✅ ADICIONADO
   ShieldCheck,
   Truck,
   BadgePercent,
@@ -162,12 +163,21 @@ export default function Footer() {
 
             {/* Socials */}
             <div className="mt-4 flex items-center gap-3">
+
+              <Social
+                href="https://www.facebook.com/profile.php?id=61577992120797"
+                label="Facebook"
+              >
+                <Facebook className="h-4 w-4" />
+              </Social>
+
               <Social
                 href="https://www.instagram.com/footballworld_store/"
                 label="Instagram"
               >
                 <Instagram className="h-4 w-4" />
               </Social>
+
               <Social
                 href="https://www.tiktok.com/@footballworld_store"
                 label="TikTok"
@@ -175,7 +185,6 @@ export default function Footer() {
                 <TikTokIcon className="h-4 w-4" />
               </Social>
 
-              {/* ✅ YouTube */}
               <Social
                 href="https://www.youtube.com/@FootBallWorld_Store"
                 label="YouTube"
