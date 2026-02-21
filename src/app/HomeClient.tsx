@@ -1874,7 +1874,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* FAQ : */}
       <section id="faq" className="container-fw pb-24 pt-16">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
           Frequently asked questions
