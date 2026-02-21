@@ -32,8 +32,6 @@ import {
   HeartHandshake,
   Clock,
   Shirt,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -173,7 +171,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal8.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal9.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
-  { src: '/images/players/Arsenal/Arenal11.png', alt: 'Arsenal jersey' } as any,
+  { src: '/images/players/Arsenal/Arsenal11.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
   {
     src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
@@ -722,108 +720,6 @@ function ImageSpaces() {
 }
 
 /* ======================================================================================
-   ✅ NEW: AS SEEN ON YOU (carousel)
-====================================================================================== */
-
-type SeenPost = {
-  id: string
-  img: string
-  handle: string
-  alt?: string
-}
-
-const AS_SEEN_ON_YOU: SeenPost[] = [
-  // Troca estas imagens pelos teus uploads reais (ex: /images/as-seen/1.jpg)
-  { id: '1', img: '/images/as-seen/1.jpg', handle: '@footballworld_store' },
-  { id: '2', img: '/images/as-seen/2.jpg', handle: '@footballworld_store' },
-  { id: '3', img: '/images/as-seen/3.jpg', handle: '@footballworld_store' },
-  { id: '4', img: '/images/as-seen/4.jpg', handle: '@footballworld_store' },
-  { id: '5', img: '/images/as-seen/5.jpg', handle: '@footballworld_store' },
-]
-
-function AsSeenOnYouCarousel({ items }: { items: SeenPost[] }) {
-  const safeItems = items?.length ? items : []
-
-  // usa scroll nativo (mais leve) + botões
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
-
-  const scrollByPx = (dir: -1 | 1) => {
-    const el = scrollerRef.current
-    if (!el) return
-    const amount = Math.max(260, Math.round(el.clientWidth * 0.8))
-    el.scrollBy({ left: dir * amount, behavior: 'smooth' })
-  }
-
-  if (!safeItems.length) return null
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-label="Previous"
-        onClick={() => scrollByPx(-1)}
-        className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow ring-1 ring-black/10 hover:bg-white transition"
-      >
-        <ChevronLeft className="h-5 w-5 text-slate-700" />
-      </button>
-
-      <button
-        type="button"
-        aria-label="Next"
-        onClick={() => scrollByPx(1)}
-        className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow ring-1 ring-black/10 hover:bg-white transition"
-      >
-        <ChevronRight className="h-5 w-5 text-slate-700" />
-      </button>
-
-      <div
-        ref={scrollerRef}
-        className="overflow-x-auto scroll-smooth no-scrollbar"
-      >
-        <div className="flex gap-4 min-w-max px-1">
-          {safeItems.map((it) => (
-            <div
-              key={it.id}
-              className="w-[240px] sm:w-[280px] md:w-[320px]"
-            >
-              <div className="rounded-3xl overflow-hidden ring-1 ring-black/5 bg-slate-50">
-                <div className="relative aspect-[4/3]">
-                  <img
-                    src={it.img}
-                    alt={it.alt || it.handle}
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                    onError={(e) => {
-                      const img = e.currentTarget as HTMLImageElement
-                      if ((img as any)._fallbackApplied) return
-                      ;(img as any)._fallbackApplied = true
-                      img.src = FALLBACK_IMG
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="mt-2 text-center text-sm font-semibold text-slate-700">
-                {it.handle}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-    </div>
-  )
-}
-
-/* ======================================================================================
    Helpers for products
 ====================================================================================== */
 
@@ -1280,6 +1176,7 @@ export default function Home() {
     const mk = (fn: (p: HomeProduct) => boolean) => shuffle(base.filter(fn))
 
     return {
+      // ✅ NOVO (para aparecer logo em primeiro, vamos renderizar fora dos grupos)
       worldCup2026: mk((p) => isWorldCup2026(p) && isJerseyLikeProduct(p)),
 
       currentSeason: mk(
@@ -1311,10 +1208,12 @@ export default function Home() {
         (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
 
+      // ✅ MUDANÇA 1
       trainingTracksuit: mk(
         (p) => isTrainingTracksuit(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
 
+      // ✅ MUDANÇA 2 (novo)
       tracksuits: mk(
         (p) => isTracksuitNonTraining(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
@@ -1333,6 +1232,7 @@ export default function Home() {
     href: string
     group: string
   }[] = [
+    // Jerseys
     {
       key: 'currentSeason',
       title: 'Current season 25/26',
@@ -1369,6 +1269,7 @@ export default function Home() {
       group: 'Jerseys',
     },
 
+    // Retro
     {
       key: 'retro',
       title: 'Retro Jerseys',
@@ -1384,6 +1285,7 @@ export default function Home() {
       group: 'Retro',
     },
 
+    // Concept & Special
     {
       key: 'conceptKits',
       title: 'Concept Kits',
@@ -1399,6 +1301,8 @@ export default function Home() {
       group: 'Concept & Special',
     },
 
+    // ✅ AQUI ESTÁ O QUE PEDISTE:
+    // "Tracksuits for Casual Wear" dentro de "Concept & Special" em baixo de "Pre-Match Jerseys"
     {
       key: 'tracksuits',
       title: 'Tracksuits',
@@ -1407,6 +1311,7 @@ export default function Home() {
       group: 'Concept & Special',
     },
 
+    // Training
     {
       key: 'trainingSleeveless',
       title: 'Training Sleeveless Sets',
@@ -1422,6 +1327,7 @@ export default function Home() {
       group: 'Training',
     },
 
+    // Kids & Woman
     {
       key: 'kidsKits',
       title: 'Kids Kits',
@@ -1446,6 +1352,7 @@ export default function Home() {
     'Kids & Woman',
   ]
 
+  // ✅ link reservado para quando pedires a página
   const WORLD_CUP_2026_HREF = '/products/fifa-world-cup-2026-jerseys'
 
   return (
@@ -1638,6 +1545,7 @@ export default function Home() {
 
             {!loadingHomeProducts && categories && (
               <div className="space-y-10">
+                {/* ✅ NOVO: logo em primeiro */}
                 {categories.worldCup2026 && categories.worldCup2026.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-baseline justify-between gap-2">
@@ -1721,25 +1629,6 @@ export default function Home() {
                 No products to show here yet. Please check the full catalog.
               </p>
             )}
-          </div>
-        </div>
-
-        {/* ✅ NEW SECTION: AS SEEN ON YOU (logo abaixo do último espaço com produtos) */}
-        <div className="mt-12">
-          <div className="rounded-3xl bg-white ring-1 ring-black/5 p-5 sm:p-8">
-            <div className="text-center">
-              <h3 className="text-2xl sm:text-3xl font-extrabold tracking-[0.18em] uppercase">
-                As seen on you
-              </h3>
-              <p className="mt-2 text-sm text-slate-500">
-                If you want to appear here, you can dm us in @footballworld_store
-                on Instagram with your review and a image
-              </p>
-            </div>
-
-            <div className="mt-6">
-              <AsSeenOnYouCarousel items={AS_SEEN_ON_YOU} />
-            </div>
           </div>
         </div>
       </section>
@@ -1874,7 +1763,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ : */}
+      {/* FAQ */}
       <section id="faq" className="container-fw pb-24 pt-16">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
           Frequently asked questions
