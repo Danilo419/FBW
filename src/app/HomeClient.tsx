@@ -722,77 +722,75 @@ function ImageSpaces() {
 }
 
 /* ======================================================================================
-   ✅ NEW: AS SEEN ON YOU (carousel)
+   ✅ FROM OUR CUSTOMERS (2 REVIEWS)
 ====================================================================================== */
 
-type SeenPost = {
+type CustomerReview = {
   id: string
   img: string
-  handle: string
-  alt?: string
+  name: string
+  rating: number
+  text: string
 }
 
-const AS_SEEN_ON_YOU: SeenPost[] = [
-  // Troca estas imagens pelos teus uploads reais (ex: /images/as-seen/1.jpg)
-  { id: '1', img: '/images/as-seen/1.jpg', handle: '@footballworld_store' },
-  { id: '2', img: '/images/as-seen/2.jpg', handle: '@footballworld_store' },
-  { id: '3', img: '/images/as-seen/3.jpg', handle: '@footballworld_store' },
-  { id: '4', img: '/images/as-seen/4.jpg', handle: '@footballworld_store' },
-  { id: '5', img: '/images/as-seen/5.jpg', handle: '@footballworld_store' },
+const CUSTOMER_REVIEWS: CustomerReview[] = [
+  {
+    id: '1',
+    img: '/images/reviews/review1.jpg',
+    name: 'Verified Customer',
+    rating: 5,
+    text: 'Excellent quality, secure shipping, and fast service, it exceeded my expectations and I will definitely buy again!',
+  },
+  {
+    id: '2',
+    img: '/images/reviews/review2.jpg',
+    name: 'Verified Customer',
+    rating: 4,
+    text: 'Very good quality and great price, it just took a little longer to arrive than I expected, but the wait was worth it and I recommend the store.',
+  },
 ]
 
-function AsSeenOnYouCarousel({ items }: { items: SeenPost[] }) {
-  const safeItems = items?.length ? items : []
-
-  // usa scroll nativo (mais leve) + botões
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
-
-  const scrollByPx = (dir: -1 | 1) => {
-    const el = scrollerRef.current
-    if (!el) return
-    const amount = Math.max(260, Math.round(el.clientWidth * 0.8))
-    el.scrollBy({ left: dir * amount, behavior: 'smooth' })
-  }
-
-  if (!safeItems.length) return null
-
+function Stars({ rating }: { rating: number }) {
   return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-label="Previous"
-        onClick={() => scrollByPx(-1)}
-        className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow ring-1 ring-black/10 hover:bg-white transition"
-      >
-        <ChevronLeft className="h-5 w-5 text-slate-700" />
-      </button>
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span
+          key={i}
+          className={`text-sm ${i < rating ? 'text-yellow-500' : 'text-gray-300'}`}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  )
+}
 
-      <button
-        type="button"
-        aria-label="Next"
-        onClick={() => scrollByPx(1)}
-        className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow ring-1 ring-black/10 hover:bg-white transition"
-      >
-        <ChevronRight className="h-5 w-5 text-slate-700" />
-      </button>
+function FromOurCustomers() {
+  return (
+    <div className="mt-12">
+      <div className="rounded-3xl bg-white ring-1 ring-black/5 p-5 sm:p-8">
+        <div className="text-center">
+          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-[0.18em] uppercase">
+            From Our Customers
+          </h3>
+          <p className="mt-2 text-sm text-slate-500">
+            Want to be featured? Send us your review and a photo via Instagram DM at @footballworld_store for a chance to appear here.
+          </p>
+        </div>
 
-      <div
-        ref={scrollerRef}
-        className="overflow-x-auto scroll-smooth no-scrollbar"
-      >
-        <div className="flex gap-4 min-w-max px-1">
-          {safeItems.map((it) => (
+        <div className="mt-6 grid md:grid-cols-2 gap-4 sm:gap-6">
+          {CUSTOMER_REVIEWS.map((review) => (
             <div
-              key={it.id}
-              className="w-[240px] sm:w-[280px] md:w-[320px]"
+              key={review.id}
+              className="rounded-3xl border border-slate-100 bg-slate-50/60 p-5 hover:shadow-lg transition"
             >
-              <div className="rounded-3xl overflow-hidden ring-1 ring-black/5 bg-slate-50">
-                <div className="relative aspect-[4/3]">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
                   <img
-                    src={it.img}
-                    alt={it.alt || it.handle}
+                    src={review.img}
+                    alt="Customer review"
+                    className="h-full w-full object-cover"
                     loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
                     onError={(e) => {
                       const img = e.currentTarget as HTMLImageElement
                       if ((img as any)._fallbackApplied) return
@@ -801,24 +799,19 @@ function AsSeenOnYouCarousel({ items }: { items: SeenPost[] }) {
                     }}
                   />
                 </div>
+                <div>
+                  <div className="font-semibold">{review.name}</div>
+                  <Stars rating={review.rating} />
+                </div>
               </div>
-              <div className="mt-2 text-center text-sm font-semibold text-slate-700">
-                {it.handle}
-              </div>
+
+              <p className="mt-4 text-sm text-slate-600 leading-relaxed">
+                {review.text}
+              </p>
             </div>
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   )
 }
@@ -964,18 +957,15 @@ function nameU(p: HomeProduct): string {
   return normalizeUpper((p?.name ?? '') as string)
 }
 
-/** garante que TODAS as palavras existem (em qualquer ordem) */
 function hasWords(p: HomeProduct, words: string[]) {
   const n = nameU(p)
   return words.every((w) => n.includes(normalizeUpper(w)))
 }
 
-/** aceita várias opções (OR) */
 function hasAnyWords(p: HomeProduct, listOfWordSets: string[][]) {
   return listOfWordSets.some((ws) => hasWords(p, ws))
 }
 
-/** útil para coisas tipo "25/26" que têm "/" */
 function hasTermRaw(p: HomeProduct, term: string): boolean {
   const raw = ((p?.name ?? '') as string).toUpperCase()
   return raw.includes(term.toUpperCase())
@@ -1022,12 +1012,10 @@ function isTrainingSleevelessSet(p: HomeProduct): boolean {
 ====================================================================================== */
 
 function isTrainingTracksuit(p: HomeProduct): boolean {
-  // só entra se tiver exatamente TRAINING + TRACKSUIT (independente de order/pontuação)
   return hasWords(p, ['TRAINING', 'TRACKSUIT'])
 }
 
 function isTracksuitNonTraining(p: HomeProduct): boolean {
-  // tem TRACKSUIT, mas não tem TRAINING TRACKSUIT
   return hasWords(p, ['TRACKSUIT']) && !isTrainingTracksuit(p)
 }
 
@@ -1039,7 +1027,6 @@ function isWorldCup2026(p: HomeProduct): boolean {
   return hasWords(p, ['WORLD', 'CUP', '2026'])
 }
 
-// "jersey-like" (para não puxar sets/shorts/tracksuits/crop tops/kids kits)
 function isJerseyLikeProduct(p: HomeProduct): boolean {
   if (isTrainingSleevelessSet(p)) return false
   if (isTrainingTracksuit(p)) return false
@@ -1724,24 +1711,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ✅ NEW SECTION: AS SEEN ON YOU (logo abaixo do último espaço com produtos) */}
-        <div className="mt-12">
-          <div className="rounded-3xl bg-white ring-1 ring-black/5 p-5 sm:p-8">
-            <div className="text-center">
-              <h3 className="text-2xl sm:text-3xl font-extrabold tracking-[0.18em] uppercase">
-                As seen on you
-              </h3>
-              <p className="mt-2 text-sm text-slate-500">
-                If you want to appear here, you can dm us in @footballworld_store
-                on Instagram with your review and a image
-              </p>
-            </div>
-
-            <div className="mt-6">
-              <AsSeenOnYouCarousel items={AS_SEEN_ON_YOU} />
-            </div>
-          </div>
-        </div>
+        {/* ✅ NEW SECTION: FROM OUR CUSTOMERS (logo abaixo do último espaço com produtos) */}
+        <FromOurCustomers />
       </section>
 
       {/* HOW IT WORKS */}
