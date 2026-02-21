@@ -1869,7 +1869,7 @@ export default function Home() {
               q: 'How long does shipping take?',
               a: 'It takes 7–20 business days, with tracking code on every order.',
             },
-            { q: 'Can I personalize name and number?', a: 'Yes!' },
+            { q: 'Can I personalize name and number?', a: 'Yes, you can!' },
             {
               q: 'Which payment methods are accepted?',
               a: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way.',
