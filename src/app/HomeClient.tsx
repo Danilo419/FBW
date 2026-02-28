@@ -28,6 +28,7 @@ import {
   Shirt,
   Sparkles,
   Star,
+  Flame,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -1113,12 +1114,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
             -{discountPercent}%
           </div>
         )}
-
-        <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-          <div className="flex-1 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-800 ring-1 ring-black/5 backdrop-blur-sm">
-            Tracked shipping included
-          </div>
-        </div>
+        {/* ✅ Removed: "Tracked shipping included" overlay text on product images */}
       </div>
 
       <div className="flex flex-1 flex-col px-2 py-2 sm:px-4 sm:py-3">
@@ -1500,12 +1496,12 @@ export default function Home() {
                 </div>
 
                 <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
-                  The jersey you want — made to order and shipped worldwide.
+                  The jersey you want, made to order and shipped worldwide.
                 </h1>
 
                 <p className="mt-4 text-gray-600 max-w-prose">
                   Shop club & national-team jerseys plus exclusive concept
-                  designs. Pick your size, add name & number, and we’ll ship
+                  designs. Pick your size, add name & number (free), and we’ll ship
                   your order with tracking from start to finish.
                 </p>
 
@@ -1543,7 +1539,7 @@ export default function Home() {
                   <HeroImageCycler interval={4200} />
                 </TiltCard>
 
-                {/* Keep ONLY typical delivery pill (remove the other one) */}
+                {/* Keep ONLY typical delivery pill */}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 ring-1 ring-black/5">
                     <Clock className="h-4 w-4 text-slate-700" />
@@ -1589,9 +1585,22 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE (keep ONLY the "Promo live now / Ends soon..." chip + remove dark overlay) */}
+        {/* PROMO (text ABOVE the banner, not inside) */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
+            {/* ✅ Promo line ABOVE the banner */}
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 ring-1 ring-black/5 shadow-sm">
+                <Flame className="h-4 w-4 text-red-600" />
+                <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
+                  Promo live now
+                </span>
+                <span className="text-[11px] text-slate-600">
+                  Ends soon • While stock lasts
+                </span>
+              </div>
+            </div>
+
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
                 <source
@@ -1614,21 +1623,9 @@ export default function Home() {
                   }}
                 />
               </picture>
-
-              {/* ✅ Only this badge stays */}
-              <div className="absolute left-5 top-5 sm:left-8 sm:top-8">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 ring-1 ring-black/5 backdrop-blur-sm">
-                  <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
-                    Promo live now
-                  </span>
-                  <span className="text-[11px] text-slate-600">
-                    Ends soon • While stock lasts
-                  </span>
-                </div>
-              </div>
             </div>
 
-            {/* ✅ Reviews stay UP here (remove the duplicated one below) */}
+            {/* Reviews stay UP here */}
             <div className="mt-8">
               <FromOurCustomers compact />
             </div>
@@ -1785,7 +1782,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ✅ Removed duplicated reviews here (you already have them above) */}
+        {/* Removed duplicated reviews (they are above the products now) */}
       </section>
 
       {/* HOW IT WORKS */}
