@@ -26,9 +26,7 @@ import {
   HeartHandshake,
   Clock,
   Shirt,
-  Flame,
   Sparkles,
-  Timer,
   Star,
 } from 'lucide-react'
 
@@ -88,9 +86,9 @@ function MagneticButton({
     if (!el) return
     const rect = el.getBoundingClientRect()
     const mx = e.clientX - rect.left - rect.width / 2
-    const my = e.clientX - rect.left - rect.width / 2
+    const my = e.clientY - rect.top - rect.height / 2
     x.set(mx * 0.3)
-    y.set((e.clientY - rect.top - rect.height / 2) * 0.3)
+    y.set(my * 0.3)
   }
   const handleMouseLeave = () => {
     x.set(0)
@@ -171,6 +169,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arenal11.png', alt: 'Arsenal jersey' } as any,
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
+
   {
     src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
     alt: 'Atlético Madrid jersey',
@@ -195,6 +194,7 @@ const heroImages: { src: string; alt?: string }[] = [
     src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png',
     alt: 'Atlético Madrid jersey',
   },
+
   { src: '/images/players/Barcelona/Barcelona1.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona2.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona3.png', alt: 'Barcelona jersey' },
@@ -203,6 +203,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Barcelona/Barcelona6.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona7.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona8.png', alt: 'Barcelona jersey' },
+
   { src: '/images/players/Chelsea/Chelsea1.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea2.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea3.png', alt: 'Chelsea jersey' },
@@ -215,7 +216,9 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Chelsea/Chelsea10.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea11.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea12.png', alt: 'Chelsea jersey' },
+
   { src: '/images/players/Legends/Legends1.png', alt: 'Legends jersey' },
+
   { src: '/images/players/Liverpool/Liverpool1.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool2.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool3.png', alt: 'Liverpool jersey' },
@@ -226,11 +229,13 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Liverpool/Liverpool8.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool9.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool10.png', alt: 'Liverpool jersey' },
+
   { src: '/images/players/Lyon/Lyon1.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon2.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon3.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon4.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon5.png', alt: 'Lyon jersey' },
+
   { src: '/images/players/ManCity/ManCity1.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity2.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity3.png', alt: 'Man City jersey' },
@@ -239,6 +244,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/ManCity/ManCity6.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity7.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity8.png', alt: 'Man City jersey' },
+
   {
     src: '/images/players/ManUnited/ManUnited1.png',
     alt: 'Man United jersey',
@@ -275,6 +281,7 @@ const heroImages: { src: string; alt?: string }[] = [
     src: '/images/players/ManUnited/ManUnited9.png',
     alt: 'Man United jersey',
   },
+
   { src: '/images/players/Marselha/Marselha1.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha2.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha3.png', alt: 'Marseille jersey' },
@@ -283,6 +290,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Marselha/Marselha6.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha7.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha8.png', alt: 'Marseille jersey' },
+
   { src: '/images/players/Monaco/Monaco1.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco2.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco3.png', alt: 'Monaco jersey' },
@@ -293,6 +301,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Monaco/Monaco8.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco9.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco10.png', alt: 'Monaco jersey' },
+
   { src: '/images/players/PSG/PSG1.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG2.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG3.png', alt: 'PSG jersey' },
@@ -301,6 +310,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSG/PSG6.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG7.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG8.png', alt: 'PSG jersey' },
+
   { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'Real Madrid' },
@@ -313,6 +323,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'Real Madrid' },
+
   { src: '/images/players/Tottenham/Tottenham1.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham2.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham3.png', alt: 'Tottenham jersey' },
@@ -321,6 +332,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Tottenham/Tottenham6.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham7.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham8.png', alt: 'Tottenham jersey' },
+
   { src: '/images/players/Juventus/Juventus1.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus2.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus3.png', alt: 'Juventus jersey' },
@@ -333,6 +345,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Juventus/Juventus10.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus11.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus12.png', alt: 'Juventus jersey' },
+
   { src: '/images/players/Milan/Milan1.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan2.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan3.png', alt: 'Milan jersey' },
@@ -349,6 +362,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Milan/Milan14.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan15.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan16.png', alt: 'Milan jersey' },
+
   { src: '/images/players/Inter/Inter1.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter2.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter3.png', alt: 'Inter jersey' },
@@ -360,6 +374,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Inter/Inter9.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter10.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter11.png', alt: 'Inter jersey' },
+
   { src: '/images/players/Roma/Roma1.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma2.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma3.png', alt: 'Roma jersey' },
@@ -368,6 +383,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Roma/Roma6.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma7.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma8.png', alt: 'Roma jersey' },
+
   { src: '/images/players/Napoli/Napoli1.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli2.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli3.png', alt: 'Napoli jersey' },
@@ -376,6 +392,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Napoli/Napoli6.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli7.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli8.png', alt: 'Napoli jersey' },
+
   { src: '/images/players/Bayern/Bayern1.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern2.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern3.png', alt: 'Bayern jersey' },
@@ -395,6 +412,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Bayern/Bayern17.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern18.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern19.png', alt: 'Bayern jersey' },
+
   { src: '/images/players/Dortmund/Dortmund1.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund2.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund3.png', alt: 'Dortmund jersey' },
@@ -406,6 +424,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Dortmund/Dortmund9.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund10.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund11.png', alt: 'Dortmund jersey' },
+
   {
     src: '/images/players/Leverkusen/Leverkusen1.png',
     alt: 'Leverkusen jersey',
@@ -438,6 +457,7 @@ const heroImages: { src: string; alt?: string }[] = [
     src: '/images/players/Leverkusen/Leverkusen8.png',
     alt: 'Leverkusen jersey',
   },
+
   { src: '/images/players/Ajax/Ajax1.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax2.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax3.png', alt: 'Ajax jersey' },
@@ -449,6 +469,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Ajax/Ajax9.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax10.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax11.png', alt: 'Ajax jersey' },
+
   { src: '/images/players/PSV/PSV1.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV2.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV3.png', alt: 'PSV jersey' },
@@ -457,6 +478,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSV/PSV6.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV7.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV8.png', alt: 'PSV jersey' },
+
   { src: '/images/players/Feyenoord/Feyenoord1.png', alt: 'Feyenoord jersey' },
   { src: '/images/players/Feyenoord/Feyenoord2.png', alt: 'Feyenoord jersey' },
   { src: '/images/players/Feyenoord/Feyenoord3.png', alt: 'Feyenoord jersey' },
@@ -936,15 +958,15 @@ function getProductPricing(p: HomeProduct) {
       : typeof p.priceCents === 'number'
       ? p.priceCents
       : typeof p.price === 'number'
-        ? Math.round(p.price * 100)
-        : null
+      ? Math.round(p.price * 100)
+      : null
 
   let compareAtCents: number | null =
     typeof p.compareAtPriceCents === 'number'
       ? p.compareAtPriceCents
       : typeof p.compareAtPrice === 'number'
-        ? Math.round(p.compareAtPrice * 100)
-        : null
+      ? Math.round(p.compareAtPrice * 100)
+      : null
 
   if (!compareAtCents && priceCents != null) {
     const mapped = SALE_MAP_CENTS[priceCents]
@@ -1194,7 +1216,11 @@ export default function Home() {
 
   const y1 = useTransform(scrollY, [0, START + SPAN], [0, -80])
   const y2 = useTransform(scrollY, [0, START + SPAN], [0, -140])
-  const opacityHero = useTransform(scrollY, [0, START, START + SPAN], [1, 1, 0.18])
+  const opacityHero = useTransform(
+    scrollY,
+    [0, START, START + SPAN],
+    [1, 1, 0.18]
+  )
 
   const velocity = useVelocity(scrollY)
   const showShadow = useTransform(velocity, [0, 100], [0, 1])
@@ -1203,7 +1229,6 @@ export default function Home() {
     v > 0.2 ? '0 10px 30px -15px rgba(2,8,23,0.12)' : 'none'
   )
 
-  // Replace “tech specs” (can look fake) with trust + benefit statements
   const trustMarquee = [
     'TRACKED SHIPPING INCLUDED',
     'SECURE CHECKOUT (STRIPE)',
@@ -1222,15 +1247,17 @@ export default function Home() {
 
     const loadProducts = async () => {
       try {
-        const res = await fetch('/api/home-products?limit=all', { cache: 'no-store' })
+        const res = await fetch('/api/home-products?limit=all', {
+          cache: 'no-store',
+        })
         if (!res.ok) throw new Error('Failed to load home products')
         const data = await res.json()
 
         const list = Array.isArray(data?.products)
           ? data.products
           : Array.isArray(data)
-            ? data
-            : []
+          ? data
+          : []
 
         if (!cancelled) setHomeProducts(list)
       } catch (err) {
@@ -1280,22 +1307,36 @@ export default function Home() {
         (p) => hasTermRaw(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
       jerseys: mk(filterJerseys),
-      longSleeve: mk((p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)),
-      playerVersion: mk((p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)),
+      longSleeve: mk(
+        (p) => isLongSleeve(p) && !isPlayerVersion(p) && !isRetro(p)
+      ),
+      playerVersion: mk(
+        (p) => isPlayerVersion(p) && !isLongSleeve(p) && !isRetro(p)
+      ),
       playerVersionLongSleeve: mk(
         (p) => isPlayerVersion(p) && isLongSleeve(p) && !isRetro(p)
       ),
-      retro: mk((p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)),
-      retroLongSleeve: mk((p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)),
-      conceptKits: mk((p) => isConceptKit(p) && !isRetro(p) && !isPlayerVersion(p)),
-      preMatch: mk((p) => isPreMatch(p) && !isRetro(p) && !isPlayerVersion(p)),
+      retro: mk(
+        (p) => isRetro(p) && !isLongSleeve(p) && !isPlayerVersion(p)
+      ),
+      retroLongSleeve: mk(
+        (p) => isRetro(p) && isLongSleeve(p) && !isPlayerVersion(p)
+      ),
+      conceptKits: mk(
+        (p) => isConceptKit(p) && !isRetro(p) && !isPlayerVersion(p)
+      ),
+      preMatch: mk(
+        (p) => isPreMatch(p) && !isRetro(p) && !isPlayerVersion(p)
+      ),
       trainingSleeveless: mk(
         (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
       trainingTracksuit: mk(
         (p) => isTrainingTracksuit(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
-      tracksuits: mk((p) => isTracksuitNonTraining(p) && !isRetro(p) && !isPlayerVersion(p)),
+      tracksuits: mk(
+        (p) => isTracksuitNonTraining(p) && !isRetro(p) && !isPlayerVersion(p)
+      ),
       kidsKits: mk((p) => isKidsKit(p) && !isRetro(p) && !isPlayerVersion(p)),
       cropTops: mk((p) => isCropTop(p) && !isRetro(p) && !isPlayerVersion(p)),
     }
@@ -1410,16 +1451,15 @@ export default function Home() {
     },
   ]
 
-  const GROUP_ORDER = ['Jerseys', 'Retro', 'Concept & Special', 'Training', 'Kids & Women']
+  const GROUP_ORDER = [
+    'Jerseys',
+    'Retro',
+    'Concept & Special',
+    'Training',
+    'Kids & Women',
+  ]
 
   const WORLD_CUP_2026_HREF = '/products/fifa-world-cup-2026-jerseys'
-
-  // Quick links (reduce friction vs /clubs)
-  const QUICK_LINKS = [
-    { label: 'Best Sellers', href: '#products' },
-    { label: 'New 25/26', href: '/products/current-season-25-26' },
-    { label: 'Retro Classics', href: '/products/retro-jerseys' },
-  ]
 
   return (
     <div className="min-h-screen">
@@ -1464,35 +1504,15 @@ export default function Home() {
                 </h1>
 
                 <p className="mt-4 text-gray-600 max-w-prose">
-                  Shop club & national-team jerseys plus exclusive concept designs. Pick your
-                  size, add name & number, and we’ll ship your order with tracking from start
-                  to finish.
+                  Shop club & national-team jerseys plus exclusive concept
+                  designs. Pick your size, add name & number, and we’ll ship
+                  your order with tracking from start to finish.
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <MagneticButton href="#products" className="!px-5">
                     Shop Best Sellers <ArrowRight className="h-4 w-4" />
                   </MagneticButton>
-
-                  <a href="/products/current-season-25-26" className="btn-outline">
-                    New 25/26 Drops
-                  </a>
-
-                  <a href="/products/retro-jerseys" className="btn-outline">
-                    Retro Classics
-                  </a>
-                </div>
-
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {QUICK_LINKS.map((l) => (
-                    <a
-                      key={l.href}
-                      href={l.href}
-                      className="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-black/5 hover:bg-white transition"
-                    >
-                      {l.label}
-                    </a>
-                  ))}
                 </div>
 
                 <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
@@ -1523,22 +1543,13 @@ export default function Home() {
                   <HeroImageCycler interval={4200} />
                 </TiltCard>
 
-                {/* Small urgency / highlight chip */}
+                {/* Keep ONLY typical delivery pill (remove the other one) */}
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 ring-1 ring-red-100">
-                    <Flame className="h-4 w-4 text-red-600" />
-                    <span className="text-xs font-semibold text-red-700">
-                      Hot this week
-                    </span>
-                    <span className="text-xs text-red-700/70">
-                      Limited-time promos inside
-                    </span>
-                  </div>
-
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 ring-1 ring-black/5">
-                    <Timer className="h-4 w-4 text-slate-700" />
+                    <Clock className="h-4 w-4 text-slate-700" />
                     <span className="text-xs text-slate-700">
-                      Typical delivery: <span className="font-semibold">7–20 business days</span>
+                      Typical delivery:{' '}
+                      <span className="font-semibold">7–20 business days</span>
                     </span>
                   </div>
                 </div>
@@ -1578,13 +1589,9 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE (with overlay CTA + deadline) */}
+        {/* PROMO IMAGE (keep ONLY the "Promo live now / Ends soon..." chip + remove dark overlay) */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
-            <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
-              Limited-Time Offers
-            </p>
-
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
                 <source
@@ -1608,40 +1615,20 @@ export default function Home() {
                 />
               </picture>
 
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
-              <div className="absolute left-5 right-5 bottom-5 sm:left-8 sm:right-8 sm:bottom-8">
-                <div className="max-w-xl">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 ring-1 ring-black/5 backdrop-blur-sm">
-                    <Flame className="h-4 w-4 text-red-600" />
-                    <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
-                      Promo live now
-                    </span>
-                    <span className="text-[11px] text-slate-600">
-                      Ends soon • While stock lasts
-                    </span>
-                  </div>
-
-                  <h3 className="mt-3 text-white text-2xl sm:text-3xl font-extrabold leading-tight">
-                    Grab a fan-favorite jersey for less — today only.
-                  </h3>
-                  <p className="mt-2 text-white/85 text-sm">
-                    Shop selected drops and save instantly. Tracked shipping included on every order.
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <a href="#products" className="btn-primary !bg-white !text-slate-900 hover:!bg-white/90">
-                      Shop deals <ArrowRight className="h-4 w-4" />
-                    </a>
-                    <a href="/products/current-season-25-26" className="btn-outline !border-white/40 !text-white hover:!bg-white/10">
-                      New 25/26
-                    </a>
-                  </div>
+              {/* ✅ Only this badge stays */}
+              <div className="absolute left-5 top-5 sm:left-8 sm:top-8">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 ring-1 ring-black/5 backdrop-blur-sm">
+                  <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
+                    Promo live now
+                  </span>
+                  <span className="text-[11px] text-slate-600">
+                    Ends soon • While stock lasts
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Move Reviews UP (trust early) */}
+            {/* ✅ Reviews stay UP here (remove the duplicated one below) */}
             <div className="mt-8">
               <FromOurCustomers compact />
             </div>
@@ -1676,7 +1663,8 @@ export default function Home() {
                   Best picks across every style
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
-                  Scroll, click, and explore. Every product includes tracked shipping and secure checkout.
+                  Scroll, click, and explore. Every product includes tracked
+                  shipping and secure checkout.
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
@@ -1797,13 +1785,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Full reviews (kept) */}
-        <FromOurCustomers />
+        {/* ✅ Removed duplicated reviews here (you already have them above) */}
       </section>
 
       {/* HOW IT WORKS */}
       <section id="how" className="bg-white/70 border-y">
-        <motion.div style={{ boxShadow: sectionShadow as any }} className="container-fw section-gap">
+        <motion.div
+          style={{ boxShadow: sectionShadow as any }}
+          className="container-fw section-gap"
+        >
           <div className="flex items-end justify-between gap-3 mb-6">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -1867,17 +1857,21 @@ export default function Home() {
                 Choose your next jersey with confidence
               </h3>
               <p className="mt-2 text-gray-600">
-                Secure checkout, tracked shipping, and fan-favorite designs — all in one place.
+                Secure checkout, tracked shipping, and fan-favorite designs — all
+                in one place.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" /> Name & number personalization
+                  <CheckCircle2 className="h-4 w-4 text-green-600" /> Name & number
+                  personalization
                 </li>
                 <li className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-blue-600" /> Secure payments via Stripe
+                  <ShieldCheck className="h-4 w-4 text-blue-600" /> Secure payments
+                  via Stripe
                 </li>
                 <li className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-600" /> Economy shipping with tracking
+                  <Clock className="h-4 w-4 text-amber-600" /> Economy shipping with
+                  tracking
                 </li>
               </ul>
             </div>
