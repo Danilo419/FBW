@@ -1501,8 +1501,8 @@ export default function Home() {
 
                 <p className="mt-4 text-gray-600 max-w-prose">
                   Shop club & national-team jerseys plus exclusive concept
-                  designs. Pick your size, add name & number (free), and we’ll ship
-                  your order with tracking from start to finish.
+                  designs. Pick your size, add name & number (free), and we’ll
+                  ship your order with tracking from start to finish.
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -1595,8 +1595,13 @@ export default function Home() {
                 <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
                   Promo live now
                 </span>
-                <span className="text-[11px] text-slate-600">
-                  Ends soon • While stock lasts
+
+                {/* ✅ MOBILE: "Ends soon" em cima, "While stock lasts" em baixo */}
+                {/* ✅ DESKTOP: mantém "Ends soon • While stock lasts" na mesma linha */}
+                <span className="text-[11px] text-slate-600 leading-tight">
+                  <span className="block sm:inline">Ends soon</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">While stock lasts</span>
                 </span>
               </div>
             </div>
