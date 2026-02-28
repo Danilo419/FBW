@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { addToCartAction } from "@/app/(store)/cart/actions";
@@ -54,7 +54,6 @@ const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
 const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -115,21 +114,9 @@ function competitionKey(value: string, label?: string) {
 
 /* ====================== Fly types ====================== */
 type FlyRect = { left: number; top: number; width: number; height: number };
-type FlyState = {
-  key: number;
-  src: string;
-  from: FlyRect;
-  to: FlyRect;
-};
+type FlyState = { key: number; src: string; from: FlyRect; to: FlyRect };
 
 /* ====================== Unicode helpers ====================== */
-/**
- * ✅ Mantém letras com acentos (Unicode), espaços e . ' -
- * - remove números/símbolos (para o nome)
- * - colapsa espaços
- * - uppercase
- * - corta a 14
- */
 function sanitizeNameUnicode(input: string, maxLen = 14) {
   return input
     .trim()
@@ -138,10 +125,6 @@ function sanitizeNameUnicode(input: string, maxLen = 14) {
     .replace(/\s+/g, " ")
     .slice(0, maxLen);
 }
-
-/**
- * ✅ Aceita 3 dígitos (0–999)
- */
 function sanitizeNumber(input: string, maxLen = 3) {
   return input.replace(/\D/g, "").slice(0, maxLen);
 }
@@ -169,18 +152,86 @@ function useLockBodyScroll(locked: boolean) {
   }, [locked]);
 }
 
-function formatDeliveryRangeISO(locale: "PT" | "EU") {
-  // copy genérica e “safe” (sem prometer datas exatas)
-  return locale === "PT" ? "Estimated delivery: 4–9 business days" : "Estimated delivery: 6–12 business days";
+/* ====================== Reviews meta fetch ====================== */
+type ReviewsMeta = { average: number; total: number };
+async function fetchReviewsMeta(productId: string): Promise<ReviewsMeta> {
+  const res = await fetch(`/api/reviews?productId=${productId}`, { cache: "no-store" });
+  const json = (await res.json()) as { average?: number; total?: number };
+  return { average: Number(json?.average ?? 0), total: Number(json?.total ?? 0) };
 }
 
-function getCountryHint(): "PT" | "EU" {
-  try {
-    const lang = (typeof navigator !== "undefined" ? navigator.language : "en").toLowerCase();
-    if (lang.startsWith("pt")) return "PT";
-  } catch {}
-  return "EU";
+/* ====================== Size guide data (from /size-guide) ====================== */
+type Unit = "cm" | "in";
+type Range = [number, number] | number;
+type AdultRowKey = "Length" | "Width" | "Height" | "Weight";
+type AdultSizeKey = "S" | "M" | "L" | "XL" | "2XL";
+type AdultRows = Record<AdultRowKey, Partial<Record<AdultSizeKey, Range>>>;
+type AdultTable = { sizes: AdultSizeKey[]; rows: AdultRows };
+
+const ADULT: AdultTable = {
+  sizes: ["S", "M", "L", "XL", "2XL"],
+  rows: {
+    Length: { S: [69, 71], M: [71, 73], L: [73, 75], XL: [75, 78], "2XL": [78, 81] },
+    Width: { S: [53, 55], M: [55, 57], L: [57, 58], XL: [58, 60], "2XL": [60, 62] },
+    Height: { S: [162, 170], M: [170, 176], L: [176, 182], XL: [182, 190], "2XL": [190, 195] },
+    Weight: { S: [50, 62], M: [62, 78], L: [78, 83], XL: [83, 90], "2XL": [90, 97] },
+  },
+};
+
+type KidsRow = {
+  size: string;
+  length: number;
+  bust: number;
+  height: [number, number];
+  age: string;
+  shortsLength: number;
+};
+
+const KIDS_ROWS: KidsRow[] = [
+  { size: "#16", length: 43, bust: 32, height: [95, 105], age: "2–3", shortsLength: 32 },
+  { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4", shortsLength: 34 },
+  { size: "#20", length: 50, bust: 36, height: [115, 125], age: "4–5", shortsLength: 36 },
+  { size: "#22", length: 53, bust: 38, height: [125, 135], age: "6–7", shortsLength: 38 },
+  { size: "#24", length: 56, bust: 40, height: [135, 145], age: "8–9", shortsLength: 39 },
+  { size: "#26", length: 58, bust: 42, height: [145, 155], age: "10–11", shortsLength: 40 },
+  { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
+];
+
+function toInches(v: number) {
+  return +(v / 2.54).toFixed(1);
 }
+function renderRange(value: Range | undefined, unit: Unit) {
+  if (value === undefined) return "–";
+  if (Array.isArray(value)) {
+    const [a, b] = value;
+    return unit === "cm" ? `${a}–${b} cm` : `${toInches(a)}–${toInches(b)} in`;
+  }
+  return unit === "cm" ? `${value} cm` : `${toInches(value)} in`;
+}
+
+type KidsRowKey = "Jersey length" | "Chest (bust)" | "Height" | "Shorts length";
+type KidsTableShape = { sizes: string[]; rows: Record<KidsRowKey, Partial<Record<string, Range>>> };
+
+function makeKidsTable(): KidsTableShape {
+  const sizes = KIDS_ROWS.map((r) => `${r.age} yrs`);
+  const rows: KidsTableShape["rows"] = {
+    "Jersey length": {},
+    "Chest (bust)": {},
+    Height: {},
+    "Shorts length": {},
+  };
+  KIDS_ROWS.forEach((r) => {
+    const key = `${r.age} yrs`;
+    rows["Jersey length"][key] = r.length;
+    rows["Chest (bust)"][key] = r.bust;
+    rows["Height"][key] = [r.height[0], r.height[1]];
+    rows["Shorts length"][key] = r.shortsLength;
+  });
+  return { sizes, rows };
+}
+
+/* ====================== Delivery text ====================== */
+const DELIVERY_TEXT = "Estimated delivery: 7–20 business days"; // ✅ correto
 
 export default function ProductConfigurator({ product }: Props) {
   const router = useRouter();
@@ -195,22 +246,49 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // ✅ fly animation state (Framer Motion)
+  // ✅ fly animation state
   const [fly, setFly] = useState<FlyState | null>(null);
   const flyKeyRef = useRef(0);
   const [mounted, setMounted] = useState(false);
 
-  // ✅ conversion-focused UX states
+  // ✅ UX states
   const [error, setError] = useState<string | null>(null);
-  const [openFaq, setOpenFaq] = useState<null | "shipping" | "returns" | "quality" | "size">(null);
-  const [showZoom, setShowZoom] = useState(false);
+  const [openSizeGuide, setOpenSizeGuide] = useState(false);
+
+  // ✅ product image lightbox (melhorado)
+  const [imgLightboxOpen, setImgLightboxOpen] = useState(false);
+  const [imgLightboxIndex, setImgLightboxIndex] = useState(0);
+
+  // ✅ sticky CTA (mobile)
   const [stickyCta, setStickyCta] = useState(false);
   const [buyNow, setBuyNow] = useState(false);
 
+  // ✅ real reviews meta
+  const [reviewsMeta, setReviewsMeta] = useState<ReviewsMeta>({ average: 0, total: 0 });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
   const isMobile = useIsMobile(1024);
-  useLockBodyScroll(showZoom);
+  useLockBodyScroll(imgLightboxOpen || openSizeGuide);
 
   useEffect(() => setMounted(true), []);
+
+  /* ---------- Load real rating/total ---------- */
+  useEffect(() => {
+    let alive = true;
+    setReviewsLoading(true);
+    fetchReviewsMeta(product.id)
+      .then((m) => {
+        if (!alive) return;
+        setReviewsMeta(m);
+      })
+      .finally(() => {
+        if (!alive) return;
+        setReviewsLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [product.id]);
 
   /* ---------- DESCONTO ---------- */
   const rawUnitPrice = product.basePrice;
@@ -218,13 +296,9 @@ export default function ProductConfigurator({ product }: Props) {
   const candidateEur2 = rawUnitPrice / 100;
 
   let salePriceEur: number;
-  if (SALE_MAP_EUR[candidateEur1.toFixed(2)]) {
-    salePriceEur = candidateEur1;
-  } else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) {
-    salePriceEur = candidateEur2;
-  } else {
-    salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
-  }
+  if (SALE_MAP_EUR[candidateEur1.toFixed(2)]) salePriceEur = candidateEur1;
+  else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) salePriceEur = candidateEur2;
+  else salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
 
   const saleKey = salePriceEur.toFixed(2);
   const originalPriceEur = SALE_MAP_EUR[saleKey];
@@ -236,7 +310,6 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   const hasDiscount = typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
-
   const discountPercent = hasDiscount
     ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
     : 0;
@@ -273,13 +346,12 @@ export default function ProductConfigurator({ product }: Props) {
         available: s.available ?? true,
       }));
     }
-    const fallback = (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
+    return (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
       id: s,
       size: s,
       stock: 999,
       available: true,
     }));
-    return fallback;
   }, [product.sizes, kid]);
 
   const isUnavailable = (s: SizeUI) =>
@@ -304,7 +376,6 @@ export default function ProductConfigurator({ product }: Props) {
     }
   }, [sizes, selectedSize]);
 
-  /* ---------- Scarcity / stock hint ---------- */
   const stockHint = useMemo(() => {
     const sel = selectedSize ? sizes.find((s) => s.size === selectedSize) : null;
     const stock = sel?.stock;
@@ -328,39 +399,27 @@ export default function ProductConfigurator({ product }: Props) {
       label: humanizeBadge(v),
       priceDelta: 0,
     }));
-    return {
-      id: "badges-virtual",
-      key: "badges",
-      label: "Badges",
-      type: "ADDON",
-      required: false,
-      values,
-    };
+    return { id: "badges-virtual", key: "badges", label: "Badges", type: "ADDON", required: false, values };
   }, [product.badges]);
 
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
     const real = product.optionGroups.find((g) => g.key === "badges");
     const virtual = badgesGroupVirtual;
-
     if (!real && !virtual) return undefined;
     if (real && !virtual) return real;
     if (!real && virtual) return virtual;
 
     const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
-    for (const v of virtual!.values) {
-      if (!map.has(v.value)) map.set(v.value, v);
-    }
+    for (const v of virtual!.values) if (!map.has(v.value)) map.set(v.value, v);
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
-
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
       : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
-
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
@@ -448,14 +507,13 @@ export default function ProductConfigurator({ product }: Props) {
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize (✅ supports accents) ---------- */
+  /* ---------- Sanitize ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
-  /* ---------- Validation (required groups) ---------- */
+  /* ---------- Required groups ---------- */
   const requiredGroups = useMemo(() => {
     const groups: OptionGroupUI[] = [];
-    // Size is handled separately, but keep mental model
     if (effectiveCustomizationGroup) groups.push(effectiveCustomizationGroup);
     if (showBadgePicker && badgesGroup) groups.push(badgesGroup);
     for (const g of otherGroups) groups.push(g);
@@ -469,21 +527,12 @@ export default function ProductConfigurator({ product }: Props) {
       if (g.type === "RADIO") {
         if (!v || typeof v !== "string") missing.push(g.label);
       } else {
-        // ADDON required => at least one chosen
         const arr = Array.isArray(v) ? v : typeof v === "string" && v ? [v] : [];
         if (arr.length === 0) missing.push(g.label);
       }
     }
     return missing;
   }, [requiredGroups, selected]);
-
-  const personalizationInvalid = useMemo(() => {
-    if (!showNameNumber) return false;
-    // se a pessoa escolheu name/number, normalmente quer pelo menos 1 campo preenchido,
-    // mas não vamos “travar” conversão. Só avisar se ambos vazios.
-    const bothEmpty = safeName.length === 0 && safeNumber.length === 0;
-    return bothEmpty;
-  }, [showNameNumber, safeName, safeNumber]);
 
   const canAddToCart = useMemo(() => {
     if (!selectedSize) return false;
@@ -493,20 +542,16 @@ export default function ProductConfigurator({ product }: Props) {
   }, [selectedSize, qty, missingRequired]);
 
   const progress = useMemo(() => {
-    // 3 passos: size / options / add
     const step1 = !!selectedSize ? 1 : 0;
     const step2 = missingRequired.length === 0 ? 1 : 0;
     const step3 = canAddToCart ? 1 : 0;
-    const pct = Math.round(((step1 + step2 + step3) / 3) * 100);
-    return clamp(pct, 0, 100);
+    return clamp(Math.round(((step1 + step2 + step3) / 3) * 100), 0, 100);
   }, [selectedSize, missingRequired.length, canAddToCart]);
 
   /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
-    ).filter((el) => {
+    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
@@ -546,8 +591,7 @@ export default function ProductConfigurator({ product }: Props) {
     if (typeof window === "undefined") return;
 
     const prefersReduced =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) {
       pulseCart();
       return;
@@ -562,12 +606,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from: FlyRect = {
-      left: start.left,
-      top: start.top,
-      width: start.width,
-      height: start.height,
-    };
+    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
@@ -589,17 +628,14 @@ export default function ProductConfigurator({ product }: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (imgLightboxOpen) return; // o lightbox já trata
       if (e.key === "ArrowLeft") goPrev();
       if (e.key === "ArrowRight") goNext();
-      if (e.key === "Escape") {
-        setShowZoom(false);
-        setOpenFaq(null);
-      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images.length]);
+  }, [images.length, imgLightboxOpen]);
 
   /* ---------- Sticky CTA (mobile) ---------- */
   const addBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -612,7 +648,6 @@ export default function ProductConfigurator({ product }: Props) {
       const btn = addBtnRef.current;
       if (!btn) return;
       const r = btn.getBoundingClientRect();
-      // quando o botão “sai” do ecrã (abaixo), mostra sticky
       const shouldShow = r.top > window.innerHeight - 20 || r.bottom < 0;
       setStickyCta(shouldShow);
     };
@@ -623,13 +658,9 @@ export default function ProductConfigurator({ product }: Props) {
 
   /* ---------- Add to cart ---------- */
   function buildOptionsForCart() {
-    const optionsForCart: Record<string, string | null> = Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [
-        k,
-        Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null,
-      ])
-    );
-    return optionsForCart;
+    return Object.fromEntries(
+      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
+    ) as Record<string, string | null>;
   }
 
   function validateBeforeAdd(): string | null {
@@ -638,8 +669,6 @@ export default function ProductConfigurator({ product }: Props) {
     if (!sel || isUnavailable(sel)) return "This size is unavailable. Please choose another.";
     if (qty < 1) return "Quantity must be at least 1.";
     if (missingRequired.length > 0) return `Please select: ${missingRequired.join(", ")}.`;
-    // não bloquear, mas avisar (em vez de impedir)
-    if (personalizationInvalid) return "Tip: Add a name or number (optional) to make it unique.";
     return null;
   }
 
@@ -647,7 +676,6 @@ export default function ProductConfigurator({ product }: Props) {
     const msg = validateBeforeAdd();
     if (msg && !canAddToCart) {
       setError(msg);
-      // scroll suave para a zona de tamanho se ainda não escolheu
       if (!selectedSize) {
         document.querySelector('[data-section="size"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -674,10 +702,7 @@ export default function ProductConfigurator({ product }: Props) {
         window.setTimeout(() => setShowToast(false), 2200);
         window.setTimeout(() => setJustAdded(false), 900);
 
-        if (opts?.goCheckout) {
-          // Pequena micro-pausa para evitar “salto” visual do toast, mas sem prometer timing.
-          router.push("/checkout");
-        }
+        if (opts?.goCheckout) router.push("/checkout");
       } catch {
         setError("Something went wrong while adding to cart. Please try again.");
       }
@@ -694,7 +719,18 @@ export default function ProductConfigurator({ product }: Props) {
     addToCartCore({ goCheckout: true });
   }
 
-  const deliveryText = useMemo(() => formatDeliveryRangeISO(getCountryHint()), []);
+  /* ---------- Product image lightbox handlers ---------- */
+  const openImgLightbox = useCallback((index: number) => {
+    setImgLightboxIndex(index);
+    setImgLightboxOpen(true);
+  }, []);
+  const closeImgLightbox = useCallback(() => setImgLightboxOpen(false), []);
+  const prevImg = useCallback(() => {
+    setImgLightboxIndex((i) => (i - 1 + images.length) % images.length);
+  }, [images.length]);
+  const nextImg = useCallback(() => {
+    setImgLightboxIndex((i) => (i + 1) % images.length);
+  }, [images.length]);
 
   /* ---------- UI ---------- */
   return (
@@ -704,7 +740,7 @@ export default function ProductConfigurator({ product }: Props) {
           {showToast ? "Item added to cart." : ""}
         </div>
 
-        {/* ✅ Fly-to-cart overlay (portal to body) */}
+        {/* ✅ Fly-to-cart overlay */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -734,10 +770,7 @@ export default function ProductConfigurator({ product }: Props) {
                     filter: "blur(1px)",
                   }}
                   exit={{ opacity: 0 }}
-                  transition={{
-                    duration: 0.65,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
+                  transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
                   onAnimationComplete={() => {
                     setFly(null);
                     pulseCart();
@@ -756,7 +789,7 @@ export default function ProductConfigurator({ product }: Props) {
             document.body
           )}
 
-        {/* ===== GALLERY (conversion upgrade: zoom + click affordance) ===== */}
+        {/* ===== GALLERY ===== */}
         <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
           <div className="flex items-center gap-2 sm:gap-3">
             {images.length > 1 ? (
@@ -772,110 +805,64 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="h-10 w-10 shrink-0 hidden lg:block" />
             )}
 
-            <div className="w-full">
-              <div
-                ref={imgWrapRef}
-                className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
+            <div
+              ref={imgWrapRef}
+              className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
+            >
+              {/* click to open lightbox */}
+              <button
+                type="button"
+                onClick={() => openImgLightbox(activeIndex)}
+                aria-label="Open image viewer"
+                className="absolute inset-0 z-10 cursor-zoom-in"
               >
-                <button
-                  type="button"
-                  onClick={() => setShowZoom(true)}
-                  aria-label="Zoom image"
-                  className="absolute inset-0 z-10 cursor-zoom-in"
-                >
-                  <span className="sr-only">Zoom</span>
-                </button>
+                <span className="sr-only">Open image</span>
+              </button>
 
-                <Image
-                  src={activeSrc}
-                  alt={product.name}
-                  fill
-                  className="object-contain"
-                  sizes="(min-width: 1024px) 540px, 100vw"
-                  priority
-                  unoptimized
-                />
+              <Image
+                src={activeSrc}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(min-width: 1024px) 540px, 100vw"
+                priority
+                unoptimized
+              />
 
-                {hasDiscount && (
-                  <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
-                    -{discountPercent}%
-                  </div>
-                )}
-
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
-                    Tap to zoom
-                  </div>
-                  <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
-                    {activeIndex + 1}/{images.length}
-                  </div>
+              {hasDiscount && (
+                <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
+                  -{discountPercent}%
                 </div>
+              )}
 
-                {images.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={goPrev}
-                      aria-label="Previous image"
-                      className="lg:hidden absolute left-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
-                    >
-                      <ChevronLeft />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      aria-label="Next image"
-                      className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
-                    >
-                      <ChevronRight />
-                    </button>
-                  </>
-                )}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
+                  Click to view
+                </div>
+                <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
+                  {activeIndex + 1}/{images.length}
+                </div>
               </div>
 
               {images.length > 1 && (
-                <div className="mt-3">
-                  <div
-                    ref={thumbsRef}
-                    className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+                <>
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label="Previous image"
+                    className="lg:hidden absolute left-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
                   >
-                    <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                    <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
-                      {images.map((src, i) => {
-                        const isActive = i === activeIndex;
-                        return (
-                          <button
-                            key={src + i}
-                            type="button"
-                            onClick={() => setActiveIndex(i)}
-                            aria-label={`Image ${i + 1}`}
-                            className={cx(
-                              "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
-                              isActive ? "border-transparent" : "hover:opacity-90"
-                            )}
-                          >
-                            {isActive && (
-                              <span
-                                aria-hidden
-                                className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
-                              />
-                            )}
-                            <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                              <Image
-                                src={src}
-                                alt={`thumb ${i + 1}`}
-                                fill
-                                className="object-contain"
-                                sizes="42px"
-                                unoptimized
-                              />
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                    <ChevronLeft />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label="Next image"
+                    className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
+                  >
+                    <ChevronRight />
+                  </button>
+                </>
               )}
             </div>
 
@@ -893,18 +880,51 @@ export default function ProductConfigurator({ product }: Props) {
             )}
           </div>
 
-          {/* trust mini row */}
+          {images.length > 1 && (
+            <div className="mt-3">
+              <div
+                ref={thumbsRef}
+                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+              >
+                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
+                  {images.map((src, i) => {
+                    const isActive = i === activeIndex;
+                    return (
+                      <button
+                        key={src + i}
+                        type="button"
+                        onClick={() => setActiveIndex(i)}
+                        aria-label={`Image ${i + 1}`}
+                        className={cx(
+                          "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
+                          isActive ? "border-transparent" : "hover:opacity-90"
+                        )}
+                      >
+                        {isActive && (
+                          <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
+                        )}
+                        <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
+                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-4 grid grid-cols-3 gap-2">
             <TrustPill icon={<ShieldIcon />} text="Secure checkout" />
             <TrustPill icon={<TruckIcon />} text="Tracked shipping" />
-            <TrustPill icon={<RefreshIcon />} text="Easy support" />
+            <TrustPill icon={<ChatIcon />} text="Fast support" />
           </div>
         </div>
 
-        {/* ===== CONFIGURATOR (conversion upgrade: trust, urgency, sticky CTA, FAQ) ===== */}
+        {/* ===== CONFIGURATOR ===== */}
         <div className="card w-full p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 min-w-0">
           <header className="space-y-2">
-            {/* progress bar */}
             <div className="rounded-full bg-gray-100 h-2 overflow-hidden" aria-hidden="true">
               <div className="h-2 bg-blue-600" style={{ width: `${progress}%` }} />
             </div>
@@ -921,9 +941,7 @@ export default function ProductConfigurator({ product }: Props) {
                       {money(originalUnitPriceForMoney)}
                     </span>
                   )}
-                  <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">
-                    {money(rawUnitPrice)}
-                  </span>
+                  <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
                   {hasDiscount && (
                     <span className="ml-1 text-[11px] sm:text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
                       Save {discountPercent}%
@@ -931,20 +949,33 @@ export default function ProductConfigurator({ product }: Props) {
                   )}
                 </div>
 
+                {/* ✅ REAL rating */}
                 <div className="mt-1 text-[11px] sm:text-xs text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="inline-flex items-center gap-1">
-                    <StarIcon className="h-3.5 w-3.5" />
-                    <span className="font-semibold">4.7</span>
-                    <span className="text-gray-500">(152 reviews)</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
+                  {reviewsLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-3 w-24 rounded-full bg-gray-200 animate-pulse" />
+                      <span className="h-3 w-14 rounded-full bg-gray-200 animate-pulse" />
+                    </span>
+                  ) : reviewsMeta.total > 0 ? (
+                    <span className="inline-flex items-center gap-2">
+                      <ReadOnlyStars value={reviewsMeta.average} />
+                      <span className="font-semibold">{reviewsMeta.average.toFixed(1)}</span>
+                      <span className="text-gray-500">({reviewsMeta.total})</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 text-gray-500">
+                      <ReadOnlyStars value={0} />
+                      No reviews yet
+                    </span>
+                  )}
+
+                  <span className="inline-flex items-center gap-2">
                     <TruckIcon className="h-3.5 w-3.5" />
-                    {deliveryText}
+                    {DELIVERY_TEXT}
                   </span>
                 </div>
               </div>
 
-              {/* small urgency badge */}
               <div className="shrink-0 text-right">
                 <span className="inline-flex items-center rounded-full border bg-white px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-gray-800 shadow-sm">
                   <BoltIcon className="h-3.5 w-3.5 mr-1" />
@@ -954,12 +985,9 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
 
             {product.description && (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">
-                {product.description}
-              </p>
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
             )}
 
-            {/* inline error (replaces alerts for higher conversion) */}
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -984,7 +1012,7 @@ export default function ProductConfigurator({ product }: Props) {
 
               <button
                 type="button"
-                onClick={() => setOpenFaq("size")}
+                onClick={() => setOpenSizeGuide(true)}
                 className="text-[11px] sm:text-xs text-blue-700 hover:underline inline-flex items-center gap-1"
               >
                 Size guide <InfoIcon className="h-3.5 w-3.5" />
@@ -1008,9 +1036,7 @@ export default function ProductConfigurator({ product }: Props) {
                         "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
                         unavailable && "opacity-50 line-through cursor-not-allowed",
                         !unavailable && !isActive && "hover:bg-gray-50",
-                        isActive &&
-                          !unavailable &&
-                          "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                        isActive && !unavailable && "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
                       )}
                       aria-pressed={isActive}
                     >
@@ -1023,7 +1049,6 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="text-sm text-gray-500">No sizes available.</div>
             )}
 
-            {/* Stock hint */}
             {stockHint && (
               <div
                 className={cx(
@@ -1048,7 +1073,7 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
             <GroupBlock
-              group={effectiveCustomizationGroup!}
+              group={effectiveCustomizationGroup}
               selected={selected}
               onPickRadio={setRadio}
               onToggleAddon={toggleAddon}
@@ -1113,7 +1138,7 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Badges */}
           {showBadgePicker && badgesGroup && (
             <GroupBlock
-              group={badgesGroup!}
+              group={badgesGroup}
               selected={selected}
               onPickRadio={setRadio}
               onToggleAddon={toggleAddon}
@@ -1124,13 +1149,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Other groups */}
           {otherGroups.map((g) => (
-            <GroupBlock
-              key={g.id}
-              group={g}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-            />
+            <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
           ))}
 
           {/* Qty + Total */}
@@ -1161,7 +1180,7 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
           </div>
 
-          {/* Primary CTAs (Add + Buy now) */}
+          {/* CTAs */}
           <div className="grid sm:grid-cols-2 gap-2">
             <motion.button
               ref={addBtnRef}
@@ -1191,16 +1210,14 @@ export default function ProductConfigurator({ product }: Props) {
 
             <button
               onClick={onBuyNow}
-              className={cx(
-                "w-full rounded-xl border border-gray-900 bg-gray-900 text-white px-4 py-2.5 text-sm sm:text-base font-semibold hover:bg-black transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
-              )}
+              className="w-full rounded-xl border border-gray-900 bg-gray-900 text-white px-4 py-2.5 text-sm sm:text-base font-semibold hover:bg-black transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
               disabled={pending || !canAddToCart}
             >
               {pending && buyNow ? "Processing…" : "Buy now"}
             </button>
           </div>
 
-          {/* reassurance row */}
+          {/* reassurance */}
           <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
             <div className="grid sm:grid-cols-3 gap-2 text-[11px] sm:text-xs text-gray-700">
               <div className="flex items-start gap-2">
@@ -1214,7 +1231,7 @@ export default function ProductConfigurator({ product }: Props) {
                 <TruckIcon className="h-4 w-4 mt-0.5" />
                 <div>
                   <div className="font-semibold">Tracked shipping</div>
-                  <div className="text-gray-500">{deliveryText}</div>
+                  <div className="text-gray-500">{DELIVERY_TEXT}</div>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -1225,48 +1242,6 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* FAQ / Objection handling */}
-          <div className="rounded-2xl border bg-white/70 overflow-hidden">
-            <FaqRow
-              open={openFaq === "shipping"}
-              onToggle={() => setOpenFaq((v) => (v === "shipping" ? null : "shipping"))}
-              title="Shipping & delivery"
-              icon={<TruckIcon className="h-4 w-4" />}
-            >
-              <ul className="list-disc pl-5 space-y-1 text-[12px] sm:text-sm text-gray-700">
-                <li>Tracked shipping on all orders.</li>
-                <li>{deliveryText} (may vary by region and peak periods).</li>
-                <li>We’ll email you the tracking link as soon as it ships.</li>
-              </ul>
-            </FaqRow>
-
-            <FaqRow
-              open={openFaq === "returns"}
-              onToggle={() => setOpenFaq((v) => (v === "returns" ? null : "returns"))}
-              title="Returns & support"
-              icon={<RefreshIcon className="h-4 w-4" />}
-            >
-              <ul className="list-disc pl-5 space-y-1 text-[12px] sm:text-sm text-gray-700">
-                <li>If something arrives wrong/damaged, contact us and we’ll make it right.</li>
-                <li>Personalized items may have limited return eligibility.</li>
-                <li>Our support team helps fast via email/DM.</li>
-              </ul>
-            </FaqRow>
-
-            <FaqRow
-              open={openFaq === "quality"}
-              onToggle={() => setOpenFaq((v) => (v === "quality" ? null : "quality"))}
-              title="Quality details"
-              icon={<BadgeIcon className="h-4 w-4" />}
-            >
-              <ul className="list-disc pl-5 space-y-1 text-[12px] sm:text-sm text-gray-700">
-                <li>High-quality fabric with breathable feel.</li>
-                <li>Badges & prints are applied to match the official style.</li>
-                <li>Recommended: wash cold, inside-out.</li>
-              </ul>
-            </FaqRow>
           </div>
         </div>
 
@@ -1291,10 +1266,7 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">Item added to cart</div>
                   <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
                 </div>
-                <button
-                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
-                  onClick={() => setShowToast(false)}
-                >
+                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
                   Close
                 </button>
               </div>
@@ -1322,10 +1294,7 @@ export default function ProductConfigurator({ product }: Props) {
                   onClick={() => {
                     if (!canAddToCart) {
                       setError(validateBeforeAdd());
-                      document.querySelector('[data-section="size"]')?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
+                      document.querySelector('[data-section="size"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
                       return;
                     }
                     addToCart();
@@ -1340,10 +1309,7 @@ export default function ProductConfigurator({ product }: Props) {
                   onClick={() => {
                     if (!canAddToCart) {
                       setError(validateBeforeAdd());
-                      document.querySelector('[data-section="size"]')?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
+                      document.querySelector('[data-section="size"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
                       return;
                     }
                     onBuyNow();
@@ -1358,151 +1324,36 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </AnimatePresence>
 
-        {/* Zoom modal */}
+        {/* ✅ Product Images Lightbox (bonito, sem aquele espaço feio) */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
             <AnimatePresence>
-              {showZoom && (
-                <motion.div
-                  className="fixed inset-0 z-[9998] bg-black/70 flex items-center justify-center p-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setShowZoom(false)}
-                  role="dialog"
-                  aria-modal="true"
-                >
-                  <motion.div
-                    initial={{ scale: 0.96, opacity: 0, y: 10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.98, opacity: 0, y: 10 }}
-                    transition={{ duration: 0.18 }}
-                    className="relative w-full max-w-[920px] rounded-2xl bg-white overflow-hidden border shadow-2xl"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-b">
-                      <div className="text-sm font-semibold truncate pr-3">{product.name}</div>
-                      <button
-                        onClick={() => setShowZoom(false)}
-                        className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100"
-                        aria-label="Close"
-                      >
-                        Close
-                      </button>
-                    </div>
-
-                    <div className="relative aspect-[3/4] sm:aspect-[16/10] bg-white">
-                      <Image
-                        src={activeSrc}
-                        alt={product.name}
-                        fill
-                        className="object-contain"
-                        sizes="(min-width: 1024px) 920px, 100vw"
-                        unoptimized
-                      />
-                    </div>
-
-                    {images.length > 1 && (
-                      <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-t">
-                        <button
-                          type="button"
-                          onClick={goPrev}
-                          className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                        >
-                          Prev
-                        </button>
-                        <div className="text-xs text-gray-600">
-                          {activeIndex + 1} / {images.length}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={goNext}
-                          className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    )}
-                  </motion.div>
-                </motion.div>
+              {imgLightboxOpen && (
+                <ProductLightbox
+                  urls={images}
+                  index={imgLightboxIndex}
+                  onClose={closeImgLightbox}
+                  onPrev={prevImg}
+                  onNext={nextImg}
+                  setIndex={setImgLightboxIndex}
+                  title={product.name}
+                />
               )}
             </AnimatePresence>,
             document.body
           )}
 
-        {/* Size guide modal (simple, no external deps) */}
+        {/* ✅ Size guide modal com as tabelas reais */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
             <AnimatePresence>
-              {openFaq === "size" && (
-                <motion.div
-                  className="fixed inset-0 z-[9997] bg-black/60 flex items-center justify-center p-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setOpenFaq(null)}
-                  role="dialog"
-                  aria-modal="true"
-                >
-                  <motion.div
-                    initial={{ scale: 0.96, opacity: 0, y: 10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.98, opacity: 0, y: 10 }}
-                    transition={{ duration: 0.18 }}
-                    className="w-full max-w-[560px] rounded-2xl bg-white border shadow-2xl overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center justify-between px-4 py-3 border-b">
-                      <div className="text-sm font-semibold">Size guide</div>
-                      <button
-                        onClick={() => setOpenFaq(null)}
-                        className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100"
-                        aria-label="Close"
-                      >
-                        Close
-                      </button>
-                    </div>
-
-                    <div className="p-4 space-y-3 text-sm text-gray-700">
-                      <div className="rounded-xl border bg-gray-50 p-3">
-                        <div className="font-semibold mb-1">Quick tip</div>
-                        <div className="text-gray-600 text-sm">
-                          If you’re between sizes, we recommend sizing up for a more comfortable fit.
-                        </div>
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div className="rounded-xl border p-3">
-                          <div className="font-semibold mb-1">Adult</div>
-                          <div className="text-gray-600 text-sm">
-                            S, M, L, XL, 2XL, 3XL, 4XL
-                          </div>
-                        </div>
-                        <div className="rounded-xl border p-3">
-                          <div className="font-semibold mb-1">Kids</div>
-                          <div className="text-gray-600 text-sm">
-                            2-3, 3-4, 4-5, 6-7, 8-9, 10-11, 12-13
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-[12px] text-gray-500">
-                        Note: measurements can vary slightly depending on the model/manufacturer.
-                      </div>
-                    </div>
-
-                    <div className="px-4 py-3 border-t">
-                      <button
-                        className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
-                        onClick={() => setOpenFaq(null)}
-                      >
-                        Got it
-                      </button>
-                    </div>
-                  </motion.div>
-                </motion.div>
+              {openSizeGuide && (
+                <SizeGuideModal
+                  onClose={() => setOpenSizeGuide(false)}
+                  defaultTab={kid ? "kids" : "adult"}
+                />
               )}
             </AnimatePresence>,
             document.body
@@ -1558,9 +1409,7 @@ function GroupBlock({
                   <span className="text-sm">{v.label}</span>
                 </div>
                 {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                    FREE
-                  </span>
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
                 ) : null}
               </label>
             );
@@ -1571,8 +1420,7 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) =>
-    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
+  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
 
   return (
     <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
@@ -1604,9 +1452,7 @@ function GroupBlock({
                 <span className="text-sm">{v.label}</span>
               </div>
               {forceFree ? (
-                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                  FREE
-                </span>
+                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
               ) : null}
             </label>
           );
@@ -1616,49 +1462,414 @@ function GroupBlock({
   );
 }
 
-/* ====================== FAQ Row ====================== */
-function FaqRow({
-  open,
-  onToggle,
+/* ====================== Product Lightbox (melhorado) ====================== */
+function ProductLightbox({
+  urls,
+  index,
+  onClose,
+  onPrev,
+  onNext,
+  setIndex,
   title,
-  icon,
-  children,
 }: {
-  open: boolean;
-  onToggle: () => void;
+  urls: string[];
+  index: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  setIndex: (i: number) => void;
   title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
 }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onPrev();
+      if (e.key === "ArrowRight") onNext();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, onPrev, onNext]);
+
+  if (!urls.length) return null;
+  const current = urls[index];
+
   return (
-    <div className="border-t first:border-t-0">
+    <motion.div
+      className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Close button fixed */}
       <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between gap-3 px-3 sm:px-4 py-3 text-left hover:bg-gray-50"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="fixed z-[9999] rounded-full bg-white/95 p-2 shadow ring-1 ring-black/10 hover:brightness-105"
+        aria-label="Close"
+        style={{
+          right: "max(1rem, env(safe-area-inset-right))",
+          top: "max(1rem, env(safe-area-inset-top))",
+        }}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-gray-800">{icon}</span>
-          <span className="font-semibold text-sm text-gray-900 truncate">{title}</span>
-        </div>
-        <span className={cx("text-gray-500 transition-transform", open && "rotate-180")}>
-          <ChevronDownIcon />
-        </span>
+        <XIcon className="h-5 w-5" />
       </button>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="overflow-hidden"
+      {/* side arrows desktop */}
+      {urls.length > 1 && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPrev();
+            }}
+            className="hidden sm:inline-flex fixed left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            aria-label="Previous image"
           >
-            <div className="px-3 sm:px-4 pb-4">{children}</div>
-          </motion.div>
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNext();
+            }}
+            className="hidden sm:inline-flex fixed right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            aria-label="Next image"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </>
+      )}
+
+      <motion.div
+        initial={{ scale: 0.98, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.98, opacity: 0, y: 10 }}
+        transition={{ duration: 0.18 }}
+        className="w-full max-w-[1080px] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* header */}
+        <div className="px-3 sm:px-4 py-3 border-b flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold truncate">{title}</div>
+            <div className="text-[11px] text-gray-500">
+              {index + 1} / {urls.length}
+            </div>
+          </div>
+
+          {urls.length > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onPrev}
+                className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={onNext}
+                className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* image area */}
+        <div className="relative bg-black/5">
+          <img
+            src={current}
+            alt={title}
+            className="block w-auto h-auto max-w-[95vw] max-h-[75vh] sm:max-h-[78vh] object-contain mx-auto select-none"
+            draggable={false}
+          />
+
+          {/* arrows on image (mobile) */}
+          {urls.length > 1 && (
+            <>
+              <button
+                onClick={onPrev}
+                className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={onNext}
+                className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* thumbs */}
+        {urls.length > 1 && (
+          <div className="px-3 sm:px-4 py-3 border-t bg-white">
+            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none]">
+              <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+              {urls.map((u, i) => (
+                <button
+                  key={u + i}
+                  onClick={() => setIndex(i)}
+                  className={cx(
+                    "relative rounded-lg overflow-hidden ring-2 flex-none h-14 w-20 sm:h-16 sm:w-24",
+                    i === index ? "ring-blue-500" : "ring-transparent hover:ring-black/10"
+                  )}
+                  aria-label={`Go to image ${i + 1}`}
+                >
+                  <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain bg-white" draggable={false} />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ====================== Size Guide Modal (com tabelas reais) ====================== */
+function SizeGuideModal({
+  onClose,
+  defaultTab,
+}: {
+  onClose: () => void;
+  defaultTab: "adult" | "kids";
+}) {
+  const [tab, setTab] = useState<"adult" | "kids">(defaultTab);
+  const [unit, setUnit] = useState<Unit>("cm");
+  const kids = useMemo(() => makeKidsTable(), []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[9997] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <motion.div
+        initial={{ scale: 0.98, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.98, opacity: 0, y: 10 }}
+        transition={{ duration: 0.18 }}
+        className="w-full max-w-5xl rounded-2xl bg-white border shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Size Guide</div>
+            <div className="text-[11px] text-gray-500">Switch Adult/Kids and cm/inches.</div>
+          </div>
+          <button onClick={onClose} className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100" aria-label="Close">
+            Close
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
+              <button
+                className={cx(
+                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  tab === "adult" ? "bg-blue-600 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
+                )}
+                onClick={() => setTab("adult")}
+                type="button"
+              >
+                Adult
+              </button>
+              <button
+                className={cx(
+                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  tab === "kids" ? "bg-blue-600 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
+                )}
+                onClick={() => setTab("kids")}
+                type="button"
+              >
+                Kids
+              </button>
+            </div>
+
+            <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
+              <button
+                className={cx(
+                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  unit === "cm" ? "bg-gray-900 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
+                )}
+                onClick={() => setUnit("cm")}
+                type="button"
+              >
+                cm
+              </button>
+              <button
+                className={cx(
+                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  unit === "in" ? "bg-gray-900 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
+                )}
+                onClick={() => setUnit("in")}
+                type="button"
+              >
+                inches
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+            <div className="px-3 sm:px-4 py-2 bg-gray-50 border-b text-xs sm:text-sm">
+              Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
+            </div>
+
+            <div className="-mx-4 sm:mx-0 overflow-x-auto">
+              <div className={cx("px-4 sm:px-0", tab === "adult" ? "min-w-[620px]" : "min-w-[680px]")}>
+                {tab === "adult" ? (
+                  <table className="w-full text-xs sm:text-sm border-collapse">
+                    <colgroup>
+                      <col className="w-32 sm:w-40" />
+                      {ADULT.sizes.map((_, i) => (
+                        <col key={i} />
+                      ))}
+                    </colgroup>
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300">
+                          Measurement
+                        </th>
+                        {ADULT.sizes.map((s) => (
+                          <th
+                            key={s}
+                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                          >
+                            {s}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
+                        <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                            {key}
+                          </td>
+                          {ADULT.sizes.map((s) => (
+                            <td
+                              key={s}
+                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                            >
+                              {renderRange(ADULT.rows[key][s], unit)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full text-xs sm:text-sm border-collapse">
+                    <colgroup>
+                      <col className="w-32 sm:w-40" />
+                      {kids.sizes.map((_, i) => (
+                        <col key={i} />
+                      ))}
+                    </colgroup>
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300">
+                          Measurement
+                        </th>
+                        {kids.sizes.map((s) => (
+                          <th
+                            key={s}
+                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                          >
+                            {s}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(["Jersey length", "Chest (bust)", "Height", "Shorts length"] as KidsRowKey[]).map((rowKey, idx) => (
+                        <tr key={rowKey} className={idx % 2 ? "bg-white" : "bg-gray-50/40"}>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                            {rowKey}
+                          </td>
+                          {kids.sizes.map((s) => (
+                            <td
+                              key={s}
+                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                            >
+                              {renderRange(kids.rows[rowKey][s], unit)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[12px] text-gray-500">
+            Tip: If you’re between sizes, we recommend sizing up for a more comfortable fit.
+          </div>
+        </div>
+
+        <div className="px-4 py-3 border-t">
+          <button
+            className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
+            onClick={onClose}
+          >
+            Got it
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ====================== Stars (read-only) ====================== */
+function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
+  const v = clamp(value, 0, 5);
+  const full = Math.floor(v);
+  const partial = v - full;
+
+  return (
+    <div className="inline-flex gap-1 align-middle" aria-label={`${v.toFixed(1)} out of 5`}>
+      {Array.from({ length: 5 }).map((_, i) => {
+        const filled = i < full ? 1 : i === full ? partial : 0;
+        return (
+          <div className="relative" key={i} style={{ width: size, height: size }}>
+            <StarShape className="absolute inset-0 text-gray-300" size={size} fill="currentColor" />
+            <StarShape
+              className="absolute inset-0 text-amber-500"
+              size={size}
+              fill="currentColor"
+              style={{ clipPath: `inset(0 ${100 - filled * 100}% 0 0)` }}
+            />
+            <StarShape className="absolute inset-0 text-black/10" size={size} fill="none" />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1707,20 +1918,38 @@ function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+function XIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
-      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
     </svg>
   );
 }
-function StarIcon(props: React.SVGProps<SVGSVGElement>) {
+function StarShape({
+  size,
+  className,
+  fill,
+  style,
+}: {
+  size: number;
+  className?: string;
+  fill: "none" | "currentColor";
+  style?: React.CSSProperties;
+}) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      className={className}
+      fill={fill}
+      style={style}
+      aria-hidden="true"
+    >
       <path
-        d="M12 17.3l-5.4 3 1-6.1-4.4-4.3 6.1-.9L12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-3z"
+        d="M12 2l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.9 5.82 21l1.18-6.87-5-4.87 6.91-1L12 2z"
         stroke="currentColor"
-        strokeWidth={1.8}
+        strokeWidth={1.6}
         strokeLinejoin="round"
       />
     </svg>
@@ -1729,12 +1958,7 @@ function StarIcon(props: React.SVGProps<SVGSVGElement>) {
 function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M3 7h11v10H3V7zM14 10h4l3 3v4h-7v-7z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
+      <path d="M3 7h11v10H3V7zM14 10h4l3 3v4h-7v-7z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
       <path d="M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" fill="currentColor" />
     </svg>
   );
@@ -1742,93 +1966,41 @@ function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
 function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M12 3l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V7l8-4z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
+      <path d="M12 3l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V7l8-4z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
       <path d="M9 12l2 2 4-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function RefreshIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M20 12a8 8 0 10-2.3 5.7"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <path d="M20 8v4h-4" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function CartIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M6 7h15l-2 9H7L6 7z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-      <path d="M6 7l-1-3H2" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <path
-        d="M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z"
-        fill="currentColor"
-      />
     </svg>
   );
 }
 function BoltIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M13 2L3 14h7l-1 8 12-14h-7l-1-6z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
+      <path d="M13 2L3 14h7l-1 8 12-14h-7l-1-6z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
     </svg>
   );
 }
 function InfoIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-blue-700", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M12 22a10 10 0 110-20 10 10 0 010 20z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-      />
+      <path d="M12 22a10 10 0 110-20 10 10 0 010 20z" stroke="currentColor" strokeWidth={1.8} />
       <path d="M12 10v7" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
       <path d="M12 7h.01" stroke="currentColor" strokeWidth={3} strokeLinecap="round" />
+    </svg>
+  );
+}
+function CartIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
+      <path d="M6 7h15l-2 9H7L6 7z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
+      <path d="M6 7l-1-3H2" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z" fill="currentColor" />
     </svg>
   );
 }
 function ChatIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M4 5h16v11H7l-3 3V5z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
+      <path d="M4 5h16v11H7l-3 3V5z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
       <path d="M8 9h8M8 12h6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
-    </svg>
-  );
-}
-function BadgeIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path
-        d="M12 2l3 5 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1 3-5z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
