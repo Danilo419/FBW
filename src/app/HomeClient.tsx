@@ -1834,13 +1834,8 @@ export default function Home() {
               },
               {
                 icon: <Truck className="h-5 w-5 text-blue-600" />,
-<<<<<<< Updated upstream
-                t: 'Global shipping',
-                s: 'Worldwide delivery in 5–7 business days, with tracking on every order.',
-=======
                 t: 'Tracked delivery',
                 s: 'Worldwide delivery in 7–20 business days with tracking.',
->>>>>>> Stashed changes
               },
             ].map((f, i) => (
               <motion.div
@@ -1887,13 +1882,8 @@ export default function Home() {
               </ul>
             </div>
             <div className="flex md:justify-end items-center gap-3">
-<<<<<<< Updated upstream
-              <MagneticButton href="/products">
-                Get started <Zap className="h-4 w-4" />
-=======
               <MagneticButton href="#products">
                 Shop now <Zap className="h-4 w-4" />
->>>>>>> Stashed changes
               </MagneticButton>
               <a href="#faq" className="btn-outline">
                 Read the FAQ
@@ -1955,10 +1945,6 @@ export default function Home() {
               q: 'Can I add name and number?',
               a: 'Yes — you can personalize most jerseys with name and number.',
             },
-<<<<<<< Updated upstream
-            { q: 'Can I personalize name and number?', a: 'Yes!' },
-=======
->>>>>>> Stashed changes
             {
               q: 'Which payment methods are accepted?',
               a: 'Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way (via Stripe).',
