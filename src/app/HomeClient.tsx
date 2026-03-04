@@ -1,12 +1,6 @@
 'use client'
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   motion,
   useMotionValue,
@@ -32,8 +26,9 @@ import {
   HeartHandshake,
   Clock,
   Shirt,
-  ChevronLeft,
-  ChevronRight,
+  Sparkles,
+  Star,
+  Flame,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -175,6 +170,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Arsenal/Arsenal10.png', alt: 'Arsenal jersey' },
   { src: '/images/players/Arsenal/Arenal11.png', alt: 'Arsenal jersey' } as any,
   { src: '/images/players/Arsenal/Arsenal12.png', alt: 'Arsenal jersey' },
+
   {
     src: '/images/players/AtleticoMadrid/AtleticoMadrid1.png',
     alt: 'Atlético Madrid jersey',
@@ -199,6 +195,7 @@ const heroImages: { src: string; alt?: string }[] = [
     src: '/images/players/AtleticoMadrid/AtleticoMadrid6.png',
     alt: 'Atlético Madrid jersey',
   },
+
   { src: '/images/players/Barcelona/Barcelona1.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona2.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona3.png', alt: 'Barcelona jersey' },
@@ -207,6 +204,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Barcelona/Barcelona6.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona7.png', alt: 'Barcelona jersey' },
   { src: '/images/players/Barcelona/Barcelona8.png', alt: 'Barcelona jersey' },
+
   { src: '/images/players/Chelsea/Chelsea1.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea2.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea3.png', alt: 'Chelsea jersey' },
@@ -219,7 +217,9 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Chelsea/Chelsea10.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea11.png', alt: 'Chelsea jersey' },
   { src: '/images/players/Chelsea/Chelsea12.png', alt: 'Chelsea jersey' },
+
   { src: '/images/players/Legends/Legends1.png', alt: 'Legends jersey' },
+
   { src: '/images/players/Liverpool/Liverpool1.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool2.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool3.png', alt: 'Liverpool jersey' },
@@ -230,11 +230,13 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Liverpool/Liverpool8.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool9.png', alt: 'Liverpool jersey' },
   { src: '/images/players/Liverpool/Liverpool10.png', alt: 'Liverpool jersey' },
+
   { src: '/images/players/Lyon/Lyon1.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon2.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon3.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon4.png', alt: 'Lyon jersey' },
   { src: '/images/players/Lyon/Lyon5.png', alt: 'Lyon jersey' },
+
   { src: '/images/players/ManCity/ManCity1.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity2.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity3.png', alt: 'Man City jersey' },
@@ -243,6 +245,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/ManCity/ManCity6.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity7.png', alt: 'Man City jersey' },
   { src: '/images/players/ManCity/ManCity8.png', alt: 'Man City jersey' },
+
   {
     src: '/images/players/ManUnited/ManUnited1.png',
     alt: 'Man United jersey',
@@ -279,6 +282,7 @@ const heroImages: { src: string; alt?: string }[] = [
     src: '/images/players/ManUnited/ManUnited9.png',
     alt: 'Man United jersey',
   },
+
   { src: '/images/players/Marselha/Marselha1.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha2.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha3.png', alt: 'Marseille jersey' },
@@ -287,6 +291,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Marselha/Marselha6.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha7.png', alt: 'Marseille jersey' },
   { src: '/images/players/Marselha/Marselha8.png', alt: 'Marseille jersey' },
+
   { src: '/images/players/Monaco/Monaco1.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco2.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco3.png', alt: 'Monaco jersey' },
@@ -297,6 +302,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Monaco/Monaco8.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco9.png', alt: 'Monaco jersey' },
   { src: '/images/players/Monaco/Monaco10.png', alt: 'Monaco jersey' },
+
   { src: '/images/players/PSG/PSG1.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG2.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG3.png', alt: 'PSG jersey' },
@@ -305,6 +311,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSG/PSG6.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG7.png', alt: 'PSG jersey' },
   { src: '/images/players/PSG/PSG8.png', alt: 'PSG jersey' },
+
   { src: '/images/players/RealMadrid/RealMadrid1.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid2.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid3.png', alt: 'Real Madrid' },
@@ -317,6 +324,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/RealMadrid/RealMadrid10.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid11.png', alt: 'Real Madrid' },
   { src: '/images/players/RealMadrid/RealMadrid12.png', alt: 'Real Madrid' },
+
   { src: '/images/players/Tottenham/Tottenham1.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham2.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham3.png', alt: 'Tottenham jersey' },
@@ -325,6 +333,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Tottenham/Tottenham6.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham7.png', alt: 'Tottenham jersey' },
   { src: '/images/players/Tottenham/Tottenham8.png', alt: 'Tottenham jersey' },
+
   { src: '/images/players/Juventus/Juventus1.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus2.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus3.png', alt: 'Juventus jersey' },
@@ -337,6 +346,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Juventus/Juventus10.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus11.png', alt: 'Juventus jersey' },
   { src: '/images/players/Juventus/Juventus12.png', alt: 'Juventus jersey' },
+
   { src: '/images/players/Milan/Milan1.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan2.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan3.png', alt: 'Milan jersey' },
@@ -353,6 +363,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Milan/Milan14.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan15.png', alt: 'Milan jersey' },
   { src: '/images/players/Milan/Milan16.png', alt: 'Milan jersey' },
+
   { src: '/images/players/Inter/Inter1.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter2.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter3.png', alt: 'Inter jersey' },
@@ -364,6 +375,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Inter/Inter9.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter10.png', alt: 'Inter jersey' },
   { src: '/images/players/Inter/Inter11.png', alt: 'Inter jersey' },
+
   { src: '/images/players/Roma/Roma1.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma2.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma3.png', alt: 'Roma jersey' },
@@ -372,6 +384,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Roma/Roma6.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma7.png', alt: 'Roma jersey' },
   { src: '/images/players/Roma/Roma8.png', alt: 'Roma jersey' },
+
   { src: '/images/players/Napoli/Napoli1.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli2.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli3.png', alt: 'Napoli jersey' },
@@ -380,6 +393,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Napoli/Napoli6.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli7.png', alt: 'Napoli jersey' },
   { src: '/images/players/Napoli/Napoli8.png', alt: 'Napoli jersey' },
+
   { src: '/images/players/Bayern/Bayern1.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern2.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern3.png', alt: 'Bayern jersey' },
@@ -399,6 +413,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Bayern/Bayern17.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern18.png', alt: 'Bayern jersey' },
   { src: '/images/players/Bayern/Bayern19.png', alt: 'Bayern jersey' },
+
   { src: '/images/players/Dortmund/Dortmund1.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund2.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund3.png', alt: 'Dortmund jersey' },
@@ -410,6 +425,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Dortmund/Dortmund9.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund10.png', alt: 'Dortmund jersey' },
   { src: '/images/players/Dortmund/Dortmund11.png', alt: 'Dortmund jersey' },
+
   {
     src: '/images/players/Leverkusen/Leverkusen1.png',
     alt: 'Leverkusen jersey',
@@ -442,6 +458,7 @@ const heroImages: { src: string; alt?: string }[] = [
     src: '/images/players/Leverkusen/Leverkusen8.png',
     alt: 'Leverkusen jersey',
   },
+
   { src: '/images/players/Ajax/Ajax1.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax2.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax3.png', alt: 'Ajax jersey' },
@@ -453,6 +470,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/Ajax/Ajax9.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax10.png', alt: 'Ajax jersey' },
   { src: '/images/players/Ajax/Ajax11.png', alt: 'Ajax jersey' },
+
   { src: '/images/players/PSV/PSV1.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV2.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV3.png', alt: 'PSV jersey' },
@@ -461,6 +479,7 @@ const heroImages: { src: string; alt?: string }[] = [
   { src: '/images/players/PSV/PSV6.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV7.png', alt: 'PSV jersey' },
   { src: '/images/players/PSV/PSV8.png', alt: 'PSV jersey' },
+
   { src: '/images/players/Feyenoord/Feyenoord1.png', alt: 'Feyenoord jersey' },
   { src: '/images/players/Feyenoord/Feyenoord2.png', alt: 'Feyenoord jersey' },
   { src: '/images/players/Feyenoord/Feyenoord3.png', alt: 'Feyenoord jersey' },
@@ -676,7 +695,7 @@ const highlightSpaces: HighlightSpace[] = [
 
 function ImageSpaces() {
   return (
-    <div className="mb-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {highlightSpaces.map((s) => (
         <motion.a
           key={s.key}
@@ -698,15 +717,15 @@ function ImageSpaces() {
                 img.style.objectPosition = 'center'
               }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
             <div className="absolute inset-x-0 bottom-0 p-4">
               <div className="flex items-end justify-between gap-2">
                 <div>
-                  <h3 className="text-white font-semibold tracking-tight">
+                  <h3 className="text-white text-lg font-semibold tracking-tight">
                     {s.label}
                   </h3>
                   {s.subtitle && (
-                    <p className="text-white/80 text-xs">{s.subtitle}</p>
+                    <p className="text-white/85 text-xs">{s.subtitle}</p>
                   )}
                 </div>
                 <div className="shrink-0 rounded-full bg-white/90 p-2 backdrop-blur-sm ring-1 ring-black/5 group-hover:bg-white transition">
@@ -737,21 +756,19 @@ type CustomerReview = {
 const CUSTOMER_REVIEWS: CustomerReview[] = [
   {
     id: '1',
-    // ✅ imagem vertical (frente da camisola) — coloca aqui o ficheiro final
     img: '/images/reviews/review1.jpg',
     name: 'Cristiano Silva',
     handle: '@criscristiano.silva',
     rating: 5,
-    text: 'Excellent quality, secure shipping, and fast service, it exceeded my expectations and I will definitely buy again!',
+    text: 'Amazing quality and the stitching is on point. Tracking updates were clear and I’ll definitely order again.',
   },
   {
     id: '2',
-    // ✅ imagem vertical (costas da camisola) — coloca aqui o ficheiro final
     img: '/images/reviews/review2.jpg',
     name: 'João Silvestre',
     handle: '@_j.silvestre._',
     rating: 4,
-    text: 'Very good quality and great price, it just took a little longer to arrive than I expected, but the wait was worth it and I recommend the store.',
+    text: 'Great value for the price. Delivery took a bit longer than expected, but the jersey exceeded my expectations.',
   },
 ]
 
@@ -772,18 +789,35 @@ function Stars({ rating }: { rating: number }) {
   )
 }
 
-function FromOurCustomers() {
+function FromOurCustomers({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="mt-12">
-      <div className="rounded-3xl bg-white ring-1 ring-black/5 p-5 sm:p-8">
-        <div className="text-center">
-          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-[0.18em] uppercase">
-            From Our Customers
-          </h3>
-          <p className="mt-2 text-sm text-slate-500">
-            Want to be featured? Send us your review and a photo via Instagram
-            DM at @footballworld_store for a chance to appear here.
-          </p>
+    <div className={compact ? '' : 'mt-12'}>
+      <div
+        className={`rounded-3xl bg-white ring-1 ring-black/5 p-5 sm:p-8 ${
+          compact ? 'shadow-sm' : ''
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 ring-1 ring-amber-100">
+              <Star className="h-4 w-4 text-amber-600" />
+              <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-amber-800">
+                Customer Reviews
+              </span>
+            </div>
+            <h3 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Real photos. Real feedback.
+            </h3>
+            <p className="mt-1 text-sm text-slate-500 max-w-xl">
+              Want to be featured? Send your review + photo via Instagram DM at{' '}
+              <span className="font-semibold">@footballworld_store</span>.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <ShieldCheck className="h-4 w-4 text-blue-600" />
+            Tracked shipping • Secure checkout
+          </div>
         </div>
 
         <div className="mt-6 grid md:grid-cols-2 gap-4 sm:gap-6">
@@ -793,7 +827,6 @@ function FromOurCustomers() {
               className="rounded-3xl border border-slate-100 bg-slate-50/60 p-5 hover:shadow-lg transition"
             >
               <div className="flex items-start gap-4">
-                {/* ✅ imagem "normal" na vertical */}
                 <div className="h-28 w-20 sm:h-32 sm:w-24 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white shrink-0">
                   <img
                     src={review.img}
@@ -853,8 +886,7 @@ const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
 function formatEurFromCents(cents: number | null | undefined) {
   if (cents == null) return ''
   const value = (cents / 100).toFixed(2)
-  const withComma = value.replace('.', ',')
-  return `${withComma} €`
+  return `${value} €`
 }
 
 type HomeProduct = any
@@ -960,8 +992,8 @@ function normalizeUpper(s: string) {
   return (s ?? '')
     .toUpperCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .replace(/[^A-Z0-9]+/g, ' ') // troca hífens/underscores/etc por espaço
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -1019,11 +1051,6 @@ function isTrainingSleevelessSet(p: HomeProduct): boolean {
   )
 }
 
-/* ======================================================================================
-   ✅ MUDANÇA 1: Training Tracksuits = só "Training Tracksuit" no nome
-   ✅ MUDANÇA 2: Tracksuits = "Tracksuit" mas NÃO "Training Tracksuit"
-====================================================================================== */
-
 function isTrainingTracksuit(p: HomeProduct): boolean {
   return hasWords(p, ['TRAINING', 'TRACKSUIT'])
 }
@@ -1031,10 +1058,6 @@ function isTrainingTracksuit(p: HomeProduct): boolean {
 function isTracksuitNonTraining(p: HomeProduct): boolean {
   return hasWords(p, ['TRACKSUIT']) && !isTrainingTracksuit(p)
 }
-
-/* ======================================================================================
-   ✅ NOVO: FIFA World Cup 2026 Jerseys (name contains "World Cup" + "2026")
-====================================================================================== */
 
 function isWorldCup2026(p: HomeProduct): boolean {
   return hasWords(p, ['WORLD', 'CUP', '2026'])
@@ -1091,6 +1114,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
             -{discountPercent}%
           </div>
         )}
+        {/* ✅ Removed: "Tracked shipping included" overlay text on product images */}
       </div>
 
       <div className="flex flex-1 flex-col px-2 py-2 sm:px-4 sm:py-3">
@@ -1115,7 +1139,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
         </div>
 
         <div className="mt-2 sm:mt-4 flex items-center text-[11px] sm:text-sm text-blue-700">
-          View product
+          View details
           <ArrowRight className="ml-1 h-3 w-3" />
         </div>
       </div>
@@ -1123,7 +1147,7 @@ function ProductCard({ product }: { product: HomeProduct }) {
   )
 }
 
-/* ---------- Marquee com animação infinita suave ---------- */
+/* ---------- Marquee with smooth infinite animation ---------- */
 
 function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
@@ -1158,9 +1182,7 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
     const move = (speedPxPerSec * delta) / 1000
 
     let next = lastXRef.current - move
-    if (next <= -base) {
-      next += base
-    }
+    if (next <= -base) next += base
 
     x.set(next)
     lastXRef.current = next
@@ -1203,17 +1225,14 @@ export default function Home() {
     v > 0.2 ? '0 10px 30px -15px rgba(2,8,23,0.12)' : 'none'
   )
 
-  const techSpecs = [
-    'ULTRA-SOFT',
-    'AERO-MESH',
-    'COOL-DRY',
-    'PRO STITCH',
-    'HYPER PRINT',
-    'ALL-DAY COMFORT',
-    'GHOST-SEAM',
-    'NANO INK',
-    'STREET-EDITION',
-    'EASY-WEAR',
+  const trustMarquee = [
+    'TRACKED SHIPPING INCLUDED',
+    'SECURE CHECKOUT (STRIPE)',
+    'MB WAY • MULTIBANCO • PAYPAL',
+    'NAME & NUMBER PERSONALIZATION',
+    'WORLDWIDE DELIVERY',
+    '14-DAY SIZE EXCHANGE (POLICY APPLIES)',
+    'SUPPORT VIA INSTAGRAM',
   ]
 
   const [homeProducts, setHomeProducts] = useState<HomeProduct[]>([])
@@ -1273,7 +1292,6 @@ export default function Home() {
       if (n.includes('SET')) return false
       if (n.includes('SHORTS')) return false
       if (n.includes('TRACKSUIT')) return false
-
       return true
     }
 
@@ -1281,7 +1299,6 @@ export default function Home() {
 
     return {
       worldCup2026: mk((p) => isWorldCup2026(p) && isJerseyLikeProduct(p)),
-
       currentSeason: mk(
         (p) => hasTermRaw(p, '25/26') && !isPlayerVersion(p) && !isRetro(p)
       ),
@@ -1310,15 +1327,12 @@ export default function Home() {
       trainingSleeveless: mk(
         (p) => isTrainingSleevelessSet(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
-
       trainingTracksuit: mk(
         (p) => isTrainingTracksuit(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
-
       tracksuits: mk(
         (p) => isTracksuitNonTraining(p) && !isRetro(p) && !isPlayerVersion(p)
       ),
-
       kidsKits: mk((p) => isKidsKit(p) && !isRetro(p) && !isPlayerVersion(p)),
       cropTops: mk((p) => isCropTop(p) && !isRetro(p) && !isPlayerVersion(p)),
     }
@@ -1335,106 +1349,101 @@ export default function Home() {
   }[] = [
     {
       key: 'currentSeason',
-      title: 'Current season 25/26',
-      subtitle: 'Latest club & national-team drops (non-player version)',
+      title: 'New Season 25/26 Drops',
+      subtitle: 'Latest club & national-team releases (non-player fit)',
       href: '/products/current-season-25-26',
       group: 'Jerseys',
     },
     {
       key: 'jerseys',
-      title: 'Jerseys (short sleeve)',
-      subtitle: 'Standard short-sleeve jerseys (non-player version)',
+      title: 'Classic Jerseys (Short Sleeve)',
+      subtitle: 'Everyday fit, the most popular choice',
       href: '/products/jerseys',
       group: 'Jerseys',
     },
     {
       key: 'longSleeve',
       title: 'Long Sleeve Jerseys',
-      subtitle: 'Non-player long-sleeve jerseys',
+      subtitle: 'Long sleeve, non-player fit',
       href: '/products/long-sleeve-jerseys',
       group: 'Jerseys',
     },
     {
       key: 'playerVersion',
-      title: 'Player Version Jerseys',
-      subtitle: 'On-pitch fit, short sleeve',
+      title: 'Player Version (On-Pitch Fit)',
+      subtitle: 'Slim fit like the pros',
       href: '/products/player-version-jerseys',
       group: 'Jerseys',
     },
     {
       key: 'playerVersionLongSleeve',
-      title: 'Player Version Long Sleeve Jerseys',
-      subtitle: 'On-pitch fit, long sleeve',
+      title: 'Player Version (Long Sleeve)',
+      subtitle: 'On-pitch fit with long sleeves',
       href: '/products/player-version-long-sleeve-jerseys',
       group: 'Jerseys',
     },
-
     {
       key: 'retro',
       title: 'Retro Jerseys',
-      subtitle: 'Throwback legends from classic seasons',
+      subtitle: 'Iconic classics from legendary seasons',
       href: '/products/retro-jerseys',
       group: 'Retro',
     },
     {
       key: 'retroLongSleeve',
-      title: 'Retro Long Sleeve Jerseys',
+      title: 'Retro Long Sleeve',
       subtitle: 'Retro designs with long sleeves',
       href: '/products/retro-long-sleeve-jerseys',
       group: 'Retro',
     },
-
     {
       key: 'conceptKits',
       title: 'Concept Kits',
-      subtitle: 'Original concept designs',
+      subtitle: 'Original designs you won’t find in stores',
       href: '/products/concept-kits',
       group: 'Concept & Special',
     },
     {
       key: 'preMatch',
-      title: 'Pre-Match Jerseys',
-      subtitle: 'Warm-up and pre-game tops',
+      title: 'Pre-Match Tops',
+      subtitle: 'Warm-up & pre-game styles',
       href: '/products/pre-match-jerseys',
       group: 'Concept & Special',
     },
-
     {
       key: 'tracksuits',
       title: 'Tracksuits',
-      subtitle: 'Tracksuits for Casual Wear',
+      subtitle: 'Everyday streetwear for fans',
       href: '/products/tracksuits',
       group: 'Concept & Special',
     },
-
     {
       key: 'trainingSleeveless',
-      title: 'Training Sleeveless Sets',
-      subtitle: 'Tank + shorts training sets',
+      title: 'Sleeveless Training Sets',
+      subtitle: 'Tank + shorts training combo',
       href: '/products/training-sleeveless-sets',
       group: 'Training',
     },
     {
       key: 'trainingTracksuit',
       title: 'Training Tracksuits',
-      subtitle: 'Full training sets (top & pants)',
+      subtitle: 'Training top + pants sets',
       href: '/products/training-tracksuits',
       group: 'Training',
     },
-
     {
       key: 'kidsKits',
       title: 'Kids Kits',
-      subtitle: 'Full sets for kids',
+      subtitle: 'Full sets for young fans',
       href: '/products/kids-kits',
-      group: 'Kids & Woman',
+      group: 'Kids & Women',
     },
     {
       key: 'cropTops',
       title: 'Crop Tops',
       subtitle: 'Stylish cropped tops',
       href: '/products/crop-tops',
-      group: 'Kids & Woman',
+      group: 'Kids & Women',
     },
   ]
 
@@ -1443,7 +1452,7 @@ export default function Home() {
     'Retro',
     'Concept & Special',
     'Training',
-    'Kids & Woman',
+    'Kids & Women',
   ]
 
   const WORLD_CUP_2026_HREF = '/products/fifa-world-cup-2026-jerseys'
@@ -1464,30 +1473,50 @@ export default function Home() {
         <Spotlight>
           <motion.div
             style={{ opacity: opacityHero }}
-            className="container-fw py-20 sm:py-28"
+            className="container-fw py-16 sm:py-24"
           >
             <div className="grid items-center gap-12 lg:grid-cols-2">
               <div>
+                {/* Trust badge */}
+                <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-white/70 px-3 py-1 ring-1 ring-black/5 backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold tracking-[0.16em] uppercase text-blue-800">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Fan-favorite drops
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-slate-300" />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
+                    <ShieldCheck className="h-4 w-4 text-blue-600" />
+                    Secure checkout
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-slate-300" />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
+                    <Truck className="h-4 w-4 text-blue-600" />
+                    Tracked shipping
+                  </span>
+                </div>
+
                 <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
-                  Authentic &amp; Concept Football Jerseys
+                  The jersey you want, made to order and shipped worldwide.
                 </h1>
+
                 <p className="mt-4 text-gray-600 max-w-prose">
-                  We sell existing club and national-team jerseys, as well as
-                  original concept jerseys, made to order with reliable worldwide
-                  tracked shipping.
+                  Shop club & national-team jerseys plus exclusive concept
+                  designs. Pick your size, add name & number (free), and we’ll
+                  ship your order with tracking from start to finish.
                 </p>
-                <div className="mt-6 flex items-center gap-3">
-                  <MagneticButton href="/clubs">
-                    Browse products <ArrowRight className="h-4 w-4" />
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <MagneticButton href="#products" className="!px-5">
+                    Shop Best Sellers <ArrowRight className="h-4 w-4" />
                   </MagneticButton>
                 </div>
 
                 <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                   {[
-                    { Icon: Truck, t: 'Worldwide shipping' },
+                    { Icon: Truck, t: 'Tracked worldwide delivery' },
                     { Icon: BadgePercent, t: 'Fair pricing' },
                     { Icon: Shield, t: 'Secure checkout' },
-                    { Icon: Globe2, t: 'English Support' },
+                    { Icon: Globe2, t: 'Support via Instagram' },
                   ].map(({ Icon, t }) => (
                     <div
                       key={t}
@@ -1509,16 +1538,27 @@ export default function Home() {
                 <TiltCard className="shadow-glow overflow-hidden">
                   <HeroImageCycler interval={4200} />
                 </TiltCard>
+
+                {/* Keep ONLY typical delivery pill */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 ring-1 ring-black/5">
+                    <Clock className="h-4 w-4 text-slate-700" />
+                    <span className="text-xs text-slate-700">
+                      Typical delivery:{' '}
+                      <span className="font-semibold">7–20 business days</span>
+                    </span>
+                  </div>
+                </div>
               </motion.div>
             </div>
           </motion.div>
         </Spotlight>
 
-        {/* tech marquee */}
+        {/* trust marquee */}
         <section className="relative border-y bg-white overflow-hidden">
           <div className="w-full py-3">
             <div className="marquee-track flex gap-6 whitespace-nowrap">
-              {[...techSpecs, ...techSpecs].map((b, i) => (
+              {[...trustMarquee, ...trustMarquee].map((b, i) => (
                 <div
                   key={`${b}-${i}`}
                   className="inline-flex items-center gap-2 rounded-full bg-slate-50/90 px-4 py-1.5 text-[11px] font-semibold tracking-[0.22em] uppercase text-slate-600 ring-1 ring-black/5 shadow-sm"
@@ -1545,12 +1585,27 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO IMAGE */}
+        {/* PROMO (text ABOVE the banner, not inside) */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
-            <p className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-center text-slate-500">
-              Special Promotion
-            </p>
+            {/* ✅ Promo line ABOVE the banner */}
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 ring-1 ring-black/5 shadow-sm">
+                <Flame className="h-4 w-4 text-red-600" />
+                <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
+                  Promo live now
+                </span>
+
+                {/* ✅ MOBILE: "Ends soon" em cima, "While stock lasts" em baixo */}
+                {/* ✅ DESKTOP: mantém "Ends soon • While stock lasts" na mesma linha */}
+                <span className="text-[11px] text-slate-600 leading-tight">
+                  <span className="block sm:inline">Ends soon</span>
+                  <span className="hidden sm:inline"> • </span>
+                  <span className="block sm:inline">While stock lasts</span>
+                </span>
+              </div>
+            </div>
+
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
                 <source
@@ -1563,7 +1618,7 @@ export default function Home() {
                 />
                 <img
                   src="/images/promos/home-promo.png"
-                  alt="Special Promotion"
+                  alt="Limited-time offers"
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement
@@ -1574,6 +1629,11 @@ export default function Home() {
                 />
               </picture>
             </div>
+
+            {/* Reviews stay UP here */}
+            <div className="mt-8">
+              <FromOurCustomers compact />
+            </div>
           </div>
         </section>
       </section>
@@ -1581,34 +1641,37 @@ export default function Home() {
       {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Highlights
-          </h2>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Shop by collection
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Start with a category — then pick your favorite design.
+            </p>
+          </div>
         </div>
 
         <ImageSpaces />
-
-        <div className="h-2 sm:h-3" />
 
         <div className="relative">
           <div className="rounded-3xl bg-gradient-to-b from-slate-50 via-white to-slate-50 ring-1 ring-black/5 p-4 sm:p-6">
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                  <BadgePercent className="h-3 w-3" />
-                  Curated selection
+                  <Sparkles className="h-3 w-3" />
+                  Curated picks
                 </div>
                 <h3 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight">
-                  Some of our products
+                  Best picks across every style
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
-                  Horizontally-scrolling selections for each product type.
-                  Everything appears in a fully random order on every page load.
+                  Scroll, click, and explore. Every product includes tracked
+                  shipping and secure checkout.
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
                 <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-red-600">
-                  Up to -70% vs original prices
+                  Save up to 70% vs official prices
                 </span>
               </div>
             </div>
@@ -1646,7 +1709,7 @@ export default function Home() {
                           FIFA World Cup 2026 Jerseys
                         </h4>
                         <p className="text-xs sm:text-sm text-gray-500">
-                          Exclusive selection of World Cup 2026 jerseys.
+                          Exclusive World Cup 2026 selection.
                         </p>
                       </div>
                       <a
@@ -1718,14 +1781,13 @@ export default function Home() {
 
             {!loadingHomeProducts && (!categories || homeProducts.length === 0) && (
               <p className="text-sm text-gray-500">
-                No products to show here yet. Please check the full catalog.
+                No products to show yet. Please check the full catalog.
               </p>
             )}
           </div>
         </div>
 
-        {/* ✅ NEW SECTION: FROM OUR CUSTOMERS */}
-        <FromOurCustomers />
+        {/* Removed duplicated reviews (they are above the products now) */}
       </section>
 
       {/* HOW IT WORKS */}
@@ -1734,27 +1796,38 @@ export default function Home() {
           style={{ boxShadow: sectionShadow as any }}
           className="container-fw section-gap"
         >
+          <div className="flex items-end justify-between gap-3 mb-6">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                How it works
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Simple, fast, and tracked from start to finish.
+              </p>
+            </div>
+          </div>
+
           <div className="grid lg:grid-cols-4 gap-6">
             {[
               {
                 icon: <Shirt className="h-5 w-5 text-blue-600" />,
-                t: 'Choose an authentic jersey',
-                s: 'Select an existing club or national-team shirt.',
+                t: 'Choose your jersey',
+                s: 'Pick a club or national-team kit (or an exclusive concept).',
               },
               {
                 icon: <MousePointer2 className="h-5 w-5 text-blue-600" />,
-                t: 'Pick a design',
-                s: 'Explore concepts and choose your favorite.',
+                t: 'Select size & options',
+                s: 'Choose your size and add name & number if you want.',
               },
               {
                 icon: <Send className="h-5 w-5 text-blue-600" />,
-                t: 'Made-to-order',
-                s: 'Produced on demand with wonderful quality.',
+                t: 'Made to order',
+                s: 'Your item is produced on demand with great detail.',
               },
               {
                 icon: <Truck className="h-5 w-5 text-blue-600" />,
-                t: 'Global shipping',
-                s: 'Worldwide delivery in 7–20 business days, with tracking on every order.',
+                t: 'Tracked delivery',
+                s: 'Worldwide delivery in 7–20 business days with tracking.',
               },
             ].map((f, i) => (
               <motion.div
@@ -1777,12 +1850,8 @@ export default function Home() {
         </motion.div>
       </section>
 
-      <br />
-      <br />
-      <br />
-
       {/* CTA */}
-      <section className="container-fw pb-20">
+      <section className="container-fw pb-20 pt-12">
         <TiltCard>
           <div className="grid md:grid-cols-2 gap-6 items-center p-8">
             <div>
@@ -1790,8 +1859,8 @@ export default function Home() {
                 Choose your next jersey with confidence
               </h3>
               <p className="mt-2 text-gray-600">
-                Discover authentic club and national-team kits alongside our
-                original concept designs, then pick your next favorite.
+                Secure checkout, tracked shipping, and fan-favorite designs — all
+                in one place.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
@@ -1809,12 +1878,11 @@ export default function Home() {
               </ul>
             </div>
             <div className="flex md:justify-end items-center gap-3">
-              <MagneticButton href="/clubs">
-                Get started <Zap className="h-4 w-4" />
+              <MagneticButton href="#products">
+                Shop now <Zap className="h-4 w-4" />
               </MagneticButton>
               <a href="#faq" className="btn-outline">
-                See frequently <br />
-                asked questions
+                Read the FAQ
               </a>
             </div>
           </div>
@@ -1833,17 +1901,17 @@ export default function Home() {
             {
               Icon: CreditCard,
               title: 'Secure checkout',
-              desc: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link, all processed securely via Stripe.',
+              desc: 'Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link — all processed securely via Stripe.',
             },
             {
               Icon: Package,
-              title: 'On-demand production',
-              desc: 'Incredible stitching and print quality.',
+              title: 'Made on demand',
+              desc: 'High-detail stitching and crisp prints.',
             },
             {
               Icon: HeartHandshake,
-              title: 'Dedicated support',
-              desc: 'Dedicated support in English via email and Instagram.',
+              title: 'Fast support',
+              desc: 'Support in English via email and Instagram.',
             },
           ].map((f, i) => (
             <div key={i} className="group card p-5 hover:shadow-xl">
@@ -1858,7 +1926,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ : */}
+      {/* FAQ */}
       <section id="faq" className="container-fw pb-24 pt-16">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
           Frequently asked questions
@@ -1867,24 +1935,27 @@ export default function Home() {
           {[
             {
               q: 'How long does shipping take?',
-              a: 'It takes 7–20 business days, with tracking code on every order.',
+              a: 'Delivery takes 7–20 business days. You’ll get a tracking code for every order.',
             },
-            { q: 'Can I personalize name and number?', a: 'Yes, you can!' },
+            {
+              q: 'Can I add name and number?',
+              a: 'Yes — you can personalize most jerseys with name and number.',
+            },
             {
               q: 'Which payment methods are accepted?',
-              a: 'Visa, Mastercard, American Express, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way.',
+              a: 'Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way (via Stripe).',
             },
             {
               q: 'How can I track my order?',
-              a: 'Once your order has been shipped, you will receive an email with your tracking code and a link to track it online. You can track your order at any time through 17track.net or on your national postal website. All orders include worldwide tracked shipping.',
+              a: 'After your order is shipped you’ll receive an email with your tracking code and a tracking link.',
             },
             {
               q: 'Which countries do you ship to?',
               a: 'We ship worldwide. Delivery times vary by destination.',
             },
             {
-              q: 'How do I pick the size?',
-              a: 'We will provide a detailed size chart and measurement tips in the Size Guide page.',
+              q: 'How do I pick the right size?',
+              a: 'Check the Size Guide page for measurements and fit tips.',
             },
           ].map((f, i) => (
             <details key={i} className="group card px-5 py-4 open:shadow-md">
