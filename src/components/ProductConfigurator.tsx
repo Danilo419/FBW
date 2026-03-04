@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useMemo, useRef, useState, useTransition, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { addToCartAction } from "@/app/(store)/cart/actions";
@@ -250,10 +250,6 @@ export default function ProductConfigurator({ product }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [openSizeGuide, setOpenSizeGuide] = useState(false);
 
-  // ✅ improved product lightbox
-  const [imgLightboxOpen, setImgLightboxOpen] = useState(false);
-  const [imgLightboxIndex, setImgLightboxIndex] = useState(0);
-
   // ✅ sticky CTA (mobile)
   const [stickyCta, setStickyCta] = useState(false);
   const [buyNow, setBuyNow] = useState(false);
@@ -263,7 +259,7 @@ export default function ProductConfigurator({ product }: Props) {
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
   const isMobile = useIsMobile(1024);
-  useLockBodyScroll(imgLightboxOpen || openSizeGuide);
+  useLockBodyScroll(openSizeGuide);
 
   useEffect(() => setMounted(true), []);
 
@@ -688,15 +684,6 @@ export default function ProductConfigurator({ product }: Props) {
     addToCartCore({ goCheckout: true });
   }
 
-  /* ---------- Product image lightbox handlers ---------- */
-  const openImgLightbox = useCallback((index: number) => {
-    setImgLightboxIndex(index);
-    setImgLightboxOpen(true);
-  }, []);
-  const closeImgLightbox = useCallback(() => setImgLightboxOpen(false), []);
-  const prevImg = useCallback(() => setImgLightboxIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
-  const nextImg = useCallback(() => setImgLightboxIndex((i) => (i + 1) % images.length), [images.length]);
-
   /* ---------- UI ---------- */
   return (
     <div className="w-full flex justify-center overflow-x-hidden px-2">
@@ -774,15 +761,6 @@ export default function ProductConfigurator({ product }: Props) {
               ref={imgWrapRef}
               className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
             >
-              <button
-                type="button"
-                onClick={() => openImgLightbox(activeIndex)}
-                aria-label="Open image viewer"
-                className="absolute inset-0 z-10 cursor-zoom-in"
-              >
-                <span className="sr-only">Open image</span>
-              </button>
-
               <Image
                 src={activeSrc}
                 alt={product.name}
@@ -798,15 +776,6 @@ export default function ProductConfigurator({ product }: Props) {
                   -{discountPercent}%
                 </div>
               )}
-
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
-                  Click to zoom
-                </div>
-                <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
-                  {activeIndex + 1}/{images.length}
-                </div>
-              </div>
 
               {images.length > 1 && (
                 <>
@@ -1021,13 +990,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock
-              group={effectiveCustomizationGroup}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              forceFree
-            />
+            <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
           )}
 
           {/* Personalization */}
@@ -1274,26 +1237,6 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ✅ Product Images Lightbox */}
-        {mounted &&
-          typeof document !== "undefined" &&
-          createPortal(
-            <AnimatePresence>
-              {imgLightboxOpen && (
-                <ProductLightbox
-                  urls={images}
-                  index={imgLightboxIndex}
-                  onClose={closeImgLightbox}
-                  onPrev={prevImg}
-                  onNext={nextImg}
-                  setIndex={setImgLightboxIndex}
-                  title={product.name}
-                />
-              )}
-            </AnimatePresence>,
-            document.body
-          )}
-
         {/* ✅ Size guide modal */}
         {mounted &&
           typeof document !== "undefined" &&
@@ -1503,281 +1446,6 @@ function GroupBlock({
         })}
       </div>
     </div>
-  );
-}
-
-/* ====================== Product Lightbox (FIX v4)
-   ✅ Zoom REAL: transform: scale() no <img> + transform-origin dinâmico
-   ✅ Hover + Click (click alterna zoom)
-   ✅ Thumbs: quando estiver nas últimas 2, “empurra” para o fim para não cortar a última
-*/
-function ProductLightbox({
-  urls,
-  index,
-  onClose,
-  onPrev,
-  onNext,
-  setIndex,
-  title,
-}: {
-  urls: string[];
-  index: number;
-  onClose: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  setIndex: (i: number) => void;
-  title: string;
-}) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft") onPrev();
-      if (e.key === "ArrowRight") onNext();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, onPrev, onNext]);
-
-  const prefersReduced = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }, []);
-
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const [pan, setPan] = useState({ x: 50, y: 50 });
-  const [hovering, setHovering] = useState(false);
-  const [clickedZoom, setClickedZoom] = useState(false);
-
-  const zoomOn = !prefersReduced && (hovering || clickedZoom);
-  const zoomScale = 2.2;
-
-  const updatePanFromPoint = (clientX: number, clientY: number) => {
-    const el = stageRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = clamp(((clientX - r.left) / r.width) * 100, 0, 100);
-    const y = clamp(((clientY - r.top) / r.height) * 100, 0, 100);
-    setPan({ x, y });
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (prefersReduced) return;
-    updatePanFromPoint(e.clientX, e.clientY);
-  };
-
-  const onPointerEnter = () => {
-    if (prefersReduced) return;
-    setHovering(true);
-  };
-
-  const onPointerLeave = () => {
-    setHovering(false);
-    setPan({ x: 50, y: 50 });
-  };
-
-  // thumbs scrolling
-  const thumbsBarRef = useRef<HTMLDivElement | null>(null);
-  const thumbBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    const bar = thumbsBarRef.current;
-    if (!bar) return;
-
-    const nearEnd = index >= urls.length - 2;
-    const nearStart = index <= 1;
-
-    const btn = thumbBtnRefs.current[index];
-    if (btn) btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-
-    if (nearEnd) bar.scrollTo({ left: bar.scrollWidth, behavior: "smooth" });
-    else if (nearStart) bar.scrollTo({ left: 0, behavior: "smooth" });
-  }, [index, urls.length]);
-
-  if (!urls.length) return null;
-  const current = urls[index];
-  const canNav = urls.length > 1;
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 lg:p-12"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        className="fixed z-[9999] rounded-full bg-white/95 p-2 shadow ring-1 ring-black/10 hover:brightness-105"
-        aria-label="Close"
-        style={{
-          right: "max(1rem, env(safe-area-inset-right))",
-          top: "max(1rem, env(safe-area-inset-top))",
-        }}
-      >
-        <XIcon className="h-5 w-5" />
-      </button>
-
-      {canNav && (
-        <>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPrev();
-            }}
-            className="hidden sm:inline-flex fixed left-5 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-            className="hidden sm:inline-flex fixed right-5 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
-            aria-label="Next image"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-        </>
-      )}
-
-      <motion.div
-        initial={{ scale: 0.985, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.985, opacity: 0, y: 10 }}
-        transition={{ duration: 0.18 }}
-        className="w-full max-w-[1040px] max-h-[calc(100vh-6rem)] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-3 sm:px-4 py-3 border-b flex items-center gap-3">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{title}</div>
-            <div className="text-[11px] text-gray-500">
-              {index + 1} / {urls.length} • {prefersReduced ? "Click thumbnails to switch" : "Hover or click to zoom"}
-            </div>
-          </div>
-
-          {!prefersReduced && (
-            <button
-              type="button"
-              onClick={() => setClickedZoom((z) => !z)}
-              className={cx(
-                "ml-auto rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
-                clickedZoom ? "bg-gray-900 text-white border-gray-900" : "bg-white hover:bg-gray-50"
-              )}
-              aria-pressed={clickedZoom}
-            >
-              {clickedZoom ? "Zoom ON" : "Zoom"}
-            </button>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-auto">
-          <div className="relative bg-gradient-to-b from-gray-50 to-white">
-            {canNav && (
-              <>
-                <button
-                  onClick={onPrev}
-                  className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={onNext}
-                  className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-              </>
-            )}
-
-            <div className="px-4 sm:px-8 py-5 sm:py-7">
-              <div
-                ref={stageRef}
-                onPointerMove={onPointerMove}
-                onPointerEnter={onPointerEnter}
-                onPointerLeave={onPointerLeave}
-                onClick={() => {
-                  if (prefersReduced) return;
-                  setClickedZoom((z) => !z);
-                }}
-                className="mx-auto rounded-xl bg-white ring-1 ring-black/5 overflow-hidden relative"
-                style={{
-                  cursor: prefersReduced ? "default" : zoomOn ? "zoom-out" : "zoom-in",
-                  userSelect: "none",
-                  width: "min(920px, 96vw)",
-                  height: "min(68vh, 640px)",
-                }}
-                aria-label="Zoomable product image"
-              >
-                <img
-                  src={current}
-                  alt={title}
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-contain"
-                  style={{
-                    transformOrigin: `${pan.x}% ${pan.y}%`,
-                    transform: zoomOn ? `scale(${zoomScale})` : "scale(1)",
-                    transition: prefersReduced ? undefined : "transform 120ms ease-out",
-                    willChange: "transform",
-                  }}
-                />
-              </div>
-
-              {!prefersReduced && (
-                <div className="mt-2 text-center text-[11px] text-gray-500">Tip: hover/move to pan • click toggles zoom</div>
-              )}
-            </div>
-          </div>
-
-          {canNav && (
-            <div className="px-3 sm:px-4 py-3 border-t bg-white">
-              <div
-                ref={thumbsBarRef}
-                className="flex gap-2 overflow-x-auto overflow-y-hidden px-2 pr-6 py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
-              >
-                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-
-                {urls.map((u, i) => {
-                  const active = i === index;
-                  return (
-                    <button
-                      key={u + i}
-                      ref={(el) => {
-                        thumbBtnRefs.current[i] = el;
-                      }}
-                      onClick={() => {
-                        setClickedZoom(false);
-                        setIndex(i);
-                      }}
-                      className={cx(
-                        "p-1 rounded-2xl flex-none transition outline-none",
-                        active
-                          ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
-                          : "hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white"
-                      )}
-                      aria-label={`Go to image ${i + 1}`}
-                    >
-                      <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
-                        <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
   );
 }
 
@@ -2053,13 +1721,6 @@ function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function XIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
     </svg>
   );
 }
