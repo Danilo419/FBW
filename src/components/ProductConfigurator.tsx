@@ -348,8 +348,7 @@ export default function ProductConfigurator({ product }: Props) {
     }));
   }, [product.sizes, kid]);
 
-  const isUnavailable = (s: SizeUI) =>
-    s.available === false || (typeof s.stock === "number" && s.stock <= 0);
+  const isUnavailable = (s: SizeUI) => s.available === false || (typeof s.stock === "number" && s.stock <= 0);
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
@@ -418,9 +417,7 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
-  const otherGroups = product.optionGroups.filter(
-    (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
-  );
+  const otherGroups = product.optionGroups.filter((g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key));
 
   const customization = selected["customization"] ?? "";
 
@@ -437,14 +434,9 @@ export default function ProductConfigurator({ product }: Props) {
   }, [badgesGroup, customization]);
 
   const showNameNumber =
-    !!effectiveCustomizationGroup &&
-    typeof customization === "string" &&
-    customization.toLowerCase().includes("name-number");
+    !!effectiveCustomizationGroup && typeof customization === "string" && customization.toLowerCase().includes("name-number");
 
-  const showBadgePicker =
-    typeof customization === "string" &&
-    customization.toLowerCase().includes("badge") &&
-    !!badgesGroup;
+  const showBadgePicker = typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
 
   const setRadio = (key: string, value: string) => {
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -454,11 +446,7 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
-      let arr: string[] = Array.isArray(current)
-        ? [...current]
-        : typeof current === "string" && current
-        ? [current]
-        : [];
+      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
       } else {
@@ -472,11 +460,7 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[group.key];
-      let arr: string[] = Array.isArray(current)
-        ? [...current]
-        : typeof current === "string" && current
-        ? [current]
-        : [];
+      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
 
       const mapByValue = new Map(group.values.map((v) => [v.value, v]));
       const newV = mapByValue.get(value);
@@ -724,8 +708,25 @@ export default function ProductConfigurator({ product }: Props) {
                   key={`fly-${fly.key}`}
                   src={fly.src}
                   alt=""
-                  initial={{ left: fly.from.left, top: fly.from.top, width: fly.from.width, height: fly.from.height, opacity: 0.95, rotate: 0, scale: 1 }}
-                  animate={{ left: fly.to.left, top: fly.to.top, width: fly.to.width, height: fly.to.height, opacity: 0, rotate: 8, scale: 0.2, filter: "blur(1px)" }}
+                  initial={{
+                    left: fly.from.left,
+                    top: fly.from.top,
+                    width: fly.from.width,
+                    height: fly.from.height,
+                    opacity: 0.95,
+                    rotate: 0,
+                    scale: 1,
+                  }}
+                  animate={{
+                    left: fly.to.left,
+                    top: fly.to.top,
+                    width: fly.to.width,
+                    height: fly.to.height,
+                    opacity: 0,
+                    rotate: 8,
+                    scale: 0.2,
+                    filter: "blur(1px)",
+                  }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
                   onAnimationComplete={() => {
@@ -762,7 +763,10 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="h-10 w-10 shrink-0 hidden lg:block" />
             )}
 
-            <div ref={imgWrapRef} className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white">
+            <div
+              ref={imgWrapRef}
+              className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
+            >
               <button
                 type="button"
                 onClick={() => openImgLightbox(activeIndex)}
@@ -827,7 +831,10 @@ export default function ProductConfigurator({ product }: Props) {
 
           {images.length > 1 && (
             <div className="mt-3">
-              <div ref={thumbsRef} className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
+              <div
+                ref={thumbsRef}
+                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+              >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
                 <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
                   {images.map((src, i) => {
@@ -871,7 +878,9 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">{product.name}</h1>
+                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">
+                  {product.name}
+                </h1>
 
                 <div className="mt-1 flex items-baseline gap-2">
                   {hasDiscount && originalUnitPriceForMoney && (
@@ -915,9 +924,7 @@ export default function ProductConfigurator({ product }: Props) {
               {/* ✅ REMOVIDO: selo "Bestseller" */}
             </div>
 
-            {product.description && (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
-            )}
+            {product.description && <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>}
 
             <AnimatePresence>
               {error && (
@@ -995,9 +1002,7 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
-                Ages are approximate. If in between, we recommend sizing up.
-              </p>
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
             )}
           </div>
 
@@ -1060,7 +1065,14 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Badges */}
           {showBadgePicker && badgesGroup && (
-            <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} onToggleBadge={toggleBadge} forceFree />
+            <GroupBlock
+              group={badgesGroup}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              onToggleBadge={toggleBadge}
+              forceFree
+            />
           )}
 
           {/* Other groups */}
@@ -1071,11 +1083,21 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Qty + Total */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={pending}>
+              <button
+                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                aria-label="Decrease quantity"
+                disabled={pending}
+              >
                 −
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
-              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={pending}>
+              <button
+                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => setQty((q) => q + 1)}
+                aria-label="Increase quantity"
+                disabled={pending}
+              >
                 +
               </button>
             </div>
@@ -1091,7 +1113,10 @@ export default function ProductConfigurator({ product }: Props) {
             <motion.button
               ref={addBtnRef}
               onClick={addToCart}
-              className={cx("btn-primary w-full disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base", justAdded && "bg-green-600 hover:bg-green-600")}
+              className={cx(
+                "btn-primary w-full disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
+                justAdded && "bg-green-600 hover:bg-green-600"
+              )}
               disabled={pending || !canAddToCart}
               animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
               transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
@@ -1230,7 +1255,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ✅ Product Images Lightbox (sem "Prev/Next", muito melhor) */}
+        {/* ✅ Product Images Lightbox (SEM setas no topo direito + thumbs sem “cortar” o azul + PAN+ZOOM hover só aqui) */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -1268,11 +1293,7 @@ export default function ProductConfigurator({ product }: Props) {
 function InfoAccordions() {
   return (
     <div className="rounded-2xl border bg-white/70 overflow-hidden">
-      <AccordionRow
-        icon={<TruckIcon className="h-4 w-4" />}
-        title="Shipping & delivery"
-        defaultOpen
-      >
+      <AccordionRow icon={<TruckIcon className="h-4 w-4" />} title="Shipping & delivery" defaultOpen>
         <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
@@ -1288,9 +1309,7 @@ function InfoAccordions() {
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>
-              If you need help with your order, our support replies fast.
-            </span>
+            <span>If you need help with your order, our support replies fast.</span>
           </li>
         </ul>
       </AccordionRow>
@@ -1301,9 +1320,7 @@ function InfoAccordions() {
         <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>
-              Got a problem? Contact us and we’ll make it right (support & guidance).
-            </span>
+            <span>Got a problem? Contact us and we’ll make it right (support & guidance).</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
@@ -1313,9 +1330,7 @@ function InfoAccordions() {
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>
-              Personalized items may have different return rules (name/number printing).
-            </span>
+            <span>Personalized items may have different return rules (name/number printing).</span>
           </li>
         </ul>
       </AccordionRow>
@@ -1326,15 +1341,11 @@ function InfoAccordions() {
         <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>
-              High-quality stitching & print finish.
-            </span>
+            <span>High-quality stitching & print finish.</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>
-              Comfortable fabric for daily wear.
-            </span>
+            <span>Comfortable fabric for daily wear.</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
@@ -1476,7 +1487,11 @@ function GroupBlock({
   );
 }
 
-/* ====================== Product Lightbox (AINDA MELHOR) ====================== */
+/* ====================== Product Lightbox (PAN + ZOOM) ======================
+   ✅ remove setas no topo direito
+   ✅ thumbs com ring que NÃO corta
+   ✅ zoom + pan (mouse move) APENAS aqui
+*/
 function ProductLightbox({
   urls,
   index,
@@ -1505,9 +1520,28 @@ function ProductLightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, onPrev, onNext]);
 
+  const prefersReduced = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [pan, setPan] = useState({ x: 50, y: 50 });
+
+  const onMove = (e: React.MouseEvent) => {
+    if (prefersReduced) return;
+    const el = stageRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = clamp(((e.clientX - r.left) / r.width) * 100, 0, 100);
+    const y = clamp(((e.clientY - r.top) / r.height) * 100, 0, 100);
+    setPan({ x, y });
+  };
+
+  const onLeave = () => setPan({ x: 50, y: 50 });
+
   if (!urls.length) return null;
   const current = urls[index];
-
   const canNav = urls.length > 1;
 
   return (
@@ -1536,7 +1570,7 @@ function ProductLightbox({
         <XIcon className="h-5 w-5" />
       </button>
 
-      {/* side arrows (NO TEXT Prev/Next) */}
+      {/* side arrows (NO topo direito) */}
       {canNav && (
         <>
           <button
@@ -1570,7 +1604,7 @@ function ProductLightbox({
         className="w-full max-w-[1160px] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* top bar (clean) */}
+        {/* top bar (clean, sem botões de setas) */}
         <div className="px-3 sm:px-4 py-3 border-b flex items-center gap-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{title}</div>
@@ -1578,28 +1612,6 @@ function ProductLightbox({
               {index + 1} / {urls.length} • Click background to close
             </div>
           </div>
-
-          {/* tiny icon controls on the right (no Prev/Next text) */}
-          {canNav && (
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onPrev}
-                className="rounded-full border bg-white px-2.5 py-2 hover:bg-gray-50"
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={onNext}
-                className="rounded-full border bg-white px-2.5 py-2 hover:bg-gray-50"
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          )}
         </div>
 
         {/* image stage */}
@@ -1624,34 +1636,59 @@ function ProductLightbox({
             </>
           )}
 
+          {/* ✅ hover zoom + pan (mouse move) apenas aqui */}
           <div className="px-3 sm:px-6 py-4 sm:py-6">
-            <img
-              src={current}
-              alt={title}
-              className="block mx-auto max-w-[96vw] max-h-[72vh] sm:max-h-[74vh] object-contain select-none"
-              draggable={false}
-            />
+            <div
+              ref={stageRef}
+              onMouseMove={onMove}
+              onMouseLeave={onLeave}
+              className="mx-auto max-w-[96vw] max-h-[72vh] sm:max-h-[74vh] rounded-xl bg-white ring-1 ring-black/5 overflow-hidden"
+              style={{ cursor: prefersReduced ? "default" : "zoom-in", userSelect: "none" }}
+            >
+              <motion.img
+                src={current}
+                alt={title}
+                draggable={false}
+                className="block w-full h-full max-w-[96vw] max-h-[72vh] sm:max-h-[74vh] object-contain select-none"
+                style={{
+                  transformOrigin: `${pan.x}% ${pan.y}%`,
+                  willChange: "transform",
+                }}
+                initial={{ opacity: 0.9, scale: 0.995 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.16 }}
+                whileHover={prefersReduced ? {} : { scale: 1.6 }}
+                whileTap={prefersReduced ? {} : { scale: 1.2 }}
+              />
+            </div>
+
+            {!prefersReduced && (
+              <div className="mt-2 text-center text-[11px] text-gray-500">Tip: hover and move your mouse to pan</div>
+            )}
           </div>
         </div>
 
-        {/* thumbs */}
+        {/* thumbs (ring não corta) */}
         {canNav && (
           <div className="px-3 sm:px-4 py-3 border-t bg-white">
-            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none]">
+            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-              {urls.map((u, i) => (
-                <button
-                  key={u + i}
-                  onClick={() => setIndex(i)}
-                  className={cx(
-                    "relative rounded-lg overflow-hidden ring-2 flex-none h-14 w-20 sm:h-16 sm:w-24 bg-white",
-                    i === index ? "ring-blue-500" : "ring-transparent hover:ring-black/10"
-                  )}
-                  aria-label={`Go to image ${i + 1}`}
-                >
-                  <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
-                </button>
-              ))}
+
+              {urls.map((u, i) => {
+                const active = i === index;
+                return (
+                  <button
+                    key={u + i}
+                    onClick={() => setIndex(i)}
+                    className={cx("p-1 rounded-2xl flex-none transition", active ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white" : "hover:bg-gray-50")}
+                    aria-label={`Go to image ${i + 1}`}
+                  >
+                    <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
+                      <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1772,7 +1809,10 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                           Measurement
                         </th>
                         {ADULT.sizes.map((s) => (
-                          <th key={s} className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50">
+                          <th
+                            key={s}
+                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                          >
                             {s}
                           </th>
                         ))}
@@ -1781,11 +1821,12 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <tbody>
                       {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
                         <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
-                            {key}
-                          </td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">{key}</td>
                           {ADULT.sizes.map((s) => (
-                            <td key={s} className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center">
+                            <td
+                              key={s}
+                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                            >
                               {renderRange(ADULT.rows[key][s], unit)}
                             </td>
                           ))}
@@ -1807,7 +1848,10 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                           Measurement
                         </th>
                         {kids.sizes.map((s) => (
-                          <th key={s} className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50">
+                          <th
+                            key={s}
+                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                          >
                             {s}
                           </th>
                         ))}
@@ -1820,7 +1864,10 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                             {rowKey}
                           </td>
                           {kids.sizes.map((s) => (
-                            <td key={s} className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center">
+                            <td
+                              key={s}
+                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                            >
                               {renderRange(kids.rows[rowKey][s], unit)}
                             </td>
                           ))}
@@ -1893,14 +1940,26 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -1994,7 +2053,12 @@ function RotateIcon(props: React.SVGProps<SVGSVGElement>) {
 function StarBadgeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path d="M12 2l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.9 7.4 16.4l.9-5.2-3.8-3.7 5.2-.8L12 2z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
+      <path
+        d="M12 2l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.9 7.4 16.4l.9-5.2-3.8-3.7 5.2-.8L12 2z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
       <path d="M7 21l5-2 5 2" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
     </svg>
   );
