@@ -5,9 +5,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  // pooled (pgBouncer) — corresponde ao Vercel
   url       = env("POSTGRES_POSTGRES_PRISMA_URL")
-  // ligação direta — corresponde ao Vercel (migracoes/Studio)
   directUrl = env("POSTGRES_POSTGRES_URL_NON_POOLING")
 }
 
@@ -30,7 +28,6 @@ model User {
   sessions Session[]
   Cart     Cart[]
 
-  // Back-relations
   orders  Order[]
   reviews Review[]
 }
@@ -80,7 +77,6 @@ model VerificationToken {
  * =========================================================
  * =============== Password Reset ===========================
  * =========================================================
- * Used by "Forgot your password?" flow.
  */
 model PasswordResetToken {
   id        String   @id @default(cuid())
@@ -98,9 +94,20 @@ model PasswordResetToken {
  * =============== Store / Products ========================
  * =========================================================
  */
+
 enum TeamType {
   CLUB
   NATION
+}
+
+/**
+ * 🔹 canal do produto / order
+ * GLOBAL = envio normal
+ * PT_STOCK_CTT = stock em Portugal enviado pelos CTT
+ */
+enum ProductChannel {
+  GLOBAL
+  PT_STOCK_CTT
 }
 
 model Product {
@@ -108,44 +115,50 @@ model Product {
   slug        String   @unique
   name        String
   team        String
-  teamType    TeamType @default(CLUB) // ✅ ADDED: distingue Clube vs Seleção
-  season      String?  // e.g. "25/26"
-  basePrice   Int      // cents
-  description String?  // texto livre por produto
+  teamType    TeamType @default(CLUB)
+  season      String?
+  basePrice   Int
+  description String?
 
-  // Imagens hospedadas (ex.: Vercel Blob/Cloud)
+  /**
+   * 🔹 canal de venda
+   */
+  channel ProductChannel @default(GLOBAL)
+
+  /**
+   * 🔹 stock local em Portugal (opcional)
+   */
+  ptStockQty Int?
+
   imageUrls String[] @default([])
+  badges    String[] @default([])
 
-  // Badges selecionados (ex.: "ucl-winners", "premier-league-champions", etc.)
-  badges String[] @default([])
-
-  // Flag para controlar a secção "Name & Number"
   allowNameNumber Boolean @default(true)
 
-  // ✅ NEW: Visibilidade do produto na loja (visível/invisível)
   isVisible Boolean @default(true)
 
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
   cartItems  CartItem[]
   orderItems OrderItem[]
-  reviews    Review[] // back-relation
+  reviews    Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([team])
-  @@index([teamType])       // ✅ ADDED
+  @@index([teamType])
   @@index([season])
-  @@index([teamType, team]) // ✅ ADDED (útil p/ lists por clubs/nations)
-  @@index([isVisible])      // ✅ NEW
+  @@index([teamType, team])
+  @@index([isVisible])
+  @@index([channel])
 }
 
 model SizeStock {
   id        String  @id @default(cuid())
   productId String
   size      String
-  available Boolean @default(true) // sem número de stock; apenas disponibilidade on/off
+  available Boolean @default(true)
 
   product Product @relation(fields: [productId], references: [id])
 
@@ -156,7 +169,7 @@ model SizeStock {
 model OptionGroup {
   id        String     @id @default(cuid())
   productId String
-  key       String     // "size", "customization", "shorts", "socks", "badges", ...
+  key       String
   label     String
   type      OptionType
   required  Boolean @default(false)
@@ -172,9 +185,8 @@ model OptionValue {
   groupId    String
   value      String
   label      String
-  priceDelta Int    @default(0) // cents
+  priceDelta Int    @default(0)
 
-  // Optional link to an official player (for team/player personalization)
   playerId     String?
   playerName   String?
   playerNumber Int?
@@ -194,12 +206,13 @@ enum OptionType {
 
 /**
  * =========================================================
- * =============== Players (official squad) =================
+ * =============== Players ================================
  * =========================================================
  */
+
 model Player {
   id        String   @id @default(cuid())
-  team      String   // e.g., "Real Madrid"
+  team      String
   name      String
   number    Int
   position  String?
@@ -217,11 +230,12 @@ model Player {
  * =============== Cart ====================================
  * =========================================================
  */
+
 model Cart {
   id        String  @id @default(cuid())
   userId    String?
   user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  sessionId String? @unique // one cookie = one cart
+  sessionId String? @unique
 
   items CartItem[]
 
@@ -237,10 +251,9 @@ model CartItem {
   productId String
 
   qty        Int @default(1)
-  unitPrice  Int // cents
+  unitPrice  Int
   totalPrice Int @default(0)
 
-  // snapshot of selected options
   optionsJson     Json?
   personalization Json?
 
@@ -256,9 +269,10 @@ model CartItem {
 
 /**
  * =========================================================
- * =============== Orders / Fulfillment =====================
+ * =============== Orders ==================================
  * =========================================================
  */
+
 enum OrderStatus {
   pending
   paid
@@ -269,10 +283,6 @@ enum OrderStatus {
   delivered
 }
 
-/**
- * Optional but recommended, to separate shipping workflow from payment status.
- * You can keep using Order.status only, but this helps for admin & tracking.
- */
 enum ShippingStatus {
   PENDING
   PROCESSING
@@ -286,33 +296,38 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   sessionId String?
-  status    String @default("pending") // mantido como String para compatibilidade
-  currency  String @default("eur")
 
-  // Totais
+  status   String @default("pending")
+  currency String @default("eur")
+
+  /**
+   * 🔹 canal da order (mesmo enum do Product)
+   */
+  channel ProductChannel @default(GLOBAL)
+
   subtotal Int @default(0)
-  shipping Int @default(0)
-  tax      Int @default(0)
 
-  // Alternativas (se usadas na app)
+  /**
+   * 🔹 shipping (em cents) — SINGLE SOURCE OF TRUTH
+   */
+  shipping Int @default(0)
+
+  tax Int @default(0)
+
   total      Float?
   totalCents Int?
 
-  // Stripe / PayPal
   stripeSessionId       String?
   stripePaymentIntentId String?
   paypalOrderId         String?
   paypalCaptured        Boolean?
   paypalCaptureId       String?
 
-  // Payment bookkeeping
   paymentStatus String?
   paidAt        DateTime?
 
-  // Shipping snapshot (legacy / fallback)
   shippingJson Json?
 
-  // Canonical shipping columns (preferidas)
   shippingFullName   String?
   shippingEmail      String?
   shippingPhone      String?
@@ -323,22 +338,18 @@ model Order {
   shippingPostalCode String?
   shippingCountry    String?
 
-  // ✅ Tracking / fulfillment (ADDED)
   shippingStatus ShippingStatus @default(PENDING)
   trackingCode   String?
   trackingUrl    String?
   shippedAt      DateTime?
   deliveredAt    DateTime?
 
-  // ✅ Email confirmations (idempotency)
   confirmationEmailSentAt     DateTime?
   confirmationEmailProviderId String?
 
-  // Other
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   items OrderItem[]
 
   @@index([status])
@@ -347,14 +358,14 @@ model Order {
   @@index([shippingCountry])
   @@index([paidAt])
 
-  // ✅ Helpful indexes (ADDED)
   @@index([shippingStatus])
   @@index([shippedAt])
   @@index([deliveredAt])
   @@index([trackingCode])
 
-  // ✅ Email indexes (optional but helpful)
   @@index([confirmationEmailSentAt])
+
+  @@index([channel])
 }
 
 model OrderItem {
@@ -364,8 +375,8 @@ model OrderItem {
   name         String
   image        String?
   qty          Int
-  unitPrice    Int // cents
-  totalPrice   Int // cents
+  unitPrice    Int
+  totalPrice   Int
   snapshotJson Json?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -377,23 +388,22 @@ model OrderItem {
 
 /**
  * =========================================================
- * =============== Engagement / Public Stats ================
+ * =============== Reviews / Engagement ====================
  * =========================================================
  */
+
 model Review {
   id String @id @default(cuid())
 
-  // relações obrigatórias
   userId String?
   user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // dados do review
   rating    Int
   comment   String?
-  imageUrls String[] @default([]) // ✅ novo
+  imageUrls String[] @default([])
 
   createdAt DateTime @default(now())
 
@@ -419,7 +429,7 @@ model SocialMetric {
 
 model Visit {
   id        String   @id @default(cuid())
-  visitorId String // anonymous id by cookie
+  visitorId String
   path      String
   referrer  String?
   ua        String?
@@ -440,11 +450,11 @@ model NewsletterSubscriber {
 model NewsletterCampaign {
   id              String   @id @default(cuid())
   subject         String
-  style           String // "simple" | "pretty"
-  contentJson     String // guarda o editor (blocos) em JSON
+  style           String
+  contentJson     String
   html            String
   text            String
-  status          String   @default("DRAFT") // DRAFT | SENDING | SENT | FAILED
+  status          String   @default("DRAFT")
   totalRecipients Int      @default(0)
   sentCount       Int      @default(0)
   failedCount     Int      @default(0)
@@ -458,7 +468,7 @@ model NewsletterSendLog {
   id         String   @id @default(cuid())
   campaignId String
   email      String
-  status     String // SENT | FAILED
+  status     String
   providerId String?
   error      String?
   createdAt  DateTime @default(now())

@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/money";
 import type { Prisma, CartItem } from "@prisma/client";
 import { removeItem } from "./actions";
 import { applyPromotions, MAX_FREE_ITEMS_PER_ORDER } from "@/lib/cartPromotions";
+import { getShippingForCart } from "@/lib/shipping";
 
 export const dynamic = "force-dynamic";
 
@@ -338,6 +339,7 @@ type CartWithItems = Prisma.CartGetPayload<{
             imageUrls: true;
             slug: true;
             basePrice: true;
+            channel: true;
           };
         };
       };
@@ -361,7 +363,15 @@ export default async function CartPage() {
       items: {
         include: {
           product: {
-            select: { id: true, name: true, team: true, imageUrls: true, slug: true, basePrice: true },
+            select: {
+              id: true,
+              name: true,
+              team: true,
+              imageUrls: true,
+              slug: true,
+              basePrice: true,
+              channel: true,
+            },
           },
         },
         orderBy: { createdAt: "asc" },
@@ -406,7 +416,19 @@ export default async function CartPage() {
   const subtotalCents: number = displayItems.reduce((acc: number, it: any) => acc + it.displayTotal, 0);
   const totalQty = displayItems.reduce((acc: number, it: any) => acc + (it.qty ?? 0), 0);
 
+  // ✅ PT Stock / CTT shipping rules (and mixed-cart block)
+  const shippingInfo = getShippingForCart(
+    displayItems.map((it: any) => ({
+      quantity: Math.max(0, Number(it.qty ?? 0)),
+      channel: (it.product?.channel ?? "GLOBAL") as any,
+    }))
+  );
+
+  const isMixedCart = shippingInfo?.cartChannel === "MIXED";
+  const isPtStockCart = shippingInfo?.cartChannel === "PT_STOCK_CTT";
+
   // ✅ SINGLE SOURCE OF TRUTH: same logic as Stripe (server)
+  // NOTE: for PT Stock cart we keep existing promo logic intact, but we do NOT apply promotions.
   const promo = applyPromotions(
     displayItems.map((it: any) => ({
       id: String(it.id),
@@ -422,31 +444,99 @@ export default async function CartPage() {
     if (l.freeQty > 0) freeQtyByItemId.set(String(l.id), l.freeQty);
   }
 
-  const payableSubtotalCents = promo.lines.reduce((acc, l) => acc + l.payQty * l.unitAmountCents, 0);
+  const payableSubtotalCents_GLOBAL = promo.lines.reduce((acc, l) => acc + l.payQty * l.unitAmountCents, 0);
+  const discountCents_GLOBAL = Math.max(0, subtotalCents - payableSubtotalCents_GLOBAL);
+  const shippingCents_GLOBAL = promo.shippingCents;
+  const totalPayableCents_GLOBAL = payableSubtotalCents_GLOBAL + shippingCents_GLOBAL;
 
-  const discountCents = Math.max(0, subtotalCents - payableSubtotalCents);
-  const shippingCents = promo.shippingCents;
-  const totalPayableCents = payableSubtotalCents + shippingCents;
+  // ✅ PT Stock cart totals (no Buy X Get Y promotions; CTT shipping rules)
+  const payableSubtotalCents_PT = subtotalCents;
+  const discountCents_PT = 0;
+  const shippingCents_PT = typeof shippingInfo?.shippingCents === "number" ? shippingInfo.shippingCents : 0;
+  const totalPayableCents_PT = payableSubtotalCents_PT + shippingCents_PT;
+
+  // ✅ choose what to display
+  const payableSubtotalCents = isPtStockCart ? payableSubtotalCents_PT : payableSubtotalCents_GLOBAL;
+  const discountCents = isPtStockCart ? discountCents_PT : discountCents_GLOBAL;
+  const shippingCents = isPtStockCart ? shippingCents_PT : shippingCents_GLOBAL;
+  const totalPayableCents = isPtStockCart ? totalPayableCents_PT : totalPayableCents_GLOBAL;
 
   const promoTitle = promoTitleFromName(promo.promoName);
   const banner = promoBannerMessage(totalQty);
+
+  // ✅ for PT Stock cart, do not show free items
+  const ptStockFreeApplied = 0;
 
   return (
     <div className="container-fw py-12">
       <h1 className="text-3xl font-extrabold mb-8">Your Cart</h1>
 
+      {/* ✅ Mixed cart warning (CTT + normal products) */}
+      {isMixedCart && (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+          <div className="text-sm font-semibold text-red-900">Cart issue</div>
+          <div className="mt-1 text-sm text-red-800">
+            Your cart has <b>Portugal Delivery (CTT Stock PT)</b> items and <b>normal</b> items. Checkout must be done
+            separately to keep shipping correct.
+          </div>
+          <div className="mt-3 text-sm">
+            <Link href="/pt-stock" className="font-semibold text-red-900 underline">
+              Go to Portugal Delivery (CTT)
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Promo summary */}
       <div className="mb-6 rounded-2xl border bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-semibold text-gray-900">{banner.title}</div>
-            <div className="text-sm text-gray-600">
-              The free items are always the cheapest ones. Max{" "}
-              <span className="font-semibold text-gray-900">{MAX_FREE_ITEMS_PER_ORDER}</span> free items per order.
+            <div className="text-sm font-semibold text-gray-900">
+              {isPtStockCart ? "Portugal Delivery (CTT Stock PT)" : banner.title}
             </div>
+
+            {!isPtStockCart ? (
+              <div className="text-sm text-gray-600">
+                The free items are always the cheapest ones. Max{" "}
+                <span className="font-semibold text-gray-900">{MAX_FREE_ITEMS_PER_ORDER}</span> free items per order.
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600">
+                CTT rules: <span className="font-semibold text-gray-900">1 item = 6€</span>,{" "}
+                <span className="font-semibold text-gray-900">2 items = 3€</span>,{" "}
+                <span className="font-semibold text-gray-900">3+ = FREE</span>. Delivery:{" "}
+                <span className="font-semibold text-gray-900">2–3 business days</span>.
+              </div>
+            )}
           </div>
 
-          {banner.showPill ? (
+          {isPtStockCart ? (
+            <div className="w-full sm:w-auto">
+              <div className="rounded-2xl sm:rounded-full border bg-gray-50 px-4 py-3 sm:py-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="font-semibold text-gray-900 text-sm sm:text-sm leading-tight">CTT Shipping</span>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 text-sm">
+                    <div className="inline-flex items-center justify-between gap-2">
+                      <span className="text-gray-500">Items</span>
+                      <span className="font-semibold text-gray-900 tabular-nums">{totalQty}</span>
+                    </div>
+
+                    <div className="hidden sm:block text-gray-300">•</div>
+
+                    <div className="inline-flex items-center justify-between gap-2">
+                      <span className="text-gray-500">Shipping</span>
+                      {shippingCents === 0 ? (
+                        <span className="font-semibold text-gray-900">FREE</span>
+                      ) : (
+                        <span className="font-semibold text-gray-900">{formatMoneyRight(shippingCents)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : banner.showPill ? (
             // ✅ FIX MOBILE: make it clear + avoid weird line breaks
             <div className="w-full sm:w-auto">
               <div className="rounded-2xl sm:rounded-full border bg-gray-50 px-4 py-3 sm:py-2">
@@ -507,7 +597,8 @@ export default async function CartPage() {
           const nameRaw = it.product.name ? String(it.product.name) : "";
           const showTeam = !!teamRaw.trim() && teamRaw.trim().toLowerCase() !== nameRaw.trim().toLowerCase();
 
-          const freeQty = freeQtyByItemId.get(String(it.id)) ?? 0;
+          // ✅ free items only apply on GLOBAL cart
+          const freeQty = isPtStockCart ? 0 : freeQtyByItemId.get(String(it.id)) ?? 0;
           const payableQty = Math.max(0, (it.qty ?? 0) - freeQty);
 
           const lineBefore = it.displayTotal;
@@ -538,6 +629,13 @@ export default async function CartPage() {
                       <h3 className="font-semibold leading-snug break-words">{it.product.name}</h3>
 
                       {showTeam && <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>}
+
+                      {/* ✅ PT Stock label per item (optional, doesn't remove existing UI) */}
+                      {String(it.product?.channel ?? "GLOBAL") === "PT_STOCK_CTT" && (
+                        <div className="mt-1 inline-flex items-center rounded-full border bg-emerald-50 px-3 py-1 text-[11px] text-emerald-800">
+                          CTT • 2–3 business days (Stock PT)
+                        </div>
+                      )}
 
                       {/* ✅ ORDER: Name, Number, Size, (Badges) */}
                       {hasMetaBlock && (
@@ -675,7 +773,7 @@ export default async function CartPage() {
 
             <div className="flex items-center justify-between">
               <span className="text-gray-600">
-                Discount {promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
+                Discount {!isPtStockCart && promoTitle ? <span className="text-gray-500">({promoTitle})</span> : null}
               </span>
               <span className={`font-semibold ${discountCents > 0 ? "text-green-700" : ""}`}>
                 -{formatMoneyRight(discountCents)}
@@ -696,13 +794,19 @@ export default async function CartPage() {
               <span className="text-base font-extrabold">{formatMoneyRight(totalPayableCents)}</span>
             </div>
 
-            {promoTitle ? (
+            {!isPtStockCart && promoTitle ? (
               <div className="pt-3 text-xs text-gray-500">
                 Free items applied:{" "}
                 <span className="font-semibold text-gray-800">
                   {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
                 </span>{" "}
                 (always the cheapest ones).
+              </div>
+            ) : isPtStockCart ? (
+              <div className="pt-3 text-xs text-gray-500">
+                CTT shipping rules: <span className="font-semibold text-gray-800">1 item = 6€</span>,{" "}
+                <span className="font-semibold text-gray-800">2 items = 3€</span>,{" "}
+                <span className="font-semibold text-gray-800">3+ = FREE</span>.
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
@@ -716,8 +820,11 @@ export default async function CartPage() {
         <div className="flex sm:justify-end">
           <Link
             href="/checkout/address"
-            className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-black px-6 py-3 text-white font-semibold hover:bg-gray-900"
+            className={`w-full sm:w-auto inline-flex items-center justify-center rounded-xl px-6 py-3 text-white font-semibold ${
+              isMixedCart ? "bg-gray-400 cursor-not-allowed pointer-events-none" : "bg-black hover:bg-gray-900"
+            }`}
             aria-label="Proceed to address step"
+            aria-disabled={isMixedCart}
           >
             Go to Checkout
           </Link>

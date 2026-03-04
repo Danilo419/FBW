@@ -1,3 +1,4 @@
+// src/app/(store)/checkout/actions.ts
 "use server";
 
 import Stripe from "stripe";
@@ -6,6 +7,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { applyPromotions, type CartLine } from "@/lib/cartPromotions";
+import { getShippingForCart } from "@/lib/shipping";
 
 /**
  * ✅ Fix TS error:
@@ -35,7 +37,7 @@ export async function createCheckoutSession() {
       items: {
         include: {
           product: {
-            select: { name: true, imageUrls: true },
+            select: { name: true, imageUrls: true, channel: true },
           },
         },
       },
@@ -43,6 +45,15 @@ export async function createCheckoutSession() {
   });
 
   if (!cart || cart.items.length === 0) throw new Error("Cart is empty.");
+
+  // ✅ Detect cart channel (GLOBAL / PT_STOCK_CTT / MIXED)
+  const channels = new Set<string>(cart.items.map((it: any) => String(it.product?.channel ?? "GLOBAL")));
+  const cartChannel: "GLOBAL" | "PT_STOCK_CTT" | "MIXED" =
+    channels.size <= 1 ? ((Array.from(channels)[0] ?? "GLOBAL") as any) : "MIXED";
+
+  if (cartChannel === "MIXED") {
+    throw new Error("Mixed cart is not allowed. Please checkout PT Stock and normal items separately.");
+  }
 
   // ✅ Build lines using YOUR actual fields:
   // - name: it.product.name
@@ -57,47 +68,94 @@ export async function createCheckoutSession() {
   }));
 
   // ✅ Apply promotions on server (same logic as cart UI + checkout route)
-  const promo = applyPromotions(lines);
+  // ✅ BUT: PT_STOCK_CTT does NOT use Buy X Get Y promotions
+  const promo = cartChannel === "PT_STOCK_CTT" ? null : applyPromotions(lines);
 
   // ✅ Build Stripe line items (paid + free items at 0€)
   const stripeLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
-  for (const l of promo.lines) {
-    if (l.payQty > 0) {
-      stripeLineItems.push({
-        quantity: l.payQty,
-        price_data: {
-          currency: "eur",
-          unit_amount: l.unitAmountCents,
-          product_data: {
-            name: l.name,
-            images: l.image ? [l.image] : undefined,
+  if (promo) {
+    // GLOBAL flow (existing)
+    for (const l of promo.lines) {
+      if (l.payQty > 0) {
+        stripeLineItems.push({
+          quantity: l.payQty,
+          price_data: {
+            currency: "eur",
+            unit_amount: l.unitAmountCents,
+            product_data: {
+              name: l.name,
+              images: l.image ? [l.image] : undefined,
+            },
           },
-        },
-      });
-    }
+        });
+      }
 
-    if (l.freeQty > 0) {
-      stripeLineItems.push({
-        quantity: l.freeQty,
-        price_data: {
-          currency: "eur",
-          unit_amount: 0,
-          product_data: {
-            name: `${l.name} (FREE)`,
-            images: l.image ? [l.image] : undefined,
+      if (l.freeQty > 0) {
+        stripeLineItems.push({
+          quantity: l.freeQty,
+          price_data: {
+            currency: "eur",
+            unit_amount: 0,
+            product_data: {
+              name: `${l.name} (FREE)`,
+              images: l.image ? [l.image] : undefined,
+            },
           },
-        },
-      });
+        });
+      }
+    }
+  } else {
+    // PT_STOCK_CTT flow (no freebies, only paid items)
+    for (const l of lines) {
+      if (l.qty > 0) {
+        stripeLineItems.push({
+          quantity: l.qty,
+          price_data: {
+            currency: "eur",
+            unit_amount: l.unitAmountCents,
+            product_data: {
+              name: l.name,
+              images: l.image ? [l.image] : undefined,
+            },
+          },
+        });
+      }
     }
   }
 
-  // ✅ Shipping in Stripe (5€ or FREE)
+  // ✅ Shipping in Stripe
+  // - GLOBAL: 5€ or FREE (promo.shippingCents)
+  // - PT_STOCK_CTT: 6€ / 3€ / FREE (shipping.ts)
+  const ptStockShipping =
+    cartChannel === "PT_STOCK_CTT"
+      ? getShippingForCart(
+          cart.items.map((it: any) => ({
+            quantity: Math.max(0, Number(it.qty ?? 0)),
+            channel: "PT_STOCK_CTT" as const,
+          }))
+        )
+      : null;
+
+  const shippingCents =
+    cartChannel === "PT_STOCK_CTT"
+      ? Math.max(0, Number(ptStockShipping?.shippingCents ?? 0))
+      : Math.max(0, Number(promo?.shippingCents ?? 0));
+
+  const shippingDisplayName =
+    cartChannel === "PT_STOCK_CTT"
+      ? shippingCents === 0
+        ? "CTT Free Shipping (Portugal)"
+        : "CTT Shipping (Portugal)"
+      : shippingCents === 0
+      ? "Free Shipping"
+      : "Shipping";
+
   const shippingOption: Stripe.Checkout.SessionCreateParams.ShippingOption = {
     shipping_rate_data: {
       type: "fixed_amount",
-      fixed_amount: { currency: "eur", amount: promo.shippingCents },
-      display_name: promo.shippingCents === 0 ? "Free Shipping" : "Shipping",
+      fixed_amount: { currency: "eur", amount: shippingCents },
+      display_name: shippingDisplayName,
     },
   };
 
@@ -111,7 +169,8 @@ export async function createCheckoutSession() {
     payment_method_types: ["card"],
 
     shipping_address_collection: {
-      allowed_countries: ["PT", "ES", "FR", "DE", "IT", "NL", "BE", "GB", "US", "CA"],
+      // ✅ PT Stock should only ship in Portugal
+      allowed_countries: cartChannel === "PT_STOCK_CTT" ? ["PT"] : ["PT", "ES", "FR", "DE", "IT", "NL", "BE", "GB", "US", "CA"],
     },
     shipping_options: [shippingOption],
 
@@ -122,9 +181,11 @@ export async function createCheckoutSession() {
 
     metadata: {
       cartId: String(cartId),
-      promoName: promo.promoName,
-      freeItemsApplied: String(promo.freeItemsApplied),
-      shippingCents: String(promo.shippingCents),
+      cartChannel: cartChannel,
+      promoName: promo?.promoName ?? "NONE",
+      freeItemsApplied: String(promo?.freeItemsApplied ?? 0),
+      shippingCents: String(shippingCents),
+      shippingMode: cartChannel === "PT_STOCK_CTT" ? "CTT_PT_STOCK" : "GLOBAL_PROMO",
     },
   });
 

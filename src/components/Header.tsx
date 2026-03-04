@@ -16,6 +16,7 @@ import {
   X,
   ShoppingCart,
   Search,
+  Truck,
 } from "lucide-react";
 
 /**
@@ -175,12 +176,23 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <Link href="/leagues" className="hover:text-blue-700">
               Leagues
             </Link>
+
             <Link href="/clubs" className="hover:text-blue-700">
               Clubs
             </Link>
+
+            <Link
+              href="/pt-stock"
+              className="flex items-center gap-1 hover:text-blue-700"
+            >
+              <Truck className="h-4 w-4" />
+              Portugal Delivery
+            </Link>
+
             <Link href="/faq" className="hover:text-blue-700">
               FAQ
             </Link>
+
             {isAdmin && (
               <Link href="/admin" className="hover:text-blue-700">
                 Admin
@@ -476,15 +488,23 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           <MobileLink href="/leagues" onClick={() => setMobileOpen(false)}>
             Leagues
           </MobileLink>
+
           <MobileLink href="/clubs" onClick={() => setMobileOpen(false)}>
             Clubs
           </MobileLink>
+
+          <MobileLink href="/pt-stock" onClick={() => setMobileOpen(false)}>
+            Portugal Delivery
+          </MobileLink>
+
           <MobileLink href="/faq" onClick={() => setMobileOpen(false)}>
             FAQ
           </MobileLink>
+
           <MobileLink href="/cart" onClick={() => setMobileOpen(false)}>
             Cart
           </MobileLink>
+
           {isAdmin && (
             <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>
               Admin
@@ -951,14 +971,18 @@ function MobileDrawer({
     <>
       <div
         className={`fixed inset-0 z-[999] bg-black/30 backdrop-blur-[2px] transition-opacity md:hidden ${
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
         aria-hidden="true"
         onClick={onClose}
       />
       <aside
         className={`fixed inset-y-0 left-0 z-[1000] w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr]
-          transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}
+          transition-transform duration-300 ${
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
         role="dialog"
         aria-modal="true"
       >
