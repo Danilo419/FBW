@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
+import { ProductChannel } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export default async function PtStockPage() {
   const products = await prisma.product.findMany({
     where: {
       isVisible: true,
-      channel: "PT_STOCK_CTT" as any,
+      channel: ProductChannel.PT_STOCK_CTT,
     },
     select: {
       id: true,
@@ -148,10 +149,14 @@ export default async function PtStockPage() {
                   {p.team ? (
                     <div className="mt-0.5 text-xs text-gray-600 break-words">
                       {p.team}
-                      {p.season ? <span className="text-gray-400"> • {p.season}</span> : null}
+                      {p.season ? (
+                        <span className="text-gray-400"> • {p.season}</span>
+                      ) : null}
                     </div>
                   ) : p.season ? (
-                    <div className="mt-0.5 text-xs text-gray-600 break-words">{p.season}</div>
+                    <div className="mt-0.5 text-xs text-gray-600 break-words">
+                      {p.season}
+                    </div>
                   ) : null}
 
                   <div className="mt-2 flex items-center justify-between gap-2">
