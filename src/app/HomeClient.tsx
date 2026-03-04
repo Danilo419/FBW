@@ -1114,7 +1114,6 @@ function ProductCard({ product }: { product: HomeProduct }) {
             -{discountPercent}%
           </div>
         )}
-        {/* ✅ Removed: "Tracked shipping included" overlay text on product images */}
       </div>
 
       <div className="flex flex-1 flex-col px-2 py-2 sm:px-4 sm:py-3">
@@ -1585,27 +1584,9 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO (text ABOVE the banner, not inside) */}
+        {/* PROMO (REMOVED "Promo live now Ends soon • While stock lasts") */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
-            {/* ✅ Promo line ABOVE the banner */}
-            <div className="flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 ring-1 ring-black/5 shadow-sm">
-                <Flame className="h-4 w-4 text-red-600" />
-                <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-900">
-                  Promo live now
-                </span>
-
-                {/* ✅ MOBILE: "Ends soon" em cima, "While stock lasts" em baixo */}
-                {/* ✅ DESKTOP: mantém "Ends soon • While stock lasts" na mesma linha */}
-                <span className="text-[11px] text-slate-600 leading-tight">
-                  <span className="block sm:inline">Ends soon</span>
-                  <span className="hidden sm:inline"> • </span>
-                  <span className="block sm:inline">While stock lasts</span>
-                </span>
-              </div>
-            </div>
-
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
               <picture className="absolute inset-0 h-full w-full">
                 <source
@@ -1786,8 +1767,6 @@ export default function Home() {
             )}
           </div>
         </div>
-
-        {/* Removed duplicated reviews (they are above the products now) */}
       </section>
 
       {/* HOW IT WORKS */}
