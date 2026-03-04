@@ -417,7 +417,9 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
-  const otherGroups = product.optionGroups.filter((g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key));
+  const otherGroups = product.optionGroups.filter(
+    (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
+  );
 
   const customization = selected["customization"] ?? "";
 
@@ -436,7 +438,8 @@ export default function ProductConfigurator({ product }: Props) {
   const showNameNumber =
     !!effectiveCustomizationGroup && typeof customization === "string" && customization.toLowerCase().includes("name-number");
 
-  const showBadgePicker = typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
+  const showBadgePicker =
+    typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
 
   const setRadio = (key: string, value: string) => {
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -446,7 +449,11 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
-      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
+      let arr: string[] = Array.isArray(current)
+        ? [...current]
+        : typeof current === "string" && current
+        ? [current]
+        : [];
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
       } else {
@@ -460,7 +467,11 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[group.key];
-      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
+      let arr: string[] = Array.isArray(current)
+        ? [...current]
+        : typeof current === "string" && current
+        ? [current]
+        : [];
 
       const mapByValue = new Map(group.values.map((v) => [v.value, v]));
       const newV = mapByValue.get(value);
@@ -776,7 +787,15 @@ export default function ProductConfigurator({ product }: Props) {
                 <span className="sr-only">Open image</span>
               </button>
 
-              <Image src={activeSrc} alt={product.name} fill className="object-contain" sizes="(min-width: 1024px) 540px, 100vw" priority unoptimized />
+              <Image
+                src={activeSrc}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(min-width: 1024px) 540px, 100vw"
+                priority
+                unoptimized
+              />
 
               {hasDiscount && (
                 <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
@@ -850,7 +869,9 @@ export default function ProductConfigurator({ product }: Props) {
                           isActive ? "border-transparent" : "hover:opacity-90"
                         )}
                       >
-                        {isActive && <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />}
+                        {isActive && (
+                          <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
+                        )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
                           <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
                         </span>
@@ -884,7 +905,9 @@ export default function ProductConfigurator({ product }: Props) {
 
                 <div className="mt-1 flex items-baseline gap-2">
                   {hasDiscount && originalUnitPriceForMoney && (
-                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
+                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+                      {money(originalUnitPriceForMoney)}
+                    </span>
                   )}
                   <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
                   {hasDiscount && (
@@ -924,7 +947,9 @@ export default function ProductConfigurator({ product }: Props) {
               {/* ✅ REMOVIDO: selo "Bestseller" */}
             </div>
 
-            {product.description && <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>}
+            {product.description && (
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
+            )}
 
             <AnimatePresence>
               {error && (
@@ -1002,13 +1027,21 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                Ages are approximate. If in between, we recommend sizing up.
+              </p>
             )}
           </div>
 
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
+            <GroupBlock
+              group={effectiveCustomizationGroup}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              forceFree
+            />
           )}
 
           {/* Personalization */}
@@ -1255,7 +1288,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ✅ Product Images Lightbox (SEM setas no topo direito + thumbs sem “cortar” o azul + PAN+ZOOM hover só aqui) */}
+        {/* ✅ Product Images Lightbox */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -1275,7 +1308,7 @@ export default function ProductConfigurator({ product }: Props) {
             document.body
           )}
 
-        {/* ✅ Size guide modal com as tabelas reais */}
+        {/* ✅ Size guide modal */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -1487,10 +1520,10 @@ function GroupBlock({
   );
 }
 
-/* ====================== Product Lightbox (PAN + ZOOM) ======================
-   ✅ remove setas no topo direito
-   ✅ thumbs com ring que NÃO corta
-   ✅ zoom + pan (mouse move) APENAS aqui
+/* ====================== Product Lightbox (FIXES)
+   ✅ ring azul NÃO corta (remove overflow-hidden do container e dá espaço)
+   ✅ zoom hover funciona (scale controlado no wrapper, não no <img>)
+   ✅ modal não ocupa a página toda (mais padding + max-h)
 */
 function ProductLightbox({
   urls,
@@ -1527,6 +1560,7 @@ function ProductLightbox({
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [pan, setPan] = useState({ x: 50, y: 50 });
+  const [hovering, setHovering] = useState(false);
 
   const onMove = (e: React.MouseEvent) => {
     if (prefersReduced) return;
@@ -1538,7 +1572,15 @@ function ProductLightbox({
     setPan({ x, y });
   };
 
-  const onLeave = () => setPan({ x: 50, y: 50 });
+  const onEnter = () => {
+    if (prefersReduced) return;
+    setHovering(true);
+  };
+
+  const onLeave = () => {
+    setHovering(false);
+    setPan({ x: 50, y: 50 });
+  };
 
   if (!urls.length) return null;
   const current = urls[index];
@@ -1546,7 +1588,7 @@ function ProductLightbox({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 lg:p-12"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1570,7 +1612,7 @@ function ProductLightbox({
         <XIcon className="h-5 w-5" />
       </button>
 
-      {/* side arrows (NO topo direito) */}
+      {/* side arrows */}
       {canNav && (
         <>
           <button
@@ -1578,7 +1620,7 @@ function ProductLightbox({
               e.stopPropagation();
               onPrev();
             }}
-            className="hidden sm:inline-flex fixed left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            className="hidden sm:inline-flex fixed left-5 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
             aria-label="Previous image"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -1588,7 +1630,7 @@ function ProductLightbox({
               e.stopPropagation();
               onNext();
             }}
-            className="hidden sm:inline-flex fixed right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+            className="hidden sm:inline-flex fixed right-5 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
             aria-label="Next image"
           >
             <ChevronRight className="h-6 w-6" />
@@ -1601,10 +1643,10 @@ function ProductLightbox({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.985, opacity: 0, y: 10 }}
         transition={{ duration: 0.18 }}
-        className="w-full max-w-[1160px] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden"
+        className="w-full max-w-[1040px] max-h-[calc(100vh-6rem)] rounded-2xl bg-white/95 border shadow-2xl overflow-visible flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* top bar (clean, sem botões de setas) */}
+        {/* top bar */}
         <div className="px-3 sm:px-4 py-3 border-b flex items-center gap-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{title}</div>
@@ -1614,84 +1656,105 @@ function ProductLightbox({
           </div>
         </div>
 
-        {/* image stage */}
-        <div className="relative bg-gradient-to-b from-gray-50 to-white">
-          {/* mobile arrows over image */}
-          {canNav && (
-            <>
-              <button
-                onClick={onPrev}
-                className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                onClick={onNext}
-                className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            </>
-          )}
-
-          {/* ✅ hover zoom + pan (mouse move) apenas aqui */}
-          <div className="px-3 sm:px-6 py-4 sm:py-6">
-            <div
-              ref={stageRef}
-              onMouseMove={onMove}
-              onMouseLeave={onLeave}
-              className="mx-auto max-w-[96vw] max-h-[72vh] sm:max-h-[74vh] rounded-xl bg-white ring-1 ring-black/5 overflow-hidden"
-              style={{ cursor: prefersReduced ? "default" : "zoom-in", userSelect: "none" }}
-            >
-              <motion.img
-                src={current}
-                alt={title}
-                draggable={false}
-                className="block w-full h-full max-w-[96vw] max-h-[72vh] sm:max-h-[74vh] object-contain select-none"
-                style={{
-                  transformOrigin: `${pan.x}% ${pan.y}%`,
-                  willChange: "transform",
-                }}
-                initial={{ opacity: 0.9, scale: 0.995 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.16 }}
-                whileHover={prefersReduced ? {} : { scale: 1.6 }}
-                whileTap={prefersReduced ? {} : { scale: 1.2 }}
-              />
-            </div>
-
-            {!prefersReduced && (
-              <div className="mt-2 text-center text-[11px] text-gray-500">Tip: hover and move your mouse to pan</div>
+        {/* body (scroll se necessário, sem colar nas bordas) */}
+        <div className="flex-1 overflow-auto">
+          <div className="relative bg-gradient-to-b from-gray-50 to-white">
+            {/* mobile arrows */}
+            {canNav && (
+              <>
+                <button
+                  onClick={onPrev}
+                  className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={onNext}
+                  className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              </>
             )}
-          </div>
-        </div>
 
-        {/* thumbs (ring não corta) */}
-        {canNav && (
-          <div className="px-3 sm:px-4 py-3 border-t bg-white">
-            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
-              <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+            {/* stage */}
+            <div className="px-4 sm:px-8 py-5 sm:py-7">
+              <div
+                ref={stageRef}
+                onMouseMove={onMove}
+                onMouseEnter={onEnter}
+                onMouseLeave={onLeave}
+                className="mx-auto rounded-xl bg-white ring-1 ring-black/5 overflow-hidden"
+                style={{
+                  cursor: prefersReduced ? "default" : hovering ? "zoom-out" : "zoom-in",
+                  userSelect: "none",
+                  maxWidth: "min(920px, 96vw)",
+                  maxHeight: "min(68vh, 640px)",
+                }}
+              >
+                {/* ✅ zoom funciona: scale no wrapper (ativado pelo hover do stage) */}
+                <motion.div
+                  animate={prefersReduced ? { scale: 1 } : { scale: hovering ? 1.7 : 1 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  style={{
+                    transformOrigin: `${pan.x}% ${pan.y}%`,
+                    willChange: "transform",
+                  }}
+                >
+                  <img
+                    src={current}
+                    alt={title}
+                    draggable={false}
+                    className="block w-full h-full object-contain select-none"
+                    style={{
+                      maxWidth: "min(920px, 96vw)",
+                      maxHeight: "min(68vh, 640px)",
+                    }}
+                  />
+                </motion.div>
+              </div>
 
-              {urls.map((u, i) => {
-                const active = i === index;
-                return (
-                  <button
-                    key={u + i}
-                    onClick={() => setIndex(i)}
-                    className={cx("p-1 rounded-2xl flex-none transition", active ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white" : "hover:bg-gray-50")}
-                    aria-label={`Go to image ${i + 1}`}
-                  >
-                    <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
-                      <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
-                    </span>
-                  </button>
-                );
-              })}
+              {!prefersReduced && (
+                <div className="mt-2 text-center text-[11px] text-gray-500">
+                  Tip: hover and move your mouse to pan • scroll not needed
+                </div>
+              )}
             </div>
           </div>
-        )}
+
+          {/* thumbs (✅ ring NÃO corta) */}
+          {canNav && (
+            <div className="px-3 sm:px-4 py-3 border-t bg-white">
+              <div className="flex gap-2 overflow-x-auto overflow-y-visible pb-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
+                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+
+                {urls.map((u, i) => {
+                  const active = i === index;
+                  return (
+                    <button
+                      key={u + i}
+                      onClick={() => setIndex(i)}
+                      className={cx(
+                        // ✅ ring com offset + espaço para não cortar
+                        "p-1 rounded-2xl flex-none transition outline-none",
+                        active
+                          ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
+                          : "hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white"
+                      )}
+                      aria-label={`Go to image ${i + 1}`}
+                    >
+                      <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
+                        <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -1884,7 +1947,10 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
         </div>
 
         <div className="px-4 py-3 border-t">
-          <button className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition" onClick={onClose}>
+          <button
+            className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
+            onClick={onClose}
+          >
             Got it
           </button>
         </div>
