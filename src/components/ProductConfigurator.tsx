@@ -436,7 +436,9 @@ export default function ProductConfigurator({ product }: Props) {
   }, [badgesGroup, customization]);
 
   const showNameNumber =
-    !!effectiveCustomizationGroup && typeof customization === "string" && customization.toLowerCase().includes("name-number");
+    !!effectiveCustomizationGroup &&
+    typeof customization === "string" &&
+    customization.toLowerCase().includes("name-number");
 
   const showBadgePicker =
     typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
@@ -899,15 +901,11 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">
-                  {product.name}
-                </h1>
+                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">{product.name}</h1>
 
                 <div className="mt-1 flex items-baseline gap-2">
                   {hasDiscount && originalUnitPriceForMoney && (
-                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                      {money(originalUnitPriceForMoney)}
-                    </span>
+                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
                   )}
                   <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
                   {hasDiscount && (
@@ -943,13 +941,9 @@ export default function ProductConfigurator({ product }: Props) {
                   </span>
                 </div>
               </div>
-
-              {/* ✅ REMOVIDO: selo "Bestseller" */}
             </div>
 
-            {product.description && (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>
-            )}
+            {product.description && <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>}
 
             <AnimatePresence>
               {error && (
@@ -1027,9 +1021,7 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
-                Ages are approximate. If in between, we recommend sizing up.
-              </p>
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
             )}
           </div>
 
@@ -1520,10 +1512,10 @@ function GroupBlock({
   );
 }
 
-/* ====================== Product Lightbox (FIXES)
-   ✅ ring azul NÃO corta (remove overflow-hidden do container e dá espaço)
-   ✅ zoom hover funciona (scale controlado no wrapper, não no <img>)
-   ✅ modal não ocupa a página toda (mais padding + max-h)
+/* ====================== Product Lightbox (FIXES v2)
+   ✅ ring azul NÃO corta: (overflow-x-auto força overflow-y a “auto” e corta shadows)
+      -> solução: dar padding vertical real + “gutter” lateral para o ring ficar DENTRO da área
+   ✅ zoom hover FUNCIONA: o stage agora tem ALTURA definida (senão h-full no img podia ficar 0/estranho)
 */
 function ProductLightbox({
   urls,
@@ -1656,7 +1648,7 @@ function ProductLightbox({
           </div>
         </div>
 
-        {/* body (scroll se necessário, sem colar nas bordas) */}
+        {/* body */}
         <div className="flex-1 overflow-auto">
           <div className="relative bg-gradient-to-b from-gray-50 to-white">
             {/* mobile arrows */}
@@ -1690,15 +1682,16 @@ function ProductLightbox({
                 style={{
                   cursor: prefersReduced ? "default" : hovering ? "zoom-out" : "zoom-in",
                   userSelect: "none",
-                  maxWidth: "min(920px, 96vw)",
-                  maxHeight: "min(68vh, 640px)",
+                  width: "min(920px, 96vw)",
+                  height: "min(68vh, 640px)", // ✅ altura definida -> hover/scale funciona sempre
                 }}
               >
-                {/* ✅ zoom funciona: scale no wrapper (ativado pelo hover do stage) */}
                 <motion.div
-                  animate={prefersReduced ? { scale: 1 } : { scale: hovering ? 1.7 : 1 }}
+                  animate={prefersReduced ? { scale: 1 } : { scale: hovering ? 1.8 : 1 }}
                   transition={{ duration: 0.18, ease: "easeOut" }}
                   style={{
+                    width: "100%",
+                    height: "100%",
                     transformOrigin: `${pan.x}% ${pan.y}%`,
                     willChange: "transform",
                   }}
@@ -1708,49 +1701,46 @@ function ProductLightbox({
                     alt={title}
                     draggable={false}
                     className="block w-full h-full object-contain select-none"
-                    style={{
-                      maxWidth: "min(920px, 96vw)",
-                      maxHeight: "min(68vh, 640px)",
-                    }}
                   />
                 </motion.div>
               </div>
 
               {!prefersReduced && (
-                <div className="mt-2 text-center text-[11px] text-gray-500">
-                  Tip: hover and move your mouse to pan • scroll not needed
-                </div>
+                <div className="mt-2 text-center text-[11px] text-gray-500">Tip: hover and move your mouse to pan</div>
               )}
             </div>
           </div>
 
-          {/* thumbs (✅ ring NÃO corta) */}
+          {/* thumbs (✅ ring NÃO corta v2) */}
           {canNav && (
             <div className="px-3 sm:px-4 py-3 border-t bg-white">
-              <div className="flex gap-2 overflow-x-auto overflow-y-visible pb-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
-                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+              {/* wrapper sem overflow; o overflow fica só no scroller */}
+              <div className="overflow-visible">
+                <div className="flex gap-2 overflow-x-auto overflow-y-hidden px-2 py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
+                  <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
 
-                {urls.map((u, i) => {
-                  const active = i === index;
-                  return (
-                    <button
-                      key={u + i}
-                      onClick={() => setIndex(i)}
-                      className={cx(
-                        // ✅ ring com offset + espaço para não cortar
-                        "p-1 rounded-2xl flex-none transition outline-none",
-                        active
-                          ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
-                          : "hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white"
-                      )}
-                      aria-label={`Go to image ${i + 1}`}
-                    >
-                      <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
-                        <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
-                      </span>
-                    </button>
-                  );
-                })}
+                  {urls.map((u, i) => {
+                    const active = i === index;
+                    return (
+                      <button
+                        key={u + i}
+                        onClick={() => setIndex(i)}
+                        className={cx(
+                          // ✅ “m-1” + “py-3 px-2” no scroller garante espaço pro ring/shadow
+                          "m-1 p-1 rounded-2xl flex-none transition outline-none",
+                          active
+                            ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
+                            : "hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white"
+                        )}
+                        aria-label={`Go to image ${i + 1}`}
+                      >
+                        <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
+                          <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -1923,9 +1913,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <tbody>
                       {(["Jersey length", "Chest (bust)", "Height", "Shorts length"] as KidsRowKey[]).map((rowKey, idx) => (
                         <tr key={rowKey} className={idx % 2 ? "bg-white" : "bg-gray-50/40"}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
-                            {rowKey}
-                          </td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">{rowKey}</td>
                           {kids.sizes.map((s) => (
                             <td
                               key={s}
@@ -1986,7 +1974,7 @@ function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
-/* ====================== The Trust pill ====================== */
+/* ====================== Trust pill ====================== */
 function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="rounded-xl border bg-gray-50 px-2.5 py-2 text-[11px] sm:text-xs text-gray-700 flex items-center justify-center gap-2">
@@ -2077,7 +2065,12 @@ function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
 function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path d="M12 3l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V7l8-4z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
+      <path
+        d="M12 3l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V7l8-4z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
       <path d="M9 12l2 2 4-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
