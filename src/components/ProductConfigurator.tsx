@@ -140,7 +140,6 @@ function useIsMobile(breakpointPx = 1024) {
   }, [breakpointPx]);
   return isMobile;
 }
-
 function useLockBodyScroll(locked: boolean) {
   useEffect(() => {
     if (!locked) return;
@@ -186,7 +185,6 @@ type KidsRow = {
   age: string;
   shortsLength: number;
 };
-
 const KIDS_ROWS: KidsRow[] = [
   { size: "#16", length: 43, bust: 32, height: [95, 105], age: "2–3", shortsLength: 32 },
   { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4", shortsLength: 34 },
@@ -211,7 +209,6 @@ function renderRange(value: Range | undefined, unit: Unit) {
 
 type KidsRowKey = "Jersey length" | "Chest (bust)" | "Height" | "Shorts length";
 type KidsTableShape = { sizes: string[]; rows: Record<KidsRowKey, Partial<Record<string, Range>>> };
-
 function makeKidsTable(): KidsTableShape {
   const sizes = KIDS_ROWS.map((r) => `${r.age} yrs`);
   const rows: KidsTableShape["rows"] = {
@@ -231,7 +228,7 @@ function makeKidsTable(): KidsTableShape {
 }
 
 /* ====================== Delivery text ====================== */
-const DELIVERY_TEXT = "Estimated delivery: 7–20 business days"; // ✅ correto
+const DELIVERY_TEXT = "Estimated delivery: 7–20 business days";
 
 export default function ProductConfigurator({ product }: Props) {
   const router = useRouter();
@@ -246,16 +243,14 @@ export default function ProductConfigurator({ product }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // ✅ fly animation state
   const [fly, setFly] = useState<FlyState | null>(null);
   const flyKeyRef = useRef(0);
   const [mounted, setMounted] = useState(false);
 
-  // ✅ UX states
   const [error, setError] = useState<string | null>(null);
   const [openSizeGuide, setOpenSizeGuide] = useState(false);
 
-  // ✅ product image lightbox (melhorado)
+  // ✅ improved product lightbox
   const [imgLightboxOpen, setImgLightboxOpen] = useState(false);
   const [imgLightboxIndex, setImgLightboxIndex] = useState(0);
 
@@ -323,7 +318,6 @@ export default function ProductConfigurator({ product }: Props) {
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     const cont = thumbsRef.current;
     if (!cont) return;
@@ -606,17 +600,12 @@ export default function ProductConfigurator({ product }: Props) {
 
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from: FlyRect = { left: start.left, top: start.top, width: start.width, height: start.height };
+    const from = { left: start.left, top: start.top, width: start.width, height: start.height };
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
     const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height)));
-    const to: FlyRect = {
-      left: endCx - targetSize / 2,
-      top: endCy - targetSize / 2,
-      width: targetSize,
-      height: targetSize,
-    };
+    const to = { left: endCx - targetSize / 2, top: endCy - targetSize / 2, width: targetSize, height: targetSize };
 
     flyKeyRef.current += 1;
     setFly({ key: flyKeyRef.current, src, from, to });
@@ -625,17 +614,6 @@ export default function ProductConfigurator({ product }: Props) {
   /* ---------- Navegação ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (imgLightboxOpen) return; // o lightbox já trata
-      if (e.key === "ArrowLeft") goPrev();
-      if (e.key === "ArrowRight") goNext();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images.length, imgLightboxOpen]);
 
   /* ---------- Sticky CTA (mobile) ---------- */
   const addBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -725,12 +703,8 @@ export default function ProductConfigurator({ product }: Props) {
     setImgLightboxOpen(true);
   }, []);
   const closeImgLightbox = useCallback(() => setImgLightboxOpen(false), []);
-  const prevImg = useCallback(() => {
-    setImgLightboxIndex((i) => (i - 1 + images.length) % images.length);
-  }, [images.length]);
-  const nextImg = useCallback(() => {
-    setImgLightboxIndex((i) => (i + 1) % images.length);
-  }, [images.length]);
+  const prevImg = useCallback(() => setImgLightboxIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
+  const nextImg = useCallback(() => setImgLightboxIndex((i) => (i + 1) % images.length), [images.length]);
 
   /* ---------- UI ---------- */
   return (
@@ -740,7 +714,7 @@ export default function ProductConfigurator({ product }: Props) {
           {showToast ? "Item added to cart." : ""}
         </div>
 
-        {/* ✅ Fly-to-cart overlay */}
+        {/* Fly-to-cart overlay */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -750,25 +724,8 @@ export default function ProductConfigurator({ product }: Props) {
                   key={`fly-${fly.key}`}
                   src={fly.src}
                   alt=""
-                  initial={{
-                    left: fly.from.left,
-                    top: fly.from.top,
-                    width: fly.from.width,
-                    height: fly.from.height,
-                    opacity: 0.95,
-                    rotate: 0,
-                    scale: 1,
-                  }}
-                  animate={{
-                    left: fly.to.left,
-                    top: fly.to.top,
-                    width: fly.to.width,
-                    height: fly.to.height,
-                    opacity: 0,
-                    rotate: 8,
-                    scale: 0.2,
-                    filter: "blur(1px)",
-                  }}
+                  initial={{ left: fly.from.left, top: fly.from.top, width: fly.from.width, height: fly.from.height, opacity: 0.95, rotate: 0, scale: 1 }}
+                  animate={{ left: fly.to.left, top: fly.to.top, width: fly.to.width, height: fly.to.height, opacity: 0, rotate: 8, scale: 0.2, filter: "blur(1px)" }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
                   onAnimationComplete={() => {
@@ -805,11 +762,7 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="h-10 w-10 shrink-0 hidden lg:block" />
             )}
 
-            <div
-              ref={imgWrapRef}
-              className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
-            >
-              {/* click to open lightbox */}
+            <div ref={imgWrapRef} className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white">
               <button
                 type="button"
                 onClick={() => openImgLightbox(activeIndex)}
@@ -819,15 +772,7 @@ export default function ProductConfigurator({ product }: Props) {
                 <span className="sr-only">Open image</span>
               </button>
 
-              <Image
-                src={activeSrc}
-                alt={product.name}
-                fill
-                className="object-contain"
-                sizes="(min-width: 1024px) 540px, 100vw"
-                priority
-                unoptimized
-              />
+              <Image src={activeSrc} alt={product.name} fill className="object-contain" sizes="(min-width: 1024px) 540px, 100vw" priority unoptimized />
 
               {hasDiscount && (
                 <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
@@ -837,7 +782,7 @@ export default function ProductConfigurator({ product }: Props) {
 
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
                 <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
-                  Click to view
+                  Click to zoom
                 </div>
                 <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] sm:text-xs text-gray-800 border shadow-sm">
                   {activeIndex + 1}/{images.length}
@@ -882,10 +827,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {images.length > 1 && (
             <div className="mt-3">
-              <div
-                ref={thumbsRef}
-                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
-              >
+              <div ref={thumbsRef} className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
                 <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
                   {images.map((src, i) => {
@@ -901,9 +843,7 @@ export default function ProductConfigurator({ product }: Props) {
                           isActive ? "border-transparent" : "hover:opacity-90"
                         )}
                       >
-                        {isActive && (
-                          <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
-                        )}
+                        {isActive && <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
                           <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
                         </span>
@@ -931,15 +871,11 @@ export default function ProductConfigurator({ product }: Props) {
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">
-                  {product.name}
-                </h1>
+                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">{product.name}</h1>
 
                 <div className="mt-1 flex items-baseline gap-2">
                   {hasDiscount && originalUnitPriceForMoney && (
-                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">
-                      {money(originalUnitPriceForMoney)}
-                    </span>
+                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
                   )}
                   <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
                   {hasDiscount && (
@@ -949,7 +885,7 @@ export default function ProductConfigurator({ product }: Props) {
                   )}
                 </div>
 
-                {/* ✅ REAL rating */}
+                {/* REAL rating */}
                 <div className="mt-1 text-[11px] sm:text-xs text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-1">
                   {reviewsLoading ? (
                     <span className="inline-flex items-center gap-2">
@@ -976,12 +912,7 @@ export default function ProductConfigurator({ product }: Props) {
                 </div>
               </div>
 
-              <div className="shrink-0 text-right">
-                <span className="inline-flex items-center rounded-full border bg-white px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-gray-800 shadow-sm">
-                  <BoltIcon className="h-3.5 w-3.5 mr-1" />
-                  Bestseller
-                </span>
-              </div>
+              {/* ✅ REMOVIDO: selo "Bestseller" */}
             </div>
 
             {product.description && (
@@ -1072,13 +1003,7 @@ export default function ProductConfigurator({ product }: Props) {
 
           {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock
-              group={effectiveCustomizationGroup}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              forceFree
-            />
+            <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
           )}
 
           {/* Personalization */}
@@ -1129,22 +1054,13 @@ export default function ProductConfigurator({ product }: Props) {
                 </label>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-gray-500">
-                Personalization will be printed in the club’s official style.
-              </p>
+              <p className="text-[11px] sm:text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
             </div>
           )}
 
           {/* Badges */}
           {showBadgePicker && badgesGroup && (
-            <GroupBlock
-              group={badgesGroup}
-              selected={selected}
-              onPickRadio={setRadio}
-              onToggleAddon={toggleAddon}
-              onToggleBadge={toggleBadge}
-              forceFree
-            />
+            <GroupBlock group={badgesGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} onToggleBadge={toggleBadge} forceFree />
           )}
 
           {/* Other groups */}
@@ -1155,21 +1071,11 @@ export default function ProductConfigurator({ product }: Props) {
           {/* Qty + Total */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <button
-                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
-                disabled={pending}
-              >
+              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={pending}>
                 −
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
-              <button
-                className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                onClick={() => setQty((q) => q + 1)}
-                aria-label="Increase quantity"
-                disabled={pending}
-              >
+              <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={pending}>
                 +
               </button>
             </div>
@@ -1185,10 +1091,7 @@ export default function ProductConfigurator({ product }: Props) {
             <motion.button
               ref={addBtnRef}
               onClick={addToCart}
-              className={cx(
-                "btn-primary w-full disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
-                justAdded && "bg-green-600 hover:bg-green-600"
-              )}
+              className={cx("btn-primary w-full disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base", justAdded && "bg-green-600 hover:bg-green-600")}
               disabled={pending || !canAddToCart}
               animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
               transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
@@ -1216,6 +1119,9 @@ export default function ProductConfigurator({ product }: Props) {
               {pending && buyNow ? "Processing…" : "Buy now"}
             </button>
           </div>
+
+          {/* ✅ ESTE É O “ESPAÇO BOM” (Shipping/Returns/Quality) */}
+          <InfoAccordions />
 
           {/* reassurance */}
           <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
@@ -1324,7 +1230,7 @@ export default function ProductConfigurator({ product }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ✅ Product Images Lightbox (bonito, sem aquele espaço feio) */}
+        {/* ✅ Product Images Lightbox (sem "Prev/Next", muito melhor) */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -1349,17 +1255,125 @@ export default function ProductConfigurator({ product }: Props) {
           typeof document !== "undefined" &&
           createPortal(
             <AnimatePresence>
-              {openSizeGuide && (
-                <SizeGuideModal
-                  onClose={() => setOpenSizeGuide(false)}
-                  defaultTab={kid ? "kids" : "adult"}
-                />
-              )}
+              {openSizeGuide && <SizeGuideModal onClose={() => setOpenSizeGuide(false)} defaultTab={kid ? "kids" : "adult"} />}
             </AnimatePresence>,
             document.body
           )}
       </div>
     </div>
+  );
+}
+
+/* ====================== Info accordions (Shipping/Returns/Quality) ====================== */
+function InfoAccordions() {
+  return (
+    <div className="rounded-2xl border bg-white/70 overflow-hidden">
+      <AccordionRow
+        icon={<TruckIcon className="h-4 w-4" />}
+        title="Shipping & delivery"
+        defaultOpen
+      >
+        <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              <b>Estimated delivery:</b> 7–20 business days (tracked shipping).
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              You’ll receive a <b>tracking number</b> as soon as your order ships.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              If you need help with your order, our support replies fast.
+            </span>
+          </li>
+        </ul>
+      </AccordionRow>
+
+      <Divider />
+
+      <AccordionRow icon={<RotateIcon className="h-4 w-4" />} title="Returns & support">
+        <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              Got a problem? Contact us and we’ll make it right (support & guidance).
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              Please keep the product <b>unused</b> and in original condition if a return is needed.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              Personalized items may have different return rules (name/number printing).
+            </span>
+          </li>
+        </ul>
+      </AccordionRow>
+
+      <Divider />
+
+      <AccordionRow icon={<StarBadgeIcon className="h-4 w-4" />} title="Quality details">
+        <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              High-quality stitching & print finish.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              Comfortable fabric for daily wear.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-1">•</span>
+            <span>
+              For the best fit, use our <b>Size Guide</b> (recommended).
+            </span>
+          </li>
+        </ul>
+      </AccordionRow>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div className="h-px bg-black/10" aria-hidden="true" />;
+}
+
+function AccordionRow({
+  icon,
+  title,
+  children,
+  defaultOpen,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details className="group" open={!!defaultOpen}>
+      <summary className="list-none cursor-pointer select-none px-4 py-3 flex items-center gap-3 hover:bg-white/60 transition">
+        <span className="text-gray-800">{icon}</span>
+        <span className="text-sm sm:text-base font-semibold text-gray-900">{title}</span>
+        <span className="ml-auto text-gray-600">
+          <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 group-open:rotate-180" />
+        </span>
+      </summary>
+      <div className="px-4 pb-4">{children}</div>
+    </details>
   );
 }
 
@@ -1462,7 +1476,7 @@ function GroupBlock({
   );
 }
 
-/* ====================== Product Lightbox (melhorado) ====================== */
+/* ====================== Product Lightbox (AINDA MELHOR) ====================== */
 function ProductLightbox({
   urls,
   index,
@@ -1480,6 +1494,7 @@ function ProductLightbox({
   setIndex: (i: number) => void;
   title: string;
 }) {
+  // keyboard navigation
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -1493,9 +1508,11 @@ function ProductLightbox({
   if (!urls.length) return null;
   const current = urls[index];
 
+  const canNav = urls.length > 1;
+
   return (
     <motion.div
-      className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1503,7 +1520,7 @@ function ProductLightbox({
       role="dialog"
       aria-modal="true"
     >
-      {/* Close button fixed */}
+      {/* close fixed */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -1519,8 +1536,8 @@ function ProductLightbox({
         <XIcon className="h-5 w-5" />
       </button>
 
-      {/* side arrows desktop */}
-      {urls.length > 1 && (
+      {/* side arrows (NO TEXT Prev/Next) */}
+      {canNav && (
         <>
           <button
             onClick={(e) => {
@@ -1546,74 +1563,79 @@ function ProductLightbox({
       )}
 
       <motion.div
-        initial={{ scale: 0.98, opacity: 0, y: 10 }}
+        initial={{ scale: 0.985, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.98, opacity: 0, y: 10 }}
+        exit={{ scale: 0.985, opacity: 0, y: 10 }}
         transition={{ duration: 0.18 }}
-        className="w-full max-w-[1080px] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden"
+        className="w-full max-w-[1160px] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* header */}
-        <div className="px-3 sm:px-4 py-3 border-b flex items-center justify-between gap-3">
+        {/* top bar (clean) */}
+        <div className="px-3 sm:px-4 py-3 border-b flex items-center gap-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{title}</div>
             <div className="text-[11px] text-gray-500">
-              {index + 1} / {urls.length}
+              {index + 1} / {urls.length} • Click background to close
             </div>
           </div>
 
-          {urls.length > 1 && (
-            <div className="flex items-center gap-2">
+          {/* tiny icon controls on the right (no Prev/Next text) */}
+          {canNav && (
+            <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"
                 onClick={onPrev}
-                className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+                className="rounded-full border bg-white px-2.5 py-2 hover:bg-gray-50"
+                aria-label="Previous image"
               >
-                Prev
+                <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 type="button"
                 onClick={onNext}
-                className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+                className="rounded-full border bg-white px-2.5 py-2 hover:bg-gray-50"
+                aria-label="Next image"
               >
-                Next
+                <ChevronRight className="h-5 w-5" />
               </button>
             </div>
           )}
         </div>
 
-        {/* image area */}
-        <div className="relative bg-black/5">
-          <img
-            src={current}
-            alt={title}
-            className="block w-auto h-auto max-w-[95vw] max-h-[75vh] sm:max-h-[78vh] object-contain mx-auto select-none"
-            draggable={false}
-          />
-
-          {/* arrows on image (mobile) */}
-          {urls.length > 1 && (
+        {/* image stage */}
+        <div className="relative bg-gradient-to-b from-gray-50 to-white">
+          {/* mobile arrows over image */}
+          {canNav && (
             <>
               <button
                 onClick={onPrev}
-                className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+                className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               <button
                 onClick={onNext}
-                className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110"
+                className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow ring-1 ring-black/10 hover:brightness-110 z-10"
                 aria-label="Next image"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
             </>
           )}
+
+          <div className="px-3 sm:px-6 py-4 sm:py-6">
+            <img
+              src={current}
+              alt={title}
+              className="block mx-auto max-w-[96vw] max-h-[72vh] sm:max-h-[74vh] object-contain select-none"
+              draggable={false}
+            />
+          </div>
         </div>
 
         {/* thumbs */}
-        {urls.length > 1 && (
+        {canNav && (
           <div className="px-3 sm:px-4 py-3 border-t bg-white">
             <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none]">
               <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -1622,12 +1644,12 @@ function ProductLightbox({
                   key={u + i}
                   onClick={() => setIndex(i)}
                   className={cx(
-                    "relative rounded-lg overflow-hidden ring-2 flex-none h-14 w-20 sm:h-16 sm:w-24",
+                    "relative rounded-lg overflow-hidden ring-2 flex-none h-14 w-20 sm:h-16 sm:w-24 bg-white",
                     i === index ? "ring-blue-500" : "ring-transparent hover:ring-black/10"
                   )}
                   aria-label={`Go to image ${i + 1}`}
                 >
-                  <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain bg-white" draggable={false} />
+                  <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
                 </button>
               ))}
             </div>
@@ -1638,14 +1660,8 @@ function ProductLightbox({
   );
 }
 
-/* ====================== Size Guide Modal (com tabelas reais) ====================== */
-function SizeGuideModal({
-  onClose,
-  defaultTab,
-}: {
-  onClose: () => void;
-  defaultTab: "adult" | "kids";
-}) {
+/* ====================== Size Guide Modal ====================== */
+function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultTab: "adult" | "kids" }) {
   const [tab, setTab] = useState<"adult" | "kids">(defaultTab);
   const [unit, setUnit] = useState<Unit>("cm");
   const kids = useMemo(() => makeKidsTable(), []);
@@ -1756,10 +1772,7 @@ function SizeGuideModal({
                           Measurement
                         </th>
                         {ADULT.sizes.map((s) => (
-                          <th
-                            key={s}
-                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
-                          >
+                          <th key={s} className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50">
                             {s}
                           </th>
                         ))}
@@ -1772,10 +1785,7 @@ function SizeGuideModal({
                             {key}
                           </td>
                           {ADULT.sizes.map((s) => (
-                            <td
-                              key={s}
-                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
-                            >
+                            <td key={s} className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center">
                               {renderRange(ADULT.rows[key][s], unit)}
                             </td>
                           ))}
@@ -1797,10 +1807,7 @@ function SizeGuideModal({
                           Measurement
                         </th>
                         {kids.sizes.map((s) => (
-                          <th
-                            key={s}
-                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
-                          >
+                          <th key={s} className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50">
                             {s}
                           </th>
                         ))}
@@ -1813,10 +1820,7 @@ function SizeGuideModal({
                             {rowKey}
                           </td>
                           {kids.sizes.map((s) => (
-                            <td
-                              key={s}
-                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
-                            >
+                            <td key={s} className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center">
                               {renderRange(kids.rows[rowKey][s], unit)}
                             </td>
                           ))}
@@ -1829,16 +1833,11 @@ function SizeGuideModal({
             </div>
           </div>
 
-          <div className="text-[12px] text-gray-500">
-            Tip: If you’re between sizes, we recommend sizing up for a more comfortable fit.
-          </div>
+          <div className="text-[12px] text-gray-500">Tip: If you’re between sizes, we recommend sizing up for a more comfortable fit.</div>
         </div>
 
         <div className="px-4 py-3 border-t">
-          <button
-            className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
-            onClick={onClose}
-          >
+          <button className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition" onClick={onClose}>
             Got it
           </button>
         </div>
@@ -1894,27 +1893,22 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} viewBox="0 0 24 24" className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)} fill="none" aria-hidden="true">
       <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg {...props} viewBox="0 0 24 24" className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)} fill="none" aria-hidden="true">
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -1937,15 +1931,7 @@ function StarShape({
   style?: React.CSSProperties;
 }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      className={className}
-      fill={fill}
-      style={style}
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill={fill} style={style} aria-hidden="true">
       <path
         d="M12 2l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.9 5.82 21l1.18-6.87-5-4.87 6.91-1L12 2z"
         stroke="currentColor"
@@ -1968,13 +1954,6 @@ function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
       <path d="M12 3l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V7l8-4z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
       <path d="M9 12l2 2 4-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function BoltIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path d="M13 2L3 14h7l-1 8 12-14h-7l-1-6z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
     </svg>
   );
 }
@@ -2001,6 +1980,22 @@ function ChatIcon(props: React.SVGProps<SVGSVGElement>) {
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
       <path d="M4 5h16v11H7l-3 3V5z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
       <path d="M8 9h8M8 12h6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+    </svg>
+  );
+}
+function RotateIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+      <path d="M21 12a9 9 0 10-3 6.7" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+      <path d="M21 7v5h-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function StarBadgeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+      <path d="M12 2l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.9 7.4 16.4l.9-5.2-3.8-3.7 5.2-.8L12 2z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
+      <path d="M7 21l5-2 5 2" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
     </svg>
   );
 }
