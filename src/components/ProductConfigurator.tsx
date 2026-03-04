@@ -1512,10 +1512,11 @@ function GroupBlock({
   );
 }
 
-/* ====================== Product Lightbox (FIXES v2)
-   ✅ ring azul NÃO corta: (overflow-x-auto força overflow-y a “auto” e corta shadows)
-      -> solução: dar padding vertical real + “gutter” lateral para o ring ficar DENTRO da área
-   ✅ zoom hover FUNCIONA: o stage agora tem ALTURA definida (senão h-full no img podia ficar 0/estranho)
+/* ====================== Product Lightbox (FIX v3)
+   ✅ Zoom GARANTIDO: em vez de “scale no <img>” (às vezes parece que não muda em object-contain),
+      usamos background-image com background-size: contain -> 220% quando zoom.
+   ✅ Hover funciona + Click também (click alterna zoom).
+   ✅ Pointer events (mouse/trackpad) em vez de só mouse events.
 */
 function ProductLightbox({
   urls,
@@ -1534,7 +1535,6 @@ function ProductLightbox({
   setIndex: (i: number) => void;
   title: string;
 }) {
-  // keyboard navigation
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -1553,23 +1553,30 @@ function ProductLightbox({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [pan, setPan] = useState({ x: 50, y: 50 });
   const [hovering, setHovering] = useState(false);
+  const [clickedZoom, setClickedZoom] = useState(false);
 
-  const onMove = (e: React.MouseEvent) => {
-    if (prefersReduced) return;
+  const zoomOn = !prefersReduced && (hovering || clickedZoom);
+
+  const updatePanFromPoint = (clientX: number, clientY: number) => {
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const x = clamp(((e.clientX - r.left) / r.width) * 100, 0, 100);
-    const y = clamp(((e.clientY - r.top) / r.height) * 100, 0, 100);
+    const x = clamp(((clientX - r.left) / r.width) * 100, 0, 100);
+    const y = clamp(((clientY - r.top) / r.height) * 100, 0, 100);
     setPan({ x, y });
   };
 
-  const onEnter = () => {
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (prefersReduced) return;
+    updatePanFromPoint(e.clientX, e.clientY);
+  };
+
+  const onPointerEnter = () => {
     if (prefersReduced) return;
     setHovering(true);
   };
 
-  const onLeave = () => {
+  const onPointerLeave = () => {
     setHovering(false);
     setPan({ x: 50, y: 50 });
   };
@@ -1588,7 +1595,6 @@ function ProductLightbox({
       role="dialog"
       aria-modal="true"
     >
-      {/* close fixed */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -1604,7 +1610,6 @@ function ProductLightbox({
         <XIcon className="h-5 w-5" />
       </button>
 
-      {/* side arrows */}
       {canNav && (
         <>
           <button
@@ -1638,20 +1643,31 @@ function ProductLightbox({
         className="w-full max-w-[1040px] max-h-[calc(100vh-6rem)] rounded-2xl bg-white/95 border shadow-2xl overflow-visible flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* top bar */}
         <div className="px-3 sm:px-4 py-3 border-b flex items-center gap-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{title}</div>
             <div className="text-[11px] text-gray-500">
-              {index + 1} / {urls.length} • Click background to close
+              {index + 1} / {urls.length} • {prefersReduced ? "Click thumbnails to switch" : "Hover or click to zoom"}
             </div>
           </div>
+
+          {!prefersReduced && (
+            <button
+              type="button"
+              onClick={() => setClickedZoom((z) => !z)}
+              className={cx(
+                "ml-auto rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
+                clickedZoom ? "bg-gray-900 text-white border-gray-900" : "bg-white hover:bg-gray-50"
+              )}
+              aria-pressed={clickedZoom}
+            >
+              {clickedZoom ? "Zoom ON" : "Zoom"}
+            </button>
+          )}
         </div>
 
-        {/* body */}
         <div className="flex-1 overflow-auto">
           <div className="relative bg-gradient-to-b from-gray-50 to-white">
-            {/* mobile arrows */}
             {canNav && (
               <>
                 <button
@@ -1671,50 +1687,44 @@ function ProductLightbox({
               </>
             )}
 
-            {/* stage */}
             <div className="px-4 sm:px-8 py-5 sm:py-7">
               <div
                 ref={stageRef}
-                onMouseMove={onMove}
-                onMouseEnter={onEnter}
-                onMouseLeave={onLeave}
+                onPointerMove={onPointerMove}
+                onPointerEnter={onPointerEnter}
+                onPointerLeave={onPointerLeave}
+                onClick={() => {
+                  if (prefersReduced) return;
+                  setClickedZoom((z) => !z);
+                }}
                 className="mx-auto rounded-xl bg-white ring-1 ring-black/5 overflow-hidden"
                 style={{
-                  cursor: prefersReduced ? "default" : hovering ? "zoom-out" : "zoom-in",
+                  cursor: prefersReduced ? "default" : zoomOn ? "zoom-out" : "zoom-in",
                   userSelect: "none",
                   width: "min(920px, 96vw)",
-                  height: "min(68vh, 640px)", // ✅ altura definida -> hover/scale funciona sempre
+                  height: "min(68vh, 640px)",
+                  backgroundImage: `url("${current}")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: `${pan.x}% ${pan.y}%`,
+                  backgroundSize: zoomOn ? "220%" : "contain",
+                  transition: prefersReduced ? undefined : "background-size 140ms ease-out",
                 }}
+                aria-label="Zoomable product image"
               >
-                <motion.div
-                  animate={prefersReduced ? { scale: 1 } : { scale: hovering ? 1.8 : 1 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    transformOrigin: `${pan.x}% ${pan.y}%`,
-                    willChange: "transform",
-                  }}
-                >
-                  <img
-                    src={current}
-                    alt={title}
-                    draggable={false}
-                    className="block w-full h-full object-contain select-none"
-                  />
-                </motion.div>
+                {/* keep semantic image (hidden) for accessibility */}
+                <img src={current} alt={title} className="sr-only" />
               </div>
 
               {!prefersReduced && (
-                <div className="mt-2 text-center text-[11px] text-gray-500">Tip: hover and move your mouse to pan</div>
+                <div className="mt-2 text-center text-[11px] text-gray-500">
+                  Tip: hover/move to pan • click toggles zoom
+                </div>
               )}
             </div>
           </div>
 
-          {/* thumbs (✅ ring NÃO corta v2) */}
           {canNav && (
             <div className="px-3 sm:px-4 py-3 border-t bg-white">
-              {/* wrapper sem overflow; o overflow fica só no scroller */}
               <div className="overflow-visible">
                 <div className="flex gap-2 overflow-x-auto overflow-y-hidden px-2 py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
                   <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -1724,9 +1734,11 @@ function ProductLightbox({
                     return (
                       <button
                         key={u + i}
-                        onClick={() => setIndex(i)}
+                        onClick={() => {
+                          setClickedZoom(false);
+                          setIndex(i);
+                        }}
                         className={cx(
-                          // ✅ “m-1” + “py-3 px-2” no scroller garante espaço pro ring/shadow
                           "m-1 p-1 rounded-2xl flex-none transition outline-none",
                           active
                             ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
