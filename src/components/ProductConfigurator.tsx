@@ -1986,7 +1986,7 @@ function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
-/* ====================== Trust pill ====================== */
+/* ====================== The Trust pill ====================== */
 function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="rounded-xl border bg-gray-50 px-2.5 py-2 text-[11px] sm:text-xs text-gray-700 flex items-center justify-center gap-2">
