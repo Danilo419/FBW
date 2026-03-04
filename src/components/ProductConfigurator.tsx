@@ -305,28 +305,34 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   const hasDiscount = typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
-  const discountPercent = hasDiscount
-    ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
-    : 0;
+  const discountPercent = hasDiscount ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100) : 0;
 
   /* ---------- Images ---------- */
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbs ---------- */
+  /* ---------- Thumbs (FIX: últimas não ficam cortadas) ---------- */
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const cont = thumbsRef.current;
     if (!cont) return;
+
     const itemWidth = THUMB_W + GAP;
     const maxScroll = cont.scrollWidth - cont.clientWidth;
+
+    const nearEnd = activeIndex >= images.length - 2; // ✅ penúltima ou última
+    const nearStart = activeIndex <= 1;
+
     let desired = Math.max(0, (activeIndex - 2) * itemWidth);
+    if (nearEnd) desired = maxScroll;
+    if (nearStart) desired = 0;
+
     desired = Math.min(desired, Math.max(0, maxScroll));
     cont.scrollTo({ left: desired, behavior: "smooth" });
-  }, [activeIndex]);
+  }, [activeIndex, images.length]);
 
   /* ---------- Sizes ---------- */
   const kid = isKidProduct(product.name);
@@ -417,9 +423,7 @@ export default function ProductConfigurator({ product }: Props) {
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
-  const otherGroups = product.optionGroups.filter(
-    (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
-  );
+  const otherGroups = product.optionGroups.filter((g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key));
 
   const customization = selected["customization"] ?? "";
 
@@ -436,9 +440,7 @@ export default function ProductConfigurator({ product }: Props) {
   }, [badgesGroup, customization]);
 
   const showNameNumber =
-    !!effectiveCustomizationGroup &&
-    typeof customization === "string" &&
-    customization.toLowerCase().includes("name-number");
+    !!effectiveCustomizationGroup && typeof customization === "string" && customization.toLowerCase().includes("name-number");
 
   const showBadgePicker =
     typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
@@ -451,11 +453,7 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
-      let arr: string[] = Array.isArray(current)
-        ? [...current]
-        : typeof current === "string" && current
-        ? [current]
-        : [];
+      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
       } else {
@@ -469,11 +467,7 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[group.key];
-      let arr: string[] = Array.isArray(current)
-        ? [...current]
-        : typeof current === "string" && current
-        ? [current]
-        : [];
+      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
 
       const mapByValue = new Map(group.values.map((v) => [v.value, v]));
       const newV = mapByValue.get(value);
@@ -854,7 +848,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="mt-3">
               <div
                 ref={thumbsRef}
-                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 pr-6 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
                 <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
@@ -1512,11 +1506,10 @@ function GroupBlock({
   );
 }
 
-/* ====================== Product Lightbox (FIX v3)
-   ✅ Zoom GARANTIDO: em vez de “scale no <img>” (às vezes parece que não muda em object-contain),
-      usamos background-image com background-size: contain -> 220% quando zoom.
-   ✅ Hover funciona + Click também (click alterna zoom).
-   ✅ Pointer events (mouse/trackpad) em vez de só mouse events.
+/* ====================== Product Lightbox (FIX v4)
+   ✅ Zoom REAL: transform: scale() no <img> + transform-origin dinâmico
+   ✅ Hover + Click (click alterna zoom)
+   ✅ Thumbs: quando estiver nas últimas 2, “empurra” para o fim para não cortar a última
 */
 function ProductLightbox({
   urls,
@@ -1556,6 +1549,7 @@ function ProductLightbox({
   const [clickedZoom, setClickedZoom] = useState(false);
 
   const zoomOn = !prefersReduced && (hovering || clickedZoom);
+  const zoomScale = 2.2;
 
   const updatePanFromPoint = (clientX: number, clientY: number) => {
     const el = stageRef.current;
@@ -1580,6 +1574,24 @@ function ProductLightbox({
     setHovering(false);
     setPan({ x: 50, y: 50 });
   };
+
+  // thumbs scrolling
+  const thumbsBarRef = useRef<HTMLDivElement | null>(null);
+  const thumbBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    const bar = thumbsBarRef.current;
+    if (!bar) return;
+
+    const nearEnd = index >= urls.length - 2;
+    const nearStart = index <= 1;
+
+    const btn = thumbBtnRefs.current[index];
+    if (btn) btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+
+    if (nearEnd) bar.scrollTo({ left: bar.scrollWidth, behavior: "smooth" });
+    else if (nearStart) bar.scrollTo({ left: 0, behavior: "smooth" });
+  }, [index, urls.length]);
 
   if (!urls.length) return null;
   const current = urls[index];
@@ -1640,7 +1652,7 @@ function ProductLightbox({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.985, opacity: 0, y: 10 }}
         transition={{ duration: 0.18 }}
-        className="w-full max-w-[1040px] max-h-[calc(100vh-6rem)] rounded-2xl bg-white/95 border shadow-2xl overflow-visible flex flex-col"
+        className="w-full max-w-[1040px] max-h-[calc(100vh-6rem)] rounded-2xl bg-white/95 border shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-3 sm:px-4 py-3 border-b flex items-center gap-3">
@@ -1697,62 +1709,69 @@ function ProductLightbox({
                   if (prefersReduced) return;
                   setClickedZoom((z) => !z);
                 }}
-                className="mx-auto rounded-xl bg-white ring-1 ring-black/5 overflow-hidden"
+                className="mx-auto rounded-xl bg-white ring-1 ring-black/5 overflow-hidden relative"
                 style={{
                   cursor: prefersReduced ? "default" : zoomOn ? "zoom-out" : "zoom-in",
                   userSelect: "none",
                   width: "min(920px, 96vw)",
                   height: "min(68vh, 640px)",
-                  backgroundImage: `url("${current}")`,
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: `${pan.x}% ${pan.y}%`,
-                  backgroundSize: zoomOn ? "220%" : "contain",
-                  transition: prefersReduced ? undefined : "background-size 140ms ease-out",
                 }}
                 aria-label="Zoomable product image"
               >
-                {/* keep semantic image (hidden) for accessibility */}
-                <img src={current} alt={title} className="sr-only" />
+                <img
+                  src={current}
+                  alt={title}
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-contain"
+                  style={{
+                    transformOrigin: `${pan.x}% ${pan.y}%`,
+                    transform: zoomOn ? `scale(${zoomScale})` : "scale(1)",
+                    transition: prefersReduced ? undefined : "transform 120ms ease-out",
+                    willChange: "transform",
+                  }}
+                />
               </div>
 
               {!prefersReduced && (
-                <div className="mt-2 text-center text-[11px] text-gray-500">
-                  Tip: hover/move to pan • click toggles zoom
-                </div>
+                <div className="mt-2 text-center text-[11px] text-gray-500">Tip: hover/move to pan • click toggles zoom</div>
               )}
             </div>
           </div>
 
           {canNav && (
             <div className="px-3 sm:px-4 py-3 border-t bg-white">
-              <div className="overflow-visible">
-                <div className="flex gap-2 overflow-x-auto overflow-y-hidden px-2 py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar">
-                  <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+              <div
+                ref={thumbsBarRef}
+                className="flex gap-2 overflow-x-auto overflow-y-hidden px-2 pr-6 py-3 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+              >
+                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
 
-                  {urls.map((u, i) => {
-                    const active = i === index;
-                    return (
-                      <button
-                        key={u + i}
-                        onClick={() => {
-                          setClickedZoom(false);
-                          setIndex(i);
-                        }}
-                        className={cx(
-                          "m-1 p-1 rounded-2xl flex-none transition outline-none",
-                          active
-                            ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
-                            : "hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white"
-                        )}
-                        aria-label={`Go to image ${i + 1}`}
-                      >
-                        <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
-                          <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {urls.map((u, i) => {
+                  const active = i === index;
+                  return (
+                    <button
+                      key={u + i}
+                      ref={(el) => {
+                        thumbBtnRefs.current[i] = el;
+                      }}
+                      onClick={() => {
+                        setClickedZoom(false);
+                        setIndex(i);
+                      }}
+                      className={cx(
+                        "p-1 rounded-2xl flex-none transition outline-none",
+                        active
+                          ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
+                          : "hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white"
+                      )}
+                      aria-label={`Go to image ${i + 1}`}
+                    >
+                      <span className="relative block h-14 w-20 sm:h-16 sm:w-24 rounded-xl overflow-hidden bg-white ring-1 ring-black/10">
+                        <img src={u} alt={`Thumb ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
