@@ -1,117 +1,136 @@
 // src/lib/shipping.ts
 
-export type CartChannel = "GLOBAL" | "PT_STOCK_CTT";
+export type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
 
 export type ShippingResult = {
+  /** total shipping em cêntimos */
   shippingCents: number;
-  label: string;
-  carrier?: "CTT" | "GLOBAL";
-  eta?: string; // texto curto tipo "2–3 business days"
+
+  /** canal do carrinho (usado no UI) */
+  cartChannel: CartChannel;
+
+  /** se pode avançar para checkout (ex.: MIXED não deve) */
+  canCheckout: boolean;
+
+  /** mensagem opcional para UI */
+  message?: string;
+
+  /** breakdown opcional */
+  breakdown?: {
+    globalQty: number;
+    ptQty: number;
+    totalQty: number;
+  };
 };
 
 /**
- * ✅ Regras:
- * - GLOBAL: usa a lógica antiga (promoções) — aqui devolvemos "null" para o caller continuar a usar applyPromotions()
- * - PT_STOCK_CTT (Portugal stock):
- *    1 item  -> 6€
- *    2 items -> 3€
- *    3+      -> FREE
- *
- * NOTA: este ficheiro é deliberadamente "pequeno" e puro,
- * para poderes chamar tanto no Cart, Checkout, Stripe webhooks, etc.
+ * Item mínimo para calcular shipping sem depender do Prisma types.
+ * (funciona com cartItem + include product.channel, ou com linhas "flat")
  */
+export type ShippingItemLike = {
+  qty: number;
+  product?: { channel?: string | null } | null;
+  channel?: string | null; // caso já venhas com channel no próprio item
+};
 
-/** helper: clamp int >= 0 */
-function toNonNegInt(n: unknown) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.floor(x));
+/** 🔹 regras de shipping (ajusta se quiseres) */
+const GLOBAL_SHIPPING_CENTS = 500; // 5€
+const PT_1_SHIPPING_CENTS = 600; // 6€
+const PT_2_SHIPPING_CENTS = 300; // 3€
+const PT_3PLUS_SHIPPING_CENTS = 0; // grátis
+
+function normChannel(v: unknown): "GLOBAL" | "PT_STOCK_CTT" {
+  return String(v ?? "").toUpperCase() === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
 }
 
-/**
- * Calcula shipping apenas com base no total de unidades de um "channel".
- * Útil quando já sabes que o carrinho é todo PT_STOCK_CTT.
- */
-export function getPtStockCttShippingByQty(totalQty: number): ShippingResult {
-  const q = toNonNegInt(totalQty);
+export function getCartChannelFromItems(items: ShippingItemLike[]): CartChannel {
+  let hasGlobal = false;
+  let hasPt = false;
 
-  if (q <= 0) {
-    return {
-      shippingCents: 0,
-      label: "CTT Shipping (Portugal)",
-      carrier: "CTT",
-      eta: "2–3 business days",
-    };
-  }
-
-  if (q === 1) {
-    return {
-      shippingCents: 600,
-      label: "CTT Shipping (Portugal)",
-      carrier: "CTT",
-      eta: "2–3 business days",
-    };
-  }
-
-  if (q === 2) {
-    return {
-      shippingCents: 300,
-      label: "CTT Shipping (Portugal)",
-      carrier: "CTT",
-      eta: "2–3 business days",
-    };
-  }
-
-  return {
-    shippingCents: 0,
-    label: "CTT Free Shipping (Portugal)",
-    carrier: "CTT",
-    eta: "2–3 business days",
-  };
-}
-
-/**
- * Forma genérica para calcular shipping a partir de linhas do carrinho,
- * suportando canais diferentes.
- *
- * Se misturares canais, isto devolve "GLOBAL" (ou 0) — a regra do teu projeto
- * é NÃO permitir MIXED carts, então normalmente nunca vais cair aqui com MIXED.
- */
-export function getShippingForCart(
-  items: Array<{ quantity: number; channel: CartChannel }>
-): ShippingResult {
-  const totals = new Map<CartChannel, number>();
   for (const it of items) {
-    const ch = it.channel ?? "GLOBAL";
-    const q = toNonNegInt(it.quantity);
-    totals.set(ch, (totals.get(ch) ?? 0) + q);
+    const qty = Math.max(0, Number(it?.qty ?? 0));
+    if (qty <= 0) continue;
+
+    const ch = normChannel(it.channel ?? it.product?.channel);
+    if (ch === "PT_STOCK_CTT") hasPt = true;
+    else hasGlobal = true;
   }
 
-  const hasGlobal = (totals.get("GLOBAL") ?? 0) > 0;
-  const hasPt = (totals.get("PT_STOCK_CTT") ?? 0) > 0;
+  if (hasGlobal && hasPt) return "MIXED";
+  if (hasPt) return "PT_STOCK_CTT";
+  return "GLOBAL";
+}
 
-  // ✅ Se por algum motivo vier MIXED, devolvemos 0 e o caller deve bloquear checkout
-  if (hasGlobal && hasPt) {
+export function calcPtStockShippingCents(ptQty: number): number {
+  const q = Math.max(0, Math.floor(ptQty || 0));
+  if (q <= 0) return 0;
+  if (q === 1) return PT_1_SHIPPING_CENTS;
+  if (q === 2) return PT_2_SHIPPING_CENTS;
+  return PT_3PLUS_SHIPPING_CENTS;
+}
+
+export function calcGlobalShippingCents(globalQty: number): number {
+  const q = Math.max(0, Math.floor(globalQty || 0));
+  if (q <= 0) return 0;
+  return GLOBAL_SHIPPING_CENTS;
+}
+
+/**
+ * ✅ FUNÇÃO PRINCIPAL (usa no cart/page.tsx)
+ * Devolve cartChannel + shippingCents.
+ */
+export function getShippingForCart(items: ShippingItemLike[]): ShippingResult {
+  const totalQty = items.reduce((a, it) => a + Math.max(0, Number(it?.qty ?? 0)), 0);
+
+  let globalQty = 0;
+  let ptQty = 0;
+
+  for (const it of items) {
+    const qty = Math.max(0, Math.floor(Number(it?.qty ?? 0)));
+    if (qty <= 0) continue;
+
+    const ch = normChannel(it.channel ?? it.product?.channel);
+    if (ch === "PT_STOCK_CTT") ptQty += qty;
+    else globalQty += qty;
+  }
+
+  const cartChannel = getCartChannelFromItems(items);
+
+  // ✅ se misturar, podes bloquear (recomendado)
+  if (cartChannel === "MIXED") {
     return {
+      cartChannel,
       shippingCents: 0,
-      label: "Shipping",
-      carrier: "GLOBAL",
+      canCheckout: false,
+      message:
+        "Your cart has mixed items (GLOBAL + Portugal Delivery). Please checkout separately.",
+      breakdown: { globalQty, ptQty, totalQty },
     };
   }
 
-  if (hasPt) {
-    return getPtStockCttShippingByQty(totals.get("PT_STOCK_CTT") ?? 0);
+  if (cartChannel === "PT_STOCK_CTT") {
+    return {
+      cartChannel,
+      shippingCents: calcPtStockShippingCents(ptQty),
+      canCheckout: true,
+      message:
+        ptQty >= 3
+          ? "Portugal Delivery: free shipping (3+ items)."
+          : ptQty === 2
+          ? "Portugal Delivery: shipping 3€ (2 items)."
+          : ptQty === 1
+          ? "Portugal Delivery: shipping 6€ (1 item)."
+          : undefined,
+      breakdown: { globalQty, ptQty, totalQty },
+    };
   }
 
-  // GLOBAL: aqui não calculamos (promoções fazem isso)
+  // GLOBAL
   return {
-    shippingCents: 0,
-    label: "Shipping",
-    carrier: "GLOBAL",
+    cartChannel: "GLOBAL",
+    shippingCents: calcGlobalShippingCents(globalQty),
+    canCheckout: true,
+    message: globalQty > 0 ? "Global shipping applies." : undefined,
+    breakdown: { globalQty, ptQty, totalQty },
   };
-}
-
-/** Pequeno helper para UI (ex.: ProductConfigurator PT Stock) */
-export function getEtaTextForChannel(channel: CartChannel) {
-  return channel === "PT_STOCK_CTT" ? "2–3 business days (CTT)" : "7–20 business days";
 }

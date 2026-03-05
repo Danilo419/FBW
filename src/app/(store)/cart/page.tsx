@@ -326,6 +326,25 @@ function promoBannerMessage(totalQty: number) {
   return { title: "Promotion Preview", message: null as string | null, showPill: true };
 }
 
+/* -------------------------- shipping helpers (type-safe) -------------------------- */
+type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+
+function cartChannelFromShipping(info: any): CartChannel {
+  if (!info) return "GLOBAL";
+
+  // some versions might return cartChannel
+  if (typeof info.cartChannel === "string") return info.cartChannel as CartChannel;
+
+  // other versions might return channel/shippingChannel
+  if (typeof info.channel === "string") return info.channel as CartChannel;
+  if (typeof info.shippingChannel === "string") return info.shippingChannel as CartChannel;
+
+  // or a boolean flag
+  if (info.isMixed === true || info.mixed === true) return "MIXED";
+
+  return "GLOBAL";
+}
+
 /* ------------------------------- types ------------------------------- */
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -417,15 +436,17 @@ export default async function CartPage() {
   const totalQty = displayItems.reduce((acc: number, it: any) => acc + (it.qty ?? 0), 0);
 
   // ✅ PT Stock / CTT shipping rules (and mixed-cart block)
+  // FIX: ShippingItemLike expects "qty" (not "quantity")
   const shippingInfo = getShippingForCart(
     displayItems.map((it: any) => ({
-      quantity: Math.max(0, Number(it.qty ?? 0)),
+      qty: Math.max(0, Number(it.qty ?? 0)),
       channel: (it.product?.channel ?? "GLOBAL") as any,
     }))
   );
 
-  const isMixedCart = shippingInfo?.cartChannel === "MIXED";
-  const isPtStockCart = shippingInfo?.cartChannel === "PT_STOCK_CTT";
+  const cartChannel = cartChannelFromShipping(shippingInfo);
+  const isMixedCart = cartChannel === "MIXED";
+  const isPtStockCart = cartChannel === "PT_STOCK_CTT";
 
   // ✅ SINGLE SOURCE OF TRUTH: same logic as Stripe (server)
   // NOTE: for PT Stock cart we keep existing promo logic intact, but we do NOT apply promotions.
@@ -452,7 +473,8 @@ export default async function CartPage() {
   // ✅ PT Stock cart totals (no Buy X Get Y promotions; CTT shipping rules)
   const payableSubtotalCents_PT = subtotalCents;
   const discountCents_PT = 0;
-  const shippingCents_PT = typeof shippingInfo?.shippingCents === "number" ? shippingInfo.shippingCents : 0;
+  const shippingCents_PT =
+    typeof (shippingInfo as any)?.shippingCents === "number" ? Number((shippingInfo as any).shippingCents) : 0;
   const totalPayableCents_PT = payableSubtotalCents_PT + shippingCents_PT;
 
   // ✅ choose what to display
@@ -463,9 +485,6 @@ export default async function CartPage() {
 
   const promoTitle = promoTitleFromName(promo.promoName);
   const banner = promoBannerMessage(totalQty);
-
-  // ✅ for PT Stock cart, do not show free items
-  const ptStockFreeApplied = 0;
 
   return (
     <div className="container-fw py-12">
@@ -537,7 +556,6 @@ export default async function CartPage() {
               </div>
             </div>
           ) : banner.showPill ? (
-            // ✅ FIX MOBILE: make it clear + avoid weird line breaks
             <div className="w-full sm:w-auto">
               <div className="rounded-2xl sm:rounded-full border bg-gray-50 px-4 py-3 sm:py-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -630,14 +648,12 @@ export default async function CartPage() {
 
                       {showTeam && <div className="mt-0.5 text-sm text-gray-600">{it.product.team}</div>}
 
-                      {/* ✅ PT Stock label per item (optional, doesn't remove existing UI) */}
                       {String(it.product?.channel ?? "GLOBAL") === "PT_STOCK_CTT" && (
                         <div className="mt-1 inline-flex items-center rounded-full border bg-emerald-50 px-3 py-1 text-[11px] text-emerald-800">
                           CTT • 2–3 business days (Stock PT)
                         </div>
                       )}
 
-                      {/* ✅ ORDER: Name, Number, Size, (Badges) */}
                       {hasMetaBlock && (
                         <div className="mt-2 space-y-2">
                           {custName && (
@@ -665,7 +681,6 @@ export default async function CartPage() {
                             <div className="text-xs text-gray-700">
                               <div className="font-semibold text-gray-900 mb-1">Badges:</div>
 
-                              {/* ✅ MOBILE: pills take full width so text uses surrounding space */}
                               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
                                 {badgePills.map((b) => (
                                   <span
@@ -705,7 +720,6 @@ export default async function CartPage() {
                         </div>
                       )}
 
-                      {/* other options */}
                       {optionRows.length > 0 && (
                         <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600">
                           {optionRows.map(([k, v]) => (
@@ -810,8 +824,7 @@ export default async function CartPage() {
               </div>
             ) : (
               <div className="pt-3 text-xs text-gray-500">
-                Add more items to unlock:{" "}
-                <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
+                Add more items to unlock: <span className="font-semibold text-gray-800">Buy 2 Get 3</span>
               </div>
             )}
           </div>
