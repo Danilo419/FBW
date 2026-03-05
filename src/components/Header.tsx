@@ -155,8 +155,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       >
         {/* DESKTOP BAR */}
         <div className="container-fw hidden md:flex h-24 items-center gap-4">
-          {/* Logo (left) */}
-          <Link href="/" className="flex items-center gap-3 shrink-0">
+          {/* Logo (left) - pushed slightly more to the edge */}
+          <Link
+            href="/"
+            className="flex items-center gap-3 shrink-0 md:-ml-2 lg:-ml-4"
+          >
             <Image
               src="/logo.png"
               alt="FootballWorld"
@@ -168,8 +171,8 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          {/* Centered nav */}
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-10 text-[16px] font-medium">
+          {/* Centered nav - more spacing between items */}
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-12 xl:gap-14 text-[16px] font-medium">
             <Link href="/nations" className="hover:text-blue-700">
               Nations
             </Link>
@@ -181,7 +184,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               Clubs
             </Link>
 
-            {/* FIX: keep "Portugal Delivery" on one line */}
+            {/* Keep "Portugal Delivery" on one line */}
             <Link
               href="/pt-stock"
               className="flex items-center gap-1 hover:text-blue-700 whitespace-nowrap"
