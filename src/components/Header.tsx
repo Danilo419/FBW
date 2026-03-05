@@ -191,11 +191,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               FAQ
             </Link>
 
-            {isAdmin && (
-              <Link href="/admin" className="hover:text-blue-700">
-                Admin
-              </Link>
-            )}
+            {/* REMOVIDO: link "Admin" no menu do topo */}
           </nav>
 
           {/* Right: Search + Cart + User */}
@@ -493,11 +489,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             Cart
           </MobileLink>
 
-          {isAdmin && (
-            <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>
-              Admin
-            </MobileLink>
-          )}
+          {/* REMOVIDO: link "Admin" no menu mobile */}
         </nav>
 
         <div className="mt-auto p-3 border-t">
