@@ -143,11 +143,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
   return (
     <>
-      {/* IMPORTANT FIX:
-          MobileDrawer uses position:fixed. If it lives INSIDE an element with transform,
-          fixed becomes “bound” to the header (it becomes tiny and unusable on mobile).
-          So the drawer is OUTSIDE the <header>, as a sibling.
-      */}
       <header
         className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/80 backdrop-blur transition-transform duration-300 ${
           hidden ? "-translate-y-full" : "translate-y-0"
@@ -155,10 +150,10 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       >
         {/* DESKTOP BAR */}
         <div className="container-fw hidden md:flex h-24 items-center gap-4">
-          {/* Logo (left) - pushed slightly more to the edge */}
+          {/* Logo (left) - more to the corner */}
           <Link
             href="/"
-            className="flex items-center gap-3 shrink-0 md:-ml-2 lg:-ml-4"
+            className="flex items-center gap-3 shrink-0 md:-ml-4 lg:-ml-7"
           >
             <Image
               src="/logo.png"
@@ -171,8 +166,8 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          {/* Centered nav - more spacing between items */}
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-12 xl:gap-14 text-[16px] font-medium">
+          {/* Centered nav - slightly reduced spacing */}
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-11 xl:gap-12 text-[16px] font-medium">
             <Link href="/nations" className="hover:text-blue-700">
               Nations
             </Link>
@@ -184,7 +179,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               Clubs
             </Link>
 
-            {/* Keep "Portugal Delivery" on one line */}
             <Link
               href="/pt-stock"
               className="flex items-center gap-1 hover:text-blue-700 whitespace-nowrap"
@@ -206,10 +200,8 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
           {/* Right: Search + Cart + User */}
           <div className="ml-auto flex items-center gap-3">
-            {/* Search (desktop) */}
             <SearchBar className="hidden lg:block" />
 
-            {/* Cart (desktop) */}
             <Link
               href="/cart"
               aria-label="Open cart"
@@ -228,7 +220,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               )}
             </Link>
 
-            {/* User */}
             {status === "authenticated" ? (
               <div className="relative">
                 <button
@@ -318,7 +309,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
         {/* MOBILE BAR */}
         <div className="container-fw md:hidden flex h-20 items-center justify-between">
-          {/* Hamburger */}
           <button
             aria-label="Open menu"
             onClick={() => setMobileOpen(true)}
@@ -327,7 +317,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <Menu className="h-6 w-6" />
           </button>
 
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -340,9 +329,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          {/* Right side (mobile) */}
           <div className="flex items-center gap-2">
-            {/* Search toggle */}
             <button
               aria-label="Open search"
               onClick={() => setShowSearchMobile((v) => !v)}
@@ -352,7 +339,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               <Search className="h-5 w-5" />
             </button>
 
-            {/* Cart */}
             <Link
               href="/cart"
               aria-label="Open cart"
@@ -402,7 +388,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </div>
         </div>
 
-        {/* Search row (mobile) */}
         {showSearchMobile && (
           <div className="md:hidden container-fw pb-3">
             <SearchBar
@@ -412,7 +397,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </div>
         )}
 
-        {/* User dropdown (mobile) */}
         {userOpen && (
           <div
             ref={userMenuMobileRef}
@@ -577,7 +561,6 @@ function SearchBar({
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
-  // Close when clicking outside
   useEffect(() => {
     const onDocPointerDown = (e: PointerEvent) => {
       const t = e.target as Node;
@@ -652,7 +635,6 @@ function SearchBar({
       });
   }, []);
 
-  // Debounced search
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     if (term.trim().length < 2) {
@@ -745,7 +727,6 @@ function SearchBar({
         </div>
       </form>
 
-      {/* Popover */}
       {open && (
         <div
           id="search-popover"
@@ -960,7 +941,6 @@ function MobileDrawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  // Optional: lock body scroll when the menu is open
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!open) return;
@@ -1001,7 +981,6 @@ function MobileDrawer({
           </button>
         </div>
 
-        {/* Actual scroll area of the drawer */}
         <div className="overflow-y-auto">{children}</div>
       </aside>
     </>
