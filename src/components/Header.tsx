@@ -179,13 +179,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               Clubs
             </Link>
 
-            <Link
-              href="/pt-stock"
-              className="flex items-center gap-1 hover:text-blue-700 whitespace-nowrap"
-            >
-              <Truck className="h-4 w-4" />
-              <span className="whitespace-nowrap">Portugal Delivery</span>
-            </Link>
+            {/* REMOVIDO: Portugal Delivery (pt-stock) do header desktop */}
 
             <Link href="/faq" className="hover:text-blue-700">
               FAQ
@@ -957,8 +951,8 @@ function MobileDrawer({
       <aside
         className={`fixed inset-y-0 left-0 z-[1000] w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr]
           transition-transform duration-300 ${
-            open ? "translate-x-0" : "-translate-x-full"
-          }`}
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
         role="dialog"
         aria-modal="true"
       >
