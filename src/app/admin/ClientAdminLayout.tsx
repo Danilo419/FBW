@@ -16,7 +16,7 @@ import { usePathname } from "next/navigation";
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 420;
-const COLLAPSED_WIDTH = 72; // rail width
+const COLLAPSED_WIDTH = 72;
 const WIDTH_KEY = "adminSidebarWidth";
 const COLLAPSED_KEY = "adminSidebarCollapsed";
 
@@ -29,7 +29,6 @@ export default function ClientAdminLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [peeking, setPeeking] = useState(false);
 
-  // drag state
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -58,7 +57,7 @@ export default function ClientAdminLayout({
     } catch {}
   }, [width, collapsed]);
 
-  /* ---------- drag to resize (expanded only) ---------- */
+  /* ---------- drag to resize ---------- */
   const onDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
     if (collapsed) return;
     draggingRef.current = true;
@@ -92,10 +91,7 @@ export default function ClientAdminLayout({
     };
   }, [collapsed]);
 
-  /* ---------- collapse / expand ---------- */
   const toggleCollapsed = () => setCollapsed((c) => !c);
-
-  // animated width; when collapsed and not peeking, use the rail width
   const effectiveWidth = collapsed && !peeking ? COLLAPSED_WIDTH : width;
 
   return (
@@ -115,7 +111,6 @@ export default function ClientAdminLayout({
         <div className="h-full p-3 md:p-4 flex flex-col">
           {/* Top */}
           <div className="mb-4 flex items-center justify-between">
-            {/* When collapsed: do not show any text */}
             {collapsed && !peeking ? (
               <span className="sr-only">FootBallWorld • Admin</span>
             ) : (
@@ -140,7 +135,6 @@ export default function ClientAdminLayout({
 
           {/* Navigation */}
           {collapsed && !peeking ? (
-            // Clean rail: no text, just a central “grab” glyph
             <div className="flex-1 flex items-center justify-center select-none text-gray-400">
               <span aria-hidden className="text-2xl leading-none">
                 ⠿
@@ -150,11 +144,27 @@ export default function ClientAdminLayout({
             <>
               <nav className="space-y-1">
                 <NavItem href="/admin" label="Dashboard" />
+
                 <NavItem href="/admin/orders" label="Orders" />
+
+                <NavItem
+                  href="/admin/pt-stock/orders"
+                  label="PT Stock Orders"
+                  indent
+                  badge="PT"
+                />
+
                 <NavItem href="/admin/products" label="Products" />
+
+                <NavItem
+                  href="/admin/pt-stock/products"
+                  label="PT Stock Products"
+                  indent
+                  badge="PT"
+                />
+
                 <NavItem href="/admin/users" label="Users" />
-                <NavItem href="/admin/newsletter" label="Newsletter" />{" "}
-                {/* ✅ NEW */}
+                <NavItem href="/admin/newsletter" label="Newsletter" />
                 <NavItem href="/admin/analytics" label="Analytics" />
               </nav>
 
@@ -164,7 +174,6 @@ export default function ClientAdminLayout({
                 <button
                   type="submit"
                   className="w-full rounded-lg border px-3 py-2 hover:bg-gray-50"
-                  title="Log out"
                 >
                   Log out
                 </button>
@@ -173,7 +182,6 @@ export default function ClientAdminLayout({
           )}
         </div>
 
-        {/* Resize handle (visible only when expanded) */}
         {!collapsed && (
           <div
             onMouseDown={onDragStart}
@@ -182,38 +190,49 @@ export default function ClientAdminLayout({
               background:
                 "linear-gradient(to right, transparent 0, rgba(0,0,0,0.08) 50%, transparent 100%)",
             }}
-            title="Drag to resize"
           />
         )}
       </aside>
 
       {/* Content */}
-      <main
-        className="flex-1 p-4 md:p-8 overflow-x-auto"
-        style={{ transition: "padding 200ms ease" }}
-      >
-        {children}
-      </main>
+      <main className="flex-1 p-4 md:p-8 overflow-x-auto">{children}</main>
     </div>
   );
 }
 
-/* ---------- Nav item (with active state) ---------- */
-function NavItem({ href, label }: { href: string; label: string }) {
+/* ---------- Nav item ---------- */
+function NavItem({
+  href,
+  label,
+  indent = false,
+  badge,
+}: {
+  href: string;
+  label: string;
+  indent?: boolean;
+  badge?: string;
+}) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== "/admin" && pathname?.startsWith(href));
+  const active =
+    pathname === href || (href !== "/admin" && pathname?.startsWith(href));
 
   return (
     <Link
       href={href}
       className={[
-        "relative block rounded-lg px-3 py-2 transition truncate",
+        "flex items-center justify-between rounded-lg px-3 py-2 transition truncate",
         active ? "bg-gray-100 font-semibold" : "hover:bg-gray-100",
+        indent ? "ml-4 text-sm" : "",
       ].join(" ")}
       title={label}
-      aria-current={active ? "page" : undefined}
     >
-      {label}
+      <span>{label}</span>
+
+      {badge && (
+        <span className="ml-2 text-[10px] font-bold px-2 py-[2px] rounded-full bg-blue-600 text-white">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
