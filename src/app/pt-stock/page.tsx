@@ -45,6 +45,7 @@ function getCoverUrl(imageUrls: unknown) {
   }
 }
 
+/** ✅ keep your original formatMoney, only move "€" to the right in THIS FILE */
 function formatMoneyRight(cents: number) {
   const s = formatMoney(cents);
 
@@ -78,53 +79,47 @@ export default async function PtStockPage() {
 
   return (
     <div className="container-fw py-10">
-
-      {/* PAGE INTRO */}
       <div className="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Portugal Stock Jerseys
             </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Products already stored in Portugal — delivered with CTT in <b>2–3 business days</b>.
-            </p>
           </div>
 
-          {/* SHIPPING BOX */}
           <div className="rounded-2xl sm:rounded-full border bg-gray-50 px-4 py-3 sm:py-2">
             <div className="text-sm font-semibold text-gray-900">
               Portugal Shipping Rules
             </div>
             <div className="mt-1 text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:gap-3">
-              <span>1 jersey: <b>6€</b></span>
+              <span>
+                1 jersey: <b>6€</b>
+              </span>
               <span className="hidden sm:block text-gray-300">•</span>
-              <span>2 jerseys: <b>3€</b></span>
+              <span>
+                2 jerseys: <b>3€</b>
+              </span>
               <span className="hidden sm:block text-gray-300">•</span>
-              <span>3+ jerseys: <b>FREE shipping</b></span>
+              <span>
+                3+ jerseys: <b>FREE shipping</b>
+              </span>
             </div>
           </div>
-
         </div>
 
         {/* TEXT EXPLANATION */}
         <div className="mt-6 space-y-5 text-sm text-gray-700">
-
           <div>
-            <p className="font-semibold text-gray-900 mb-1">
-              🇬🇧 ENGLISH :
-            </p>
+            <p className="font-semibold text-gray-900 mb-1">🇬🇧 ENGLISH :</p>
 
             <p>
-              On this page you can only buy products that <b>FootballWorld already has in stock in Portugal</b>.
-              These items are shipped directly from Portugal using CTT, allowing much faster delivery within the country.
+              On this page you can only buy products that <b>FootballWorld already has in stock in Portugal</b>,
+              delivered with CTT in <b>2–3 business days</b>.
             </p>
 
             <p className="mt-2">
-              The promotions shown in the banner above <b>do not apply</b> to the products on this page.
-              Instead, the following Portugal shipping rules apply:
+              The promotions used on other pages <b>do not apply</b> to the products on this page.
+              Instead, this page uses a special Portugal stock shipping promotion:
             </p>
 
             <p className="mt-2">
@@ -147,18 +142,16 @@ export default async function PtStockPage() {
           </div>
 
           <div>
-            <p className="font-semibold text-gray-900 mb-1">
-              🇵🇹 PORTUGUÊS :
-            </p>
+            <p className="font-semibold text-gray-900 mb-1">🇵🇹 PORTUGUÊS :</p>
 
             <p>
-              Nesta página só é possível comprar produtos que a <b>FootBallWorld já tem em stock em Portugal</b>.
-              Estes produtos são enviados diretamente a partir de Portugal através dos CTT, permitindo uma entrega muito mais rápida dentro do país.
+              Nesta página só é possível comprar produtos que a <b>FootBallWorld já tem em stock em Portugal</b>,
+              delivered with CTT in <b>2–3 business days</b>.
             </p>
 
             <p className="mt-2">
-              As promoções apresentadas no banner acima <b>não se aplicam</b> aos produtos desta página.
-              Em vez disso, aplicam-se as seguintes regras de envio para Portugal:
+              As promoções usadas noutras páginas <b>não se aplicam</b> aos produtos desta página.
+              Em vez disso, esta página usa uma promoção especial de envio para stock em Portugal:
             </p>
 
             <p className="mt-2">
@@ -175,9 +168,7 @@ export default async function PtStockPage() {
               mantendo exatamente a mesma qualidade do produto.
             </p>
           </div>
-
         </div>
-
       </div>
 
       {products.length === 0 ? (
@@ -205,7 +196,6 @@ export default async function PtStockPage() {
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     unoptimized={external}
                   />
-
                   <div className="absolute left-3 top-3 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1 text-[11px] font-semibold">
                     CTT 2–3 days
                   </div>
@@ -233,13 +223,11 @@ export default async function PtStockPage() {
                     <div className="text-sm font-extrabold text-gray-900 tabular-nums">
                       {formatMoneyRight(p.basePrice)}
                     </div>
-
                     <span className="text-[11px] text-gray-500 group-hover:text-gray-700 transition">
                       View product →
                     </span>
                   </div>
                 </div>
-
               </Link>
             );
           })}
