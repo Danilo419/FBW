@@ -105,31 +105,6 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
   return product.basePrice;
 }
 
-/* ✅ NEW: product channel */
-async function getProductChannel(productId: string): Promise<"GLOBAL" | "PT_STOCK_CTT"> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: { channel: true },
-  });
-  if (!product) throw new Error("Product not found");
-  return (product.channel as any) ?? "GLOBAL";
-}
-
-/* ✅ NEW: cart channel (GLOBAL / PT_STOCK_CTT / MIXED) */
-async function getCartChannel(cartId: string): Promise<"GLOBAL" | "PT_STOCK_CTT" | "MIXED"> {
-  const rows = await prisma.cartItem.findMany({
-    where: { cartId },
-    select: { product: { select: { channel: true } } },
-  });
-
-  const set = new Set<string>();
-  for (const r of rows) set.add(String((r.product as any)?.channel ?? "GLOBAL"));
-
-  if (set.size === 0) return "GLOBAL";
-  if (set.size === 1) return (Array.from(set)[0] as any) ?? "GLOBAL";
-  return "MIXED";
-}
-
 function emptySummary() {
   return {
     count: 0,
@@ -145,26 +120,22 @@ function emptySummary() {
   };
 }
 
+/** local helper: não assumir que ShippingResult tem sempre cartChannel no type */
+function cartChannelFromShipping(info: any): "GLOBAL" | "PT_STOCK_CTT" | "MIXED" {
+  if (!info) return "GLOBAL";
+  if (typeof info.cartChannel === "string") return info.cartChannel;
+  if (typeof info.channel === "string") return info.channel;
+  if (typeof info.shippingChannel === "string") return info.shippingChannel;
+  if (info.isMixed === true || info.mixed === true) return "MIXED";
+  return "GLOBAL";
+}
+
 /* ========= actions ========= */
 export async function addToCartAction(raw: AddToCartInput) {
   try {
     const input = AddToCartSchema.parse(raw);
 
     const cart = await getOrCreateCart();
-
-    // ✅ prevent mixed carts (GLOBAL + PT_STOCK_CTT)
-    const incomingChannel = await getProductChannel(input.productId);
-    const currentCartChannel = await getCartChannel(cart.id);
-
-    if (
-      currentCartChannel === "MIXED" ||
-      (currentCartChannel !== "GLOBAL" && currentCartChannel !== incomingChannel) ||
-      (currentCartChannel === "GLOBAL" && incomingChannel === "PT_STOCK_CTT" && (await prisma.cartItem.count({ where: { cartId: cart.id } })) > 0) ||
-      (currentCartChannel === "PT_STOCK_CTT" && incomingChannel === "GLOBAL")
-    ) {
-      return { ok: false as const, error: "MIXED_CART_NOT_ALLOWED" };
-    }
-
     const unitPrice = await getBaseUnitPrice(input.productId);
 
     // ✅ normalizar options
@@ -258,7 +229,6 @@ export async function addToCartAction(raw: AddToCartInput) {
  * getCartSummary agora:
  * - lê as linhas do carrinho
  * - usa applyPromotions (mesma lógica do Stripe e do cart/page.tsx)
- * - ✅ se for PT_STOCK_CTT: ignora promo e usa regras CTT (shipping.ts)
  * - devolve subtotal, discount, shipping, total, etc.
  */
 export async function getCartSummary() {
@@ -274,7 +244,11 @@ export async function getCartSummary() {
       qty: true,
       unitPrice: true,
       product: {
-        select: { name: true, imageUrls: true, channel: true },
+        select: {
+          name: true,
+          imageUrls: true,
+          channel: true,
+        },
       },
     },
     orderBy: { createdAt: "asc" },
@@ -284,57 +258,39 @@ export async function getCartSummary() {
 
   const subtotal = rawItems.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
 
-  // ✅ detect cart channel
-  const channels = new Set<string>(rawItems.map((it) => String((it.product as any)?.channel ?? "GLOBAL")));
-  const cartChannel: "GLOBAL" | "PT_STOCK_CTT" | "MIXED" =
-    channels.size <= 1 ? ((Array.from(channels)[0] ?? "GLOBAL") as any) : "MIXED";
+  // ✅ determinar canal do carrinho
+  const channels = new Set<string>();
+  for (const it of rawItems) channels.add(String(it.product?.channel ?? "GLOBAL"));
+  const cartChannel =
+    channels.size > 1 ? "MIXED" : (Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL";
 
-  // ✅ MIXED: return a safe summary (caller can block checkout)
-  if (cartChannel === "MIXED") {
-    return {
-      count: rawItems.length,
-      subtotal,
-      discount: 0,
-      shipping: 0,
-      total: subtotal,
-      promotion: {
-        promoName: "NONE" as const,
-        freeUnitsCount: 0,
-        hasPromotion: false,
-      },
-      cartChannel,
-      mixedCart: true,
-    } as any;
-  }
-
-  // ✅ PT Stock: no promos, CTT shipping rules
+  // ✅ Para PT Stock: shipping via regras CTT e sem promo Buy X Get Y
   if (cartChannel === "PT_STOCK_CTT") {
     const ship = getShippingForCart(
       rawItems.map((it) => ({
-        quantity: Math.max(0, Number(it.qty ?? 0)),
+        // ✅ FIX AQUI: ShippingItemLike usa "qty", não "quantity"
+        qty: Math.max(0, Number(it.qty ?? 0)),
         channel: "PT_STOCK_CTT" as const,
       }))
     );
 
-    const shipping = ship?.shippingCents ?? 0;
-    const total = subtotal + shipping;
+    const shipping = typeof (ship as any)?.shippingCents === "number" ? Number((ship as any).shippingCents) : 0;
 
     return {
       count: rawItems.length,
       subtotal,
       discount: 0,
       shipping,
-      total,
+      total: subtotal + shipping,
       promotion: {
         promoName: "NONE" as const,
         freeUnitsCount: 0,
         hasPromotion: false,
       },
-      cartChannel,
-    } as any;
+    };
   }
 
-  // ✅ GLOBAL: keep existing promotions logic intact
+  // ✅ GLOBAL (promo normal)
   const lines: CartLine[] = rawItems.map((it) => ({
     id: String(it.id),
     name: it.product?.name ?? "",
@@ -345,10 +301,7 @@ export async function getCartSummary() {
 
   const promo = applyPromotions(lines);
 
-  const payableSubtotal = promo.lines.reduce(
-    (acc, l) => acc + l.payQty * l.unitAmountCents,
-    0
-  );
+  const payableSubtotal = promo.lines.reduce((acc, l) => acc + l.payQty * l.unitAmountCents, 0);
 
   const discount = Math.max(0, subtotal - payableSubtotal);
   const shipping = promo.shippingCents;
@@ -365,8 +318,7 @@ export async function getCartSummary() {
       freeUnitsCount: promo.freeItemsApplied,
       hasPromotion: promo.promoName !== "NONE" && promo.freeItemsApplied > 0,
     },
-    cartChannel,
-  } as any;
+  };
 }
 
 /* ====== EXTRA: mover estas actions para fora do page.tsx ====== */
