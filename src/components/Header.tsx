@@ -181,12 +181,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               Clubs
             </Link>
 
+            {/* FIX: keep "Portugal Delivery" on one line */}
             <Link
               href="/pt-stock"
-              className="flex items-center gap-1 hover:text-blue-700"
+              className="flex items-center gap-1 hover:text-blue-700 whitespace-nowrap"
             >
               <Truck className="h-4 w-4" />
-              Portugal Delivery
+              <span className="whitespace-nowrap">Portugal Delivery</span>
             </Link>
 
             <Link href="/faq" className="hover:text-blue-700">
