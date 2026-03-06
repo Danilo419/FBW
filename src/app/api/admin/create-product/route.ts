@@ -27,20 +27,18 @@ function parsePriceToCents(raw: string): number {
   return Math.round(n * 100);
 }
 
-/* ================== teamType (CLUB vs NATION) ================== */
 type TeamTypeLocal = "CLUB" | "NATION";
+
 function parseTeamType(v: unknown): TeamTypeLocal {
   const raw = String(v ?? "").trim().toUpperCase();
   return raw === "NATION" ? "NATION" : "CLUB";
 }
 
-/* ================== bool parsing ================== */
 function parseBool(v: unknown): boolean {
   const raw = String(v ?? "").trim().toLowerCase();
   return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
 }
 
-/** Catálogo de labels legíveis para as badges (mesmos "values" usados no admin) */
 const BADGE_LABELS = new Map<string, string>([
   ["premier-league-regular", "Premier League – League Badge"],
   ["premier-league-champions", "Premier League – Champions (Gold)"],
@@ -100,20 +98,19 @@ const BADGE_LABELS = new Map<string, string>([
   ["intercontinental-cup-champions", "FIFA Intercontinental Cup – Champions Badge"],
 ]);
 
-/* ================== Handler ================== */
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
 
-    // ✅ canal (PT Stock vs normal)
-    const channel = String(form.get("channel") ?? "").trim(); // ex: "PT_STOCK_CTT"
-    const isPTStock = channel === "PT_STOCK_CTT" || parseBool(form.get("isPtStock")) || parseBool(form.get("ptStockOnly"));
+    const channel = String(form.get("channel") ?? "").trim();
+    const isPTStock =
+      channel === "PT_STOCK_CTT" ||
+      parseBool(form.get("isPtStock")) ||
+      parseBool(form.get("ptStockOnly"));
 
     const name = String(form.get("name") || "").trim();
     const priceStr = String(form.get("price") || "").trim();
 
-    // ✅ Para PT Stock, team/teamType/season/badges/customization não são usados
-    // ✅ Para normal, continuam obrigatórios
     let team = String(form.get("team") || "").trim();
     let teamType = parseTeamType(form.get("teamType"));
     let season = (String(form.get("season") || "").trim() || null) as string | null;
@@ -126,7 +123,11 @@ export async function POST(req: Request) {
 
     if (!name || !priceStr || (!isPTStock && !team)) {
       return NextResponse.json(
-        { error: isPTStock ? "Missing required fields: name or price." : "Missing required fields: name, team or price." },
+        {
+          error: isPTStock
+            ? "Missing required fields: name or price."
+            : "Missing required fields: name, team or price.",
+        },
         { status: 400 }
       );
     }
@@ -136,9 +137,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid price." }, { status: 400 });
     }
 
-    const description = (String(form.get("description") || "").trim() || null) as string | null;
-
-    // ✅ PT Stock: ignora disableCustomization/badges
     const dcRaw = String(form.get("disableCustomization") ?? "").toLowerCase();
     const disableCustomization =
       dcRaw === "true" ||
@@ -147,6 +145,7 @@ export async function POST(req: Request) {
       dcRaw === "yes" ||
       (dcRaw === "" && form.has("disableCustomization"));
 
+    const description = (String(form.get("description") || "").trim() || null) as string | null;
     const badges = isPTStock ? [] : getAllStrings(form.getAll("badges"));
     const imageUrlsRaw = getAllStrings(form.getAll("imageUrls"));
 
@@ -160,7 +159,6 @@ export async function POST(req: Request) {
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean);
 
-    // Slug único
     const base = toSlug(`${team ? team + " " : ""}${name}${season ? " " + season : ""}`);
     let slug = base || toSlug(name) || `product-${Date.now()}`;
     let suffix = 1;
@@ -168,8 +166,9 @@ export async function POST(req: Request) {
       slug = `${base}-${suffix++}`;
     }
 
-    // ✅ data tipada do Prisma não deixa meter campos extra sem existirem no schema,
-    // então montamos como "any" e só adicionamos canal/flags se tu tiveres isso no schema.
+    // ⚠️ MUITO IMPORTANTE:
+    // Aqui só usamos campos "seguros", sem ptStockOnly/isPtStock.
+    // Se o teu schema tiver MESMO um campo "channel", descomenta a linha abaixo.
     const productData: any = {
       name,
       team,
@@ -180,22 +179,14 @@ export async function POST(req: Request) {
       basePrice,
       badges,
       imageUrls,
+      // channel, // <-- descomenta APENAS se no teu schema Product existir este campo
     };
 
-    // ✅ Se no teu schema existir "channel"/"ptStockOnly"/"isPtStock", isto grava e resolve o teu filtro do admin.
-    if (channel) productData.channel = channel;
-    if (isPTStock) {
-      productData.ptStockOnly = true;
-      productData.isPtStock = true;
-    }
-
-    // 1) Criar produto
     const created = await prisma.product.create({
       data: productData,
       select: { id: true, slug: true },
     });
 
-    // 2) Criar APENAS os tamanhos escolhidos
     try {
       if (sizes.length > 0) {
         await prisma.sizeStock.createMany({
@@ -207,14 +198,9 @@ export async function POST(req: Request) {
           skipDuplicates: true,
         });
       }
-    } catch {
-      // ignorar se não existir
-    }
+    } catch {}
 
-    // ✅ 3) Option Groups
-    // PT Stock: NÃO cria customization e NÃO cria badges
     if (!isPTStock) {
-      // 3.1 Customization (se não estiver desativado)
       if (!disableCustomization) {
         const hasBadges = badges.length > 0;
         const valuesToCreate = [
@@ -223,7 +209,11 @@ export async function POST(req: Request) {
           ...(hasBadges
             ? [
                 { value: "badge", label: "Competition Badge", priceDelta: 0 },
-                { value: "name-number-badge", label: "Name & Number + Competition Badge", priceDelta: 0 },
+                {
+                  value: "name-number-badge",
+                  label: "Name & Number + Competition Badge",
+                  priceDelta: 0,
+                },
               ]
             : []),
         ];
@@ -240,7 +230,6 @@ export async function POST(req: Request) {
         });
       }
 
-      // 3.2 Badges
       if (badges.length > 0) {
         await prisma.optionGroup.create({
           data: {
@@ -266,18 +255,18 @@ export async function POST(req: Request) {
         ok: true,
         id: created.id,
         slug: created.slug,
-        channel: channel || null,
         isPTStock,
         teamType,
         sizeGroup,
         sizes,
-        disableCustomization: isPTStock ? true : disableCustomization,
-        badgesCount: badges.length,
       },
       { status: 201 }
     );
   } catch (err: any) {
     console.error("create-product error:", err);
-    return NextResponse.json({ error: "Failed to create product." }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message || "Failed to create product." },
+      { status: 500 }
+    );
   }
 }

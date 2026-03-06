@@ -19,25 +19,20 @@ const KID_SIZES = [
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]);
 const MAX_BYTES = 8 * 1024 * 1024;
-
-// ✅ Canal PT Stock (igual ao texto do teu admin)
 const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
 
 export default function NewPTStockProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
-
-  // ✅ Só mostramos os tamanhos escolhidos.
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
-
-  // Images (URLs, ordenáveis)
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  /* ===================== Sizes ===================== */
   function handleSizeGroupChange(e: ChangeEvent<HTMLSelectElement>) {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
+
     if (group === "adult") {
       setSelectedAdult((prev) => (prev.length ? prev : [...ADULT_SIZES]));
       setSelectedKid([]);
@@ -47,21 +42,22 @@ export default function NewPTStockProductPage() {
     }
   }
 
-  // Helpers para adicionar/remover
   function addAdult(size: string) {
     setSelectedAdult((prev) => (prev.includes(size) ? prev : [...prev, size]));
   }
+
   function removeAdult(size: string) {
     setSelectedAdult((prev) => prev.filter((s) => s !== size));
   }
+
   function addKid(size: string) {
     setSelectedKid((prev) => (prev.includes(size) ? prev : [...prev, size]));
   }
+
   function removeKid(size: string) {
     setSelectedKid((prev) => prev.filter((s) => s !== size));
   }
 
-  /* ===================== Images (via /api/upload) ===================== */
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -73,6 +69,7 @@ export default function NewPTStockProductPage() {
         errors.push(`${file.name}: unsupported type`);
         continue;
       }
+
       if (file.size > MAX_BYTES) {
         errors.push(`${file.name}: bigger than 8MB`);
         continue;
@@ -82,13 +79,13 @@ export default function NewPTStockProductPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        // ✅ upload server-side (Blob/Cloud)
         const res = await fetch("/api/upload", {
           method: "POST",
           body: formData,
         });
 
         const data = await res.json().catch(() => ({} as any));
+
         if (!res.ok) {
           errors.push(`${file.name}: ${data?.error ?? "upload failed"}`);
           continue;
@@ -114,14 +111,12 @@ export default function NewPTStockProductPage() {
     }
   }
 
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-
   function move(from: number, to: number) {
     setImageUrls((prev) => {
       if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
       const arr = [...prev];
-      const [it] = arr.splice(from, 1);
-      arr.splice(to, 0, it);
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
       return arr;
     });
   }
@@ -130,49 +125,45 @@ export default function NewPTStockProductPage() {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  /* ===================== Submit ===================== */
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // ✅ Forçar criação apenas para PT Stock
     formData.set("channel", PT_STOCK_CHANNEL);
     formData.set("ptStockOnly", "true");
     formData.set("isPtStock", "true");
 
-    // Sizes – apenas os selecionados são enviados
-    formData.append("sizeGroup", sizeGroup);
+    formData.set("sizeGroup", sizeGroup);
+
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
 
-    // Imagens (apenas URLs)
     imageUrls.forEach((u) => formData.append("imageUrls", u));
     formData.delete("images");
 
-    // ✅ Usa o mesmo endpoint (agora suporta PT Stock via channel)
     const res = await fetch("/api/admin/create-product", {
       method: "POST",
       body: formData,
     });
 
     if (!res.ok) {
-      const msg = await res.text().catch(() => "");
-      alert(`Failed to create PT Stock product. ${msg || ""}`);
+      const data = await res.json().catch(() => null);
+      const msg = data?.error || "Failed to create product.";
+      alert(`Failed to create PT Stock product.\n${msg}`);
       return;
     }
 
     alert("PT Stock product created successfully!");
     form.reset();
-
-    // Reset state
     setSelectedAdult([...ADULT_SIZES]);
     setSelectedKid([]);
     setSizeGroup("adult");
     setImageUrls([]);
+    setDragIndex(null);
   }
 
-  // ====== Componente reutilizável para gerir tamanhos ======
   function SizesManager({
     title,
     selected,
@@ -191,7 +182,7 @@ export default function NewPTStockProductPage() {
     onClear: () => void;
   }) {
     const remaining = all.filter((s) => !selected.includes(s));
-    const [pick, setPick] = useState<string>("");
+    const [pick, setPick] = useState("");
 
     return (
       <div className="space-y-2">
@@ -217,7 +208,6 @@ export default function NewPTStockProductPage() {
           </div>
         </div>
 
-        {/* Chips — só tamanhos selecionados */}
         {selected.length === 0 ? (
           <div className="text-xs text-gray-500">No sizes selected.</div>
         ) : (
@@ -225,7 +215,7 @@ export default function NewPTStockProductPage() {
             {selected.map((s) => (
               <span
                 key={s}
-                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs bg-white"
+                className="inline-flex items-center gap-1 rounded-full border bg-white px-2.5 py-1 text-xs"
                 title={`Remove ${s}`}
               >
                 {s}
@@ -242,7 +232,6 @@ export default function NewPTStockProductPage() {
           </div>
         )}
 
-        {/* Adicionar um tamanho de volta */}
         <div className="flex items-center gap-2">
           <select
             value={pick}
@@ -256,6 +245,7 @@ export default function NewPTStockProductPage() {
               </option>
             ))}
           </select>
+
           <button
             type="button"
             disabled={!pick}
@@ -275,13 +265,13 @@ export default function NewPTStockProductPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold">Create PT Stock Product</h1>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Create PT Stock Product</h1>
         <p className="text-sm text-gray-500">
           Products created here will appear only in <strong>/pt-stock</strong> (CTT 2–3 business days).
         </p>
       </header>
 
-      <section className="rounded-2xl bg-white p-6 shadow border">
+      <section className="rounded-2xl border bg-white p-6 shadow">
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
@@ -293,7 +283,7 @@ export default function NewPTStockProductPage() {
                 name="name"
                 required
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                placeholder="e.g., Real Madrid Home 25/26"
+                placeholder="e.g., Benfica Home 24/25"
               />
             </div>
 
@@ -327,7 +317,6 @@ export default function NewPTStockProductPage() {
             />
           </div>
 
-          {/* Images */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Images</label>
             <input
@@ -342,11 +331,11 @@ export default function NewPTStockProductPage() {
             </p>
 
             {imageUrls.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {imageUrls.map((u, i) => (
                   <motion.div
                     key={u}
-                    className="group relative rounded-xl border bg-white overflow-hidden"
+                    className="group relative overflow-hidden rounded-xl border bg-white"
                     draggable
                     onDragStart={() => setDragIndex(i)}
                     onDragOver={(e) => e.preventDefault()}
@@ -363,16 +352,15 @@ export default function NewPTStockProductPage() {
                       unoptimized
                       width={400}
                       height={400}
-                      className="aspect-[3/4] w-full object-contain bg.white"
+                      className="aspect-[3/4] w-full object-contain bg-white"
                     />
 
-                    {/* controls */}
-                    <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 opacity-0 group-hover:opacity-100 transition">
+                    <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 opacity-0 transition group-hover:opacity-100">
                       <div className="flex gap-1">
                         <button
                           type="button"
                           onClick={() => move(i, Math.max(0, i - 1))}
-                          className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
+                          className="rounded-md border bg-white/90 px-2 text-xs hover:bg-white"
                           aria-label="Move left"
                           title="Move left"
                         >
@@ -381,7 +369,7 @@ export default function NewPTStockProductPage() {
                         <button
                           type="button"
                           onClick={() => move(i, Math.min(imageUrls.length - 1, i + 1))}
-                          className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
+                          className="rounded-md border bg-white/90 px-2 text-xs hover:bg-white"
                           aria-label="Move right"
                           title="Move right"
                         >
@@ -391,7 +379,7 @@ export default function NewPTStockProductPage() {
                       <button
                         type="button"
                         onClick={() => removeAt(i)}
-                        className="rounded-md bg-white/90 px-2 text-xs border hover:bg.white text-red-600"
+                        className="rounded-md border bg-white/90 px-2 text-xs text-red-600 hover:bg-white"
                         aria-label="Remove image"
                         title="Remove image"
                       >
@@ -399,8 +387,7 @@ export default function NewPTStockProductPage() {
                       </button>
                     </div>
 
-                    {/* index badge */}
-                    <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 text-white text-[11px] px-1.5 py-0.5">
+                    <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">
                       {i + 1}
                     </div>
                   </motion.div>
@@ -411,7 +398,6 @@ export default function NewPTStockProductPage() {
             {uploading && <p className="text-xs text-blue-600">Uploading images…</p>}
           </div>
 
-          {/* Sizes */}
           <div className="space-y-3">
             <label htmlFor="sizeGroup" className="text-sm font-medium">
               Sizes
