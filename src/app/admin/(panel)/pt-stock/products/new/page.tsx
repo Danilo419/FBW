@@ -134,7 +134,6 @@ export default function NewPTStockProductPage() {
     formData.set("channel", PT_STOCK_CHANNEL);
     formData.set("ptStockOnly", "true");
     formData.set("isPtStock", "true");
-
     formData.set("sizeGroup", sizeGroup);
 
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;

@@ -134,8 +134,7 @@ model Product {
   badges    String[] @default([])
 
   allowNameNumber Boolean @default(true)
-
-  isVisible Boolean @default(true)
+  isVisible       Boolean @default(true)
 
   sizes      SizeStock[]
   options    OptionGroup[] @relation("ProductOptions")
@@ -172,7 +171,7 @@ model OptionGroup {
   key       String
   label     String
   type      OptionType
-  required  Boolean @default(false)
+  required  Boolean    @default(false)
 
   product Product      @relation("ProductOptions", fields: [productId], references: [id])
   values  OptionValue[]

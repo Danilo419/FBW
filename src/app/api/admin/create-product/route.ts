@@ -1,7 +1,7 @@
 // src/app/api/admin/create-product/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { OptionType } from "@prisma/client";
+import { OptionType, ProductChannel, TeamType } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,16 +27,19 @@ function parsePriceToCents(raw: string): number {
   return Math.round(n * 100);
 }
 
-type TeamTypeLocal = "CLUB" | "NATION";
-
-function parseTeamType(v: unknown): TeamTypeLocal {
-  const raw = String(v ?? "").trim().toUpperCase();
-  return raw === "NATION" ? "NATION" : "CLUB";
-}
-
 function parseBool(v: unknown): boolean {
   const raw = String(v ?? "").trim().toLowerCase();
   return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+}
+
+function parseTeamType(v: unknown): TeamType {
+  const raw = String(v ?? "").trim().toUpperCase();
+  return raw === "NATION" ? TeamType.NATION : TeamType.CLUB;
+}
+
+function parseChannel(v: unknown): ProductChannel {
+  const raw = String(v ?? "").trim().toUpperCase();
+  return raw === "PT_STOCK_CTT" ? ProductChannel.PT_STOCK_CTT : ProductChannel.GLOBAL;
 }
 
 const BADGE_LABELS = new Map<string, string>([
@@ -102,11 +105,15 @@ export async function POST(req: Request) {
   try {
     const form = await req.formData();
 
-    const channel = String(form.get("channel") ?? "").trim();
+    const requestedChannel = parseChannel(form.get("channel"));
+    const forcedPTStock =
+      parseBool(form.get("isPtStock")) || parseBool(form.get("ptStockOnly"));
     const isPTStock =
-      channel === "PT_STOCK_CTT" ||
-      parseBool(form.get("isPtStock")) ||
-      parseBool(form.get("ptStockOnly"));
+      requestedChannel === ProductChannel.PT_STOCK_CTT || forcedPTStock;
+
+    const channel = isPTStock
+      ? ProductChannel.PT_STOCK_CTT
+      : requestedChannel;
 
     const name = String(form.get("name") || "").trim();
     const priceStr = String(form.get("price") || "").trim();
@@ -117,7 +124,7 @@ export async function POST(req: Request) {
 
     if (isPTStock) {
       team = "Portugal Stock";
-      teamType = "CLUB";
+      teamType = TeamType.CLUB;
       season = null;
     }
 
@@ -145,13 +152,18 @@ export async function POST(req: Request) {
       dcRaw === "yes" ||
       (dcRaw === "" && form.has("disableCustomization"));
 
-    const description = (String(form.get("description") || "").trim() || null) as string | null;
+    const description =
+      (String(form.get("description") || "").trim() || null) as string | null;
+
     const badges = isPTStock ? [] : getAllStrings(form.getAll("badges"));
     const imageUrlsRaw = getAllStrings(form.getAll("imageUrls"));
 
     const imageUrls = imageUrlsRaw.filter((u) => /^https?:\/\//i.test(u));
     if (imageUrls.length === 0) {
-      return NextResponse.json({ error: "At least one image url is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "At least one image url is required." },
+        { status: 400 }
+      );
     }
 
     const sizeGroup = String(form.get("sizeGroup") || "adult") as "adult" | "kid";
@@ -162,29 +174,26 @@ export async function POST(req: Request) {
     const base = toSlug(`${team ? team + " " : ""}${name}${season ? " " + season : ""}`);
     let slug = base || toSlug(name) || `product-${Date.now()}`;
     let suffix = 1;
+
     while (await prisma.product.findUnique({ where: { slug } })) {
       slug = `${base}-${suffix++}`;
     }
 
-    // ⚠️ MUITO IMPORTANTE:
-    // Aqui só usamos campos "seguros", sem ptStockOnly/isPtStock.
-    // Se o teu schema tiver MESMO um campo "channel", descomenta a linha abaixo.
-    const productData: any = {
-      name,
-      team,
-      teamType,
-      season,
-      description,
-      slug,
-      basePrice,
-      badges,
-      imageUrls,
-      // channel, // <-- descomenta APENAS se no teu schema Product existir este campo
-    };
-
     const created = await prisma.product.create({
-      data: productData,
-      select: { id: true, slug: true },
+      data: {
+        name,
+        team,
+        teamType,
+        season,
+        description,
+        slug,
+        basePrice,
+        badges,
+        imageUrls,
+        channel,
+        allowNameNumber: isPTStock ? false : true,
+      },
+      select: { id: true, slug: true, channel: true },
     });
 
     try {
@@ -198,7 +207,9 @@ export async function POST(req: Request) {
           skipDuplicates: true,
         });
       }
-    } catch {}
+    } catch {
+      // ignore if not needed / duplicate edge cases
+    }
 
     if (!isPTStock) {
       if (!disableCustomization) {
@@ -255,6 +266,7 @@ export async function POST(req: Request) {
         ok: true,
         id: created.id,
         slug: created.slug,
+        channel: created.channel,
         isPTStock,
         teamType,
         sizeGroup,

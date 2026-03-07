@@ -10,11 +10,13 @@ export const dynamic = "force-dynamic";
 function isExternalUrl(u: string) {
   return /^https?:\/\//i.test(u) || u.startsWith("//");
 }
+
 function normalizeUrl(u: string) {
   if (!u) return "";
   if (u.startsWith("//")) return `https:${u}`;
   return u;
 }
+
 function getCoverUrl(imageUrls: unknown) {
   try {
     if (!imageUrls) return "/placeholder.png";
@@ -45,7 +47,7 @@ function getCoverUrl(imageUrls: unknown) {
   }
 }
 
-/** ✅ keep your original formatMoney, only move "€" to the right in THIS FILE */
+/** mantém o teu formatMoney original, apenas move o € para a direita */
 function formatMoneyRight(cents: number) {
   const s = formatMoney(cents);
 
@@ -62,7 +64,7 @@ export default async function PtStockPage() {
   const products = await prisma.product.findMany({
     where: {
       isVisible: true,
-      channel: ProductChannel.PT_STOCK_CTT,
+      channel: ProductChannel.PT_STOCK_CTT, // ✅ apenas stock Portugal
     },
     select: {
       id: true,
@@ -107,7 +109,7 @@ export default async function PtStockPage() {
           </div>
         </div>
 
-        {/* TEXT EXPLANATION */}
+        {/* Explanation */}
         <div className="mt-6 space-y-5 text-sm text-gray-700">
           <div>
             <p className="font-semibold text-gray-900 mb-1">🇬🇧 ENGLISH :</p>
@@ -136,8 +138,7 @@ export default async function PtStockPage() {
             </p>
 
             <p className="mt-2">
-              This allows us to offer better prices and faster delivery within Portugal
-              while keeping the same product quality.
+              This allows us to offer better prices and faster delivery within Portugal while keeping the same product quality.
             </p>
           </div>
 
