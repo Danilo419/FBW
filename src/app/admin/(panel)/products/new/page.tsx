@@ -50,12 +50,9 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     ],
   },
 
-  /* ✅ NEW: Coppa Italia winners badge (coccarda tricolore) */
   {
     title: "Domestic Cups",
-    items: [
-      { value: "coppa-italia-winners", label: "Coppa Italia – Winners (Coccarda)" },
-    ],
+    items: [{ value: "coppa-italia-winners", label: "Coppa Italia – Winners (Coccarda)" }],
   },
 
   {
@@ -88,7 +85,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     ],
   },
 
-  /* ✅ National Teams (NO women / NO youth) */
   {
     title: "National Teams – FIFA",
     items: [
@@ -142,8 +138,14 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "concacaf-gold-cup-regular", label: "CONCACAF Gold Cup – Tournament Badge" },
       { value: "concacaf-gold-cup-winners", label: "CONCACAF Gold Cup – Winners Badge" },
 
-      { value: "concacaf-nations-league-regular", label: "CONCACAF Nations League – Tournament Badge" },
-      { value: "concacaf-nations-league-winners", label: "CONCACAF Nations League – Winners Badge" },
+      {
+        value: "concacaf-nations-league-regular",
+        label: "CONCACAF Nations League – Tournament Badge",
+      },
+      {
+        value: "concacaf-nations-league-winners",
+        label: "CONCACAF Nations League – Winners Badge",
+      },
     ],
   },
   {
@@ -158,7 +160,10 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
     title: "International Club",
     items: [
       { value: "club-world-cup-champions", label: "Club World Cup – Champions Badge" },
-      { value: "intercontinental-cup-champions", label: "FIFA Intercontinental Cup – Champions Badge" },
+      {
+        value: "intercontinental-cup-champions",
+        label: "FIFA Intercontinental Cup – Champions Badge",
+      },
     ],
   },
 ];
@@ -171,21 +176,15 @@ type TeamType = "CLUB" | "NATION";
 export default function NewProductPage() {
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
 
-  // ✅ Só mostramos os tamanhos escolhidos.
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
 
-  // ✅ diferenciar clube vs seleção
   const [teamType, setTeamType] = useState<TeamType>("CLUB");
-
-  // remover completamente o bloco "Customization" no produto
   const [disableCustomization, setDisableCustomization] = useState(false);
 
-  // Badges
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const [badgeQuery, setBadgeQuery] = useState("");
 
-  // Images (URLs, ordenáveis)
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -193,6 +192,7 @@ export default function NewProductPage() {
   function handleSizeGroupChange(e: ChangeEvent<HTMLSelectElement>) {
     const group = e.target.value as "adult" | "kid";
     setSizeGroup(group);
+
     if (group === "adult") {
       setSelectedAdult((prev) => (prev.length ? prev : [...ADULT_SIZES]));
       setSelectedKid([]);
@@ -202,28 +202,21 @@ export default function NewProductPage() {
     }
   }
 
-  // Helpers para adicionar/remover
   function addAdult(size: string) {
     setSelectedAdult((prev) => (prev.includes(size) ? prev : [...prev, size]));
   }
+
   function removeAdult(size: string) {
     setSelectedAdult((prev) => prev.filter((s) => s !== size));
   }
+
   function addKid(size: string) {
     setSelectedKid((prev) => (prev.includes(size) ? prev : [...prev, size]));
   }
+
   function removeKid(size: string) {
     setSelectedKid((prev) => prev.filter((s) => s !== size));
   }
-
-  const remainingAdult = useMemo(
-    () => ADULT_SIZES.filter((s) => !selectedAdult.includes(s)),
-    [selectedAdult]
-  );
-  const remainingKid = useMemo(
-    () => KID_SIZES.filter((s) => !selectedKid.includes(s)),
-    [selectedKid]
-  );
 
   /* ===================== Badges ===================== */
   function toggleBadge(value: string) {
@@ -232,7 +225,6 @@ export default function NewProductPage() {
     );
   }
 
-  // Lista achatada para pesquisa
   const ALL_BADGES: (BadgeOption & { group: string })[] = useMemo(() => {
     return BADGE_GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, group: g.title })));
   }, []);
@@ -240,6 +232,7 @@ export default function NewProductPage() {
   const filteredBadges = useMemo(() => {
     const q = badgeQuery.trim().toLowerCase();
     if (!q) return [];
+
     return ALL_BADGES.filter(
       (b) =>
         b.label.toLowerCase().includes(q) ||
@@ -248,7 +241,7 @@ export default function NewProductPage() {
     ).slice(0, 50);
   }, [badgeQuery, ALL_BADGES]);
 
-  /* ===================== Images (Vercel Blob via /api/upload) ===================== */
+  /* ===================== Images (via /api/upload) ===================== */
   async function handleImagesSelected(files: FileList | null, input?: HTMLInputElement) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -260,6 +253,7 @@ export default function NewProductPage() {
         errors.push(`${file.name}: unsupported type`);
         continue;
       }
+
       if (file.size > MAX_BYTES) {
         errors.push(`${file.name}: bigger than 8MB`);
         continue;
@@ -269,7 +263,6 @@ export default function NewProductPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        // ✅ this endpoint now uploads to Vercel Blob (server-side)
         const res = await fetch("/api/upload", {
           method: "POST",
           body: formData,
@@ -305,13 +298,16 @@ export default function NewProductPage() {
 
   function move(from: number, to: number) {
     setImageUrls((prev) => {
-      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
+        return prev;
+      }
       const arr = [...prev];
       const [it] = arr.splice(from, 1);
       arr.splice(to, 0, it);
       return arr;
     });
   }
+
   function removeAt(idx: number) {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -319,25 +315,21 @@ export default function NewProductPage() {
   /* ===================== Submit ===================== */
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    // ✅ Team type
     formData.set("teamType", teamType);
 
-    // Sizes – apenas os selecionados são enviados
     formData.append("sizeGroup", sizeGroup);
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
 
-    // Personalization toggle
     formData.append("disableCustomization", disableCustomization ? "true" : "false");
 
-    // Badges
     selectedBadges.forEach((b) => formData.append("badges", b));
-
-    // Imagens (apenas URLs)
     imageUrls.forEach((u) => formData.append("imageUrls", u));
+
     formData.delete("images");
 
     const res = await fetch("/api/admin/create-product", {
@@ -354,7 +346,6 @@ export default function NewProductPage() {
     alert("Product created successfully!");
     form.reset();
 
-    // Reset state
     setSelectedAdult([...ADULT_SIZES]);
     setSelectedKid([]);
     setSizeGroup("adult");
@@ -365,7 +356,6 @@ export default function NewProductPage() {
     setTeamType("CLUB");
   }
 
-  // ====== Componente reutilizável para gerir tamanhos ======
   function SizesManager({
     title,
     selected,
@@ -410,7 +400,6 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {/* Chips — só tamanhos selecionados */}
         {selected.length === 0 ? (
           <div className="text-xs text-gray-500">No sizes selected.</div>
         ) : (
@@ -418,7 +407,7 @@ export default function NewProductPage() {
             {selected.map((s) => (
               <span
                 key={s}
-                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs bg-white"
+                className="inline-flex items-center gap-1 rounded-full border bg-white px-2.5 py-1 text-xs"
                 title={`Remove ${s}`}
               >
                 {s}
@@ -435,7 +424,6 @@ export default function NewProductPage() {
           </div>
         )}
 
-        {/* Adicionar um tamanho de volta */}
         <div className="flex items-center gap-2">
           <select
             value={pick}
@@ -449,6 +437,7 @@ export default function NewProductPage() {
               </option>
             ))}
           </select>
+
           <button
             type="button"
             disabled={!pick}
@@ -468,11 +457,11 @@ export default function NewProductPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold">Create Product</h1>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Create Product</h1>
         <p className="text-sm text-gray-500">Create a new product from scratch.</p>
       </header>
 
-      <section className="rounded-2xl bg-white p-6 shadow border">
+      <section className="rounded-2xl border bg-white p-6 shadow">
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
@@ -501,7 +490,6 @@ export default function NewProductPage() {
               />
             </div>
 
-            {/* ✅ Team Type */}
             <div className="space-y-2">
               <label htmlFor="teamType" className="text-sm font-medium">
                 Team Type
@@ -517,7 +505,8 @@ export default function NewProductPage() {
                 <option value="NATION">Nation</option>
               </select>
               <p className="text-xs text-gray-500">
-                Clubs appear in <strong>/clubs</strong>. Nations appear in <strong>/nations</strong>.
+                Clubs appear in <strong>/clubs</strong>. Nations appear in{" "}
+                <strong>/nations</strong>.
               </p>
             </div>
 
@@ -563,7 +552,6 @@ export default function NewProductPage() {
             />
           </div>
 
-          {/* Images */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Images</label>
             <input
@@ -574,15 +562,16 @@ export default function NewProductPage() {
               className="block w-full rounded-xl border px-3 py-2 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-900"
             />
             <p className="text-xs text-gray-500">
-              Files are uploaded to cloud storage. The first image is used as the main image. Drag to reorder.
+              Files are uploaded to cloud storage. The first image is used as the main image. Drag
+              to reorder.
             </p>
 
             {imageUrls.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {imageUrls.map((u, i) => (
                   <motion.div
                     key={u}
-                    className="group relative rounded-xl border bg-white overflow-hidden"
+                    className="group relative overflow-hidden rounded-xl border bg-white"
                     draggable
                     onDragStart={() => setDragIndex(i)}
                     onDragOver={(e) => e.preventDefault()}
@@ -599,16 +588,15 @@ export default function NewProductPage() {
                       unoptimized
                       width={400}
                       height={400}
-                      className="aspect-[3/4] w-full object-contain bg.white"
+                      className="aspect-[3/4] w-full object-contain bg-white"
                     />
 
-                    {/* controls */}
-                    <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 opacity-0 group-hover:opacity-100 transition">
+                    <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 opacity-0 transition group-hover:opacity-100">
                       <div className="flex gap-1">
                         <button
                           type="button"
                           onClick={() => move(i, Math.max(0, i - 1))}
-                          className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
+                          className="rounded-md border bg-white/90 px-2 text-xs hover:bg-white"
                           aria-label="Move left"
                           title="Move left"
                         >
@@ -617,7 +605,7 @@ export default function NewProductPage() {
                         <button
                           type="button"
                           onClick={() => move(i, Math.min(imageUrls.length - 1, i + 1))}
-                          className="rounded-md bg-white/90 px-2 text-xs border hover:bg-white"
+                          className="rounded-md border bg-white/90 px-2 text-xs hover:bg-white"
                           aria-label="Move right"
                           title="Move right"
                         >
@@ -627,7 +615,7 @@ export default function NewProductPage() {
                       <button
                         type="button"
                         onClick={() => removeAt(i)}
-                        className="rounded-md bg-white/90 px-2 text-xs border hover:bg.white text-red-600"
+                        className="rounded-md border bg-white/90 px-2 text-xs text-red-600 hover:bg-white"
                         aria-label="Remove image"
                         title="Remove image"
                       >
@@ -635,21 +623,20 @@ export default function NewProductPage() {
                       </button>
                     </div>
 
-                    {/* index badge */}
-                    <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 text-white text-[11px] px-1.5 py-0.5">
+                    <div className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">
                       {i + 1}
                     </div>
                   </motion.div>
                 ))}
               </div>
             )}
+
             {uploading && <p className="text-xs text-blue-600">Uploading images…</p>}
           </div>
 
-          {/* === Personalization (entre Images e Badges) === */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Personalization</label>
-            <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
+            <div className="flex items-start gap-3 rounded-2xl border bg-white/70 p-4">
               <input
                 id="disableCustomization"
                 type="checkbox"
@@ -661,22 +648,21 @@ export default function NewProductPage() {
                 <label htmlFor="disableCustomization" className="font-medium">
                   Remove “Customization” section on product page
                 </label>
-                <p className="text-xs text-gray-600 mt-1">
-                  Use for products without any personalization (no name/number, no “Name &amp; Number + Badge”
-                  option). This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
-                  <code>customization</code> option group with <strong>no values</strong>, and the product page will not
-                  render that block.
+                <p className="mt-1 text-xs text-gray-600">
+                  Use for products without any personalization (no name/number, no “Name &amp;
+                  Number + Badge” option). This sets <code>disableCustomization=true</code> in the
+                  request; the API creates a <code>customization</code> option group with{" "}
+                  <strong>no values</strong>, and the product page will not render that block.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Badges com pesquisa */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
-              Type to search patches (league, champion, UEFA, cups, etc.). Selected badges are kept even if they are
-              hidden by the filter.
+              Type to search patches (league, champion, UEFA, cups, etc.). Selected badges are kept
+              even if they are hidden by the filter.
             </p>
 
             <input
@@ -692,7 +678,7 @@ export default function NewProductPage() {
             ) : filteredBadges.length === 0 ? (
               <div className="text-xs text-gray-500">No badges found.</div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2">
+              <div className="grid max-h-72 grid-cols-1 gap-2 overflow-auto rounded-xl border p-2 sm:grid-cols-2">
                 {filteredBadges.map((opt) => (
                   <label
                     key={opt.value}
@@ -706,7 +692,7 @@ export default function NewProductPage() {
                       onChange={() => toggleBadge(opt.value)}
                     />
                     <span className="text-sm">{opt.label}</span>
-                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                    <span className="ml-auto rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
                       {opt.group.split(" – ")[0]}
                     </span>
                   </label>
@@ -714,7 +700,6 @@ export default function NewProductPage() {
               </div>
             )}
 
-            {/* Selecionados (sempre visíveis) */}
             {selectedBadges.length > 0 && (
               <div className="space-y-2">
                 <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
@@ -739,7 +724,6 @@ export default function NewProductPage() {
             )}
           </div>
 
-          {/* Size group selection */}
           <div className="space-y-3">
             <label htmlFor="sizeGroup" className="text-sm font-medium">
               Sizes
@@ -754,10 +738,10 @@ export default function NewProductPage() {
               <option value="kid">Kid sizes</option>
             </select>
             <p className="text-xs text-gray-500">
-              Only selected sizes are shown below. Removing a size means it won’t exist in the product.
+              Only selected sizes are shown below. Removing a size means it won’t exist in the
+              product.
             </p>
 
-            {/* Adult */}
             {sizeGroup === "adult" && (
               <SizesManager
                 title="Adult"
@@ -770,7 +754,6 @@ export default function NewProductPage() {
               />
             )}
 
-            {/* Kid */}
             {sizeGroup === "kid" && (
               <SizesManager
                 title="Kid"

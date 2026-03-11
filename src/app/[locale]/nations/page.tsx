@@ -1,8 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { ArrowRight } from "lucide-react";
-import { slugFromTeamName } from "@/lib/shop-data";
 import { getTranslations } from "next-intl/server";
+import { prisma } from "@/lib/prisma";
+import { slugFromTeamName } from "@/lib/shop-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -33,6 +34,50 @@ const NATION_ASSET_BY_SLUG: Record<string, string> = {
   usa: "UnitedStatesfc.png",
 };
 
+function normalizeUrl(u: string) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+
+function getFirstImage(imageUrls: unknown): string | null {
+  try {
+    if (!imageUrls) return null;
+
+    if (Array.isArray(imageUrls)) {
+      const first = imageUrls.find(
+        (s) => typeof s === "string" && s.trim().length > 0
+      );
+      return first ? normalizeUrl(String(first).trim()) : null;
+    }
+
+    if (typeof imageUrls === "string") {
+      const s = imageUrls.trim();
+      if (!s) return null;
+
+      if (s.startsWith("[") && s.endsWith("]")) {
+        const parsed: unknown = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          const first = parsed.find(
+            (x) => typeof x === "string" && x.trim().length > 0
+          );
+          return first ? normalizeUrl(String(first).trim()) : null;
+        }
+      }
+
+      return normalizeUrl(s);
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function findNationAsset(teamName: string): string | null {
   const slug = slugFromTeamName(teamName);
   const file = NATION_ASSET_BY_SLUG[slug];
@@ -55,11 +100,9 @@ export default async function NationsPage() {
     if (!team || map.has(team)) continue;
 
     const assetImg = findNationAsset(team);
-    const arr = Array.isArray(r.imageUrls) ? r.imageUrls : [];
-    const firstDbImg =
-      arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
-
+    const firstDbImg = getFirstImage(r.imageUrls);
     const slug = slugFromTeamName(team);
+
     map.set(team, { image: assetImg ?? firstDbImg, slug });
   }
 
@@ -74,14 +117,13 @@ export default async function NationsPage() {
   return (
     <main className="min-h-screen bg-white py-6 md:py-10">
       <div className="container-fw mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-6 md:mb-8 flex flex-col gap-4 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-2 md:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
               {t("title")}
             </h1>
 
-            <p className="mt-1 text-xs sm:text-sm text-slate-600 max-w-xl">
+            <p className="mt-1 max-w-xl text-xs text-slate-600 sm:text-sm">
               {t.rich("subtitle", {
                 brand: (chunks) => (
                   <span className="font-semibold text-emerald-600">
@@ -92,42 +134,44 @@ export default async function NationsPage() {
             </p>
           </div>
 
-          <div className="inline-flex items-center justify-end text-[11px] sm:text-xs text-slate-500 gap-1">
+          <div className="inline-flex items-center justify-end gap-1 text-[11px] text-slate-500 sm:text-xs">
             <span className="uppercase tracking-[0.18em]">
               {t("totalNations")}
             </span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-800 font-medium">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
               {nations.length}
             </span>
           </div>
         </div>
 
-        {/* Grid */}
         {nations.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {nations.map((nation) => (
               <Link
                 key={nation.slug}
                 href={`/nations/${nation.slug}`}
                 className="group block touch-manipulation"
               >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white transition-transform duration-200 hover:-translate-y-1">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200 hover:-translate-y-1">
                   {nation.image ? (
-                    <img
+                    <Image
                       src={nation.image}
                       alt={t("nationImageAlt", { nation: nation.name })}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="lazy"
+                      unoptimized={isExternalUrl(nation.image)}
                     />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
                   )}
 
-                  <div className="pointer-events-none absolute inset-0 ring-0 group-hover:ring-2 group-hover:ring-emerald-500/40 transition" />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                  <div className="pointer-events-none absolute inset-0 ring-0 transition group-hover:ring-2 group-hover:ring-emerald-500/40" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
 
-                  <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition">
-                    <div className="flex items-center justify-between text-white text-[11px] sm:text-xs md:text-sm">
+                  <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
+                    <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
                       {t("viewJerseys")}
                       <ArrowRight className="h-4 w-4" />
                     </div>
@@ -135,7 +179,7 @@ export default async function NationsPage() {
                 </div>
 
                 <div className="px-1 pt-3 text-center">
-                  <h3 className="font-semibold text-xs sm:text-sm md:text-base text-slate-900">
+                  <h3 className="text-xs font-semibold text-slate-900 sm:text-sm md:text-base">
                     {nation.name}
                   </h3>
                 </div>

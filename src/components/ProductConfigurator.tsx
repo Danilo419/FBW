@@ -4,7 +4,7 @@ import Image from "next/image";
 import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "@/i18n/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
@@ -105,8 +105,8 @@ function competitionKey(value: string, label?: string) {
   const source = label || value;
   const parts = source.split(/–|—|-/);
   if (parts.length > 1) return take(parts[0]);
-  const m = (value.match(/^[A-Za-z]+/) || [value])[0];
-  return take(m);
+  const m = value.match(/^[A-Za-z]+/) || [value];
+  return take(m[0]);
 }
 
 /* ====================== Fly types ====================== */
@@ -129,14 +129,17 @@ function sanitizeNumber(input: string, maxLen = 3) {
 /* ====================== Small UI helpers ====================== */
 function useIsMobile(breakpointPx = 1024) {
   const [isMobile, setIsMobile] = useState(false);
+
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < breakpointPx);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, [breakpointPx]);
+
   return isMobile;
 }
+
 function useLockBodyScroll(locked: boolean) {
   useEffect(() => {
     if (!locked) return;
@@ -150,6 +153,7 @@ function useLockBodyScroll(locked: boolean) {
 
 /* ====================== Reviews meta fetch ====================== */
 type ReviewsMeta = { average: number; total: number };
+
 async function fetchReviewsMeta(productId: string): Promise<ReviewsMeta> {
   const res = await fetch(`/api/reviews?productId=${productId}`, { cache: "no-store" });
   const json = (await res.json()) as { average?: number; total?: number };
@@ -182,6 +186,7 @@ type KidsRow = {
   age: string;
   shortsLength: number;
 };
+
 const KIDS_ROWS: KidsRow[] = [
   { size: "#16", length: 43, bust: 32, height: [95, 105], age: "2–3", shortsLength: 32 },
   { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4", shortsLength: 34 },
@@ -195,6 +200,7 @@ const KIDS_ROWS: KidsRow[] = [
 function toInches(v: number) {
   return +(v / 2.54).toFixed(1);
 }
+
 function renderRange(value: Range | undefined, unit: Unit) {
   if (value === undefined) return "–";
   if (Array.isArray(value)) {
@@ -206,6 +212,7 @@ function renderRange(value: Range | undefined, unit: Unit) {
 
 type KidsRowKey = "Jersey length" | "Chest (bust)" | "Height" | "Shorts length";
 type KidsTableShape = { sizes: string[]; rows: Record<KidsRowKey, Partial<Record<string, Range>>> };
+
 function makeKidsTable(): KidsTableShape {
   const sizes = KIDS_ROWS.map((r) => `${r.age} yrs`);
   const rows: KidsTableShape["rows"] = {
@@ -214,6 +221,7 @@ function makeKidsTable(): KidsTableShape {
     Height: {},
     "Shorts length": {},
   };
+
   KIDS_ROWS.forEach((r) => {
     const key = `${r.age} yrs`;
     rows["Jersey length"][key] = r.length;
@@ -221,12 +229,12 @@ function makeKidsTable(): KidsTableShape {
     rows["Height"][key] = [r.height[0], r.height[1]];
     rows["Shorts length"][key] = r.shortsLength;
   });
+
   return { sizes, rows };
 }
 
 export default function ProductConfigurator({ product }: Props) {
   const t = useTranslations("ProductConfigurator");
-  const locale = useLocale();
   const router = useRouter();
 
   const DELIVERY_TEXT = t("deliveryText");
@@ -262,6 +270,7 @@ export default function ProductConfigurator({ product }: Props) {
   useEffect(() => {
     let alive = true;
     setReviewsLoading(true);
+
     fetchReviewsMeta(product.id)
       .then((m) => {
         if (!alive) return;
@@ -271,6 +280,7 @@ export default function ProductConfigurator({ product }: Props) {
         if (!alive) return;
         setReviewsLoading(false);
       });
+
     return () => {
       alive = false;
     };
@@ -294,8 +304,11 @@ export default function ProductConfigurator({ product }: Props) {
     originalUnitPriceForMoney = originalPriceEur * factor;
   }
 
-  const hasDiscount = typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
-  const discountPercent = hasDiscount ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100) : 0;
+  const hasDiscount =
+    typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
+  const discountPercent = hasDiscount
+    ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
+    : 0;
 
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
@@ -304,6 +317,7 @@ export default function ProductConfigurator({ product }: Props) {
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const cont = thumbsRef.current;
     if (!cont) return;
@@ -333,6 +347,7 @@ export default function ProductConfigurator({ product }: Props) {
         available: s.available ?? true,
       }));
     }
+
     return (kid ? KID_SIZES : ADULT_SIZES).map((s) => ({
       id: s,
       size: s,
@@ -341,7 +356,8 @@ export default function ProductConfigurator({ product }: Props) {
     }));
   }, [product.sizes, kid]);
 
-  const isUnavailable = (s: SizeUI) => s.available === false || (typeof s.stock === "number" && s.stock <= 0);
+  const isUnavailable = (s: SizeUI) =>
+    s.available === false || (typeof s.stock === "number" && s.stock <= 0);
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
@@ -378,38 +394,55 @@ export default function ProductConfigurator({ product }: Props) {
 
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
     if (!product.badges || product.badges.length === 0) return undefined;
+
     const values: OptionValueUI[] = product.badges.map((v) => ({
       id: v,
       value: v,
       label: humanizeBadge(v),
       priceDelta: 0,
     }));
-    return { id: "badges-virtual", key: "badges", label: t("badges"), type: "ADDON", required: false, values };
+
+    return {
+      id: "badges-virtual",
+      key: "badges",
+      label: t("badges"),
+      type: "ADDON",
+      required: false,
+      values,
+    };
   }, [product.badges, t]);
 
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
     const real = product.optionGroups.find((g) => g.key === "badges");
     const virtual = badgesGroupVirtual;
+
     if (!real && !virtual) return undefined;
     if (real && !virtual) return real;
     if (!real && virtual) return virtual;
 
     const map = new Map<string, OptionValueUI>(real!.values.map((v) => [v.value, v]));
-    for (const v of virtual!.values) if (!map.has(v.value)) map.set(v.value, v);
+    for (const v of virtual!.values) {
+      if (!map.has(v.value)) map.set(v.value, v);
+    }
+
     return { ...real!, values: Array.from(map.values()) };
   }, [product.optionGroups, badgesGroupVirtual]);
 
   const effectiveCustomizationGroup: OptionGroupUI | undefined = useMemo(() => {
     if (!customizationGroupFromDb) return undefined;
+
     const original = customizationGroupFromDb;
     const filtered = badgesGroup
       ? original.values
       : original.values.filter((v) => !/badge/i.test(v.value) && !/badge/i.test(v.label));
+
     if ((filtered?.length ?? 0) === 0) return undefined;
     return { ...original, values: filtered };
   }, [customizationGroupFromDb, badgesGroup]);
 
-  const otherGroups = product.optionGroups.filter((g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key));
+  const otherGroups = product.optionGroups.filter(
+    (g) => !["size", "customization", "badges", "shorts", "socks"].includes(g.key)
+  );
 
   const customization = selected["customization"] ?? "";
 
@@ -426,10 +459,14 @@ export default function ProductConfigurator({ product }: Props) {
   }, [badgesGroup, customization]);
 
   const showNameNumber =
-    !!effectiveCustomizationGroup && typeof customization === "string" && customization.toLowerCase().includes("name-number");
+    !!effectiveCustomizationGroup &&
+    typeof customization === "string" &&
+    customization.toLowerCase().includes("name-number");
 
   const showBadgePicker =
-    typeof customization === "string" && customization.toLowerCase().includes("badge") && !!badgesGroup;
+    typeof customization === "string" &&
+    customization.toLowerCase().includes("badge") &&
+    !!badgesGroup;
 
   const setRadio = (key: string, value: string) => {
     setSelected((s) => ({ ...s, [key]: value || null }));
@@ -439,21 +476,32 @@ export default function ProductConfigurator({ product }: Props) {
   function toggleAddon(key: string, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[key];
-      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
+      let arr: string[] = Array.isArray(current)
+        ? [...current]
+        : typeof current === "string" && current
+          ? [current]
+          : [];
+
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
       } else {
         arr = arr.filter((v) => v !== value);
       }
+
       return { ...prev, [key]: arr.length ? arr : null };
     });
+
     setError(null);
   }
 
   function toggleBadge(group: OptionGroupUI, value: string, checked: boolean) {
     setSelected((prev) => {
       const current = prev[group.key];
-      let arr: string[] = Array.isArray(current) ? [...current] : typeof current === "string" && current ? [current] : [];
+      let arr: string[] = Array.isArray(current)
+        ? [...current]
+        : typeof current === "string" && current
+          ? [current]
+          : [];
 
       const mapByValue = new Map(group.values.map((v) => [v.value, v]));
       const newV = mapByValue.get(value);
@@ -469,8 +517,10 @@ export default function ProductConfigurator({ product }: Props) {
       } else {
         arr = arr.filter((v) => v !== value);
       }
+
       return { ...prev, [group.key]: arr.length ? arr : null };
     });
+
     setError(null);
   }
 
@@ -490,8 +540,10 @@ export default function ProductConfigurator({ product }: Props) {
 
   const missingRequired = useMemo(() => {
     const missing: string[] = [];
+
     for (const g of requiredGroups) {
       const v = selected[g.key];
+
       if (g.type === "RADIO") {
         if (!v || typeof v !== "string") missing.push(g.label);
       } else {
@@ -499,6 +551,7 @@ export default function ProductConfigurator({ product }: Props) {
         if (arr.length === 0) missing.push(g.label);
       }
     }
+
     return missing;
   }, [requiredGroups, selected]);
 
@@ -518,12 +571,16 @@ export default function ProductConfigurator({ product }: Props) {
 
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
-    const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
+
+    const anchors = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')
+    ).filter((el) => {
       const r = el.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0;
       const style = window.getComputedStyle(el);
       return visible && style.visibility !== "hidden" && style.opacity !== "0";
     });
+
     if (anchors.length === 0) return null;
 
     const imgRect = imgWrapRef.current?.getBoundingClientRect();
@@ -534,16 +591,19 @@ export default function ProductConfigurator({ product }: Props) {
 
     let best = anchors[0];
     let bestDist = Infinity;
+
     for (const el of anchors) {
       const r = el.getBoundingClientRect();
       const cx2 = r.left + r.width / 2;
       const cy2 = r.top + r.height / 2;
       const d = Math.hypot(cx2 - imgCx, cy2 - imgCy);
+
       if (d < bestDist) {
         bestDist = d;
         best = el;
       }
     }
+
     return best.getBoundingClientRect();
   }
 
@@ -551,14 +611,18 @@ export default function ProductConfigurator({ product }: Props) {
     const el = document.querySelector<HTMLElement>('[data-cart-anchor="true"]');
     if (!el) return;
     el.classList.add("ring-2", "ring-blue-400", "ring-offset-2");
-    setTimeout(() => el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2"), 450);
+    setTimeout(() => {
+      el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2");
+    }, 450);
   }
 
   function flyToCart() {
     if (typeof window === "undefined") return;
 
     const prefersReduced =
-      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     if (prefersReduced) {
       pulseCart();
       return;
@@ -566,6 +630,7 @@ export default function ProductConfigurator({ product }: Props) {
 
     const start = imgWrapRef.current?.getBoundingClientRect();
     const end = getCartTargetRect();
+
     if (!start || !end) {
       pulseCart();
       return;
@@ -573,12 +638,23 @@ export default function ProductConfigurator({ product }: Props) {
 
     const src = activeSrc?.startsWith("//") ? `https:${activeSrc}` : activeSrc;
 
-    const from = { left: start.left, top: start.top, width: start.width, height: start.height };
+    const from = {
+      left: start.left,
+      top: start.top,
+      width: start.width,
+      height: start.height,
+    };
 
     const endCx = end.left + end.width / 2;
     const endCy = end.top + end.height / 2;
     const targetSize = Math.max(18, Math.min(34, Math.min(end.width, end.height)));
-    const to = { left: endCx - targetSize / 2, top: endCy - targetSize / 2, width: targetSize, height: targetSize };
+
+    const to = {
+      left: endCx - targetSize / 2,
+      top: endCy - targetSize / 2,
+      width: targetSize,
+      height: targetSize,
+    };
 
     flyKeyRef.current += 1;
     setFly({ key: flyKeyRef.current, src, from, to });
@@ -588,11 +664,13 @@ export default function ProductConfigurator({ product }: Props) {
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
 
   const addBtnRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (!isMobile) {
       setStickyCta(false);
       return;
     }
+
     const onScroll = () => {
       const btn = addBtnRef.current;
       if (!btn) return;
@@ -600,6 +678,7 @@ export default function ProductConfigurator({ product }: Props) {
       const shouldShow = r.top > window.innerHeight - 20 || r.bottom < 0;
       setStickyCta(shouldShow);
     };
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -607,25 +686,38 @@ export default function ProductConfigurator({ product }: Props) {
 
   function buildOptionsForCart() {
     return Object.fromEntries(
-      Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
+      Object.entries(selected).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null,
+      ])
     ) as Record<string, string | null>;
   }
 
   function validateBeforeAdd(): string | null {
     if (!selectedSize) return t("validationChooseSize");
+
     const sel = sizes.find((s) => s.size === selectedSize);
     if (!sel || isUnavailable(sel)) return t("validationSizeUnavailable");
+
     if (qty < 1) return t("validationQuantity");
-    if (missingRequired.length > 0) return t("validationSelect", { fields: missingRequired.join(", ") });
+
+    if (missingRequired.length > 0) {
+      return t("validationSelect", { fields: missingRequired.join(", ") });
+    }
+
     return null;
   }
 
   function addToCartCore(opts?: { goCheckout?: boolean }) {
     const msg = validateBeforeAdd();
+
     if (msg && !canAddToCart) {
       setError(msg);
+
       if (!selectedSize) {
-        document.querySelector('[data-section="size"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+        document
+          .querySelector('[data-section="size"]')
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       return;
     }
@@ -668,8 +760,8 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   return (
-    <div className="w-full flex justify-center overflow-x-hidden px-2">
-      <div className="relative w-full max-w-[260px] sm:max-w-[520px] lg:max-w-none flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
+    <div className="w-full overflow-x-hidden px-2">
+      <div className="relative mx-auto flex w-full max-w-[260px] flex-col gap-6 sm:max-w-[520px] lg:max-w-none lg:flex-row lg:items-start lg:gap-8">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {showToast ? t("itemAddedLive") : ""}
         </div>
@@ -722,24 +814,24 @@ export default function ProductConfigurator({ product }: Props) {
             document.body
           )}
 
-        <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
+        <div className="w-full rounded-2xl border bg-white p-3 lg:w-[560px] lg:flex-none lg:self-start lg:p-6 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3">
             {images.length > 1 ? (
               <button
                 type="button"
                 onClick={goPrev}
                 aria-label={t("previousImage")}
-                className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
               >
                 <ChevronLeft />
               </button>
             ) : (
-              <div className="h-10 w-10 shrink-0 hidden lg:block" />
+              <div className="hidden h-10 w-10 shrink-0 lg:block" />
             )}
 
             <div
               ref={imgWrapRef}
-              className="relative aspect-[3/4] w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none mx-auto overflow-hidden rounded-xl bg-white"
+              className="relative mx-auto aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-xl bg-white sm:max-w-[320px] lg:max-w-none"
             >
               <Image
                 src={activeSrc}
@@ -752,7 +844,7 @@ export default function ProductConfigurator({ product }: Props) {
               />
 
               {hasDiscount && (
-                <div className="absolute left-3 top-3 sm:left-4 sm:top-4 rounded-full bg-red-500 px-3 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md flex items-center justify-center">
+                <div className="absolute left-3 top-3 flex items-center justify-center rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-md sm:left-4 sm:top-4 sm:text-sm">
                   -{discountPercent}%
                 </div>
               )}
@@ -763,7 +855,7 @@ export default function ProductConfigurator({ product }: Props) {
                     type="button"
                     onClick={goPrev}
                     aria-label={t("previousImage")}
-                    className="lg:hidden absolute left-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
+                    className="absolute left-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
                   >
                     <ChevronLeft />
                   </button>
@@ -771,7 +863,7 @@ export default function ProductConfigurator({ product }: Props) {
                     type="button"
                     onClick={goNext}
                     aria-label={t("nextImage")}
-                    className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
+                    className="absolute right-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
                   >
                     <ChevronRight />
                   </button>
@@ -784,12 +876,12 @@ export default function ProductConfigurator({ product }: Props) {
                 type="button"
                 onClick={goNext}
                 aria-label={t("nextImage")}
-                className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
               >
                 <ChevronRight />
               </button>
             ) : (
-              <div className="h-10 w-10 shrink-0 hidden lg:block" />
+              <div className="hidden h-10 w-10 shrink-0 lg:block" />
             )}
           </div>
 
@@ -797,7 +889,7 @@ export default function ProductConfigurator({ product }: Props) {
             <div className="mt-3">
               <div
                 ref={thumbsRef}
-                className="mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 pr-6 [scrollbar-width:none] [-ms-overflow-style:none] no-scrollbar"
+                className="no-scrollbar mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 pr-6 [scrollbar-width:none] [-ms-overflow-style:none]"
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
                 <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
@@ -810,15 +902,25 @@ export default function ProductConfigurator({ product }: Props) {
                         onClick={() => setActiveIndex(i)}
                         aria-label={t("imageNumber", { number: i + 1 })}
                         className={cx(
-                          "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
+                          "relative h-[52px] w-[42px] flex-none rounded-xl border transition focus:outline-none sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px]",
                           isActive ? "border-transparent" : "hover:opacity-90"
                         )}
                       >
                         {isActive && (
-                          <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600" />
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
+                          />
                         )}
                         <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image src={src} alt={`thumb ${i + 1}`} fill className="object-contain" sizes="42px" unoptimized />
+                          <Image
+                            src={src}
+                            alt={`thumb ${i + 1}`}
+                            fill
+                            className="object-contain"
+                            sizes="42px"
+                            unoptimized
+                          />
                         </span>
                       </button>
                     );
@@ -835,33 +937,41 @@ export default function ProductConfigurator({ product }: Props) {
           </div>
         </div>
 
-        <div className="card w-full p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 min-w-0">
+        <div className="card min-w-0 w-full flex-1 space-y-4 p-3 sm:p-4 lg:space-y-6 lg:p-6">
           <header className="space-y-2">
-            <div className="rounded-full bg-gray-100 h-2 overflow-hidden" aria-hidden="true">
+            <div className="h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
               <div className="h-2 bg-blue-600" style={{ width: `${progress}%` }} />
             </div>
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-sm sm:text-base lg:text-2xl font-extrabold tracking-tight leading-snug">{product.name}</h1>
+                <h1 className="text-sm font-extrabold leading-snug tracking-tight sm:text-base lg:text-2xl">
+                  {product.name}
+                </h1>
 
                 <div className="mt-1 flex items-baseline gap-2">
                   {hasDiscount && originalUnitPriceForMoney && (
-                    <span className="text-[11px] sm:text-xs text-gray-400 line-through">{money(originalUnitPriceForMoney)}</span>
+                    <span className="text-[11px] text-gray-400 line-through sm:text-xs">
+                      {money(originalUnitPriceForMoney)}
+                    </span>
                   )}
-                  <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
+
+                  <span className="text-sm font-semibold text-gray-900 sm:text-lg lg:text-xl">
+                    {money(rawUnitPrice)}
+                  </span>
+
                   {hasDiscount && (
-                    <span className="ml-1 text-[11px] sm:text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                    <span className="ml-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 sm:text-xs">
                       {t("savePercent", { percent: discountPercent })}
                     </span>
                   )}
                 </div>
 
-                <div className="mt-1 text-[11px] sm:text-xs text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
                   {reviewsLoading ? (
                     <span className="inline-flex items-center gap-2">
-                      <span className="h-3 w-24 rounded-full bg-gray-200 animate-pulse" />
-                      <span className="h-3 w-14 rounded-full bg-gray-200 animate-pulse" />
+                      <span className="h-3 w-24 animate-pulse rounded-full bg-gray-200" />
+                      <span className="h-3 w-14 animate-pulse rounded-full bg-gray-200" />
                     </span>
                   ) : reviewsMeta.total > 0 ? (
                     <span className="inline-flex items-center gap-2">
@@ -884,7 +994,11 @@ export default function ProductConfigurator({ product }: Props) {
               </div>
             </div>
 
-            {product.description && <p className="mt-1.5 text-xs sm:text-sm text-gray-700 whitespace-pre-line">{product.description}</p>}
+            {product.description && (
+              <p className="mt-1.5 whitespace-pre-line text-xs text-gray-700 sm:text-sm">
+                {product.description}
+              </p>
+            )}
 
             <AnimatePresence>
               {error && (
@@ -892,7 +1006,7 @@ export default function ProductConfigurator({ product }: Props) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] sm:text-sm text-amber-900"
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900 sm:text-sm"
                   role="status"
                 >
                   <span className="font-semibold">{t("headsUp")}</span> {error}
@@ -901,16 +1015,17 @@ export default function ProductConfigurator({ product }: Props) {
             </AnimatePresence>
           </header>
 
-          <div data-section="size" className="rounded-2xl border p-3 sm:p-4 bg-white/70">
+          <div data-section="size" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
             <div className="flex items-center justify-between gap-2">
-              <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
-                {t("size")} ({kid ? t("kids") : t("adult")}) <span className="text-red-500">*</span>
+              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
+                {t("size")} ({kid ? t("kids") : t("adult")}){" "}
+                <span className="text-red-500">*</span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setOpenSizeGuide(true)}
-                className="text-[11px] sm:text-xs text-blue-700 hover:underline inline-flex items-center gap-1"
+                className="inline-flex items-center gap-1 text-[11px] text-blue-700 hover:underline sm:text-xs"
               >
                 {t("sizeGuide")} <InfoIcon className="h-3.5 w-3.5" />
               </button>
@@ -920,7 +1035,8 @@ export default function ProductConfigurator({ product }: Props) {
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {sizes.map((s) => {
                   const unavailable = isUnavailable(s);
-                  const isActive = (selected.size as string) === s.size && !unavailable;
+                  const isActive = selected.size === s.size && !unavailable;
+
                   return (
                     <button
                       key={s.id}
@@ -930,10 +1046,12 @@ export default function ProductConfigurator({ product }: Props) {
                       aria-disabled={unavailable}
                       title={unavailable ? t("unavailable") : t("selectSize", { size: s.size })}
                       className={cx(
-                        "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
-                        unavailable && "opacity-50 line-through cursor-not-allowed",
+                        "rounded-xl border px-2.5 py-1.5 text-[11px] transition sm:text-xs lg:text-sm",
+                        unavailable && "cursor-not-allowed opacity-50 line-through",
                         !unavailable && !isActive && "hover:bg-gray-50",
-                        isActive && !unavailable && "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                        isActive &&
+                          !unavailable &&
+                          "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
                       )}
                       aria-pressed={isActive}
                     >
@@ -961,29 +1079,35 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">{t("kidsSizeNote")}</p>
+              <p className="mt-2 text-[11px] text-gray-500 sm:text-xs">{t("kidsSizeNote")}</p>
             )}
           </div>
 
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
-            <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
+            <GroupBlock
+              group={effectiveCustomizationGroup}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+              forceFree
+            />
           )}
 
           {showNameNumber && (
-            <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
-              <div className="text-sm text-gray-700 flex items-center justify-between">
+            <div className="space-y-3 rounded-2xl border bg-white/70 p-3 sm:p-4">
+              <div className="flex items-center justify-between text-sm text-gray-700">
                 <span>
                   {t("personalization")}{" "}
                   <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
                     {t("free")}
                   </span>
                 </span>
-                <span className="text-[11px] sm:text-xs text-gray-500">{t("optional")}</span>
+                <span className="text-[11px] text-gray-500 sm:text-xs">{t("optional")}</span>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <label className="block">
-                  <span className="text-[11px] sm:text-xs text-gray-600">{t("nameUppercase")}</span>
+                  <span className="text-[11px] text-gray-600 sm:text-xs">{t("nameUppercase")}</span>
                   <input
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("namePlaceholder")}
@@ -993,13 +1117,14 @@ export default function ProductConfigurator({ product }: Props) {
                   />
                   {custName.length > 0 && safeName !== custName.toUpperCase() && (
                     <span className="mt-1 block text-[10px] text-gray-500">
-                      {t("willBePrintedAs")} <span className="font-semibold">{safeName || "—"}</span>
+                      {t("willBePrintedAs")}{" "}
+                      <span className="font-semibold">{safeName || "—"}</span>
                     </span>
                   )}
                 </label>
 
                 <label className="block">
-                  <span className="text-[11px] sm:text-xs text-gray-600">{t("numberLabel")}</span>
+                  <span className="text-[11px] text-gray-600 sm:text-xs">{t("numberLabel")}</span>
                   <input
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("numberPlaceholder")}
@@ -1010,13 +1135,14 @@ export default function ProductConfigurator({ product }: Props) {
                   />
                   {custNumber.length > 0 && safeNumber !== custNumber && (
                     <span className="mt-1 block text-[10px] text-gray-500">
-                      {t("willBePrintedAs")} <span className="font-semibold">{safeNumber || "—"}</span>
+                      {t("willBePrintedAs")}{" "}
+                      <span className="font-semibold">{safeNumber || "—"}</span>
                     </span>
                   )}
                 </label>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-gray-500">{t("personalizationNote")}</p>
+              <p className="text-[11px] text-gray-500 sm:text-xs">{t("personalizationNote")}</p>
             </div>
           )}
 
@@ -1032,12 +1158,19 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
           {otherGroups.map((g) => (
-            <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
+            <GroupBlock
+              key={g.id}
+              group={g}
+              selected={selected}
+              onPickRadio={setRadio}
+              onToggleAddon={toggleAddon}
+            />
           ))}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 aria-label={t("decreaseQuantity")}
@@ -1047,6 +1180,7 @@ export default function ProductConfigurator({ product }: Props) {
               </button>
               <span className="min-w-[2ch] text-center text-sm">{qty}</span>
               <button
+                type="button"
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => q + 1)}
                 aria-label={t("increaseQuantity")}
@@ -1057,18 +1191,19 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
 
             <div className="text-right sm:text-left">
-              <div className="text-xs sm:text-sm text-gray-600">{t("total")}</div>
-              <div className="text-base sm:text-lg font-semibold">{money(finalPrice)}</div>
+              <div className="text-xs text-gray-600 sm:text-sm">{t("total")}</div>
+              <div className="text-base font-semibold sm:text-lg">{money(finalPrice)}</div>
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             <motion.button
               ref={addBtnRef}
               onClick={addToCart}
               className={cx(
-                "btn-primary w-full disabled:opacity-60 inline-flex items-center justify-center gap-2 text-sm sm:text-base",
-                justAdded && "bg-green-600 hover:bg-green-600"
+                "btn-primary inline-flex w-full items-center justify-center gap-2 text-sm sm:text-base",
+                justAdded && "bg-green-600 hover:bg-green-600",
+                "disabled:opacity-60"
               )}
               disabled={pending || !canAddToCart}
               animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
@@ -1090,8 +1225,9 @@ export default function ProductConfigurator({ product }: Props) {
             </motion.button>
 
             <button
+              type="button"
               onClick={onBuyNow}
-              className="w-full rounded-xl border border-gray-900 bg-gray-900 text-white px-4 py-2.5 text-sm sm:text-base font-semibold hover:bg-black transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-900 bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60 sm:text-base"
               disabled={pending || !canAddToCart}
             >
               {pending && buyNow ? t("processing") : t("buyNow")}
@@ -1101,23 +1237,25 @@ export default function ProductConfigurator({ product }: Props) {
           <InfoAccordions />
 
           <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="grid sm:grid-cols-3 gap-2 text-[11px] sm:text-xs text-gray-700">
+            <div className="grid gap-2 text-[11px] text-gray-700 sm:grid-cols-3 sm:text-xs">
               <div className="flex items-start gap-2">
-                <ShieldIcon className="h-4 w-4 mt-0.5" />
+                <ShieldIcon className="mt-0.5 h-4 w-4" />
                 <div>
                   <div className="font-semibold">{t("securePayment")}</div>
                   <div className="text-gray-500">{t("encryptedCheckout")}</div>
                 </div>
               </div>
+
               <div className="flex items-start gap-2">
-                <TruckIcon className="h-4 w-4 mt-0.5" />
+                <TruckIcon className="mt-0.5 h-4 w-4" />
                 <div>
                   <div className="font-semibold">{t("trackedShipping")}</div>
                   <div className="text-gray-500">{DELIVERY_TEXT}</div>
                 </div>
               </div>
+
               <div className="flex items-start gap-2">
-                <ChatIcon className="h-4 w-4 mt-0.5" />
+                <ChatIcon className="mt-0.5 h-4 w-4" />
                 <div>
                   <div className="font-semibold">{t("fastSupport")}</div>
                   <div className="text-gray-500">{t("weReplyQuickly")}</div>
@@ -1139,7 +1277,7 @@ export default function ProductConfigurator({ product }: Props) {
               role="status"
               aria-live="polite"
             >
-              <div className="rounded-xl border bg-white/95 backdrop-blur px-4 py-3 shadow-xl flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-xl border bg-white/95 px-4 py-3 shadow-xl backdrop-blur">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
                   <CheckIcon className="h-4 w-4 text-green-700" />
                 </div>
@@ -1147,7 +1285,11 @@ export default function ProductConfigurator({ product }: Props) {
                   <div className="font-semibold">{t("toastTitle")}</div>
                   <div className="text-gray-600">{t("toastSubtitle")}</div>
                 </div>
-                <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
+                <button
+                  type="button"
+                  className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
+                  onClick={() => setShowToast(false)}
+                >
                   {t("close")}
                 </button>
               </div>
@@ -1162,39 +1304,45 @@ export default function ProductConfigurator({ product }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 18 }}
               transition={{ duration: 0.18 }}
-              className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur px-3 py-3 shadow-[0_-10px_30px_rgba(0,0,0,0.08)]"
+              className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 px-3 py-3 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] backdrop-blur"
             >
-              <div className="mx-auto max-w-[520px] flex items-center gap-3">
+              <div className="mx-auto flex max-w-[520px] items-center gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] text-gray-600">{t("total")}</div>
-                  <div className="text-sm font-semibold truncate">{money(finalPrice)}</div>
+                  <div className="truncate text-sm font-semibold">{money(finalPrice)}</div>
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => {
                     if (!canAddToCart) {
                       setError(validateBeforeAdd());
-                      document.querySelector('[data-section="size"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      document
+                        .querySelector('[data-section="size"]')
+                        ?.scrollIntoView({ behavior: "smooth", block: "center" });
                       return;
                     }
                     addToCart();
                   }}
-                  className="ml-auto rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+                  className="ml-auto rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
                   disabled={pending}
                 >
                   {t("addShort")}
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => {
                     if (!canAddToCart) {
                       setError(validateBeforeAdd());
-                      document.querySelector('[data-section="size"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      document
+                        .querySelector('[data-section="size"]')
+                        ?.scrollIntoView({ behavior: "smooth", block: "center" });
                       return;
                     }
                     onBuyNow();
                   }}
-                  className="rounded-xl bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-black transition disabled:opacity-60"
+                  className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
                   disabled={pending}
                 >
                   {t("buyShort")}
@@ -1208,7 +1356,12 @@ export default function ProductConfigurator({ product }: Props) {
           typeof document !== "undefined" &&
           createPortal(
             <AnimatePresence>
-              {openSizeGuide && <SizeGuideModal onClose={() => setOpenSizeGuide(false)} defaultTab={kid ? "kids" : "adult"} />}
+              {openSizeGuide && (
+                <SizeGuideModal
+                  onClose={() => setOpenSizeGuide(false)}
+                  defaultTab={kid ? "kids" : "adult"}
+                />
+              )}
             </AnimatePresence>,
             document.body
           )}
@@ -1221,9 +1374,9 @@ function InfoAccordions() {
   const t = useTranslations("ProductConfigurator");
 
   return (
-    <div className="rounded-2xl border bg-white/70 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border bg-white/70">
       <AccordionRow icon={<TruckIcon className="h-4 w-4" />} title={t("shippingDelivery")} defaultOpen>
-        <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
+        <ul className="space-y-2 text-xs text-gray-700 sm:text-sm">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
@@ -1233,7 +1386,8 @@ function InfoAccordions() {
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              {t("trackingNumberText1")} <b>{t("trackingNumberBold")}</b> {t("trackingNumberText2")}
+              {t("trackingNumberText1")} <b>{t("trackingNumberBold")}</b>{" "}
+              {t("trackingNumberText2")}
             </span>
           </li>
           <li className="flex gap-2">
@@ -1246,7 +1400,7 @@ function InfoAccordions() {
       <Divider />
 
       <AccordionRow icon={<RotateIcon className="h-4 w-4" />} title={t("returnsSupport")}>
-        <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
+        <ul className="space-y-2 text-xs text-gray-700 sm:text-sm">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>{t("gotProblem")}</span>
@@ -1267,7 +1421,7 @@ function InfoAccordions() {
       <Divider />
 
       <AccordionRow icon={<StarBadgeIcon className="h-4 w-4" />} title={t("qualityDetails")}>
-        <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
+        <ul className="space-y-2 text-xs text-gray-700 sm:text-sm">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>{t("qualityStitching")}</span>
@@ -1305,9 +1459,9 @@ function AccordionRow({
 }) {
   return (
     <details className="group" open={!!defaultOpen}>
-      <summary className="list-none cursor-pointer select-none px-4 py-3 flex items-center gap-3 hover:bg-white/60 transition">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 transition hover:bg-white/60">
         <span className="text-gray-800">{icon}</span>
-        <span className="text-sm sm:text-base font-semibold text-gray-900">{title}</span>
+        <span className="text-sm font-semibold text-gray-900 sm:text-base">{title}</span>
         <span className="ml-auto text-gray-600">
           <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 group-open:rotate-180" />
         </span>
@@ -1338,18 +1492,20 @@ function GroupBlock({
 
   if (group.type === "RADIO") {
     return (
-      <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
-        <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
+      <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+        <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
           {group.label} {group.required && <span className="text-red-500">*</span>}
         </div>
+
         <div className="grid gap-2">
           {group.values.map((v) => {
             const active = selected[group.key] === v.value;
+
             return (
               <label
                 key={v.id}
                 className={cx(
-                  "flex items-center justify-between rounded-xl border px-3 py-2 cursor-pointer transition",
+                  "flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 transition",
                   active ? "border-blue-600 ring-2 ring-blue-100" : "hover:bg-gray-50"
                 )}
               >
@@ -1363,8 +1519,11 @@ function GroupBlock({
                   />
                   <span className="text-sm">{v.label}</span>
                 </div>
+
                 {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">{t("free")}</span>
+                  <span className="rounded bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">
+                    {t("free")}
+                  </span>
                 ) : null}
               </label>
             );
@@ -1375,21 +1534,24 @@ function GroupBlock({
   }
 
   const chosen = selected[group.key];
-  const isActive = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
+  const isActive = (value: string) =>
+    Array.isArray(chosen) ? chosen.includes(value) : chosen === value;
 
   return (
-    <div className="rounded-2xl border p-3 sm:p-4 bg-white/70">
-      <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
+    <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+      <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
         {group.label} {group.required && <span className="text-red-500">*</span>}
       </div>
+
       <div className="grid gap-2">
         {group.values.map((v) => {
           const active = isActive(v.value);
+
           return (
             <label
               key={v.id}
               className={cx(
-                "flex items-center justify-between rounded-xl border px-3 py-2 cursor-pointer transition",
+                "flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 transition",
                 active ? "border-blue-600 ring-2 ring-blue-100" : "hover:bg-gray-50"
               )}
             >
@@ -1406,8 +1568,11 @@ function GroupBlock({
                 />
                 <span className="text-sm">{v.label}</span>
               </div>
+
               {forceFree ? (
-                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">{t("free")}</span>
+                <span className="rounded bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">
+                  {t("free")}
+                </span>
               ) : null}
             </label>
           );
@@ -1417,7 +1582,13 @@ function GroupBlock({
   );
 }
 
-function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultTab: "adult" | "kids" }) {
+function SizeGuideModal({
+  onClose,
+  defaultTab,
+}: {
+  onClose: () => void;
+  defaultTab: "adult" | "kids";
+}) {
   const t = useTranslations("ProductConfigurator");
   const [tab, setTab] = useState<"adult" | "kids">(defaultTab);
   const [unit, setUnit] = useState<Unit>("cm");
@@ -1433,7 +1604,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
 
   return (
     <motion.div
-      className="fixed inset-0 z-[9997] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1446,25 +1617,30 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: 10 }}
         transition={{ duration: 0.18 }}
-        className="w-full max-w-5xl rounded-2xl bg-white border shadow-2xl overflow-hidden"
+        className="w-full max-w-5xl overflow-hidden rounded-2xl border bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <div>
             <div className="text-sm font-semibold">{t("sizeGuide")}</div>
             <div className="text-[11px] text-gray-500">{t("sizeGuideSwitchText")}</div>
           </div>
-          <button onClick={onClose} className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100" aria-label={t("close")}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100"
+            aria-label={t("close")}
+          >
             {t("close")}
           </button>
         </div>
 
-        <div className="p-4 space-y-3">
+        <div className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
+            <div className="inline-flex rounded-xl border bg-white p-1 shadow-sm">
               <button
                 className={cx(
-                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition sm:px-4 sm:text-sm",
                   tab === "adult" ? "bg-blue-600 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => setTab("adult")}
@@ -1474,7 +1650,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
               </button>
               <button
                 className={cx(
-                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition sm:px-4 sm:text-sm",
                   tab === "kids" ? "bg-blue-600 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => setTab("kids")}
@@ -1484,10 +1660,10 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
               </button>
             </div>
 
-            <div className="inline-flex rounded-xl border p-1 bg-white shadow-sm">
+            <div className="inline-flex rounded-xl border bg-white p-1 shadow-sm">
               <button
                 className={cx(
-                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition sm:px-4 sm:text-sm",
                   unit === "cm" ? "bg-gray-900 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => setUnit("cm")}
@@ -1497,7 +1673,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
               </button>
               <button
                 className={cx(
-                  "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition",
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition sm:px-4 sm:text-sm",
                   unit === "in" ? "bg-gray-900 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => setUnit("in")}
@@ -1508,15 +1684,15 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
             </div>
           </div>
 
-          <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-            <div className="px-3 sm:px-4 py-2 bg-gray-50 border-b text-xs sm:text-sm">
+          <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <div className="border-b bg-gray-50 px-3 py-2 text-xs sm:px-4 sm:text-sm">
               {t("units")}: <b>{unit === "cm" ? t("centimetres") : t("inchesFull")}</b>
             </div>
 
-            <div className="-mx-4 sm:mx-0 overflow-x-auto">
+            <div className="-mx-4 overflow-x-auto sm:mx-0">
               <div className={cx("px-4 sm:px-0", tab === "adult" ? "min-w-[620px]" : "min-w-[680px]")}>
                 {tab === "adult" ? (
-                  <table className="w-full text-xs sm:text-sm border-collapse">
+                  <table className="w-full border-collapse text-xs sm:text-sm">
                     <colgroup>
                       <col className="w-32 sm:w-40" />
                       {ADULT.sizes.map((_, i) => (
@@ -1525,13 +1701,13 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     </colgroup>
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300">
+                        <th className="border border-gray-300 px-3 py-2 text-center font-medium sm:px-4 sm:py-3">
                           {t("measurement")}
                         </th>
                         {ADULT.sizes.map((s) => (
                           <th
                             key={s}
-                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                            className="border border-gray-300 bg-gray-50 px-3 py-2 text-center font-medium sm:px-4 sm:py-3"
                           >
                             {s}
                           </th>
@@ -1541,13 +1717,13 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <tbody>
                       {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
                         <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                          <td className="border border-gray-300 px-3 py-2 text-center font-semibold sm:px-4 sm:py-3">
                             {t(`adultRow.${key}` as any)}
                           </td>
                           {ADULT.sizes.map((s) => (
                             <td
                               key={s}
-                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                              className="whitespace-nowrap border border-gray-300 px-3 py-2 text-center sm:px-4 sm:py-3"
                             >
                               {renderRange(ADULT.rows[key][s], unit)}
                             </td>
@@ -1557,7 +1733,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     </tbody>
                   </table>
                 ) : (
-                  <table className="w-full text-xs sm:text-sm border-collapse">
+                  <table className="w-full border-collapse text-xs sm:text-sm">
                     <colgroup>
                       <col className="w-32 sm:w-40" />
                       {kids.sizes.map((_, i) => (
@@ -1566,13 +1742,13 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     </colgroup>
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300">
+                        <th className="border border-gray-300 px-3 py-2 text-center font-medium sm:px-4 sm:py-3">
                           {t("measurement")}
                         </th>
                         {kids.sizes.map((s) => (
                           <th
                             key={s}
-                            className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300 bg-gray-50"
+                            className="border border-gray-300 bg-gray-50 px-3 py-2 text-center font-medium sm:px-4 sm:py-3"
                           >
                             {s}
                           </th>
@@ -1580,15 +1756,17 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                       </tr>
                     </thead>
                     <tbody>
-                      {(["Jersey length", "Chest (bust)", "Height", "Shorts length"] as KidsRowKey[]).map((rowKey, idx) => (
+                      {(
+                        ["Jersey length", "Chest (bust)", "Height", "Shorts length"] as KidsRowKey[]
+                      ).map((rowKey, idx) => (
                         <tr key={rowKey} className={idx % 2 ? "bg-white" : "bg-gray-50/40"}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                          <td className="border border-gray-300 px-3 py-2 text-center font-semibold sm:px-4 sm:py-3">
                             {t(`kidsRow.${rowKey}` as any)}
                           </td>
                           {kids.sizes.map((s) => (
                             <td
                               key={s}
-                              className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap border border-gray-300 text-center"
+                              className="whitespace-nowrap border border-gray-300 px-3 py-2 text-center sm:px-4 sm:py-3"
                             >
                               {renderRange(kids.rows[rowKey][s], unit)}
                             </td>
@@ -1605,10 +1783,11 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
           <div className="text-[12px] text-gray-500">{t("sizeGuideTip")}</div>
         </div>
 
-        <div className="px-4 py-3 border-t">
+        <div className="border-t px-4 py-3">
           <button
-            className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
+            className="w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
             onClick={onClose}
+            type="button"
           >
             {t("gotIt")}
           </button>
@@ -1646,9 +1825,9 @@ function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
 
 function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="rounded-xl border bg-gray-50 px-2.5 py-2 text-[11px] sm:text-xs text-gray-700 flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-2 rounded-xl border bg-gray-50 px-2.5 py-2 text-[11px] font-semibold text-gray-700 sm:text-xs">
       <span className="text-gray-800">{icon}</span>
-      <span className="font-semibold">{text}</span>
+      <span>{text}</span>
     </div>
   );
 }
@@ -1656,43 +1835,77 @@ function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M20 7L9 18l-5-5"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
 function ChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
+      className={cx(
+        "mx-auto h-5 w-5 text-gray-900 transition-transform group-hover:scale-110",
+        props.className
+      )}
       fill="none"
       aria-hidden="true"
     >
-      <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M15 6l-6 6 6 6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
 function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
       viewBox="0 0 24 24"
-      className={cx("mx-auto h-5 w-5 text-gray-900 group-hover:scale-110 transition-transform", props.className)}
+      className={cx(
+        "mx-auto h-5 w-5 text-gray-900 transition-transform group-hover:scale-110",
+        props.className
+      )}
       fill="none"
       aria-hidden="true"
     >
-      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
 function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
-      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M6 9l6 6 6-6"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
 function StarShape({
   size,
   className,
@@ -1705,7 +1918,15 @@ function StarShape({
   style?: React.CSSProperties;
 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill={fill} style={style} aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      className={className}
+      fill={fill}
+      style={style}
+      aria-hidden="true"
+    >
       <path
         d="M12 2l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.9 5.82 21l1.18-6.87-5-4.87 6.91-1L12 2z"
         stroke="currentColor"
@@ -1715,14 +1936,24 @@ function StarShape({
     </svg>
   );
 }
+
 function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path d="M3 7h11v10H3V7zM14 10h4l3 3v4h-7v-7z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" fill="currentColor" />
+      <path
+        d="M3 7h11v10H3V7zM14 10h4l3 3v4h-7v-7z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
+
 function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
@@ -1732,10 +1963,17 @@ function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeWidth={1.8}
         strokeLinejoin="round"
       />
-      <path d="M9 12l2 2 4-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9 12l2 2 4-5"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
 function InfoIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-blue-700", props.className)} fill="none" aria-hidden="true">
@@ -1745,31 +1983,70 @@ function InfoIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
 function CartIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
-      <path d="M6 7h15l-2 9H7L6 7z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M6 7l-1-3H2" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z" fill="currentColor" />
+      <path
+        d="M6 7h15l-2 9H7L6 7z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 7l-1-3H2"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
+
 function ChatIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path d="M4 5h16v11H7l-3 3V5z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M8 9h8M8 12h6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+      <path
+        d="M4 5h16v11H7l-3 3V5z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 9h8M8 12h6"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
+
 function RotateIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
-      <path d="M21 12a9 9 0 10-3 6.7" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
-      <path d="M21 7v5h-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M21 12a9 9 0 10-3 6.7"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+      <path
+        d="M21 7v5h-5"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
 function StarBadgeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
@@ -1779,7 +2056,12 @@ function StarBadgeIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeWidth={1.8}
         strokeLinejoin="round"
       />
-      <path d="M7 21l5-2 5 2" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+      <path
+        d="M7 21l5-2 5 2"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

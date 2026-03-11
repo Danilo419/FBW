@@ -1,9 +1,8 @@
-// src/app/checkout/success/SuccessClient.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type OrderItem = {
   id: string;
@@ -42,7 +41,7 @@ type Order = {
 type ApiResponse =
   | { order: Order }
   | { data: { order: Order } }
-  | { ok?: boolean; status?: string } // 202 response
+  | { ok?: boolean; status?: string }
   | { error: string }
   | Record<string, any>;
 
@@ -105,14 +104,17 @@ function humanizeBadge(value: string) {
 function isExternalUrl(u: string) {
   return /^https?:\/\//i.test(u) || u.startsWith("//");
 }
+
 function normalizeUrl(u: string) {
   if (!u) return "";
   if (u.startsWith("//")) return `https:${u}`;
   return u;
 }
+
 function isRecord(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
+
 function getCoverUrl(imageUrls: unknown): string {
   try {
     if (!imageUrls) return "/placeholder.png";
@@ -156,47 +158,19 @@ function getItemImageUrl(it: OrderItem) {
   return direct || cover || "/placeholder.png";
 }
 
-function ExternalImg({
-  src,
-  alt,
-  className,
-}: {
-  src: string;
-  alt: string;
-  className?: string;
-}) {
-  const [current, setCurrent] = useState(src || "/placeholder.png");
-
-  useEffect(() => {
-    setCurrent(src || "/placeholder.png");
-  }, [src]);
-
-  return (
-    <img
-      src={current}
-      alt={alt}
-      className={className}
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setCurrent("/placeholder.png")}
-    />
-  );
-}
-
 function ItemThumb({ src, alt }: { src: string; alt: string }) {
-  const external = isExternalUrl(src);
-
-  if (external) {
-    return (
-      <div className="relative h-14 w-14 overflow-hidden rounded-xl border bg-gray-50 shrink-0">
-        <ExternalImg src={src} alt={alt} className="h-full w-full object-cover" />
-      </div>
-    );
-  }
+  const normalizedSrc = src || "/placeholder.png";
 
   return (
-    <div className="relative h-14 w-14 overflow-hidden rounded-xl border bg-gray-50 shrink-0">
-      <Image src={src} alt={alt} fill className="object-cover" sizes="56px" />
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border bg-gray-50">
+      <Image
+        src={normalizedSrc}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes="56px"
+        unoptimized={isExternalUrl(normalizedSrc)}
+      />
     </div>
   );
 }
@@ -262,30 +236,69 @@ function normalizeBadges(rawBadges: unknown): string[] {
   return splitBadgesString(String(rawBadges));
 }
 
-function extractPersonalization(it: OrderItem, snap: Record<string, unknown>, optionsObj: Record<string, unknown>) {
+function extractPersonalization(
+  it: OrderItem,
+  snap: Record<string, unknown>,
+  optionsObj: Record<string, unknown>
+) {
   const snapPers =
-    snap?.personalization && typeof (snap as any).personalization === "object"
-      ? ((snap as any).personalization as Record<string, unknown>)
+    snap.personalization && typeof snap.personalization === "object"
+      ? (snap.personalization as Record<string, unknown>)
       : null;
 
-  const snapPersName = snapPers ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"]) : null;
-  const snapPersNumber = snapPers ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"]) : null;
+  const snapPersName = snapPers
+    ? pickStr(snapPers, ["name", "playerName", "customName", "shirtName"])
+    : null;
+  const snapPersNumber = snapPers
+    ? pickStr(snapPers, ["number", "playerNumber", "customNumber", "shirtNumber"])
+    : null;
 
   const directName =
-    pickStr(it as any, ["personalizationName", "playerName", "custName", "nameOnShirt", "shirtName", "customName"]) ?? null;
+    pickStr(it, [
+      "personalizationName",
+      "playerName",
+      "custName",
+      "nameOnShirt",
+      "shirtName",
+      "customName",
+    ]) ?? null;
 
   const directNumber =
-    pickStr(it as any, ["personalizationNumber", "playerNumber", "custNumber", "numberOnShirt", "shirtNumber", "customNumber"]) ?? null;
+    pickStr(it, [
+      "personalizationNumber",
+      "playerNumber",
+      "custNumber",
+      "numberOnShirt",
+      "shirtNumber",
+      "customNumber",
+    ]) ?? null;
 
-  const snapRootName = pickStr(snap as any, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ?? null;
+  const snapRootName =
+    pickStr(snap, ["custName", "customerName", "nameOnShirt", "shirtName", "playerName"]) ?? null;
+
   const snapRootNumber =
-    pickStr(snap as any, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ?? null;
+    pickStr(snap, ["custNumber", "customerNumber", "numberOnShirt", "shirtNumber", "playerNumber"]) ??
+    null;
 
   const optName =
-    pickStr(optionsObj as any, ["custName", "playerName", "player_name", "shirtName", "shirt_name", "nameOnShirt"]) ?? null;
+    pickStr(optionsObj, [
+      "custName",
+      "playerName",
+      "player_name",
+      "shirtName",
+      "shirt_name",
+      "nameOnShirt",
+    ]) ?? null;
 
   const optNumber =
-    pickStr(optionsObj as any, ["custNumber", "playerNumber", "player_number", "shirtNumber", "shirt_number", "numberOnShirt"]) ?? null;
+    pickStr(optionsObj, [
+      "custNumber",
+      "playerNumber",
+      "player_number",
+      "shirtNumber",
+      "shirt_number",
+      "numberOnShirt",
+    ]) ?? null;
 
   const name = (snapPersName ?? directName ?? snapRootName ?? optName ?? null)?.trim() || null;
   const numRaw = (snapPersNumber ?? directNumber ?? snapRootNumber ?? optNumber ?? null)?.trim() || "";
@@ -316,25 +329,25 @@ function prettyKey(k: string) {
 function deriveItemDetails(it: OrderItem) {
   const snap = safeParseJSON(it.snapshotJson);
 
-  const optionsObj =
-    safeParseJSON((snap as any)?.optionsJson) ||
-    safeParseJSON((snap as any)?.options) ||
-    safeParseJSON((snap as any)?.selected) ||
-    {};
+  const optionsJson = snap.optionsJson;
+  const options = snap.options;
+  const selected = snap.selected;
+
+  const optionsObj = {
+    ...safeParseJSON(optionsJson),
+    ...safeParseJSON(options),
+    ...safeParseJSON(selected),
+  };
 
   const personalization = extractPersonalization(it, snap, optionsObj);
 
   const size =
-    (optionsObj as any).size ??
-    (snap as any)?.size ??
+    optionsObj.size ??
+    snap.size ??
     pickStr(snap, ["sizeLabel", "variant", "skuSize"]) ??
     null;
 
-  const rawBadges =
-    (optionsObj as any).badges ??
-    (snap as any)?.badges ??
-    (optionsObj as any)["competition_badge"] ??
-    null;
+  const rawBadges = optionsObj.badges ?? snap.badges ?? optionsObj["competition_badge"] ?? null;
 
   const badgesFromSnap = normalizeBadges(rawBadges);
   const badgesFromProduct = normalizeBadges(it.product?.badges);
@@ -381,13 +394,14 @@ export default function SuccessClient() {
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const confirmStripe = async (oid: string, sid: string) => {
+  const confirmStripe = useCallback(async (oid: string, sid: string) => {
     if (!oid || !sid || confirmingRef.current) return;
     confirmingRef.current = true;
     setLoading(true);
     setLoadingMsg("Finalizing your payment…");
 
     const MAX_TRIES = 6;
+
     for (let i = 0; i < MAX_TRIES; i++) {
       try {
         const res = await fetch(
@@ -397,7 +411,7 @@ export default function SuccessClient() {
 
         const json: any = await res.json().catch(() => ({}));
 
-        if (res.ok && json?.ok) return;
+        if (res.ok && json?.ok) return true;
 
         if (res.status === 202 || json?.status === "processing") {
           await wait(1500);
@@ -405,18 +419,16 @@ export default function SuccessClient() {
         }
 
         setError(json?.error || "Could not confirm the payment.");
-        break;
+        return false;
       } catch {
         await wait(1200);
       }
     }
-  };
 
-  /**
-   * ✅ Stripe success MUST use the public endpoint (no auth),
-   * and MUST handle 202 (processing) with retries.
-   */
-  const fetchOrder = async (oid: string, sid: string) => {
+    return false;
+  }, []);
+
+  const fetchOrder = useCallback(async (oid: string, sid: string) => {
     if (!oid) {
       setLoading(false);
       setOrder(null);
@@ -428,9 +440,9 @@ export default function SuccessClient() {
     setLoadingMsg("Loading your order…");
 
     try {
-      // If we have a session_id, always use the public endpoint
       if (sid) {
         const MAX_TRIES = 8;
+        let lastOrder: Order | null = null;
 
         for (let i = 0; i < MAX_TRIES; i++) {
           const res = await fetch(
@@ -438,7 +450,6 @@ export default function SuccessClient() {
             { method: "GET", cache: "no-store" }
           );
 
-          // 202 = still processing → wait and retry
           if (res.status === 202) {
             setLoadingMsg("Finalizing your payment…");
             await wait(1200);
@@ -461,9 +472,9 @@ export default function SuccessClient() {
             return;
           }
 
+          lastOrder = o;
           setOrder(o);
 
-          // If order isn't final yet, try a couple more refreshes
           if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
             await wait(900);
             continue;
@@ -472,18 +483,23 @@ export default function SuccessClient() {
           return;
         }
 
-        // If we exhausted tries, still show whatever we got (or an error)
-        if (!order) {
+        if (!lastOrder) {
           setError("Payment is still processing. Please check your order in your account in a moment.");
         }
+
         return;
       }
 
-      // No session_id (non-stripe / legacy) → fallback to old endpoints (may require auth depending on your setup)
-      let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, { method: "GET", cache: "no-store" });
+      let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
       if (!res.ok) {
-        res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, { method: "GET", cache: "no-store" });
+        res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, {
+          method: "GET",
+          cache: "no-store",
+        });
       }
 
       const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
@@ -510,12 +526,12 @@ export default function SuccessClient() {
       setLoading(false);
       setLoadingMsg("Loading your order…");
     }
-  };
+  }, []);
 
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    const run = async () => {
       if (!orderId) {
         setLoading(false);
         return;
@@ -527,13 +543,14 @@ export default function SuccessClient() {
 
       if (!alive) return;
       await fetchOrder(orderId, provider === "stripe" ? sessionId : "");
-    })();
+    };
+
+    run();
 
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId, provider, sessionId]);
+  }, [confirmStripe, fetchOrder, orderId, provider, sessionId]);
 
   const currency = useMemo(() => (order?.currency || "eur").toUpperCase(), [order?.currency]);
 
@@ -552,8 +569,8 @@ export default function SuccessClient() {
 
   if (error) {
     return (
-      <div className="rounded-2xl border bg-white p-5 space-y-4">
-        <p className="text-sm text-red-700 rounded-md border border-red-200 bg-red-50 px-3 py-2">{error}</p>
+      <div className="space-y-4 rounded-2xl border bg-white p-5">
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         <div className="flex gap-2">
           <button
             onClick={() => router.replace("/account")}
@@ -573,14 +590,17 @@ export default function SuccessClient() {
   }
 
   return (
-    <div className="rounded-2xl border bg-white p-5 space-y-4">
-      <p className="text-sm text-gray-800">Your payment was successful{provider ? ` via ${provider}` : ""}.</p>
+    <div className="space-y-4 rounded-2xl border bg-white p-5">
+      <p className="text-sm text-gray-800">
+        Your payment was successful
+        {provider ? ` via ${provider}` : ""}.
+      </p>
 
       {order ? (
         <>
           <div className="text-sm">
             <div className="text-gray-500">Order</div>
-            <div className="font-mono break-all">{order.id}</div>
+            <div className="break-all font-mono">{order.id}</div>
             <div className="mt-1 text-gray-500">Status</div>
             <div className="font-semibold capitalize">{order.status}</div>
           </div>
@@ -594,16 +614,16 @@ export default function SuccessClient() {
                 typeof it.unitPrice === "number" && it.unitPrice > 0
                   ? it.unitPrice
                   : typeof it.totalPrice === "number" && it.qty > 0
-                  ? Math.round(it.totalPrice / it.qty)
-                  : 0;
+                    ? Math.round(it.totalPrice / it.qty)
+                    : 0;
 
               return (
                 <li key={it.id} className="p-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex min-w-0 items-start gap-3">
                       <ItemThumb src={img} alt={it.name} />
                       <div className="min-w-0">
-                        <div className="font-medium truncate">{it.name}</div>
+                        <div className="truncate font-medium">{it.name}</div>
                         <div className="text-sm text-gray-600">
                           Qty: {it.qty}
                           <span className="mx-2">·</span>
@@ -612,7 +632,7 @@ export default function SuccessClient() {
                       </div>
                     </div>
 
-                    <div className="font-semibold shrink-0">{moneyCents(it.totalPrice, currency)}</div>
+                    <div className="shrink-0 font-semibold">{moneyCents(it.totalPrice, currency)}</div>
                   </div>
 
                   {(details.size ||
@@ -620,14 +640,14 @@ export default function SuccessClient() {
                     details.personalization?.number ||
                     details.optionsPairs.length > 0 ||
                     details.badges.length > 0) && (
-                    <div className="mt-3 pl-[68px] space-y-2">
+                    <div className="mt-3 space-y-2 pl-[68px]">
                       {(details.size ||
                         details.personalization?.name ||
                         details.personalization?.number) && (
-                        <div className="text-sm text-gray-700 space-y-0.5">
+                        <div className="space-y-0.5 text-sm text-gray-700">
                           {details.size ? (
                             <div>
-                              <span className="text-gray-500">Size:</span> {details.size}
+                              <span className="text-gray-500">Size:</span> {String(details.size)}
                             </div>
                           ) : null}
 
@@ -635,7 +655,9 @@ export default function SuccessClient() {
                             <div>
                               <span className="text-gray-500">Personalization:</span>{" "}
                               {details.personalization.name ? details.personalization.name : "—"}
-                              {details.personalization.number ? ` · #${details.personalization.number}` : ""}
+                              {details.personalization.number
+                                ? ` · #${details.personalization.number}`
+                                : ""}
                             </div>
                           ) : null}
                         </div>
@@ -646,7 +668,7 @@ export default function SuccessClient() {
                           {details.optionsPairs.map((p, idx) => (
                             <span
                               key={`${p.k}-${idx}`}
-                              className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                              className="max-w-full break-words rounded-full border bg-white px-2 py-1 text-xs"
                               title={p.k}
                             >
                               <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
@@ -657,12 +679,12 @@ export default function SuccessClient() {
 
                       {details.badges.length > 0 && (
                         <div>
-                          <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
+                          <div className="mb-1 text-xs font-semibold text-gray-500">Badges:</div>
                           <div className="flex flex-wrap gap-2">
                             {details.badges.map((b, idx) => (
                               <span
                                 key={`${b}-${idx}`}
-                                className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
+                                className="max-w-full break-words rounded-full border bg-white px-2 py-1 text-xs"
                                 title={b}
                               >
                                 {humanizeBadge(b)}

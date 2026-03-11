@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 function isExternalUrl(u: string) {
   return /^https?:\/\//i.test(u) || u.startsWith("//");
 }
+
 function normalizeUrl(u?: string | null) {
   if (!u) return "";
   if (u.startsWith("//")) return `https:${u}`;
@@ -24,33 +25,27 @@ export default function OrderItemThumb({
   className?: string;
 }) {
   const safeSrc = useMemo(() => normalizeUrl(src) || "/placeholder.png", [src]);
-  const external = useMemo(() => isExternalUrl(safeSrc), [safeSrc]);
-  const [current, setCurrent] = useState(safeSrc);
+  const [imgSrc, setImgSrc] = useState(safeSrc);
 
-  useEffect(() => {
-    setCurrent(safeSrc);
-  }, [safeSrc]);
-
-  if (external) {
-    return (
-      <div className={className} style={{ width: size, height: size }}>
-        <img
-          src={current}
-          alt={alt}
-          className="h-full w-full object-cover"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => {
-            setCurrent((prev) => (prev === "/placeholder.png" ? prev : "/placeholder.png"));
-          }}
-        />
-      </div>
-    );
-  }
+  const finalSrc = imgSrc || "/placeholder.png";
+  const external = isExternalUrl(finalSrc);
 
   return (
-    <div className={className} style={{ width: size, height: size }}>
-      <Image src={safeSrc} alt={alt} fill className="object-cover" sizes={`${size}px`} />
+    <div
+      className={className}
+      style={{ width: size, height: size, position: "relative" }}
+    >
+      <Image
+        src={finalSrc}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes={`${size}px`}
+        unoptimized={external}
+        onError={() => {
+          setImgSrc((prev) => (prev === "/placeholder.png" ? prev : "/placeholder.png"));
+        }}
+      />
     </div>
   );
 }

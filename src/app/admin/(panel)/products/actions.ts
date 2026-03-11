@@ -40,7 +40,9 @@ function parseImagesText(input: unknown): string[] {
 
 function getAllStrings(list: FormDataEntryValue[] | undefined): string[] {
   if (!list) return [];
-  return list.map((v) => (typeof v === "string" ? v.trim() : "")).filter(Boolean);
+  return list
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
 }
 
 function slugify(s: string) {
@@ -63,26 +65,23 @@ function parseBool(v: unknown, fallback = false): boolean {
 }
 
 /**
- * ✅ IMPORTANT: If the form sends multiple values for the same key
+ * IMPORTANT: If the form sends multiple values for the same key
  * (hidden input + checkbox), we must take the LAST one.
  */
 function getLastFormValue(formData: FormData, key: string): FormDataEntryValue | null {
   const all = formData.getAll(key);
   if (!all || all.length === 0) return null;
 
-  // take the last non-empty string if possible
   for (let i = all.length - 1; i >= 0; i--) {
     const v = all[i];
     if (typeof v === "string") {
       const t = v.trim();
       if (t !== "") return t;
     } else {
-      // File or other value
       return v;
     }
   }
 
-  // fallback to the last
   return all[all.length - 1] ?? null;
 }
 
@@ -104,53 +103,34 @@ function revalidatePublicProduct(meta?: {
 }) {
   if (!meta) return;
 
-  // ✅ product page (your route is /products/[slug])
   if (meta.slug) revalidatePath(`/products/${meta.slug}`);
 
   const t = String(meta.teamType ?? "CLUB").toUpperCase();
   const base = t === "NATION" ? "/nations" : "/clubs";
 
   if (meta.team) revalidatePath(`${base}/${slugify(meta.team)}`);
-
-  // other listings
   if (meta.team) revalidatePath(`/products/team/${slugify(meta.team)}`);
-  if (meta.season) revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
+  if (meta.season) {
+    revalidatePath(`/products/season/${encodeURIComponent(meta.season)}`);
+  }
 
   revalidatePath("/products");
   revalidatePath("/clubs");
   revalidatePath("/nations");
 }
 
-/** Ensures there's a "badges" OptionGroup for a product. */
-async function ensureBadgesGroup(productId: string) {
-  let group = await prisma.optionGroup.findFirst({
-    where: { productId, key: "badges" },
-  });
-
-  if (!group) {
-    group = await prisma.optionGroup.create({
-      data: {
-        productId,
-        key: "badges",
-        label: "Badges",
-        type: "ADDON",
-        required: false,
-      },
-    });
-  }
-
-  return group;
-}
-
 /**
- * ✅ Resolve allowNameNumber robustly and correctly with hidden-input + checkbox forms.
+ * Resolve allowNameNumber robustly and correctly with hidden-input + checkbox forms.
  *
  * Priority:
  *  1) allowNameNumber (explicit flag, recommended)
  *  2) disableCustomization (legacy flag; inverted)
  *  3) fallback to existing DB value (so it never flips by accident)
  */
-async function resolveAllowNameNumber(productId: string, formData: FormData): Promise<boolean> {
+async function resolveAllowNameNumber(
+  productId: string,
+  formData: FormData
+): Promise<boolean> {
   const allowRaw = getLastFormValue(formData, "allowNameNumber");
   if (allowRaw !== null) {
     return parseBool(allowRaw, true);
@@ -188,7 +168,6 @@ export async function updateProduct(formData: FormData) {
   const basePrice = toCents(formData.get("price"));
 
   const imageUrls = parseImagesText(formData.get("imagesText"));
-
   const allowNameNumber = await resolveAllowNameNumber(id, formData);
 
   const updated = await prisma.product.update({
@@ -203,20 +182,27 @@ export async function updateProduct(formData: FormData) {
       imageUrls,
       allowNameNumber,
     },
-    select: { id: true, slug: true, team: true, season: true, teamType: true },
+    select: {
+      id: true,
+      slug: true,
+      team: true,
+      season: true,
+      teamType: true,
+    },
   });
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
-
-  // ✅ public pages
   revalidatePublicProduct(updated);
 }
 
 /**
  * Toggles availability of a SizeStock row (boolean `available`).
  */
-export async function setSizeUnavailable(args: { sizeId: string; unavailable: boolean }) {
+export async function setSizeUnavailable(args: {
+  sizeId: string;
+  unavailable: boolean;
+}) {
   const { sizeId, unavailable } = args;
   if (!sizeId) throw new Error("Missing sizeId");
 
@@ -231,14 +217,11 @@ export async function setSizeUnavailable(args: { sizeId: string; unavailable: bo
 }
 
 /**
- * ✅ SYNC badges OptionGroup:
+ * SYNC badges OptionGroup:
  * - keep selected existing values
  * - create new ones
  * - REMOVE values that were removed in the UI
  * - ALSO clean Product.badges removing values that no longer exist
- *
- * NOTE: This action edits the *catalog* of possible badge values (OptionGroup "badges")
- * and also cleans the product's selected badges accordingly.
  */
 export async function saveBadges(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
@@ -251,16 +234,25 @@ export async function saveBadges(formData: FormData) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const group = await (async () => {
-        let g = await tx.optionGroup.findFirst({ where: { productId, key: "badges" } });
+        let g = await tx.optionGroup.findFirst({
+          where: { productId, key: "badges" },
+        });
+
         if (!g) {
           g = await tx.optionGroup.create({
-            data: { productId, key: "badges", label: "Badges", type: "ADDON", required: false },
+            data: {
+              productId,
+              key: "badges",
+              label: "Badges",
+              type: "ADDON",
+              required: false,
+            },
           });
         }
+
         return g;
       })();
 
-      // 1) Create new values (if any) and collect their ids
       const createdIds: string[] = [];
 
       for (let i = 0; i < newLabels.length; i++) {
@@ -270,9 +262,13 @@ export async function saveBadges(formData: FormData) {
         const value = slugify(label);
 
         const already = await tx.optionValue.findFirst({
-          where: { groupId: group.id, OR: [{ value }, { label }] },
+          where: {
+            groupId: group.id,
+            OR: [{ value }, { label }],
+          },
           select: { id: true },
         });
+
         if (already) continue;
 
         const priceDelta = i < newPricesEur.length ? toCents(newPricesEur[i]) : 0;
@@ -281,10 +277,10 @@ export async function saveBadges(formData: FormData) {
           data: { groupId: group.id, value, label, priceDelta },
           select: { id: true },
         });
+
         createdIds.push(created.id);
       }
 
-      // 2) Ensure any "existingIds" are attached to this group (safety)
       if (keepExistingIds.length) {
         await tx.optionValue.updateMany({
           where: { id: { in: keepExistingIds } },
@@ -292,8 +288,6 @@ export async function saveBadges(formData: FormData) {
         });
       }
 
-      // 3) REMOVE values that were removed in the UI:
-      // keep = ids user kept + ids we just created
       const keepIds = Array.from(new Set([...keepExistingIds, ...createdIds]));
 
       await tx.optionValue.deleteMany({
@@ -303,12 +297,11 @@ export async function saveBadges(formData: FormData) {
         },
       });
 
-      // 4) Clean Product.badges so removed values stop appearing:
-      // We only keep product.badges that still exist as optionValue.value
       const remaining = await tx.optionValue.findMany({
         where: { groupId: group.id },
         select: { value: true },
       });
+
       const allowedValues = new Set(remaining.map((r) => r.value));
 
       const prod = await tx.product.findUnique({
@@ -317,7 +310,9 @@ export async function saveBadges(formData: FormData) {
       });
 
       const currentBadges = Array.isArray(prod?.badges) ? prod!.badges : [];
-      const cleanedBadges = currentBadges.filter((b) => allowedValues.has(String(b)));
+      const cleanedBadges = currentBadges.filter((b) =>
+        allowedValues.has(String(b))
+      );
 
       if (cleanedBadges.length !== currentBadges.length) {
         await tx.product.update({
@@ -334,28 +329,30 @@ export async function saveBadges(formData: FormData) {
       return { group: fullGroup };
     });
 
-    // ✅ revalidate admin
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
-    // ✅ revalidate public (slug/team/season/listings)
     const meta = await prisma.product.findUnique({
       where: { id: productId },
       select: { slug: true, team: true, season: true, teamType: true },
     });
+
     revalidatePublicProduct(meta || undefined);
 
     return { ok: true, group: result.group };
   } catch (e: any) {
     console.error("saveBadges error:", e);
-    return { ok: false, error: e?.message ?? "Unexpected error while saving badges." };
+    return {
+      ok: false,
+      error: e?.message ?? "Unexpected error while saving badges.",
+    };
   }
 }
 
 /**
- * ✅ Saves which badges are selected on the product (Product.badges column).
+ * Saves which badges are selected on the product (Product.badges column).
  *
- * IMPORTANT FIX for your issue:
+ * IMPORTANT:
  * - We MUST revalidate the PUBLIC product page route (/products/[slug])
  * - and related listings, otherwise the ProductConfigurator may keep showing stale cached data.
  */
@@ -366,22 +363,23 @@ export async function setSelectedBadges(formData: FormData) {
   const selected = getAllStrings(formData.getAll("selectedBadges[]"));
 
   try {
-    // ✅ Update DB
     const updated = await prisma.product.update({
       where: { id: productId },
       data: { badges: selected },
-      select: { id: true, slug: true, team: true, season: true, teamType: true },
+      select: {
+        id: true,
+        slug: true,
+        team: true,
+        season: true,
+        teamType: true,
+      },
     });
 
-    // ✅ Revalidate admin
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/admin/products");
 
-    // ✅ Revalidate PUBLIC (this is what fixes the “badge removed but still shows”)
     revalidatePublicProduct(updated);
 
-    // Extra safety: also revalidate the exact product page (already covered by revalidatePublicProduct)
-    // but kept here explicitly to avoid regressions if someone changes revalidatePublicProduct later.
     if (updated.slug) revalidatePath(`/products/${updated.slug}`);
 
     return { ok: true };

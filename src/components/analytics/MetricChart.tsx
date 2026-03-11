@@ -1,7 +1,6 @@
-// src/components/analytics/MetricChart.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CartesianGrid,
@@ -31,10 +30,10 @@ type Metric = "pageviews" | "visitors" | "sales" | "profit" | "orders" | "conver
 type Period = "today" | "7d" | "30d" | "90d" | "custom";
 
 const METRICS: { key: Metric; label: string }[] = [
-  { key: "pageviews", label: "Page views" }, // ✅ era "Visitors" (na verdade pageviews)
-  { key: "visitors", label: "Visitors" }, // ✅ uniques reais
+  { key: "pageviews", label: "Page views" },
+  { key: "visitors", label: "Visitors" },
   { key: "sales", label: "Sales (€)" },
-  { key: "profit", label: "Profit (€)" }, // ✅ entre Sales e Orders
+  { key: "profit", label: "Profit (€)" },
   { key: "orders", label: "Orders" },
   { key: "conversion", label: "Conversion rate" },
 ];
@@ -66,7 +65,7 @@ function formatPercent(v: number) {
 }
 
 function parseISOToTs(isoYYYYMMDD: string) {
-  const ts = Date.parse(isoYYYYMMDD + "T00:00:00.000Z");
+  const ts = Date.parse(`${isoYYYYMMDD}T00:00:00.000Z`);
   return Number.isFinite(ts) ? ts : NaN;
 }
 
@@ -112,6 +111,7 @@ function niceNum(range: number, round: boolean) {
 
 function buildNiceTicks(min: number, max: number, maxTicks = 6) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
+
   if (max === min) {
     const pad = max === 0 ? 10 : Math.abs(max) * 0.2;
     min -= pad;
@@ -128,6 +128,7 @@ function buildNiceTicks(min: number, max: number, maxTicks = 6) {
   for (let v = niceMin, i = 0; v <= niceMax + step / 2 && i < 200; v += step, i++) {
     ticks.push(Number(v.toFixed(10)));
   }
+
   return ticks;
 }
 
@@ -156,7 +157,7 @@ function buildEvenTimeTicks(minTs: number, maxTs: number, count = 6) {
 /* ===========================
    Helpers: payload compat
 =========================== */
-function pickNumber(obj: any, keys: string[], fallback = 0) {
+function pickNumber(obj: Record<string, number> | undefined, keys: string[], fallback = 0) {
   for (const k of keys) {
     const v = obj?.[k];
     if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -164,7 +165,7 @@ function pickNumber(obj: any, keys: string[], fallback = 0) {
   return fallback;
 }
 
-function pickSeries(obj: any, keys: string[]) {
+function pickSeries(obj: Record<string, number[]> | undefined, keys: string[]) {
   for (const k of keys) {
     const arr = obj?.[k];
     if (Array.isArray(arr)) return arr;
@@ -192,8 +193,8 @@ function TooltipCard({
   metric,
 }: {
   active?: boolean;
-  payload?: any[];
-  label?: any;
+  payload?: Array<{ value?: number }>;
+  label?: string | number;
   metric: Metric;
 }) {
   if (!active || !payload || payload.length === 0) return null;
@@ -205,11 +206,11 @@ function TooltipCard({
     metric === "sales" || metric === "profit"
       ? formatEUR(Number.isFinite(v) ? v : 0)
       : metric === "conversion"
-      ? formatPercent(Number.isFinite(v) ? v : 0)
-      : formatInt(Number.isFinite(v) ? v : 0);
+        ? formatPercent(Number.isFinite(v) ? v : 0)
+        : formatInt(Number.isFinite(v) ? v : 0);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur px-3 py-2">
+    <div className="rounded-xl border border-gray-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
       <div className="text-[11px] text-gray-500">{formatDateTooltip(ts)}</div>
       <div className="mt-1 flex items-baseline gap-2">
         <div className="text-sm font-semibold text-gray-900">{valueText}</div>
@@ -229,12 +230,11 @@ export default function MetricChart({
   const [metric, setMetric] = useState<Metric>(defaultMetric);
   const [period, setPeriod] = useState<Period>(defaultPeriod);
 
-  const [from, setFrom] = useState<string>("");
-  const [to, setTo] = useState<string>("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const [loading, setLoading] = useState(true);
 
-  // Mantém o type “flexível” para compat com a API antiga
   const [payload, setPayload] = useState<{
     labels: string[];
     series: Record<string, number[]>;
@@ -257,10 +257,12 @@ export default function MetricChart({
 
     async function run() {
       setLoading(true);
+
       try {
         const res = await fetch(`/api/admin/analytics?${qs}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to load analytics");
         const json = await res.json();
+
         if (!ignore) setPayload(json);
       } catch {
         if (!ignore) setPayload(null);
@@ -270,6 +272,7 @@ export default function MetricChart({
     }
 
     run();
+
     return () => {
       ignore = true;
     };
@@ -279,14 +282,11 @@ export default function MetricChart({
   const series = payload?.series ?? {};
   const totals = payload?.totals ?? {};
 
-  // ✅ aqui é onde fazemos a troca: pageviews != visitors
   const metricSeries = useMemo(() => {
     if (metric === "pageviews") {
-      // API antiga: series.visitors (na verdade pageviews)
       return pickSeries(series, ["pageviews", "views", "pageViews", "visitors"]);
     }
     if (metric === "visitors") {
-      // tenta vários nomes comuns para uniques
       return pickSeries(series, ["visitors", "uniqueVisitors", "visitorsUnique", "uniques", "uniqVisitors"]);
     }
     if (metric === "sales") return pickSeries(series, ["sales"]);
@@ -309,60 +309,52 @@ export default function MetricChart({
   }, [labels, metricSeries]);
 
   const xTicks = useMemo(() => {
-    if (chartData.length === 0) return undefined as any;
+    if (chartData.length === 0) return undefined;
     const minTs = chartData[0].ts;
     const maxTs = chartData[chartData.length - 1].ts;
-    if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) return undefined as any;
+    if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) return undefined;
     if (maxTs <= minTs) return [minTs];
     return buildEvenTimeTicks(minTs, maxTs, 6);
   }, [chartData]);
 
   const { yDomain, yTicks } = useMemo(() => {
     if (!(metric === "sales" || metric === "profit" || metric === "conversion")) {
-      return { yDomain: undefined as any, yTicks: undefined as any };
+      return { yDomain: undefined as [number, number] | undefined, yTicks: undefined as number[] | undefined };
     }
-    if (chartData.length === 0) return { yDomain: undefined as any, yTicks: undefined as any };
+
+    if (chartData.length === 0) {
+      return { yDomain: undefined as [number, number] | undefined, yTicks: undefined as number[] | undefined };
+    }
 
     let min = Infinity;
     let max = -Infinity;
+
     for (const p of chartData) {
       const v = Number(p.value);
       if (!Number.isFinite(v)) continue;
       min = Math.min(min, v);
       max = Math.max(max, v);
     }
+
     if (!Number.isFinite(min) || !Number.isFinite(max)) {
-      return { yDomain: undefined as any, yTicks: undefined as any };
+      return { yDomain: undefined as [number, number] | undefined, yTicks: undefined as number[] | undefined };
     }
 
-    if (metric === "sales" || metric === "profit") {
-      min = Math.min(0, min);
-      max = Math.max(0, max);
-      const ticks = buildNiceTicks(min, max, 6);
-      const domain: [number, number] =
-        ticks.length >= 2 ? [ticks[0], ticks[ticks.length - 1]] : [min, max];
-      return { yDomain: domain, yTicks: ticks };
-    }
+    min = Math.min(0, min);
+    max = Math.max(0, max);
 
-    if (metric === "conversion") {
-      min = Math.min(0, min);
-      max = Math.max(0, max);
-      const ticks = buildNiceTicks(min, max, 6);
-      const domain: [number, number] =
-        ticks.length >= 2 ? [ticks[0], ticks[ticks.length - 1]] : [min, max];
-      return { yDomain: domain, yTicks: ticks };
-    }
+    const ticks = buildNiceTicks(min, max, 6);
+    const domain: [number, number] =
+      ticks.length >= 2 ? [ticks[0], ticks[ticks.length - 1]] : [min, max];
 
-    return { yDomain: undefined as any, yTicks: undefined as any };
+    return { yDomain: domain, yTicks: ticks };
   }, [chartData, metric]);
 
   const totalsPageviews = useMemo(() => {
-    // API antiga: totals.visitors (na verdade pageviews)
     return pickNumber(totals, ["pageviews", "views", "pageViews", "visitors"], 0);
   }, [totals]);
 
   const totalsVisitorsUnique = useMemo(() => {
-    // tenta nomes para uniques; se ainda não existir na API, fica 0 (até atualizares a API)
     return pickNumber(totals, ["visitors", "uniqueVisitors", "visitorsUnique", "uniques", "uniqVisitors"], 0);
   }, [totals]);
 
@@ -380,7 +372,6 @@ export default function MetricChart({
     if (metric === "profit") return totalsProfit;
 
     if (metric === "conversion") {
-      // Conversion deve usar VISITORS (uniques), não pageviews
       if (totalsVisitorsUnique <= 0) return 0;
       return (totalsOrders / totalsVisitorsUnique) * 100;
     }
@@ -403,12 +394,12 @@ export default function MetricChart({
   }, [metric]);
 
   return (
-    <div className="rounded-2xl border bg-white p-4 md:p-6 shadow-sm">
-      {/* Tabs + Periods */}
+    <div className="rounded-2xl border bg-white p-4 shadow-sm md:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="inline-flex flex-wrap gap-2 rounded-xl bg-gray-50 p-2">
           {METRICS.map((m) => {
             const active = m.key === metric;
+
             return (
               <Link
                 key={m.key}
@@ -418,10 +409,10 @@ export default function MetricChart({
                   setMetric(m.key);
                 }}
                 className={[
-                  "px-4 py-2 text-sm rounded-lg border transition",
+                  "rounded-lg border px-4 py-2 text-sm transition",
                   active
-                    ? "bg-white border-gray-300 shadow-sm font-semibold"
-                    : "bg-transparent border-transparent text-gray-600 hover:text-gray-900",
+                    ? "border-gray-300 bg-white font-semibold shadow-sm"
+                    : "border-transparent bg-transparent text-gray-600 hover:text-gray-900",
                 ].join(" ")}
               >
                 {m.label}
@@ -430,18 +421,19 @@ export default function MetricChart({
           })}
         </div>
 
-        <div className="flex flex-wrap gap-2 justify-start md:justify-end">
+        <div className="flex flex-wrap justify-start gap-2 md:justify-end">
           {PERIODS.map((p) => {
             const active = p.key === period;
+
             return (
               <button
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
                 className={[
-                  "px-4 py-2 text-sm rounded-lg border transition",
+                  "rounded-lg border px-4 py-2 text-sm transition",
                   active
-                    ? "bg-black text-white border-black font-semibold"
-                    : "bg-white text-gray-800 border-gray-300 hover:border-gray-400",
+                    ? "border-black bg-black font-semibold text-white"
+                    : "border-gray-300 bg-white text-gray-800 hover:border-gray-400",
                 ].join(" ")}
               >
                 {p.label}
@@ -451,50 +443,47 @@ export default function MetricChart({
         </div>
       </div>
 
-      {/* Custom */}
       {period === "custom" && (
-        <div className="mt-3 flex flex-col md:flex-row gap-2 md:items-center">
+        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">From</span>
             <input
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm"
             />
           </div>
+
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">To</span>
             <input
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm"
             />
           </div>
-          <div className="text-xs text-gray-500">
-            (Depois de mudar datas, o gráfico atualiza automaticamente.)
-          </div>
+
+          <div className="text-xs text-gray-500">(Depois de mudar datas, o gráfico atualiza automaticamente.)</div>
         </div>
       )}
 
-      {/* Total box */}
       <div className="mt-4">
-        <div className="w-full md:w-[360px] rounded-2xl border p-4 shadow-sm">
+        <div className="w-full rounded-2xl border p-4 shadow-sm md:w-[360px]">
           <div className="text-xs text-gray-500">Total</div>
           <div className="text-2xl font-extrabold tracking-tight">{loading ? "…" : totalText}</div>
           <div className="mt-1 text-xs text-gray-500">{activeMetricLabel}</div>
         </div>
       </div>
 
-      {/* Chart */}
       <div className="mt-3 h-[320px] md:h-[380px]">
         {loading ? (
-          <div className="h-full rounded-2xl border flex items-center justify-center text-sm text-gray-500">
+          <div className="flex h-full items-center justify-center rounded-2xl border text-sm text-gray-500">
             Loading…
           </div>
         ) : !payload || chartData.length === 0 ? (
-          <div className="h-full rounded-2xl border flex items-center justify-center text-sm text-gray-500">
+          <div className="flex h-full items-center justify-center rounded-2xl border text-sm text-gray-500">
             No data.
           </div>
         ) : (
@@ -515,8 +504,8 @@ export default function MetricChart({
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  ticks={xTicks as any}
-                  tickFormatter={(ts: any) => formatDateTick(Number(ts))}
+                  ticks={xTicks}
+                  tickFormatter={(ts) => formatDateTick(Number(ts))}
                   height={34}
                   tickMargin={12}
                   tick={{ fontSize: 12, fill: "#6b7280" }}
@@ -525,9 +514,9 @@ export default function MetricChart({
                 />
 
                 <YAxis
-                  tickFormatter={yTickFormatter as any}
-                  domain={yDomain as any}
-                  ticks={yTicks as any}
+                  tickFormatter={yTickFormatter}
+                  domain={yDomain}
+                  ticks={yTicks}
                   width={72}
                   tickMargin={12}
                   tick={{ fontSize: 12, fill: "#6b7280" }}
@@ -541,8 +530,8 @@ export default function MetricChart({
 
                 <Tooltip
                   cursor={{ stroke: "#cbd5e1", strokeDasharray: "6 6" }}
-                  content={(props: any) => <TooltipCard {...props} metric={metric} />}
-                  labelFormatter={(label: any) => formatDateTooltip(Number(label))}
+                  content={(props) => <TooltipCard {...props} metric={metric} />}
+                  labelFormatter={(label) => formatDateTooltip(Number(label))}
                 />
 
                 <Line

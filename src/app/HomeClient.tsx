@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
@@ -99,7 +100,7 @@ function MagneticButton({
     y.set(0)
   }
 
-  const content = (
+  return (
     <motion.div style={{ x: springX, y: springY }}>
       {href?.startsWith('#') ? (
         <a
@@ -126,8 +127,6 @@ function MagneticButton({
       )}
     </motion.div>
   )
-
-  return content
 }
 
 function TiltCard({
@@ -141,7 +140,7 @@ function TiltCard({
   const [glow, setGlow] = useState({ x: 50, y: 50 })
 
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+    const r = e.currentTarget.getBoundingClientRect()
     const px = (e.clientX - r.left) / r.width
     const py = (e.clientY - r.top) / r.height
     const rx = (py - 0.5) * 10
@@ -157,7 +156,7 @@ function TiltCard({
       style={{
         transform: `perspective(900px) rotateX(${t.rx}deg) rotateY(${t.ry}deg)`,
       }}
-      className={`card ${className}`}
+      className={`card relative ${className}`}
     >
       <div
         className="pointer-events-none absolute -inset-px opacity-0 hover:opacity-100 transition"
@@ -167,6 +166,41 @@ function TiltCard({
       />
       {children}
     </motion.div>
+  )
+}
+
+function SafeFillImage({
+  src,
+  alt,
+  className,
+  sizes,
+  priority = false,
+}: {
+  src: string
+  alt: string
+  className?: string
+  sizes?: string
+  priority?: boolean
+}) {
+  const [currentSrc, setCurrentSrc] = useState(src || FALLBACK_IMG)
+
+  useEffect(() => {
+    setCurrentSrc(src || FALLBACK_IMG)
+  }, [src])
+
+  return (
+    <Image
+      src={currentSrc || FALLBACK_IMG}
+      alt={alt}
+      fill
+      sizes={sizes}
+      priority={priority}
+      unoptimized
+      className={className}
+      onError={() => {
+        if (currentSrc !== FALLBACK_IMG) setCurrentSrc(FALLBACK_IMG)
+      }}
+    />
   )
 }
 
@@ -526,59 +560,88 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   }
 
   const ptrRef = useRef<number>(0)
-  const aRef = useRef<HTMLImageElement>(null)
-  const bRef = useRef<HTMLImageElement>(null)
+  const aRef = useRef<HTMLDivElement>(null)
+  const bRef = useRef<HTMLDivElement>(null)
   const frontIsARef = useRef(true)
   const timerRef = useRef<number | null>(null)
 
   const firstIndex = orderRef.current[0]
   const initialSrc = heroImages[firstIndex]?.src ?? FALLBACK_IMG
 
-  const playKenBurns = (img: HTMLImageElement | null, dur: number) => {
-    if (!img) return
+  const [aSrc, setASrc] = useState(initialSrc)
+  const [bSrc, setBSrc] = useState(FALLBACK_IMG)
+
+  const setLayerBackground = useCallback((el: HTMLDivElement | null, src: string) => {
+    if (!el) return
+    el.style.backgroundImage = `url("${src || FALLBACK_IMG}")`
+  }, [])
+
+  const playKenBurns = useCallback((el: HTMLDivElement | null, dur: number) => {
+    if (!el) return
     try {
       const ox = ['center', 'left', 'right'][Math.floor(Math.random() * 3)]
       const oy = ['center', 'top', 'bottom'][Math.floor(Math.random() * 3)]
-      img.style.transformOrigin = `${ox} ${oy}`
-      ;(img as any).getAnimations?.forEach((a: Animation) => a.cancel())
-      img.animate([{ transform: 'scale(1.03)' }, { transform: 'scale(1.0)' }], {
+      el.style.transformOrigin = `${ox} ${oy}`
+      ;(el as any).getAnimations?.().forEach((a: Animation) => a.cancel())
+      el.animate([{ transform: 'scale(1.03)' }, { transform: 'scale(1.0)' }], {
         duration: Math.max(1000, dur),
         easing: 'ease-out',
         fill: 'forwards',
       })
     } catch {}
-  }
+  }, [])
 
-  const load = (src: string) =>
-    new Promise<void>((resolve) => {
-      const i = new Image()
+  const preload = useCallback((src: string) => {
+    return new Promise<void>((resolve) => {
+      const i = new window.Image()
       i.onload = () => resolve()
       i.onerror = () => resolve()
-      i.src = src
+      i.src = src || FALLBACK_IMG
     })
+  }, [])
 
-  const swapTo = async (nextIndex: number) => {
-    const nextSrc = heroImages[nextIndex]?.src || FALLBACK_IMG
-    await load(nextSrc)
+  const swapTo = useCallback(
+    async (nextIndex: number) => {
+      const nextSrc = heroImages[nextIndex]?.src || FALLBACK_IMG
+      await preload(nextSrc)
 
-    const frontIsA = frontIsARef.current
-    const front = frontIsA ? aRef.current : bRef.current
-    const back = frontIsA ? bRef.current : aRef.current
-    if (!front || !back) return
+      const frontIsA = frontIsARef.current
+      const front = frontIsA ? aRef.current : bRef.current
+      const back = frontIsA ? bRef.current : aRef.current
+      if (!front || !back) return
 
-    back.src = nextSrc
-    back.style.transitionDuration = `${fade}ms`
-    back.offsetHeight
-    back.classList.add('is-visible')
-    front.classList.remove('is-visible')
-    playKenBurns(back, interval - fade)
-    frontIsARef.current = !frontIsA
-  }
+      if (frontIsA) {
+        setBSrc(nextSrc)
+      } else {
+        setASrc(nextSrc)
+      }
+
+      requestAnimationFrame(() => {
+        setLayerBackground(back, nextSrc)
+        back.style.transitionDuration = `${fade}ms`
+        back.offsetHeight
+        back.classList.add('is-visible')
+        front.classList.remove('is-visible')
+        playKenBurns(back, interval - fade)
+        frontIsARef.current = !frontIsA
+      })
+    },
+    [fade, interval, playKenBurns, preload, setLayerBackground]
+  )
+
+  useEffect(() => {
+    setLayerBackground(aRef.current, aSrc)
+  }, [aSrc, setLayerBackground])
+
+  useEffect(() => {
+    setLayerBackground(bRef.current, bSrc)
+  }, [bSrc, setLayerBackground])
 
   useEffect(() => {
     let killed = false
 
     if (aRef.current) {
+      setLayerBackground(aRef.current, aSrc)
       playKenBurns(aRef.current, interval - fade)
     }
 
@@ -603,38 +666,21 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
       killed = true
       if (timerRef.current != null) window.clearTimeout(timerRef.current)
     }
-  }, [interval])
+  }, [aSrc, fade, interval, playKenBurns, setLayerBackground, swapTo])
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-slate-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(59,130,246,0.18),transparent_60%)]" />
 
-      <img
+      <div
         ref={aRef}
         className="hero-layer is-visible"
-        src={initialSrc}
-        alt=""
-        decoding="async"
-        onError={(e: any) => {
-          const img = e.currentTarget as HTMLImageElement
-          if ((img as any)._fallbackApplied) return
-          ;(img as any)._fallbackApplied = true
-          img.src = FALLBACK_IMG
-        }}
+        aria-hidden="true"
       />
-
-      <img
+      <div
         ref={bRef}
         className="hero-layer"
-        src=""
-        alt=""
-        decoding="async"
-        onError={(e: any) => {
-          const img = e.currentTarget as HTMLImageElement
-          if ((img as any)._fallbackApplied) return
-          ;(img as any)._fallbackApplied = true
-          img.src = FALLBACK_IMG
-        }}
+        aria-hidden="true"
       />
 
       <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-black/5" />
@@ -643,9 +689,9 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
         .hero-layer {
           position: absolute;
           inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
           opacity: 0;
           transform: scale(1);
           transition-property: opacity, transform;
@@ -732,18 +778,11 @@ function ImageSpaces() {
             className="group relative block overflow-hidden rounded-3xl ring-1 ring-black/5"
           >
             <div className="relative aspect-[16/10] sm:aspect-[5/6]">
-              <img
+              <SafeFillImage
                 src={s.img}
                 alt={s.alt || spaceMeta[s.key].label}
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement
-                  if ((img as any)._fallbackApplied) return
-                  ;(img as any)._fallbackApplied = true
-                  img.src = FALLBACK_IMG
-                  img.style.objectPosition = 'center'
-                }}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
               <div className="absolute inset-x-0 bottom-0 p-4">
@@ -858,18 +897,12 @@ function FromOurCustomers({ compact = false }: { compact?: boolean }) {
               className="rounded-3xl border border-slate-100 bg-slate-50/60 p-5 hover:shadow-lg transition"
             >
               <div className="flex items-start gap-4">
-                <div className="h-28 w-20 sm:h-32 sm:w-24 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white shrink-0">
-                  <img
+                <div className="relative h-28 w-20 sm:h-32 sm:w-24 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white shrink-0">
+                  <SafeFillImage
                     src={review.img}
                     alt={`Review by ${review.name}`}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      const img = e.currentTarget as HTMLImageElement
-                      if ((img as any)._fallbackApplied) return
-                      ;(img as any)._fallbackApplied = true
-                      img.src = FALLBACK_IMG
-                    }}
+                    sizes="96px"
+                    className="object-cover"
                   />
                 </div>
 
@@ -1129,17 +1162,11 @@ function ProductCard({ product }: { product: HomeProduct }) {
         className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[50%] max-w-[50%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px]"
       >
         <div className="relative h-[200px] sm:h-[260px] md:h-[320px] bg-slate-50">
-          <img
+          <SafeFillImage
             src={imgSrc}
             alt={product.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement
-              if ((img as any)._fallbackApplied) return
-              ;(img as any)._fallbackApplied = true
-              img.src = FALLBACK_IMG
-            }}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 240px, 260px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {discountPercent != null && (
             <div className="absolute left-2 top-2 sm:left-3 sm:top-3 rounded-full bg-red-600 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-white shadow">
@@ -1711,27 +1738,22 @@ export default function Home() {
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
-              <picture className="absolute inset-0 h-full w-full">
-                <source
-                  srcSet="/images/promos/home-promo2.png"
-                  media="(max-width: 767px)"
+              <div className="absolute inset-0 md:hidden">
+                <SafeFillImage
+                  src="/images/promos/home-promo2.png"
+                  alt={t('promoAlt')}
+                  sizes="100vw"
+                  className="object-cover"
                 />
-                <source
-                  srcSet="/images/promos/home-promo.png"
-                  media="(min-width: 768px)"
-                />
-                <img
+              </div>
+              <div className="absolute inset-0 hidden md:block">
+                <SafeFillImage
                   src="/images/promos/home-promo.png"
                   alt={t('promoAlt')}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const img = e.currentTarget as HTMLImageElement
-                    if ((img as any)._fallbackApplied) return
-                    ;(img as any)._fallbackApplied = true
-                    img.src = FALLBACK_IMG
-                  }}
+                  sizes="100vw"
+                  className="object-cover"
                 />
-              </picture>
+              </div>
             </div>
 
             <div className="mt-8">

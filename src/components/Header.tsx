@@ -19,6 +19,16 @@ import {
   Check,
 } from "lucide-react";
 
+function normalizeUrl(u?: string | null) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+
 /**
  * Optional: pass cartCount to show the cart badge.
  * e.g. <Header cartCount={cart.totalQty} />
@@ -36,7 +46,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showSearchMobile, setShowSearchMobile] = useState(false);
 
-  // ===== Auto-hide on scroll =====
   const [hidden, setHidden] = useState(false);
   const lastYRef = useRef(0);
   const rafRef = useRef<number | null>(null);
@@ -55,22 +64,24 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           const passed = y > 40;
           setHidden(passed && goingDown);
         }
+
         lastYRef.current = y;
         rafRef.current = null;
       };
+
       if (rafRef.current == null) {
         rafRef.current = window.requestAnimationFrame(run);
       }
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+
     return () => {
       window.removeEventListener("scroll", onScroll);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [mobileOpen, userOpen, showSearchMobile]);
 
-  // User dropdown (DESKTOP + MOBILE refs)
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const userBtnRef = useRef<HTMLButtonElement | null>(null);
   const userMenuMobileRef = useRef<HTMLDivElement | null>(null);
@@ -83,6 +94,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
       const insideDesktop =
         userMenuRef.current?.contains(target) || userBtnRef.current?.contains(target);
+
       const insideMobile =
         userMenuMobileRef.current?.contains(target) ||
         userBtnMobileRef.current?.contains(target);
@@ -101,15 +113,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
     document.addEventListener("pointerdown", onDocPointerDown);
     document.addEventListener("keydown", onEsc);
+
     return () => {
       document.removeEventListener("pointerdown", onDocPointerDown);
       document.removeEventListener("keydown", onEsc);
     };
   }, [userOpen]);
 
-  /* ==========================================================
-     Keep the session fresh to reflect a new profile image
-  ========================================================== */
   useEffect(() => {
     if (!update) return;
 
@@ -129,20 +139,20 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
     const onCustom = () => refresh();
 
-    window.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
-    window.addEventListener("profile:updated", onCustom as any);
+    window.addEventListener("profile:updated", onCustom as EventListener);
 
     return () => {
-      window.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("profile:updated", onCustom as any);
+      window.removeEventListener("profile:updated", onCustom as EventListener);
     };
   }, [status, update]);
 
-  const avatarSrc = session?.user?.image || undefined;
+  const avatarSrc = normalizeUrl(session?.user?.image || undefined) || undefined;
   const displayName = session?.user?.name || session?.user?.email || t("userFallback");
 
   function handleChangeLocale(nextLocale: "en" | "pt") {
@@ -152,16 +162,15 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 glass border-b border-white/60 bg-white/80 backdrop-blur transition-transform duration-300 ${
+        className={`sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur transition-transform duration-300 glass ${
           hidden ? "-translate-y-full" : "translate-y-0"
         }`}
       >
-        {/* DESKTOP BAR */}
-        <div className="container-fw hidden md:flex h-24 items-center gap-4">
-          {/* Logo (left) */}
+        <div className="container-fw hidden h-24 items-center gap-4 md:flex">
           <Link
             href="/"
-            className="flex items-center gap-3 shrink-0 md:-ml-4 lg:-ml-7"
+            className="flex shrink-0 items-center gap-3 md:-ml-4 lg:-ml-7"
+            aria-label="FootballWorld"
           >
             <Image
               src="/logo.png"
@@ -174,8 +183,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          {/* Centered nav */}
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-11 xl:gap-12 text-[16px] font-medium">
+          <nav className="hidden flex-1 items-center justify-center gap-11 text-[16px] font-medium lg:flex xl:gap-12">
             <Link href="/nations" className="hover:text-blue-700">
               {t("nations")}
             </Link>
@@ -190,7 +198,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
             <Link
               href="/pt-stock"
-              className="flex items-center gap-1 hover:text-blue-700 whitespace-nowrap"
+              className="flex items-center gap-1 whitespace-nowrap hover:text-blue-700"
             >
               <Truck className="h-4 w-4" />
               <span className="whitespace-nowrap">{t("portugalDelivery")}</span>
@@ -201,7 +209,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             </Link>
           </nav>
 
-          {/* Right */}
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher
               locale={locale}
@@ -222,7 +229,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               {cartCount > 0 && (
                 <span
                   aria-label={t("itemsInCart", { count: cartCount })}
-                  className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
+                  className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-blue-600 px-1 text-[11px] font-semibold leading-none text-white"
                 >
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
@@ -233,11 +240,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               <div className="relative">
                 <button
                   ref={userBtnRef}
+                  type="button"
                   onClick={() => setUserOpen((v) => !v)}
                   className="group inline-flex items-center gap-2 rounded-full border px-3 py-2 hover:bg-gray-100"
                   aria-haspopup="menu"
                   aria-expanded={userOpen}
                   aria-controls="user-menu"
+                  aria-label={t("userMenu")}
                 >
                   <Avatar
                     key={avatarSrc || "__"}
@@ -258,7 +267,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                     id="user-menu"
                     role="menu"
                     aria-label={t("userMenu")}
-                    className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white shadow-xl p-1"
+                    className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white p-1 shadow-xl"
                   >
                     <div className="px-3 py-2">
                       <div className="text-xs text-gray-500">{t("signedInAs")}</div>
@@ -307,7 +316,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             ) : (
               <Link
                 href="/account/signup"
-                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 text-sm"
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:bg-gray-100"
               >
                 <LogIn className="h-4 w-4" />
                 {t("signUp")}
@@ -316,9 +325,9 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </div>
         </div>
 
-        {/* MOBILE BAR */}
-        <div className="container-fw md:hidden flex h-20 items-center justify-between">
+        <div className="container-fw flex h-20 items-center justify-between md:hidden">
           <button
+            type="button"
             aria-label={t("openMenu")}
             onClick={() => setMobileOpen(true)}
             className="inline-flex items-center justify-center rounded-xl border px-3 py-2 hover:bg-gray-100"
@@ -326,7 +335,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <Menu className="h-6 w-6" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" aria-label="FootballWorld">
             <Image
               src="/logo.png"
               alt="FootballWorld"
@@ -340,6 +349,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               aria-label={t("openSearch")}
               onClick={() => setShowSearchMobile((v) => !v)}
               className="inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
@@ -359,7 +369,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               {cartCount > 0 && (
                 <span
                   aria-label={t("itemsInCart", { count: cartCount })}
-                  className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
+                  className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-blue-600 px-1 text-[11px] font-semibold leading-none text-white"
                 >
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
@@ -369,11 +379,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             {status === "authenticated" ? (
               <button
                 ref={userBtnMobileRef}
+                type="button"
                 onClick={() => setUserOpen((v) => !v)}
                 className="inline-flex items-center justify-center rounded-full border p-1.5 hover:bg-gray-100"
                 aria-haspopup="menu"
                 aria-expanded={userOpen}
                 aria-controls="user-menu-mobile"
+                aria-label={t("userMenu")}
               >
                 <Avatar
                   key={avatarSrc || "__m"}
@@ -385,11 +397,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             ) : (
               <Link
                 href="/account/signup"
-                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 hover:bg-gray-100 whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 whitespace-nowrap hover:bg-gray-100"
                 aria-label={t("signUp")}
               >
                 <LogIn className="h-4 w-4 shrink-0" />
-                <span className="text-[13px] font-medium leading-none whitespace-nowrap shrink-0">
+                <span className="shrink-0 whitespace-nowrap text-[13px] font-medium leading-none">
                   {t("signUp")}
                 </span>
               </Link>
@@ -398,7 +410,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         </div>
 
         {showSearchMobile && (
-          <div className="md:hidden container-fw pb-3">
+          <div className="container-fw pb-3 md:hidden">
             <SearchBar
               className="w-full"
               onSubmitted={() => setShowSearchMobile(false)}
@@ -411,9 +423,10 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             ref={userMenuMobileRef}
             id="user-menu-mobile"
             role="menu"
-            className="md:hidden container-fw"
+            aria-label={t("userMenu")}
+            className="container-fw md:hidden"
           >
-            <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
+            <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white p-2 shadow-lg">
               <div className="px-3 py-2">
                 <div className="text-xs text-gray-500">{t("signedInAs")}</div>
                 <div className="truncate text-sm font-medium">{displayName}</div>
@@ -458,13 +471,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         )}
       </header>
 
-      {/* MOBILE DRAWER */}
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} title={t("menu")}>
-        <div className="px-4 pt-3 pb-6 border-b">
+        <div className="border-b px-4 pb-6 pt-3">
           <Link
             href="/"
             className="flex items-center gap-3"
             onClick={() => setMobileOpen(false)}
+            aria-label="FootballWorld"
           >
             <Image
               src="/logo.png"
@@ -478,7 +491,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </Link>
         </div>
 
-        <div className="px-4 py-4 border-b">
+        <div className="border-b px-4 py-4">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
             {t("language")}
           </div>
@@ -531,14 +544,15 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </MobileLink>
         </nav>
 
-        <div className="mt-auto p-3 border-t">
+        <div className="mt-auto border-t p-3">
           {status === "authenticated" ? (
             <button
+              type="button"
               onClick={() => {
                 setMobileOpen(false);
                 signOut({ callbackUrl: `/${locale}` });
               }}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
             >
               <LogOut className="h-4 w-4" />
               {t("signOut")}
@@ -546,7 +560,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           ) : (
             <Link
               href="/account/signup"
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50 whitespace-nowrap"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 whitespace-nowrap hover:bg-gray-50"
               onClick={() => setMobileOpen(false)}
             >
               <LogIn className="h-4 w-4 shrink-0" />
@@ -573,7 +587,7 @@ function LanguageSwitcher({
   const t = useTranslations("Header");
 
   return (
-    <div className="hidden xl:flex items-center gap-2 rounded-full border px-2 py-1.5 bg-white/90">
+    <div className="hidden items-center gap-2 rounded-full border bg-white/90 px-2 py-1.5 xl:flex">
       <button
         type="button"
         onClick={() => onChangeLocale("en")}
@@ -619,6 +633,7 @@ function LanguageOptionButton({
       className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
         active ? "border-black bg-black text-white" : "hover:bg-gray-50"
       }`}
+      aria-pressed={active}
     >
       <span className="inline-flex items-center gap-2">
         <span aria-hidden="true">{flag}</span>
@@ -674,12 +689,14 @@ function SearchBar({
         setActive(-1);
       }
     };
+
     document.addEventListener("pointerdown", onDocPointerDown);
     return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, []);
 
   const sortByRelevance = (arr: ProductSearchItem[], q: string) => {
     const phrase = q.toLowerCase();
+
     return [...arr].sort((a, b) => {
       const an = (a.name + " " + (a.clubName || "")).toLowerCase();
       const bn = (b.name + " " + (b.clubName || "")).toLowerCase();
@@ -702,41 +719,47 @@ function SearchBar({
     });
   };
 
-  const fetchResults = useCallback((q: string) => {
-    if (abortRef.current) abortRef.current.abort();
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
+  const fetchResults = useCallback(
+    (q: string) => {
+      if (abortRef.current) abortRef.current.abort();
 
-    setLoading(true);
-    setError(null);
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
 
-    const url = `${SEARCH_API}?q=${encodeURIComponent(q)}&limit=12`;
-    fetch(url, { signal: ctrl.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
+      setLoading(true);
+      setError(null);
 
-        const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-        const narrowed = arr.filter((item) => {
-          const hay = (item.name + " " + (item.clubName || "")).toLowerCase();
-          return terms.every((termPart) => hay.includes(termPart));
+      const url = `${SEARCH_API}?q=${encodeURIComponent(q)}&limit=12`;
+
+      fetch(url, { signal: ctrl.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const data = await response.json();
+          const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
+
+          const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+          const narrowed = arr.filter((item) => {
+            const hay = (item.name + " " + (item.clubName || "")).toLowerCase();
+            return terms.every((termPart) => hay.includes(termPart));
+          });
+
+          const sorted = sortByRelevance(narrowed, q);
+          setItems(sorted);
+          setOpen(true);
+        })
+        .catch((err) => {
+          if ((err as any).name === "AbortError") return;
+          setError(t("failedToLoadResults"));
+          setItems([]);
+          setOpen(true);
+        })
+        .finally(() => {
+          setLoading(false);
         });
-
-        const sorted = sortByRelevance(narrowed, q);
-        setItems(sorted);
-        setOpen(true);
-      })
-      .catch((err) => {
-        if ((err as any).name === "AbortError") return;
-        setError(t("failedToLoadResults"));
-        setItems([]);
-        setOpen(true);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [t]);
+    },
+    [t]
+  );
 
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -804,9 +827,9 @@ function SearchBar({
         onSubmit={onSubmit}
         className="group relative"
       >
-        <div className="p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
-          <div className="relative rounded-full bg-white/80 backdrop-blur ring-1 ring-black/5 hover:ring-gray-300 focus-within:ring-blue-500 transition">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 p-[1.5px] shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
+          <div className="relative rounded-full bg-white/80 ring-1 ring-black/5 backdrop-blur transition hover:ring-gray-300 focus-within:ring-blue-500">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               ref={inputRef}
               type="search"
@@ -819,7 +842,7 @@ function SearchBar({
               onFocus={() => term.trim().length >= 2 && setOpen(true)}
               onKeyDown={onKeyDown}
               placeholder={t("searchProductsPlaceholder")}
-              className="w-full sm:w-72 lg:w-80 xl:w-96 sm:group-focus-within:w-[28rem] transition-[width] duration-300 rounded-full bg-transparent pl-9 pr-24 py-2 text-sm outline-none"
+              className="w-full rounded-full bg-transparent py-2 pl-9 pr-24 text-sm outline-none transition-[width] duration-300 sm:w-72 sm:group-focus-within:w-[28rem] lg:w-80 xl:w-96"
               aria-label={t("searchProducts")}
               aria-expanded={open}
               aria-controls="search-popover"
@@ -827,7 +850,7 @@ function SearchBar({
             />
             <button
               type="submit"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700 active:bg-blue-800"
               aria-label={t("submitSearch")}
             >
               {t("search")}
@@ -841,7 +864,7 @@ function SearchBar({
           id="search-popover"
           role="listbox"
           aria-label={t("searchSuggestions")}
-          className="absolute z-50 mt-2 w-[min(30rem,92vw)] rounded-2xl border bg-white/95 backdrop-blur shadow-2xl ring-1 ring-black/5 overflow-hidden"
+          className="absolute z-50 mt-2 w-[min(30rem,92vw)] overflow-hidden rounded-2xl border bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur"
         >
           {loading && (
             <div className="p-4 text-sm text-gray-500">{t("searching")}</div>
@@ -859,49 +882,53 @@ function SearchBar({
 
           {!loading && !error && items.length > 0 && (
             <ul className="max-h-[70vh] overflow-auto">
-              {items.map((item, idx) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={active === idx}
-                    onMouseEnter={() => setActive(idx)}
-                    onMouseLeave={() => setActive(-1)}
-                    onClick={() => {
-                      setOpen(false);
-                      setActive(-1);
-                      onSubmitted?.();
-                      router.push(`/products/${item.slug}`);
-                    }}
-                    className={`w-full flex items-center gap-3 p-2.5 text-left transition ${
-                      active === idx ? "bg-blue-50" : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="relative h-12 w-12 rounded-xl overflow-hidden border bg-white">
-                      <Image
-                        src={item.imageUrl || "/placeholder.png"}
-                        alt={item.name}
-                        fill
-                        sizes="48px"
-                        className="object-cover"
-                        unoptimized
-                        loading="lazy"
-                      />
-                    </div>
+              {items.map((item, idx) => {
+                const imgSrc = normalizeUrl(item.imageUrl) || "/placeholder.png";
 
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate text-sm font-medium">{item.name}</div>
-                      <div className="truncate text-xs text-gray-500">
-                        {item.clubName || t("product")}
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={active === idx}
+                      onMouseEnter={() => setActive(idx)}
+                      onMouseLeave={() => setActive(-1)}
+                      onClick={() => {
+                        setOpen(false);
+                        setActive(-1);
+                        onSubmitted?.();
+                        router.push(`/products/${item.slug}`);
+                      }}
+                      className={`flex w-full items-center gap-3 p-2.5 text-left transition ${
+                        active === idx ? "bg-blue-50" : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="relative h-12 w-12 overflow-hidden rounded-xl border bg-white">
+                        <Image
+                          src={imgSrc}
+                          alt={item.name}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                          unoptimized={isExternalUrl(imgSrc)}
+                          loading="lazy"
+                        />
                       </div>
-                    </div>
 
-                    <div className="shrink-0 text-sm font-semibold">
-                      {formatPrice(item.price, locale)}
-                    </div>
-                  </button>
-                </li>
-              ))}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{item.name}</div>
+                        <div className="truncate text-xs text-gray-500">
+                          {item.clubName || t("product")}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-sm font-semibold">
+                        {formatPrice(item.price, locale)}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
 
               <li className="border-t">
                 <Link
@@ -972,9 +999,10 @@ function MenuButton({
 }) {
   return (
     <button
+      type="button"
       role="menuitem"
       onClick={onClick}
-      className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-gray-50"
+      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-gray-50"
     >
       {icon}
       <span>{children}</span>
@@ -991,6 +1019,7 @@ function Avatar({
   name?: string;
   size?: number;
 }) {
+  const safeSrc = normalizeUrl(src);
   const initials = (name || "U")
     .split(" ")
     .map((part) => part[0])
@@ -998,17 +1027,21 @@ function Avatar({
     .slice(0, 2)
     .toUpperCase();
 
-  if (src) {
+  if (safeSrc) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={name || "Avatar"}
-        width={size}
-        height={size}
-        className="rounded-full object-cover"
+      <div
+        className="relative overflow-hidden rounded-full"
         style={{ width: size, height: size }}
-      />
+      >
+        <Image
+          src={safeSrc}
+          alt={name || "Avatar"}
+          fill
+          sizes={`${size}px`}
+          className="object-cover"
+          unoptimized={isExternalUrl(safeSrc)}
+        />
+      </div>
     );
   }
 
@@ -1016,7 +1049,7 @@ function Avatar({
     <div
       className="grid place-items-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 text-white"
       style={{ width: size, height: size }}
-      aria-label="avatar"
+      aria-label={name || "Avatar"}
       title={name}
     >
       <span className="text-[14px] font-semibold leading-none">{initials}</span>
@@ -1044,7 +1077,6 @@ function MobileLink({
   );
 }
 
-/** Mobile drawer (overlay) */
 function MobileDrawer({
   open,
   onClose,
@@ -1075,25 +1107,25 @@ function MobileDrawer({
       <div
         className={`fixed inset-0 z-[999] bg-black/30 backdrop-blur-[2px] transition-opacity md:hidden ${
           open
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
         }`}
         aria-hidden="true"
         onClick={onClose}
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-[1000] w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr]
-          transition-transform duration-300 ${
-            open ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-[1000] grid w-[86%] max-w-sm grid-rows-[auto_1fr] bg-white shadow-2xl transition-transform duration-300 md:hidden ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="flex items-center justify-between p-3 border-b">
+        <div className="flex items-center justify-between border-b p-3">
           <div className="text-sm font-medium">{title}</div>
           <button
+            type="button"
             aria-label={t("closeMenu")}
             onClick={onClose}
             className="inline-flex items-center justify-center rounded-xl border p-2 hover:bg-gray-100"

@@ -1,6 +1,6 @@
-// src/app/admin/(panel)/newsletter/ui/NewsletterComposer.tsx
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { sendNewsletterEmailAction } from "../actions";
 
@@ -29,6 +29,16 @@ function uid() {
   return Math.random().toString(16).slice(2);
 }
 
+function normalizeUrl(u: string) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+
 const STYLE_OPTIONS: Array<{ value: StyleMode; label: string; hint: string }> = [
   { value: "pretty", label: "Pretty", hint: "Balanced card layout (default)" },
   { value: "simple", label: "Simple", hint: "Basic text email" },
@@ -40,6 +50,47 @@ const STYLE_OPTIONS: Array<{ value: StyleMode; label: string; hint: string }> = 
   { value: "brandBold", label: "Brand Bold", hint: "Premium bold header" },
   { value: "football", label: "Football", hint: "Football-y, subtle green accents" },
 ];
+
+function ImageBlockPreview({
+  src,
+  alt,
+  href,
+}: {
+  src: string;
+  alt?: string;
+  href?: string;
+}) {
+  const normalized = normalizeUrl(src.trim());
+  if (!normalized) return null;
+
+  const image = (
+    <div className="relative h-48 w-full overflow-hidden rounded-lg bg-gray-100">
+      <Image
+        src={normalized}
+        alt={alt || ""}
+        fill
+        className="object-contain"
+        sizes="(max-width: 640px) 100vw, 50vw"
+        unoptimized={isExternalUrl(normalized)}
+      />
+    </div>
+  );
+
+  if (href?.trim()) {
+    return (
+      <a
+        href={href.trim()}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block"
+      >
+        {image}
+      </a>
+    );
+  }
+
+  return image;
+}
 
 export default function NewsletterComposer() {
   const [subject, setSubject] = useState("");
@@ -266,15 +317,19 @@ export default function NewsletterComposer() {
   function addText() {
     setBlocks((b) => [...b, { id: uid(), type: "text", value: "" }]);
   }
+
   function addImage() {
     setBlocks((b) => [...b, { id: uid(), type: "image", url: "", alt: "", href: "" }]);
   }
+
   function addButton() {
     setBlocks((b) => [...b, { id: uid(), type: "button", label: "Open", href: "" }]);
   }
+
   function removeBlock(id: string) {
     setBlocks((b) => b.filter((x) => x.id !== id));
   }
+
   function move(id: string, dir: -1 | 1) {
     setBlocks((b) => {
       const i = b.findIndex((x) => x.id === id);
@@ -291,11 +346,10 @@ export default function NewsletterComposer() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-      {/* Left: editor */}
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <div className="text-sm font-semibold mb-1">Subject</div>
+            <div className="mb-1 text-sm font-semibold">Subject</div>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -305,12 +359,12 @@ export default function NewsletterComposer() {
           </div>
 
           <div>
-            <div className="text-sm font-semibold mb-1">Style</div>
+            <div className="mb-1 text-sm font-semibold">Style</div>
 
             <select
               value={style}
               onChange={(e) => setStyle(e.target.value as StyleMode)}
-              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Email style"
             >
               {STYLE_OPTIONS.map((opt) => (
@@ -324,28 +378,28 @@ export default function NewsletterComposer() {
           </div>
         </div>
 
-        <div className="rounded-2xl border p-3 bg-white space-y-3">
+        <div className="space-y-3 rounded-2xl border bg-white p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="font-semibold">Editor</div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={addText}
-                className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
+                className="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
               >
                 + Text
               </button>
               <button
                 type="button"
                 onClick={addImage}
-                className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
+                className="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
               >
                 + Image
               </button>
               <button
                 type="button"
                 onClick={addButton}
-                className="px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
+                className="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
               >
                 + Button
               </button>
@@ -354,8 +408,8 @@ export default function NewsletterComposer() {
 
           <div className="space-y-3">
             {blocks.map((b, idx) => (
-              <div key={b.id} className="rounded-2xl border p-3 bg-gray-50">
-                <div className="flex items-center justify-between gap-2 mb-2">
+              <div key={b.id} className="rounded-2xl border bg-gray-50 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="text-sm font-semibold">
                     {b.type.toUpperCase()} <span className="text-gray-400">•</span> #{idx + 1}
                   </div>
@@ -363,7 +417,7 @@ export default function NewsletterComposer() {
                     <button
                       type="button"
                       onClick={() => move(b.id, -1)}
-                      className="px-2 py-1 rounded-lg border text-sm hover:bg-white"
+                      className="rounded-lg border px-2 py-1 text-sm hover:bg-white"
                       aria-label="Move up"
                     >
                       ↑
@@ -371,7 +425,7 @@ export default function NewsletterComposer() {
                     <button
                       type="button"
                       onClick={() => move(b.id, 1)}
-                      className="px-2 py-1 rounded-lg border text-sm hover:bg-white"
+                      className="rounded-lg border px-2 py-1 text-sm hover:bg-white"
                       aria-label="Move down"
                     >
                       ↓
@@ -379,7 +433,7 @@ export default function NewsletterComposer() {
                     <button
                       type="button"
                       onClick={() => removeBlock(b.id)}
-                      className="px-2 py-1 rounded-lg border text-sm hover:bg-white"
+                      className="rounded-lg border px-2 py-1 text-sm hover:bg-white"
                       aria-label="Remove block"
                     >
                       ✕
@@ -395,7 +449,7 @@ export default function NewsletterComposer() {
                         arr.map((x) => (x.id === b.id ? { ...x, value: e.target.value } : x))
                       )
                     }
-                    className="w-full min-h-[120px] rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="min-h-[120px] w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Write text..."
                   />
                 ) : b.type === "image" ? (
@@ -407,7 +461,7 @@ export default function NewsletterComposer() {
                           arr.map((x) => (x.id === b.id ? { ...x, url: e.target.value } : x))
                         )
                       }
-                      className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Image URL (https://...)"
                     />
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -418,7 +472,7 @@ export default function NewsletterComposer() {
                             arr.map((x) => (x.id === b.id ? { ...x, alt: e.target.value } : x))
                           )
                         }
-                        className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Alt text (optional)"
                       />
                       <input
@@ -428,13 +482,14 @@ export default function NewsletterComposer() {
                             arr.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x))
                           )
                         }
-                        className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Link URL (optional)"
                       />
                     </div>
+
                     {b.url ? (
                       <div className="rounded-xl border bg-white p-2">
-                        <img src={b.url} alt={b.alt || ""} className="max-h-48 w-auto rounded-lg" />
+                        <ImageBlockPreview src={b.url} alt={b.alt} href={b.href} />
                       </div>
                     ) : null}
                   </div>
@@ -447,7 +502,7 @@ export default function NewsletterComposer() {
                           arr.map((x) => (x.id === b.id ? { ...x, label: e.target.value } : x))
                         )
                       }
-                      className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Button label"
                     />
                     <input
@@ -457,7 +512,7 @@ export default function NewsletterComposer() {
                           arr.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x))
                         )
                       }
-                      className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="w-full rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="https://..."
                     />
                   </div>
@@ -490,28 +545,28 @@ export default function NewsletterComposer() {
           {(result as any)?.ok === false &&
           Array.isArray((result as any).details) &&
           (result as any).details.length ? (
-            <div className="text-xs text-red-600 space-y-1">
+            <div className="space-y-1 text-xs text-red-600">
               {(result as any).details.map((d: string, i: number) => (
                 <div key={i}>• {d}</div>
               ))}
             </div>
           ) : null}
 
-          <div className="text-xs text-gray-500">Tip: use blocks. Images must be public URLs (hosted).</div>
+          <div className="text-xs text-gray-500">
+            Tip: use blocks. Images must be public URLs (hosted).
+          </div>
 
-          {/* hidden payload */}
           <input type="hidden" value={contentJson} readOnly />
         </div>
       </div>
 
-      {/* Right: preview */}
-      <div className="rounded-2xl border bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b">
+      <div className="overflow-hidden rounded-2xl border bg-white">
+        <div className="border-b px-4 py-3">
           <div className="font-semibold">Preview</div>
           <div className="text-xs text-gray-500">Style: {style}</div>
         </div>
-        <div className="p-3 bg-gray-50">
-          <div className="rounded-xl border bg-white overflow-hidden">
+        <div className="bg-gray-50 p-3">
+          <div className="overflow-hidden rounded-xl border bg-white">
             <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
           </div>
         </div>
@@ -521,9 +576,8 @@ export default function NewsletterComposer() {
 }
 
 function stripId(b: EditorBlock): WireBlock {
-  // remove client-only id before sending to server
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, ...rest } = b;
+  void id;
   return rest as WireBlock;
 }
 
@@ -541,19 +595,26 @@ function blocksToPreview(blocks: EditorBlock[]) {
         `<div style="margin:0 0 12px 0;font-size:14px;line-height:1.7;color:#111">${safe}</div>`
       );
     }
+
     if (b.type === "image") {
-      const url = (b.url || "").trim();
+      const url = normalizeUrl((b.url || "").trim());
       if (!url) continue;
+
       const alt = escapeHtml(b.alt || "");
       const img = `<img src="${url}" alt="${alt}" style="max-width:100%;border-radius:12px;display:block;margin:10px 0" />`;
+
       parts.push(
-        b.href ? `<a href="${b.href}" target="_blank" rel="noopener noreferrer">${img}</a>` : img
+        b.href
+          ? `<a href="${b.href}" target="_blank" rel="noopener noreferrer">${img}</a>`
+          : img
       );
     }
+
     if (b.type === "button") {
       const label = escapeHtml(b.label || "Open");
       const href = (b.href || "").trim();
       if (!href) continue;
+
       parts.push(`
         <div style="margin:14px 0 18px 0">
           <a href="${href}" target="_blank" rel="noopener noreferrer"

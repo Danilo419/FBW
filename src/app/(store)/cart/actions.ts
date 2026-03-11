@@ -15,17 +15,13 @@ const AddToCartSchema = z.object({
   options: z.record(z.string(), z.string().nullable()).default({}),
   personalization: z
     .object({
-      // ✅ backend como fonte da verdade: 14 chars (igual ao que vai para a encomenda)
       name: z.string().max(14).optional().nullable(),
-
-      // ✅ 0–999 (1 a 3 dígitos) — guardamos como string
       number: z
         .string()
         .trim()
         .regex(/^\d{1,3}$/, "Invalid number")
         .optional()
         .nullable(),
-
       playerId: z.string().optional().nullable(),
     })
     .optional()
@@ -40,15 +36,11 @@ function normalizeOptions(obj?: Record<string, string | null>) {
   entries.sort(([a], [b]) => a.localeCompare(b));
   return Object.fromEntries(entries);
 }
+
 function sameJson(a: unknown, b: unknown) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/**
- * Nome:
- * - mantém o que o UI faz: trim + uppercase + max 14
- * (o UI também permite espaços; aqui não tiramos espaços)
- */
 function sanitizeName(v: unknown) {
   const s = (v == null ? "" : String(v)).trim();
   if (!s) return null;
@@ -56,12 +48,6 @@ function sanitizeName(v: unknown) {
   return up || null;
 }
 
-/**
- * Número:
- * - mantém só dígitos
- * - limita a 3
- * - permite "0" e "000" etc (porque é string)
- */
 function sanitizeNumber(v: unknown) {
   const s = (v == null ? "" : String(v)).trim();
   if (!s) return null;
@@ -73,22 +59,26 @@ async function getOrCreateCart() {
   const jar = await cookies();
 
   const existingSid = jar.get("sid")?.value ?? null;
-  const userId: string | null = null; // se tiveres auth, mete aqui
+  const userId: string | null = null;
 
   if (existingSid) {
-    const found = await prisma.cart.findFirst({ where: { sessionId: existingSid } });
+    const found = await prisma.cart.findFirst({
+      where: { sessionId: existingSid },
+    });
     if (found) return found;
   }
 
-  const newSid: string = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+  const newSid: string =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
-  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 dias
+  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+
   jar.set("sid", newSid, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
     expires,
-    secure: true, // ✅ em prod
+    secure: true,
   });
 
   return prisma.cart.create({
@@ -101,6 +91,7 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
     where: { id: productId },
     select: { basePrice: true },
   });
+
   if (!product) throw new Error("Product not found");
   return product.basePrice;
 }
@@ -120,16 +111,6 @@ function emptySummary() {
   };
 }
 
-/** local helper: não assumir que ShippingResult tem sempre cartChannel no type */
-function cartChannelFromShipping(info: any): "GLOBAL" | "PT_STOCK_CTT" | "MIXED" {
-  if (!info) return "GLOBAL";
-  if (typeof info.cartChannel === "string") return info.cartChannel;
-  if (typeof info.channel === "string") return info.channel;
-  if (typeof info.shippingChannel === "string") return info.shippingChannel;
-  if (info.isMixed === true || info.mixed === true) return "MIXED";
-  return "GLOBAL";
-}
-
 /* ========= actions ========= */
 export async function addToCartAction(raw: AddToCartInput) {
   try {
@@ -138,13 +119,9 @@ export async function addToCartAction(raw: AddToCartInput) {
     const cart = await getOrCreateCart();
     const unitPrice = await getBaseUnitPrice(input.productId);
 
-    // ✅ normalizar options
     const optionsJson = normalizeOptions(input.options ?? undefined);
 
-    // ✅ normalizar personalization
     const inPers = input.personalization ?? null;
-
-    // (mesmo que Zod valide, continuamos a limpar por segurança)
     const cleanName = sanitizeName(inPers?.name);
     const cleanNumber = sanitizeNumber(inPers?.number);
 
@@ -157,16 +134,13 @@ export async function addToCartAction(raw: AddToCartInput) {
           }
         : null;
 
-    /**
-     * ✅ IMPORTANTÍSSIMO:
-     * Guardar name/number também dentro de optionsJson
-     * para garantir que o carrinho/admin mostrem sempre corretamente.
-     */
-    const optionsJsonWithPersonalization: Record<string, any> = { ...optionsJson };
+    const optionsJsonWithPersonalization: Record<string, any> = {
+      ...optionsJson,
+    };
+
     if (cleanName) optionsJsonWithPersonalization.custName = cleanName;
     if (cleanNumber) optionsJsonWithPersonalization.custNumber = cleanNumber;
 
-    // procurar linhas iguais (mesmo produto + mesmas opções/personalização)
     const siblings = await prisma.cartItem.findMany({
       where: { cartId: cart.id, productId: input.productId },
       select: {
@@ -186,12 +160,13 @@ export async function addToCartAction(raw: AddToCartInput) {
 
     if (existing) {
       const newQty = Math.min(99, existing.qty + input.qty);
+
       await prisma.cartItem.update({
         where: { id: existing.id },
         data: {
           qty: newQty,
-          unitPrice, // ✅ sempre preço real do produto
-          totalPrice: unitPrice * newQty, // ✅ SEM promo aqui
+          unitPrice,
+          totalPrice: unitPrice * newQty,
           optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
         },
@@ -202,8 +177,8 @@ export async function addToCartAction(raw: AddToCartInput) {
           cartId: cart.id,
           productId: input.productId,
           qty: input.qty,
-          unitPrice, // ✅ sempre preço real do produto
-          totalPrice: unitPrice * input.qty, // ✅ SEM promo aqui
+          unitPrice,
+          totalPrice: unitPrice * input.qty,
           optionsJson: optionsJsonWithPersonalization as any,
           personalization: personalization as any,
         },
@@ -213,6 +188,7 @@ export async function addToCartAction(raw: AddToCartInput) {
     revalidatePath("/cart");
 
     const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
+
     return {
       ok: true as const,
       cartId: cart.id,
@@ -225,12 +201,6 @@ export async function addToCartAction(raw: AddToCartInput) {
   }
 }
 
-/**
- * getCartSummary agora:
- * - lê as linhas do carrinho
- * - usa applyPromotions (mesma lógica do Stripe e do cart/page.tsx)
- * - devolve subtotal, discount, shipping, total, etc.
- */
 export async function getCartSummary() {
   const jar = await cookies();
   const sid = jar.get("sid")?.value ?? null;
@@ -256,25 +226,33 @@ export async function getCartSummary() {
 
   if (!rawItems.length) return emptySummary();
 
-  const subtotal = rawItems.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
+  const subtotal = rawItems.reduce(
+    (acc, it) => acc + it.unitPrice * it.qty,
+    0
+  );
 
-  // ✅ determinar canal do carrinho
   const channels = new Set<string>();
-  for (const it of rawItems) channels.add(String(it.product?.channel ?? "GLOBAL"));
-  const cartChannel =
-    channels.size > 1 ? "MIXED" : (Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL";
+  for (const it of rawItems) {
+    channels.add(String(it.product?.channel ?? "GLOBAL"));
+  }
 
-  // ✅ Para PT Stock: shipping via regras CTT e sem promo Buy X Get Y
+  const cartChannel =
+    channels.size > 1
+      ? "MIXED"
+      : ((Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL");
+
   if (cartChannel === "PT_STOCK_CTT") {
     const ship = getShippingForCart(
       rawItems.map((it) => ({
-        // ✅ FIX AQUI: ShippingItemLike usa "qty", não "quantity"
         qty: Math.max(0, Number(it.qty ?? 0)),
         channel: "PT_STOCK_CTT" as const,
       }))
     );
 
-    const shipping = typeof (ship as any)?.shippingCents === "number" ? Number((ship as any).shippingCents) : 0;
+    const shipping =
+      typeof (ship as any)?.shippingCents === "number"
+        ? Number((ship as any).shippingCents)
+        : 0;
 
     return {
       count: rawItems.length,
@@ -290,7 +268,6 @@ export async function getCartSummary() {
     };
   }
 
-  // ✅ GLOBAL (promo normal)
   const lines: CartLine[] = rawItems.map((it) => ({
     id: String(it.id),
     name: it.product?.name ?? "",
@@ -301,7 +278,10 @@ export async function getCartSummary() {
 
   const promo = applyPromotions(lines);
 
-  const payableSubtotal = promo.lines.reduce((acc, l) => acc + l.payQty * l.unitAmountCents, 0);
+  const payableSubtotal = promo.lines.reduce(
+    (acc, l) => acc + l.payQty * l.unitAmountCents,
+    0
+  );
 
   const discount = Math.max(0, subtotal - payableSubtotal);
   const shipping = promo.shippingCents;
@@ -321,8 +301,6 @@ export async function getCartSummary() {
   };
 }
 
-/* ====== EXTRA: mover estas actions para fora do page.tsx ====== */
-
 export async function removeItem(formData: FormData) {
   const id = formData.get("itemId");
   if (!id || typeof id !== "string") return;
@@ -337,13 +315,17 @@ export async function removeItem(formData: FormData) {
 export async function updateQty(formData: FormData) {
   const id = formData.get("itemId");
   const qty = Number(formData.get("qty"));
-  if (!id || typeof id !== "string" || !Number.isFinite(qty) || qty < 1) return;
+
+  if (!id || typeof id !== "string" || !Number.isFinite(qty) || qty < 1) {
+    return;
+  }
 
   try {
     const item = await prisma.cartItem.findUnique({
       where: { id },
       select: { unitPrice: true },
     });
+
     if (!item) return;
 
     const q = Math.min(99, Math.floor(qty));
@@ -352,7 +334,7 @@ export async function updateQty(formData: FormData) {
       where: { id },
       data: {
         qty: q,
-        totalPrice: item.unitPrice * q, // ✅ SEM promo aqui
+        totalPrice: item.unitPrice * q,
       },
     });
   } catch {}

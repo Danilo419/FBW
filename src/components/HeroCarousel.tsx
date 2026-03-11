@@ -1,14 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type Slide = { src: string; alt?: string; href?: string };
+type Slide = {
+  src: string;
+  alt?: string;
+  href?: string;
+};
 
 export default function HeroCarousel({
   slides,
-  aspect = "aspect-[16/9]",        // keep layout stable
-  intervalMs = 4000,                // autoplay speed
+  aspect = "aspect-[16/9]",
+  intervalMs = 4000,
   showDots = true,
   className = "",
 }: {
@@ -19,35 +23,50 @@ export default function HeroCarousel({
   className?: string;
 }) {
   const safeSlides = useMemo(
-    () => (slides?.length ? slides : [{ src: "/placeholder.png", alt: "placeholder" }]),
+    () =>
+      slides?.length
+        ? slides
+        : [{ src: "/placeholder.png", alt: "placeholder" }],
     [slides]
   );
+
   const [index, setIndex] = useState(0);
   const nextIndex = (index + 1) % safeSlides.length;
 
-  // crossfade layers
+  /* ---------------- crossfade layers ---------------- */
+
   const [aSrc, setASrc] = useState(safeSlides[0].src);
-  const [bSrc, setBSrc] = useState<string | null>(safeSlides[1]?.src ?? null);
+  const [bSrc, setBSrc] = useState<string | null>(
+    safeSlides[1]?.src ?? null
+  );
   const [showB, setShowB] = useState(false);
 
-  // autoplay
+  /* ---------------- autoplay ---------------- */
+
   useEffect(() => {
     if (safeSlides.length <= 1) return;
-    const t = setInterval(() => go(nextIndex), intervalMs);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, safeSlides.length, intervalMs]);
 
-  // preload + fade to target slide
+    const timer = setInterval(() => {
+      go((index + 1) % safeSlides.length);
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [index, intervalMs, safeSlides.length]);
+
+  /* ---------------- navigation ---------------- */
+
   const go = (target: number) => {
     if (target === index) return;
+
     const targetSrc = safeSlides[target].src;
+
     const img = new window.Image();
     img.src = targetSrc;
+
     img.onload = () => {
-      // choose layer to update
       if (showB) setASrc(targetSrc);
       else setBSrc(targetSrc);
+
       requestAnimationFrame(() => {
         setShowB((v) => !v);
         setIndex(target);
@@ -55,12 +74,17 @@ export default function HeroCarousel({
     };
   };
 
-  // manual navigation
-  const prev = () => go((index - 1 + safeSlides.length) % safeSlides.length);
-  const next = () => go((index + 1) % safeSlides.length);
+  const prev = () =>
+    go((index - 1 + safeSlides.length) % safeSlides.length);
+
+  const next = () =>
+    go((index + 1) % safeSlides.length);
 
   const current = safeSlides[index];
-  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({
+    children,
+  }) =>
     current.href ? (
       <a href={current.href} aria-label={current.alt || "slide link"}>
         {children}
@@ -69,11 +93,14 @@ export default function HeroCarousel({
       <>{children}</>
     );
 
+  /* ---------------- render ---------------- */
+
   return (
-    <div className={`relative w-full overflow-hidden rounded-2xl ${className}`}>
-      {/* fixed aspect stops layout shift */}
+    <div
+      className={`relative w-full overflow-hidden rounded-2xl ${className}`}
+    >
       <div className={`relative w-full ${aspect}`}>
-        {/* layer A */}
+        {/* Layer A */}
         <Wrapper>
           <Image
             key={`A-${aSrc}`}
@@ -88,7 +115,7 @@ export default function HeroCarousel({
           />
         </Wrapper>
 
-        {/* layer B */}
+        {/* Layer B */}
         {bSrc && (
           <Wrapper>
             <Image
@@ -104,7 +131,7 @@ export default function HeroCarousel({
           </Wrapper>
         )}
 
-        {/* controls */}
+        {/* Controls */}
         {safeSlides.length > 1 && (
           <>
             <button
@@ -114,6 +141,7 @@ export default function HeroCarousel({
             >
               ‹
             </button>
+
             <button
               onClick={next}
               aria-label="Next slide"
@@ -125,7 +153,7 @@ export default function HeroCarousel({
         )}
       </div>
 
-      {/* dots */}
+      {/* Dots */}
       {showDots && safeSlides.length > 1 && (
         <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-2">
           {safeSlides.map((_, i) => (
@@ -134,7 +162,9 @@ export default function HeroCarousel({
               aria-label={`Go to slide ${i + 1}`}
               onClick={() => go(i)}
               className={`h-2 w-2 rounded-full transition ${
-                i === index ? "bg-white" : "bg-white/50 hover:bg-white/80"
+                i === index
+                  ? "bg-white"
+                  : "bg-white/50 hover:bg-white/80"
               }`}
             />
           ))}

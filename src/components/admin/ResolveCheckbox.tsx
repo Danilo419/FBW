@@ -7,36 +7,43 @@ import { toggleResolved } from "@/app/admin/(panel)/actions";
 type Props = {
   orderId: string;
   initialResolved: boolean;
-  initialStatus: string; // status atual quando a página carregou
+  initialStatus: string;
 };
 
-export default function ResolveCheckbox({ orderId, initialResolved, initialStatus }: Props) {
+export default function ResolveCheckbox({
+  orderId,
+  initialResolved,
+  initialStatus,
+}: Props) {
   const router = useRouter();
   const [checked, setChecked] = React.useState(initialResolved);
   const [isPending, startTransition] = React.useTransition();
 
-  // Quando o status inicial já é RESOLVED, usar PENDING como fallback;
-  // caso contrário, usar o próprio initialStatus.
   const fallbackStatus = React.useMemo(() => {
     const s = (initialStatus || "").toUpperCase();
-    return s === "RESOLVED" ? "PENDING" : (initialStatus || "PENDING");
+    return s === "RESOLVED" ? "PENDING" : initialStatus || "PENDING";
   }, [initialStatus]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = e.target.checked;
     setChecked(next);
 
-    // confetti apenas ao marcar
     if (next) fireConfettiAtTarget(e.currentTarget);
 
     startTransition(async () => {
-      if (next) {
-        await toggleResolved({ orderId, makeResolved: true });
-      } else {
-        await toggleResolved({ orderId, makeResolved: false, fallbackStatus });
+      try {
+        if (next) {
+          await toggleResolved({ orderId, makeResolved: true });
+        } else {
+          await toggleResolved({
+            orderId,
+            makeResolved: false,
+            fallbackStatus,
+          });
+        }
+      } finally {
+        router.refresh();
       }
-      // força revalidate no cliente para refletir o novo status na tabela
-      router.refresh();
     });
   };
 
@@ -54,7 +61,7 @@ export default function ResolveCheckbox({ orderId, initialResolved, initialStatu
   );
 }
 
-/* ===================== CONFETTI (Canvas) ===================== */
+/* ===================== CONFETTI ===================== */
 
 function fireConfettiAtTarget(inputEl: HTMLInputElement) {
   const rect = inputEl.getBoundingClientRect();
@@ -75,45 +82,48 @@ function confettiBurst({
   duration?: number;
 }) {
   const canvas = document.createElement("canvas");
+
   canvas.style.position = "fixed";
   canvas.style.left = "0";
   canvas.style.top = "0";
   canvas.style.width = "100vw";
   canvas.style.height = "100vh";
   canvas.style.pointerEvents = "none";
-  canvas.style.zIndex = "60";
+  canvas.style.zIndex = "9999";
+
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+
   document.body.appendChild(canvas);
 
   const ctx = canvas.getContext("2d")!;
-  const particles = makeParticles(count, x, y, canvas.width, canvas.height);
+  const particles = makeParticles(count, x, y);
   const start = performance.now();
 
   function tick(now: number) {
-    const t = now - start;
-    const p = Math.min(1, t / duration);
+    const elapsed = now - start;
+    const progress = Math.min(1, elapsed / duration);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    particles.forEach((pt) => {
-      // física simples
-      pt.vy += 0.25; // gravidade
-      pt.vx += 0.02 * Math.sin(pt.seed + t * 0.01); // drift lateral
-      pt.x += pt.vx;
-      pt.y += pt.vy;
-      pt.r += pt.spin;
+    particles.forEach((p) => {
+      p.vy += 0.25;
+      p.vx += 0.02 * Math.sin(p.seed + elapsed * 0.01);
+
+      p.x += p.vx;
+      p.y += p.vy;
+      p.r += p.spin;
 
       ctx.save();
-      ctx.translate(pt.x, pt.y);
-      ctx.rotate(pt.r);
-      ctx.globalAlpha = 1 - p;
-      ctx.fillStyle = pt.color;
-      ctx.fillRect(-pt.w / 2, -pt.h / 2, pt.w, pt.h);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.r);
+      ctx.globalAlpha = 1 - progress;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
     });
 
-    if (t < duration) {
+    if (elapsed < duration) {
       requestAnimationFrame(tick);
     } else {
       document.body.removeChild(canvas);
@@ -123,8 +133,8 @@ function confettiBurst({
   requestAnimationFrame(tick);
 }
 
-function makeParticles(n: number, x: number, y: number, W: number, H: number) {
-  const out: Array<{
+function makeParticles(n: number, x: number, y: number) {
+  const particles: Array<{
     x: number;
     y: number;
     vx: number;
@@ -138,16 +148,15 @@ function makeParticles(n: number, x: number, y: number, W: number, H: number) {
   }> = [];
 
   for (let i = 0; i < n; i++) {
-    // Semicírculo superior [-π, 0] → esquerda e direita
-    const angle = -Math.PI + Math.random() * Math.PI; // [-π, 0]
+    const angle = -Math.PI + Math.random() * Math.PI;
     const speed = 4 + Math.random() * 6;
     const hue = Math.floor(Math.random() * 360);
 
-    out.push({
+    particles.push({
       x,
       y,
-      vx: Math.cos(angle) * speed,           // esquerda (<0) / direita (>0)
-      vy: Math.sin(angle) * speed - 2,       // impulso para cima
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
       r: Math.random() * Math.PI,
       spin: (Math.random() - 0.5) * 0.3,
       w: 6 + Math.random() * 6,
@@ -156,5 +165,6 @@ function makeParticles(n: number, x: number, y: number, W: number, H: number) {
       seed: Math.random() * 1000,
     });
   }
-  return out;
+
+  return particles;
 }

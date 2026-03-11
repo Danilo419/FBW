@@ -1,12 +1,12 @@
-// src/app/clubs/page.tsx
+import Image from "next/image";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { prisma } from "@/lib/prisma";
 import {
+  clubImg,
   leagueClubs,
   slugFromTeamName,
-  clubImg,
   type LeagueKey,
 } from "@/lib/shop-data";
 
@@ -27,6 +27,50 @@ function findClubAsset(teamName: string): string | null {
   }
 
   return null;
+}
+
+function normalizeUrl(u: string) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
+function isExternalUrl(u: string) {
+  return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+
+function getFirstImage(imageUrls: unknown): string | null {
+  try {
+    if (!imageUrls) return null;
+
+    if (Array.isArray(imageUrls)) {
+      const first = imageUrls.find(
+        (s) => typeof s === "string" && s.trim().length > 0
+      );
+      return first ? normalizeUrl(String(first).trim()) : null;
+    }
+
+    if (typeof imageUrls === "string") {
+      const s = imageUrls.trim();
+      if (!s) return null;
+
+      if (s.startsWith("[") && s.endsWith("]")) {
+        const parsed: unknown = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          const first = parsed.find(
+            (x) => typeof x === "string" && x.trim().length > 0
+          );
+          return first ? normalizeUrl(String(first).trim()) : null;
+        }
+      }
+
+      return normalizeUrl(s);
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 type ClubCard = {
@@ -57,12 +101,13 @@ export default async function ClubsPage() {
     if (!team || map.has(team)) continue;
 
     const assetImg = findClubAsset(team);
-    const arr = Array.isArray(r.imageUrls) ? r.imageUrls : [];
-    const firstDbImg =
-      arr.find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
-
+    const firstDbImg = getFirstImage(r.imageUrls);
     const slug = slugFromTeamName(team);
-    map.set(team, { image: assetImg ?? firstDbImg, slug });
+
+    map.set(team, {
+      image: assetImg ?? firstDbImg,
+      slug,
+    });
   }
 
   const clubs: ClubCard[] = Array.from(map.entries())
@@ -76,7 +121,6 @@ export default async function ClubsPage() {
   return (
     <main className="min-h-screen bg-white py-6 md:py-10">
       <div className="container-fw mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
@@ -104,7 +148,6 @@ export default async function ClubsPage() {
           </div>
         </div>
 
-        {/* Grid */}
         {clubs.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {clubs.map((club) => (
@@ -115,11 +158,14 @@ export default async function ClubsPage() {
               >
                 <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200 hover:-translate-y-1">
                   {club.image ? (
-                    <img
+                    <Image
                       src={club.image}
                       alt={t("clubImageAlt", { club: club.name })}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="lazy"
+                      unoptimized={isExternalUrl(club.image)}
                     />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />

@@ -7,7 +7,7 @@ import { Resend } from "resend";
 import { put } from "@vercel/blob";
 
 /**
- * ✅ IMPORTANT:
+ * IMPORTANT:
  * We now use the shared template file:
  *   src/lib/email/shipmentEmail.ts
  * This guarantees the logo/hero layout you are editing is the one actually sent.
@@ -28,7 +28,7 @@ function toUpperTrim(v: unknown) {
   return s ? s.toUpperCase() : "";
 }
 
-function safeParseJSON(input: any): AnyObj {
+function safeParseJSON(input: unknown): AnyObj {
   if (!input) return {};
   if (typeof input === "string") {
     try {
@@ -41,10 +41,10 @@ function safeParseJSON(input: any): AnyObj {
   return {};
 }
 
-function pickStr(o: any, keys: string[]) {
+function pickStr(o: unknown, keys: string[]) {
   if (!o || typeof o !== "object") return null;
   for (const k of keys) {
-    const v = (o as any)?.[k];
+    const v = (o as AnyObj)?.[k];
     if (v != null && String(v).trim() !== "") return String(v).trim();
   }
   return null;
@@ -99,13 +99,11 @@ function mapShippingStatusToOrderStatus(shippingStatus: string) {
 /* -------------------- email helpers -------------------- */
 
 function emailFrom() {
-  // ✅ DOMÍNIO OFICIAL
   return "FootballWorld <orders@myfootballworldstore.com>";
 }
 
 function siteUrl() {
   const raw = process.env.NEXT_PUBLIC_SITE_URL || "https://myfootballworldstore.com";
-  // garante https://
   if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
   return `https://${raw}`;
 }
@@ -170,7 +168,7 @@ export async function updateOrderTrackingAction(formData: FormData) {
 
 /* ------------------------------- NEW ACTION ------------------------------- */
 /**
- * ✅ USADO NA UI NOVA
+ * USADO NA UI NOVA
  * - trackingCode obrigatório
  * - shipmentImage opcional
  * - envia email premium (template em src/lib/email/shipmentEmail.ts)
@@ -201,8 +199,6 @@ export async function sendShipmentEmailAction(formData: FormData) {
 
   const to = extractCustomerEmail({ ...order, shippingJson: prevJson });
   if (!to) throw new Error("Customer email not found");
-
-  const customerName = extractCustomerName({ ...order, shippingJson: prevJson }) || null;
 
   /* -------- upload image (optional) -------- */
   let shipmentImageUrl: string | null = null;
@@ -240,14 +236,9 @@ export async function sendShipmentEmailAction(formData: FormData) {
   /* -------- email -------- */
   const resend = new Resend(process.env.RESEND_API_KEY);
 
-  // ⚠️ No teu screenshot o subject usa #cmkzwn5 (sem slice).
-  // Mantemos o padrão que já aparece no Gmail (o id curto).
   const orderShort = `#${orderId.slice(0, 7)}`;
-
-  // Link direto para a página com o tracking preenchido
   const track17Url = `https://www.17track.net/en?nums=${encodeURIComponent(trackingCode)}`;
 
-  // ✅ Usa o template partilhado (onde estás a mexer na logo)
   const html = shipmentEmailHtml({
     brandName: brandName(),
     orderShort,
