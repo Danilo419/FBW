@@ -1,0 +1,1110 @@
+{
+  "HomePage": {
+    "badge": "Fan-favorite drops",
+    "viewDetails": "View details",
+    "viewAllArrow": "View all →",
+    "promoAlt": "Limited-time offers",
+    "noProducts": "No products to show yet. Please check the full catalog.",
+    "hero": {
+      "badge1": "Fan-favorite drops",
+      "badge2": "Secure checkout",
+      "badge3": "Tracked shipping",
+      "title": "The jersey you want, made to order and shipped worldwide.",
+      "description": "Shop club & national-team jerseys plus exclusive concept designs. Pick your size, add name & number (free), and we’ll ship your order with tracking from start to finish.",
+      "shopButton": "Shop Best Sellers",
+      "deliveryLabel": "Typical delivery:",
+      "deliveryValue": "7–20 business days",
+      "features": {
+        "shipping": "Tracked worldwide delivery",
+        "pricing": "Fair pricing",
+        "checkout": "Secure checkout",
+        "support": "Support via Instagram"
+      }
+    },
+    "trustMarquee": {
+      "shipping": "TRACKED SHIPPING INCLUDED",
+      "checkout": "SECURE CHECKOUT (STRIPE)",
+      "payments": "MB WAY • MULTIBANCO • PAYPAL",
+      "personalization": "NAME & NUMBER PERSONALIZATION",
+      "worldwide": "WORLDWIDE DELIVERY",
+      "exchange": "14-DAY SIZE EXCHANGE (POLICY APPLIES)",
+      "instagram": "SUPPORT VIA INSTAGRAM"
+    },
+    "spaces": {
+      "adult": {
+        "label": "Adult",
+        "subtitle": "Sizes S–2XL"
+      },
+      "kids": {
+        "label": "Kids",
+        "subtitle": "Ages 2–13"
+      },
+      "retro": {
+        "label": "Retro",
+        "subtitle": "Timeless classics"
+      },
+      "concept": {
+        "label": "Concept Kits",
+        "subtitle": "Original designs"
+      }
+    },
+    "customers": {
+      "badge": "Customer Reviews",
+      "title": "Real photos. Real feedback.",
+      "text1": "Want to be featured? Send your review + photo via Instagram DM at",
+      "sideNote": "Tracked shipping • Secure checkout",
+      "review1": "Amazing quality and the stitching is on point. Tracking updates were clear and I’ll definitely order again.",
+      "review2": "Great value for the price. Delivery took a bit longer than expected, but the jersey exceeded my expectations."
+    },
+    "collections": {
+      "title": "Shop by collection",
+      "subtitle": "Start with a category — then pick your favorite design."
+    },
+    "curated": {
+      "badge": "Curated picks",
+      "title": "Best picks across every style",
+      "subtitle": "Scroll, click, and explore. Every product includes tracked shipping and secure checkout.",
+      "saveNote": "Save up to 70% vs official prices"
+    },
+    "worldCup": {
+      "title": "FIFA World Cup 2026 Jerseys",
+      "subtitle": "Exclusive World Cup 2026 selection."
+    },
+    "groups": {
+      "jerseys": "Jerseys",
+      "retro": "Retro",
+      "conceptSpecial": "Concept & Special",
+      "training": "Training",
+      "kidsWomen": "Kids & Women"
+    },
+    "categories": {
+      "currentSeason": {
+        "title": "New Season 25/26 Drops",
+        "subtitle": "Latest club & national-team releases (non-player fit)"
+      },
+      "jerseys": {
+        "title": "Classic Jerseys (Short Sleeve)",
+        "subtitle": "Everyday fit, the most popular choice"
+      },
+      "longSleeve": {
+        "title": "Long Sleeve Jerseys",
+        "subtitle": "Long sleeve, non-player fit"
+      },
+      "playerVersion": {
+        "title": "Player Version (On-Pitch Fit)",
+        "subtitle": "Slim fit like the pros"
+      },
+      "playerVersionLongSleeve": {
+        "title": "Player Version (Long Sleeve)",
+        "subtitle": "On-pitch fit with long sleeves"
+      },
+      "retro": {
+        "title": "Retro Jerseys",
+        "subtitle": "Iconic classics from legendary seasons"
+      },
+      "retroLongSleeve": {
+        "title": "Retro Long Sleeve",
+        "subtitle": "Retro designs with long sleeves"
+      },
+      "conceptKits": {
+        "title": "Concept Kits",
+        "subtitle": "Original designs you won’t find in stores"
+      },
+      "preMatch": {
+        "title": "Pre-Match Tops",
+        "subtitle": "Warm-up & pre-game styles"
+      },
+      "tracksuits": {
+        "title": "Tracksuits",
+        "subtitle": "Everyday streetwear for fans"
+      },
+      "trainingSleeveless": {
+        "title": "Sleeveless Training Sets",
+        "subtitle": "Tank + shorts training combo"
+      },
+      "trainingTracksuit": {
+        "title": "Training Tracksuits",
+        "subtitle": "Training top + pants sets"
+      },
+      "kidsKits": {
+        "title": "Kids Kits",
+        "subtitle": "Full sets for young fans"
+      },
+      "cropTops": {
+        "title": "Crop Tops",
+        "subtitle": "Stylish cropped tops"
+      }
+    },
+    "howSection": {
+      "title": "How it works",
+      "subtitle": "Simple, fast, and tracked from start to finish."
+    },
+    "how": {
+      "choose": {
+        "title": "Choose your jersey",
+        "text": "Pick a club or national-team kit (or an exclusive concept)."
+      },
+      "options": {
+        "title": "Select size & options",
+        "text": "Choose your size and add name & number if you want."
+      },
+      "made": {
+        "title": "Made to order",
+        "text": "Your item is produced on demand with great detail."
+      },
+      "delivery": {
+        "title": "Tracked delivery",
+        "text": "Worldwide delivery in 7–20 business days with tracking."
+      }
+    },
+    "cta": {
+      "title": "Choose your next jersey with confidence",
+      "subtitle": "Secure checkout, tracked shipping, and fan-favorite designs — all in one place.",
+      "item1": "Name & number personalization",
+      "item2": "Secure payments via Stripe",
+      "item3": "Economy shipping with tracking",
+      "shopNow": "Shop now",
+      "readFaq": "Read the FAQ"
+    },
+    "guarantees": {
+      "guarantee": {
+        "title": "14-day guarantee",
+        "text": "Size/fit exchange within 14 days (policy applies)."
+      },
+      "checkout": {
+        "title": "Secure checkout",
+        "text": "Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link — all processed securely via Stripe."
+      },
+      "made": {
+        "title": "Made on demand",
+        "text": "High-detail stitching and crisp prints."
+      },
+      "support": {
+        "title": "Fast support",
+        "text": "Support in English via email and Instagram."
+      }
+    },
+    "faqSection": {
+      "title": "Frequently asked questions"
+    },
+    "faq": {
+      "shipping": {
+        "q": "How long does shipping take?",
+        "a": "Delivery takes 7–20 business days. You’ll get a tracking code for every order."
+      },
+      "personalization": {
+        "q": "Can I add name and number?",
+        "a": "Yes — you can personalize most jerseys with name and number."
+      },
+      "payments": {
+        "q": "Which payment methods are accepted?",
+        "a": "Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way (via Stripe)."
+      },
+      "tracking": {
+        "q": "How can I track my order?",
+        "a": "After your order is shipped you’ll receive an email with your tracking code and a tracking link."
+      },
+      "countries": {
+        "q": "Which countries do you ship to?",
+        "a": "We ship worldwide. Delivery times vary by destination."
+      },
+      "size": {
+        "q": "How do I pick the right size?",
+        "a": "Check the Size Guide page for measurements and fit tips."
+      }
+    }
+  },
+  "termsPage": {
+    "metadata": {
+      "title": "Terms of Service — FootballWorld",
+      "description": "FootballWorld Terms of Service: ordering, pricing, shipping, returns, personalizations, payments, promotions, intellectual property, acceptable use, liability, law, and contact."
+    },
+    "hero": {
+      "title": "Terms of Service",
+      "description": "These Terms govern your use of FootballWorld and any purchases you make here. By using our site, you agree to these Terms. For how we collect and handle your data, see our <privacy>Privacy Policy</privacy>.",
+      "badges": {
+        "clear": "Clear & simple policy",
+        "updated": "Last updated: 09 Sep 2025"
+      },
+      "quickLinks": {
+        "returns": "Returns & Refunds",
+        "payments": "Payments"
+      }
+    },
+    "sidebar": {
+      "title": "On this page",
+      "links": {
+        "shipping": "Shipping & Tracking",
+        "return": "Start a return"
+      },
+      "stats": {
+        "reply": {
+          "label": "Avg reply",
+          "value": "24–48h"
+        },
+        "coverage": {
+          "label": "Coverage",
+          "value": "Worldwide"
+        }
+      }
+    },
+    "sections": {
+      "intro": {
+        "label": "Introduction",
+        "title": "Introduction",
+        "body": "These Terms (“Terms”) apply to the FootballWorld website and to orders placed through it. If you do not agree, do not use the site. Where mandatory consumer laws provide additional protections in your country, those protections prevail.",
+        "callout": "Tip: keep your order-confirmation email — it includes your order number and helpful links."
+      },
+      "account": {
+        "label": "Eligibility & Account",
+        "title": "Eligibility & Account",
+        "items": [
+          "You must have legal capacity to contract in your jurisdiction.",
+          "You are responsible for activity under your account and for keeping credentials secure.",
+          "We may suspend/terminate accounts for fraud, abuse, or violation of these Terms."
+        ]
+      },
+      "ordering": {
+        "label": "Ordering Process",
+        "title": "Ordering Process",
+        "items": [
+          "You will receive an email confirming your order. The contract is formed when we send a dispatch/shipping confirmation.",
+          "We reserve the right to refuse/cancel due to inventory, suspected fraud, or pricing error (you will be refunded).",
+          "Double-check customizations; items are produced exactly as entered."
+        ]
+      },
+      "pricing": {
+        "label": "Pricing & Taxes",
+        "title": "Pricing & Taxes",
+        "items": [
+          "Prices are usually in EUR unless otherwise shown.",
+          "Taxes, duties, and import fees may be collected by the carrier at destination depending on your country.",
+          "Obvious pricing mistakes may be corrected; we’ll contact you before processing."
+        ]
+      },
+      "shipping": {
+        "label": "Shipping & Delivery",
+        "title": "Shipping & Delivery",
+        "body": "Production and transit times are estimates and can vary by carrier and customs. For a detailed guide and live tracking tips, see <shipping>Shipping & Tracking</shipping>.",
+        "stats": {
+          "production": {
+            "label": "Average production",
+            "value": "3–5 days"
+          },
+          "transit": {
+            "label": "Typical transit",
+            "value": "7-9 business days"
+          },
+          "coverage": {
+            "label": "Coverage",
+            "value": "Worldwide"
+          }
+        }
+      },
+      "custom": {
+        "label": "Custom Products",
+        "title": "Custom Products",
+        "items": [
+          "Personalized items (e.g., name/number) are made to order and are not returnable unless defective.",
+          "Please verify spelling, number, and size before checkout."
+        ],
+        "callout": "Before customizing, check our <sizeGuide>Size Guide</sizeGuide> to make sure the fit is perfect."
+      },
+      "returns": {
+        "label": "Returns & Refunds",
+        "title": "Returns & Refunds",
+        "body": "Eligible items can be returned according to our <returns>Returns & Exchanges</returns> policy. Items must be new, unused, and with tags. Personalized items: only if defective or damaged."
+      },
+      "cancel": {
+        "label": "Cancellations & Changes",
+        "title": "Cancellations & Changes",
+        "items": [
+          "We process orders quickly — contact us immediately for changes/cancellations.",
+          "Orders already in production or shipped cannot be changed/cancelled. Personalized items typically enter production shortly after purchase."
+        ]
+      },
+      "product": {
+        "label": "Product Info & Sizing",
+        "title": "Product Information & Sizing",
+        "body": "Colors may vary slightly due to display settings. For measurements and fit, see the <sizeGuide>Size Guide</sizeGuide>."
+      },
+      "payments": {
+        "label": "Payments & Security",
+        "title": "Payments & Security",
+        "items": [
+          "Payments are handled by trusted processors (e.g., Stripe, PayPal, Amazon Pay). We do not store full card numbers.",
+          "We may run antifraud checks to protect customers and the store."
+        ],
+        "callout": "Payment data is processed securely by those providers. Review their privacy and security policies as well."
+      },
+      "promos": {
+        "label": "Promotions",
+        "title": "Promotions & Discount Codes",
+        "items": [
+          "Codes must be applied at checkout and cannot be applied retroactively.",
+          "Promotions can be modified or withdrawn at any time."
+        ]
+      },
+      "ip": {
+        "label": "Intellectual Property",
+        "title": "Intellectual Property",
+        "body": "All content (images, text, graphics, and designs) is owned/licensed by FootballWorld and protected by law. Use without prior permission is prohibited."
+      },
+      "acceptable": {
+        "label": "Acceptable Use",
+        "title": "Acceptable Use",
+        "items": [
+          "Do not engage in unlawful, fraudulent, infringing, or harmful activities.",
+          "Do not interfere with security, site operation, or the experience of other users.",
+          "No automated scraping or reuse of content without permission."
+        ]
+      },
+      "third": {
+        "label": "Third-Party Links",
+        "title": "Third-Party Links",
+        "body": "We may reference third-party sites. We are not responsible for their content, policies, or practices — access at your own risk and review their terms and privacy notices."
+      },
+      "warranty": {
+        "label": "Warranties & Liability",
+        "title": "Warranties & Liability",
+        "items": [
+          "The site is provided “as is” and “as available”. To the fullest extent permitted by law, we disclaim implied warranties.",
+          "We are not liable for indirect or consequential losses. Our total liability for any claim is limited to the amount you paid for the product at issue.",
+          "Nothing in these Terms limits non-excludable consumer rights under applicable law."
+        ]
+      },
+      "law": {
+        "label": "Governing Law",
+        "title": "Governing Law & Disputes",
+        "body": "These Terms are governed by the laws applicable in our principal place of business, without regard to conflict-of-laws rules. Disputes will be submitted to the competent courts there, without prejudice to mandatory consumer protections in your country."
+      },
+      "contact": {
+        "label": "Contact",
+        "title": "Contact",
+        "body": "Questions about these Terms? Reach out via <contact>Contact</contact> or email <email>myfootballworldstore@gmail.com</email>.",
+        "buttons": {
+          "privacy": "Privacy Policy",
+          "returns": "Returns & Exchanges"
+        }
+      }
+    }
+  },
+  "shippingPolicyPage": {
+    "metadata": {
+      "title": "Shipping Policy — FootballWorld",
+      "description": "FootballWorld Shipping Policy: processing times, carriers, rates, delivery estimates, tracking, customs/duties, failed deliveries, lost parcels, and contact."
+    },
+    "hero": {
+      "badge": "Transparent shipping info",
+      "title": "Shipping Policy",
+      "description": "Here’s how we process, ship, and track your order. If you need hands-on help, visit <shippingTracking>Shipping & Tracking</shippingTracking> for live tips and tools.",
+      "quickLinks": {
+        "customs": "Customs & Duties",
+        "lost": "Lost parcels"
+      }
+    },
+    "sidebar": {
+      "title": "On this page",
+      "links": {
+        "shippingTracking": "Shipping & Tracking",
+        "startReturn": "Start a return"
+      },
+      "stats": {
+        "production": {
+          "label": "Production",
+          "value": "2–6 days"
+        },
+        "worldwide": {
+          "label": "Worldwide",
+          "value": "Yes"
+        }
+      }
+    },
+    "sections": {
+      "intro": {
+        "label": "Introduction",
+        "title": "Introduction",
+        "body": "We ship worldwide from our partner facilities. Processing times and transit times are estimates and may vary due to volume, customs, weather, and carrier performance."
+      },
+      "processing": {
+        "label": "Processing Times",
+        "title": "Processing Times",
+        "items": [
+          "Standard production: 2–5 business days for most items.",
+          "Personalized/custom products: usually 3–6 business days.",
+          "Orders placed on weekends or holidays begin processing next business day."
+        ],
+        "stats": {
+          "standard": {
+            "label": "Standard production",
+            "value": "2–5 days"
+          },
+          "personalized": {
+            "label": "Personalized items",
+            "value": "3–6 days"
+          },
+          "cutoff": {
+            "label": "Cut-off",
+            "value": "Mon–Fri"
+          }
+        }
+      },
+      "carriers": {
+        "label": "Carriers & Methods",
+        "title": "Carriers & Methods",
+        "body": "We use reliable postal and courier partners (varies by destination) to deliver safely and quickly. You’ll receive a shipping confirmation with a tracking link when your parcel leaves our facility."
+      },
+      "rates": {
+        "label": "Rates & Free Shipping",
+        "title": "Rates & Free Shipping",
+        "items": [
+          "Shipping rates are shown at checkout based on destination, weight, and method.",
+          "From time to time we may offer free-shipping promotions (see banner at the top of the site).",
+          "Any additional customs charges are separate from shipping fees collected at checkout."
+        ]
+      },
+      "estimates": {
+        "label": "Delivery Estimates",
+        "title": "Delivery Estimates (after dispatch)",
+        "body": "Typical transit ranges below. Remote areas may require extra time.",
+        "regions": {
+          "europe": {
+            "label": "Europe",
+            "value": "7–9 business days"
+          },
+          "northAmerica": {
+            "label": "North America",
+            "value": "10–15 business days"
+          },
+          "southAmerica": {
+            "label": "South America",
+            "value": "15–20 business days"
+          },
+          "asia": {
+            "label": "Asia",
+            "value": "10–12 business days"
+          },
+          "oceania": {
+            "label": "Oceania",
+            "value": "9–12 business days"
+          },
+          "middleEast": {
+            "label": "Middle East",
+            "value": "7–15 business days"
+          }
+        },
+        "callout": "Estimates exclude production/processing time. Customs inspections can extend delivery."
+      },
+      "tracking": {
+        "label": "Tracking",
+        "title": "Tracking",
+        "body": "Use the link in your shipping email or head to <shippingTracking>Shipping & Tracking</shippingTracking> for carrier tools, troubleshooting, and status explanations."
+      },
+      "address": {
+        "label": "Address Changes",
+        "title": "Address Changes & Corrections",
+        "items": [
+          "Contact us immediately if you entered the wrong address. We can only edit before the order ships.",
+          "Once in transit, address changes are rarely possible and may incur a re-shipping fee if the parcel returns to us."
+        ]
+      },
+      "customs": {
+        "label": "Customs & Duties",
+        "title": "Customs, Duties & Taxes",
+        "items": [
+          "International orders may be subject to import duties, taxes, and fees collected by the destination country.",
+          "These charges are the recipient’s responsibility and are not included in our product or shipping prices (unless explicitly stated).",
+          "Customs processing can add time to the delivery window."
+        ]
+      },
+      "failed": {
+        "label": "Failed Delivery",
+        "title": "Failed Delivery / Returned to Sender",
+        "items": [
+          "If delivery fails due to an incorrect address, unavailability, or non-collection, carriers may return the parcel.",
+          "We can reship once it returns (additional shipping costs may apply).",
+          "If you prefer a refund on return, shipping fees are non-refundable and personalized items are not eligible unless defective."
+        ]
+      },
+      "lost": {
+        "label": "Lost / Delayed Parcels",
+        "title": "Lost or Heavily Delayed Parcels",
+        "items": [
+          "If your tracking hasn’t updated for several days, check our tips on the Shipping & Tracking page first.",
+          "Contact us if the parcel appears lost; we’ll open a trace with the carrier.",
+          "Resolutions may include replacement or refund depending on the investigation outcome and product type."
+        ]
+      },
+      "split": {
+        "label": "Split Shipments",
+        "title": "Split Shipments",
+        "body": "Orders with multiple items may ship separately to speed up delivery. You’ll receive separate tracking numbers where applicable."
+      },
+      "preorders": {
+        "label": "Pre-orders",
+        "title": "Pre-orders & Back-orders",
+        "body": "Pre-order products ship once available. Estimated ship windows are shown on the product page and in your order confirmation. Your entire order may be held to ship together unless otherwise stated."
+      },
+      "holidays": {
+        "label": "Holidays & Peak",
+        "title": "Holidays & Peak Periods",
+        "body": "During peak seasons (e.g., Black Friday, December holidays) production and carriers may experience delays. Please order early to allow extra time."
+      },
+      "force": {
+        "label": "Force Majeure",
+        "title": "Service Interruptions / Force Majeure",
+        "body": "We are not liable for delays caused by events outside our control (e.g., severe weather, strikes, pandemic restrictions, customs closures). We always work with carriers to minimize impact and keep you informed."
+      },
+      "contact": {
+        "label": "Contact",
+        "title": "Need help with shipping?",
+        "body": "Visit <shippingTracking>Shipping & Tracking</shippingTracking> for step-by-step fixes. Still stuck? <contactSupport>Contact Support</contactSupport> or email <email>myfootballworldstore@gmail.com</email>.",
+        "buttons": {
+          "returns": "Returns & Exchanges",
+          "sizeGuide": "Size Guide"
+        }
+      }
+    }
+  },
+  "returnRefundPolicyPage": {
+    "metadata": {
+      "title": "Return & Refund Policy — FootballWorld",
+      "description": "How returns, exchanges and refunds work at FootballWorld: eligibility, timelines, non-returnable items, personalized products, costs, and how to start a return."
+    },
+    "hero": {
+      "badge": "Hassle-free returns (policy outline)",
+      "title": "Return & Refund Policy",
+      "description": "We want you to love your jersey. Below you’ll find how returns, exchanges, and refunds work. For a guided flow, use <returns>Returns & Exchanges</returns>.",
+      "quickLinks": {
+        "refunds": "Refunds",
+        "defective": "Defective"
+      }
+    },
+    "sidebar": {
+      "title": "On this page",
+      "links": {
+        "return": "Start a return",
+        "contact": "Contact Support"
+      },
+      "stats": {
+        "window": {
+          "label": "Return window",
+          "value": "14 days"
+        },
+        "refund": {
+          "label": "Refund time",
+          "value": "2–5 biz days"
+        }
+      }
+    },
+    "sections": {
+      "intro": {
+        "label": "Introduction",
+        "title": "Introduction",
+        "body": "This policy applies to purchases made directly on <brand>FootballWorld</brand>. If you bought from a third-party marketplace, please refer to their return rules. Your statutory rights remain unaffected where applicable."
+      },
+      "window": {
+        "label": "Return Window",
+        "title": "Return window",
+        "items": [
+          "You can request a return or exchange within 14 days of delivery.",
+          "The window counts from the day tracking marks the parcel as delivered.",
+          "For holiday gifts, we may extend the window—check our seasonal notice or contact support."
+        ],
+        "callout": "Tip: Start your return as soon as you decide. Faster initiation = faster resolution."
+      },
+      "condition": {
+        "label": "Item Condition",
+        "title": "Item condition requirements",
+        "items": [
+          "Unworn, unwashed, and in original condition.",
+          "All tags, hygiene seals, and packaging intact.",
+          "No smells (e.g., perfume, smoke) or signs of wear/use.",
+          "Include any freebies/gifts that came with the order."
+        ],
+        "callout": "Items returned in non-resellable condition may be refused or incur a partial refund."
+      },
+      "nonreturn": {
+        "label": "Non-returnable Items",
+        "title": "Non-returnable items",
+        "items": [
+          "Final-sale items clearly marked as non-returnable.",
+          "Gift cards and downloadable products.",
+          "Used or washed items."
+        ]
+      },
+      "personalized": {
+        "label": "Personalized Items",
+        "title": "Personalized / Custom products",
+        "items": [
+          "Customized jerseys (e.g., printed name/number, badges) are non-returnable and non-refundable, except if defective or we made a mistake.",
+          "Please double-check spelling, numbers, and sizing before ordering."
+        ],
+        "callout": "If a personalized item arrives damaged or incorrect, we will repair, replace, or refund according to the issue—contact us right away with photos."
+      },
+      "start": {
+        "label": "Start a Return",
+        "title": "How to start a return",
+        "items": [
+          "Go to the dedicated page: <returns>Returns & Exchanges</returns>.",
+          "Use your order number and email to request a label or instructions.",
+          "Pack items securely; include your order slip or a note with name, email, and order number."
+        ],
+        "buttons": {
+          "return": "Start a return",
+          "contact": "Contact Support"
+        }
+      },
+      "exchanges": {
+        "label": "Exchanges",
+        "title": "Exchanges (size / variant)",
+        "items": [
+          "Exchanges depend on availability. If the requested size/variant is out of stock, we’ll offer alternatives or a refund.",
+          "We typically ship the replacement after receiving and checking your return, unless otherwise arranged."
+        ]
+      },
+      "refunds": {
+        "label": "Refunds & Timing",
+        "title": "Refund method & timing",
+        "items": [
+          "Refunds are issued to the original payment method unless agreed otherwise.",
+          "Once your return is inspected and approved, we process refunds within 2–5 business days.",
+          "Your bank/card issuer may take additional time to post the credit (up to 10 business days).",
+          "Original shipping fees are non-refundable unless the item was defective or we made an error."
+        ]
+      },
+      "costs": {
+        "label": "Return Shipping Costs",
+        "title": "Return shipping costs & responsibility",
+        "items": [
+          "Return postage is generally the customer’s responsibility, unless the item is defective or incorrect.",
+          "If we provide a prepaid label, we may deduct its cost from the refund unless the return is due to our error.",
+          "We recommend a tracked service; lost return parcels without proof of posting cannot be refunded."
+        ]
+      },
+      "defective": {
+        "label": "Defective / Wrong Item",
+        "title": "Defective, damaged, or wrong item received",
+        "items": [
+          "Inspect your order upon arrival. If there’s an issue, contact us within 7 days.",
+          "Include clear photos and a short description of the problem.",
+          "We will repair, replace, or refund depending on the case and stock availability."
+        ],
+        "callout": "Keep all packaging until we confirm next steps. Carriers may require evidence for a claim."
+      },
+      "gifts": {
+        "label": "Gifts",
+        "title": "Gifts",
+        "items": [
+          "If the item was marked as a gift and shipped directly to you, you may receive store credit for the value of your return once processed.",
+          "If the order wasn’t marked as a gift, the refund goes to the original purchaser."
+        ]
+      },
+      "promos": {
+        "label": "Bundles / Discounts",
+        "title": "Bundles, promotions & partial returns",
+        "items": [
+          "For bundle/BOGO deals, returning part of the bundle may adjust the discount.",
+          "Free gifts must be returned if they were part of a promotion tied to the returned item."
+        ]
+      },
+      "contact": {
+        "label": "Need Help?",
+        "title": "Questions or special cases?",
+        "body": "Our team is happy to help with sizing issues, damaged parcels, or unique situations. Use <returns>Returns & Exchanges</returns> or <contact>Contact Support</contact>. You can also email <email>myfootballworldstore@gmail.com</email>."
+      }
+    },
+    "footer": {
+      "lastUpdatedLabel": "Last updated:",
+      "lastUpdatedLocale": "en-GB"
+    }
+  },
+  "aboutPage": {
+    "metadata": {
+      "title": "About Us — FootballWorld",
+      "description": "Learn who we are, how we craft concept and authentic football jerseys, and what we stand for at FootballWorld."
+    },
+    "hero": {
+      "badge": "Designed with passion since 2026",
+      "title": "About FootballWorld",
+      "description": "We’re a design-first studio crafting <authentic>authentic</authentic> and <concept>concept</concept> football jerseys. Made-to-order quality, fair pricing, and reliable worldwide shipping, so you can wear the game your way.",
+      "pills": {
+        "secure": "Secure checkout",
+        "shipping": "Tracked shipping",
+        "pricing": "Fair pricing",
+        "worldwide": "Ships worldwide"
+      }
+    },
+    "whatWeDo": {
+      "make": {
+        "title": "What we make",
+        "description": "From elite club classics to bold concept drops, every jersey is built with premium fabrics, pro-level stitching and vibrant color accuracy. Personalization? Absolutely — names, numbers and badges in club-correct styles.",
+        "items": [
+          "Authentic jerseys",
+          "Concept jerseys",
+          "Name and number personalization"
+        ]
+      },
+      "build": {
+        "title": "How we build",
+        "description": "Our studio combines <design>design</design> and <craft>craft</craft>. Patterns are cut with precision, panels are stitched for movement, and prints are applied using durable techniques — all made to order to reduce waste.",
+        "mini": [
+          "Tailored cuts",
+          "Pro stitching",
+          "QC checked"
+        ]
+      }
+    },
+    "values": {
+      "title": "What we stand for",
+      "items": [
+        {
+          "title": "Quality first",
+          "desc": "Materials, fit and finish that feel great on and off the pitch."
+        },
+        {
+          "title": "Customer care",
+          "desc": "Helpful, human support with 24–48h average reply times."
+        },
+        {
+          "title": "Fair pricing",
+          "desc": "Direct-to-fan model keeps prices honest and transparent."
+        },
+        {
+          "title": "Design culture",
+          "desc": "Original concepts with bold aesthetics and club lore."
+        }
+      ]
+    },
+    "sustainability": {
+      "title": "Sustainability, thoughtfully",
+      "description": "We operate mostly on a <madeToOrder>made-to-order</madeToOrder> basis, which helps avoid overstock and reduces waste. We’re continually refining our packaging and production partners to minimize impact.",
+      "items": [
+        "Reduced overproduction",
+        "Global carriers with consolidated routes",
+        "Durable prints and long wear"
+      ]
+    },
+    "timeline": {
+      "title": "Our Story – Quick Timeline",
+      "items": [
+        {
+          "title": "January 2026 Kick-Off",
+          "desc": "FootBallWorld officially launches, offering football fans the best of both worlds: official football shirts and exclusive concept kits designed by us."
+        },
+        {
+          "title": "The First Products Arrive",
+          "desc": "Our very first shirts became available online, a mix of official football shirts and creative concept kits, made for true fans."
+        },
+        {
+          "title": "Today — Built for the Fans",
+          "desc": "From day one, FootBallWorld was made for football lovers who want something different, whether it’s a shirt they know or a design they’ve never seen before."
+        },
+        {
+          "title": "Future — More to Come",
+          "desc": "This is only the beginning. New products, fresh concept kits, and more ways to celebrate football are on the horizon."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Ready to find your next jersey?",
+      "description": "Browse products or reach our support team — we’re happy to help.",
+      "buttons": {
+        "shop": "Shop products",
+        "contact": "Contact us"
+      }
+    },
+    "footer": {
+      "copyright": "© {year} FootballWorld — Built by fans, for fans."
+    }
+  },
+  "signupPage": {
+    "title": "Sign up",
+    "fields": {
+      "name": {
+        "label": "Name",
+        "placeholder": "Your name"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "you@example.com"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "••••••••"
+      },
+      "confirm": {
+        "label": "Confirm password",
+        "placeholder": "Repeat your password"
+      }
+    },
+    "actions": {
+      "show": "Show",
+      "hide": "Hide",
+      "create": "Create account",
+      "creating": "Creating account…"
+    },
+    "errors": {
+      "passwordMin": "Password must be at least 8 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "usernameTaken": "A user with this name already exists. Please choose another name.",
+      "emailTaken": "An account with this email already exists.",
+      "generic": "Could not create account. Please try again.",
+      "signupFailed": "Sign up failed"
+    },
+    "strength": {
+      "veryWeak": "Very weak",
+      "weak": "Weak",
+      "fair": "Fair",
+      "strong": "Strong",
+      "veryStrong": "Very strong",
+      "tip": "Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger."
+    },
+    "footer": {
+      "haveAccount": "Already have an account?",
+      "login": "Log in"
+    }
+  },
+  "loginPage": {
+    "title": "Log in",
+    "loading": "Loading…",
+    "fields": {
+      "identifier": {
+        "label": "Name or Email",
+        "placeholder": "yourname or you@example.com"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "••••••••"
+      }
+    },
+    "actions": {
+      "logIn": "Log in",
+      "loggingIn": "Logging in…"
+    },
+    "links": {
+      "forgotPassword": "Forgot your password?"
+    },
+    "footer": {
+      "noAccount": "Don’t have an account?",
+      "signUp": "Sign up"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid credentials.",
+      "oauthNotLinked": "This email is already linked to a credentials account. Log in using email & password.",
+      "accessDenied": "Access denied.",
+      "configuration": "Auth configuration error. Please try again later.",
+      "default": "Unable to sign in. Please try again.",
+      "generic": "Something went wrong. Please try again.",
+      "unexpected": "Unexpected error. Please try again."
+    }
+  },
+  "forgotPasswordPage": {
+    "title": "Reset your password",
+    "description": "Enter your email and we’ll send you a password reset link.",
+    "success": "If this email exists, we sent you a reset link. Please check your inbox (and spam/junk).",
+    "securityNote": "For security, we don’t confirm whether an email is registered.",
+    "fields": {
+      "email": {
+        "label": "Email",
+        "placeholder": "you@example.com"
+      }
+    },
+    "actions": {
+      "send": "Send reset link",
+      "sending": "Sending…"
+    },
+    "links": {
+      "backLogin": "Back to login",
+      "createAccount": "Create an account",
+      "useDifferent": "Use a different email"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "network": "Network error. Please try again."
+    }
+  },
+  "resetPasswordPage": {
+    "title": "New password",
+    "description": "Choose a strong password to keep your FootballWorld account safe.",
+    "invalidLinkText": "This reset link looks invalid or incomplete.",
+    "requestNew": "Request a new link",
+    "success": "Password updated successfully. Redirecting to login…",
+    "loginNow": "Go to login now",
+    "fields": {
+      "password": "New password",
+      "confirm": "Confirm password",
+      "confirmPlaceholder": "Repeat your password"
+    },
+    "show": "Show",
+    "hide": "Hide",
+    "actions": {
+      "reset": "Reset password",
+      "resetting": "Resetting…"
+    },
+    "links": {
+      "backLogin": "Back to login",
+      "requestNew": "Request a new link"
+    },
+    "strength": {
+      "veryWeak": "Very weak",
+      "weak": "Weak",
+      "fair": "Fair",
+      "strong": "Strong",
+      "veryStrong": "Very strong",
+      "tip": "Use at least 8 characters. Mixing UPPER/lower case, numbers and symbols makes it stronger.",
+      "security": "Security rule: choose at least a Fair password."
+    },
+    "errors": {
+      "invalidLink": "This reset link is invalid. Please request a new one.",
+      "minLength": "Password must be at least 8 characters.",
+      "weakPassword": "Please choose a stronger password (at least Fair).",
+      "passwordMismatch": "Passwords do not match.",
+      "generic": "Unable to reset password.",
+      "network": "Network error. Please try again."
+    },
+    "footer": "If you keep having issues, request a new reset link."
+  },
+  "cartPage": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty.",
+    "browseProducts": "Browse products",
+    "remove": "Remove",
+    "fromCart": "from cart",
+    "free": "FREE",
+    "noPromotion": "No promotion",
+    "checkout": "Go to Checkout",
+    "orderSummary": "Order Summary",
+    "cttBadge": "CTT • 2–3 business days (Stock PT)",
+    "promoInfo": "The free items are always the cheapest ones. Max <max></max> free items per order.",
+    "promotions": {
+      "buy2get3": "Buy 2 Get 3",
+      "buy3get5": "Buy 3 Get 5"
+    },
+    "promoPreview": {
+      "title": "Promotion Preview",
+      "empty": "Add items to unlock promotions.",
+      "one": "Add 2 more items to unlock: Buy 2 Get 3 (get 1 free item).",
+      "two": "Add 1 more item to unlock: Buy 2 Get 3 (get 1 free item).",
+      "three": "Add 2 more items to unlock: Buy 3 Get 5 (get 2 free items).",
+      "four": "Add 1 more item to unlock: Buy 3 Get 5 (get 2 free items)."
+    },
+    "mixedCart": {
+      "title": "Cart issue",
+      "message": "Your cart has <pt>Portugal Delivery (CTT Stock PT)</pt> items and <normal>normal</normal> items. Checkout must be done separately to keep shipping correct.",
+      "link": "Go to Portugal Delivery (CTT)"
+    },
+    "ptStock": {
+      "title": "Portugal Delivery (CTT Stock PT)",
+      "shippingTitle": "CTT Shipping",
+      "info": "CTT rules: <one></one>, <two></two>, <three></three>. Delivery: <delivery></delivery>."
+    },
+    "labels": {
+      "items": "Items",
+      "shipping": "Shipping",
+      "freeItems": "Free items",
+      "name": "Name",
+      "number": "Number",
+      "size": "Size",
+      "badges": "Badges",
+      "unit": "Unit",
+      "before": "Before",
+      "qty": "Qty",
+      "payFor": "Pay for",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "total": "Total"
+    },
+    "summary": {
+      "freeItemsApplied": "Free items applied: <count></count> (always the cheapest ones).",
+      "cttRules": "CTT shipping rules: <one></one>, <two></two>, <three></three>.",
+      "unlockPromo": "Add more items to unlock: <promo></promo>"
+    }
+  },
+  "checkoutAddressPage": {
+    "fields": {
+      "fullName": "Full name",
+      "phone": "Phone (optional)",
+      "email": "Email (optional)",
+      "line1": "Address line 1",
+      "line2": "Address line 2 (optional)",
+      "city": "City",
+      "state": "Region / State (optional)",
+      "postalCode": "Postal code",
+      "country": "Country"
+    },
+    "actions": {
+      "saving": "Saving…",
+      "continue": "Continue"
+    },
+    "errors": {
+      "saveFailed": "Failed to save address"
+    }
+  },
+  "checkoutPage": {
+    "title": "Choose Payment Method",
+    "loading": "Loading…"
+  },
+  "ptStockPage": {
+    "title": "Portugal Stock Jerseys",
+    "shippingRules": {
+      "title": "Portugal Shipping Rules",
+      "one": "1 jersey: 6€",
+      "two": "2 jerseys: 3€",
+      "three": "3+ jerseys: FREE shipping"
+    },
+    "intro": {
+      "line1": "On this page you can only buy products that <brand>FootballWorld already has in stock in Portugal</brand>, delivered with CTT in <delivery>2–3 business days</delivery>.",
+      "line2": "The promotions used on other pages <noApply>do not apply</noApply> to the products on this page. Instead, this page uses a special Portugal stock shipping promotion:",
+      "line3": "<one>1 jersey:</one> 6€ shipping • <two>2 jerseys:</two> 3€ shipping • <three>3 or more jerseys:</three> FREE shipping",
+      "whyTitle": "Why are Portugal stock products cheaper?",
+      "whyLine1": "Because these products are already stored in Portugal, we avoid international shipping costs, import fees, and extra supplier margins.",
+      "whyLine2": "This allows us to offer better prices and faster delivery within Portugal while keeping the same product quality."
+    },
+    "empty": "No Portugal stock products available yet.",
+    "badge": "CTT 2–3 days",
+    "viewProduct": "View product →"
+  },
+  "ptStockProductPage": {
+    "breadcrumbs": {
+      "home": "Home",
+      "ptStock": "PT Stock"
+    },
+    "labels": {
+      "season": "Season"
+    },
+    "stock": {
+      "title": "Stock status",
+      "inStock": "In stock in Portugal",
+      "outOfStock": "Out of stock",
+      "units": "{count} unit(s) available"
+    },
+    "sizes": {
+      "title": "Sizes",
+      "noSizes": "No sizes available.",
+      "availableOnly": "Only available sizes can be shipped immediately."
+    },
+    "shippingInfo": {
+      "title": "Shipping information",
+      "oneShirt": "1 jersey",
+      "onePrice": "6€ shipping",
+      "twoShirts": "2 jerseys",
+      "twoPrice": "3€ shipping",
+      "threePlus": "3 or more jerseys",
+      "free": "Free shipping"
+    },
+    "ctt": {
+      "title": "Delivered with CTT",
+      "description": "This product is already in stock in Portugal and is shipped via <ctt>CTT</ctt>, with fast local delivery.",
+      "delivery": "Estimated delivery: 2–3 business days"
+    },
+    "description": {
+      "title": "Description",
+      "fallback": "No description available for this product."
+    },
+    "actions": {
+      "back": "Back to PT Stock",
+      "browseMore": "Browse more products"
+    }
+  }
+}

@@ -1,18 +1,15 @@
-// src/components/ProductConfigurator.tsx
 "use client";
 
 import Image from "next/image";
 import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { addToCartAction } from "@/app/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 
-/* ====================== MAPA DE DESCONTOS ======================
- * chave  = preço atual (EUROS, como aparece no site, ex: "34.99")
- * valor  = preço ORIGINAL antes do desconto (em euros)
- */
+/* ====================== MAPA DE DESCONTOS ====================== */
 const SALE_MAP_EUR: Record<string, number> = {
   "29.99": 70,
   "34.99": 100,
@@ -159,7 +156,7 @@ async function fetchReviewsMeta(productId: string): Promise<ReviewsMeta> {
   return { average: Number(json?.average ?? 0), total: Number(json?.total ?? 0) };
 }
 
-/* ====================== Size guide data (from /size-guide) ====================== */
+/* ====================== Size guide data ====================== */
 type Unit = "cm" | "in";
 type Range = [number, number] | number;
 type AdultRowKey = "Length" | "Width" | "Height" | "Weight";
@@ -227,11 +224,12 @@ function makeKidsTable(): KidsTableShape {
   return { sizes, rows };
 }
 
-/* ====================== Delivery text ====================== */
-const DELIVERY_TEXT = "Estimated delivery: 7–20 business days";
-
 export default function ProductConfigurator({ product }: Props) {
+  const t = useTranslations("ProductConfigurator");
+  const locale = useLocale();
   const router = useRouter();
+
+  const DELIVERY_TEXT = t("deliveryText");
 
   const [selected, setSelected] = useState<SelectedState>({});
   const [custName, setCustName] = useState("");
@@ -250,11 +248,9 @@ export default function ProductConfigurator({ product }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [openSizeGuide, setOpenSizeGuide] = useState(false);
 
-  // ✅ sticky CTA (mobile)
   const [stickyCta, setStickyCta] = useState(false);
   const [buyNow, setBuyNow] = useState(false);
 
-  // ✅ real reviews meta
   const [reviewsMeta, setReviewsMeta] = useState<ReviewsMeta>({ average: 0, total: 0 });
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
@@ -263,7 +259,6 @@ export default function ProductConfigurator({ product }: Props) {
 
   useEffect(() => setMounted(true), []);
 
-  /* ---------- Load real rating/total ---------- */
   useEffect(() => {
     let alive = true;
     setReviewsLoading(true);
@@ -281,7 +276,6 @@ export default function ProductConfigurator({ product }: Props) {
     };
   }, [product.id]);
 
-  /* ---------- DESCONTO ---------- */
   const rawUnitPrice = product.basePrice;
   const candidateEur1 = rawUnitPrice;
   const candidateEur2 = rawUnitPrice / 100;
@@ -303,12 +297,10 @@ export default function ProductConfigurator({ product }: Props) {
   const hasDiscount = typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
   const discountPercent = hasDiscount ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100) : 0;
 
-  /* ---------- Images ---------- */
   const images = product.images?.length ? product.images : ["/placeholder.png"];
   const activeSrc = images[Math.min(activeIndex, images.length - 1)];
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------- Thumbs (FIX: últimas não ficam cortadas) ---------- */
   const THUMB_W = 68;
   const GAP = 8;
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -319,7 +311,7 @@ export default function ProductConfigurator({ product }: Props) {
     const itemWidth = THUMB_W + GAP;
     const maxScroll = cont.scrollWidth - cont.clientWidth;
 
-    const nearEnd = activeIndex >= images.length - 2; // ✅ penúltima ou última
+    const nearEnd = activeIndex >= images.length - 2;
     const nearStart = activeIndex <= 1;
 
     let desired = Math.max(0, (activeIndex - 2) * itemWidth);
@@ -330,7 +322,6 @@ export default function ProductConfigurator({ product }: Props) {
     cont.scrollTo({ left: desired, behavior: "smooth" });
   }, [activeIndex, images.length]);
 
-  /* ---------- Sizes ---------- */
   const kid = isKidProduct(product.name);
 
   const sizes: SizeUI[] = useMemo(() => {
@@ -375,15 +366,14 @@ export default function ProductConfigurator({ product }: Props) {
     const sel = selectedSize ? sizes.find((s) => s.size === selectedSize) : null;
     const stock = sel?.stock;
     if (!sel) return null;
-    if (isUnavailable(sel)) return { tone: "danger" as const, text: "This size is sold out." };
+    if (isUnavailable(sel)) return { tone: "danger" as const, text: t("stockSoldOut") };
     if (typeof stock === "number") {
-      if (stock <= 3) return { tone: "warning" as const, text: `Only ${stock} left in this size.` };
-      if (stock <= 8) return { tone: "info" as const, text: "Low stock in this size." };
+      if (stock <= 3) return { tone: "warning" as const, text: t("stockOnlyLeft", { count: stock }) };
+      if (stock <= 8) return { tone: "info" as const, text: t("stockLow") };
     }
-    return { tone: "ok" as const, text: "In stock, ready to ship." };
-  }, [selectedSize, sizes]);
+    return { tone: "ok" as const, text: t("stockReady") };
+  }, [selectedSize, sizes, t]);
 
-  /* ---------- Groups ---------- */
   const customizationGroupFromDb = product.optionGroups.find((g) => g.key === "customization");
 
   const badgesGroupVirtual: OptionGroupUI | undefined = useMemo(() => {
@@ -394,8 +384,8 @@ export default function ProductConfigurator({ product }: Props) {
       label: humanizeBadge(v),
       priceDelta: 0,
     }));
-    return { id: "badges-virtual", key: "badges", label: "Badges", type: "ADDON", required: false, values };
-  }, [product.badges]);
+    return { id: "badges-virtual", key: "badges", label: t("badges"), type: "ADDON", required: false, values };
+  }, [product.badges, t]);
 
   const badgesGroup: OptionGroupUI | undefined = useMemo(() => {
     const real = product.optionGroups.find((g) => g.key === "badges");
@@ -484,15 +474,12 @@ export default function ProductConfigurator({ product }: Props) {
     setError(null);
   }
 
-  /* ---------- Price ---------- */
   const unitJerseyPrice = useMemo(() => product.basePrice, [product.basePrice]);
   const finalPrice = useMemo(() => unitJerseyPrice * qty, [unitJerseyPrice, qty]);
 
-  /* ---------- Sanitize ---------- */
   const safeName = useMemo(() => sanitizeNameUnicode(custName, 14), [custName]);
   const safeNumber = useMemo(() => sanitizeNumber(custNumber, 3), [custNumber]);
 
-  /* ---------- Required groups ---------- */
   const requiredGroups = useMemo(() => {
     const groups: OptionGroupUI[] = [];
     if (effectiveCustomizationGroup) groups.push(effectiveCustomizationGroup);
@@ -529,7 +516,6 @@ export default function ProductConfigurator({ product }: Props) {
     return clamp(Math.round(((step1 + step2 + step3) / 3) * 100), 0, 100);
   }, [selectedSize, missingRequired.length, canAddToCart]);
 
-  /* ---------- Fly-to-cart helpers ---------- */
   function getCartTargetRect(): DOMRect | null {
     if (typeof document === "undefined") return null;
     const anchors = Array.from(document.querySelectorAll<HTMLElement>('[data-cart-anchor="true"]')).filter((el) => {
@@ -598,11 +584,9 @@ export default function ProductConfigurator({ product }: Props) {
     setFly({ key: flyKeyRef.current, src, from, to });
   }
 
-  /* ---------- Navegação ---------- */
   const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
 
-  /* ---------- Sticky CTA (mobile) ---------- */
   const addBtnRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     if (!isMobile) {
@@ -621,7 +605,6 @@ export default function ProductConfigurator({ product }: Props) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isMobile]);
 
-  /* ---------- Add to cart ---------- */
   function buildOptionsForCart() {
     return Object.fromEntries(
       Object.entries(selected).map(([k, v]) => [k, Array.isArray(v) ? (v.length ? v.join(",") : null) : v ?? null])
@@ -629,11 +612,11 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   function validateBeforeAdd(): string | null {
-    if (!selectedSize) return "Please choose a size to continue.";
+    if (!selectedSize) return t("validationChooseSize");
     const sel = sizes.find((s) => s.size === selectedSize);
-    if (!sel || isUnavailable(sel)) return "This size is unavailable. Please choose another.";
-    if (qty < 1) return "Quantity must be at least 1.";
-    if (missingRequired.length > 0) return `Please select: ${missingRequired.join(", ")}.`;
+    if (!sel || isUnavailable(sel)) return t("validationSizeUnavailable");
+    if (qty < 1) return t("validationQuantity");
+    if (missingRequired.length > 0) return t("validationSelect", { fields: missingRequired.join(", ") });
     return null;
   }
 
@@ -669,7 +652,7 @@ export default function ProductConfigurator({ product }: Props) {
 
         if (opts?.goCheckout) router.push("/checkout");
       } catch {
-        setError("Something went wrong while adding to cart. Please try again.");
+        setError(t("addToCartError"));
       }
     });
   }
@@ -684,15 +667,13 @@ export default function ProductConfigurator({ product }: Props) {
     addToCartCore({ goCheckout: true });
   }
 
-  /* ---------- UI ---------- */
   return (
     <div className="w-full flex justify-center overflow-x-hidden px-2">
       <div className="relative w-full max-w-[260px] sm:max-w-[520px] lg:max-w-none flex flex-col gap-6 lg:gap-8 lg:flex-row lg:items-start">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {showToast ? "Item added to cart." : ""}
+          {showToast ? t("itemAddedLive") : ""}
         </div>
 
-        {/* Fly-to-cart overlay */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -741,14 +722,13 @@ export default function ProductConfigurator({ product }: Props) {
             document.body
           )}
 
-        {/* ===== GALLERY ===== */}
         <div className="rounded-2xl border bg-white w-full lg:w-[560px] lg:flex-none lg:self-start p-3 sm:p-4 lg:p-6">
           <div className="flex items-center gap-2 sm:gap-3">
             {images.length > 1 ? (
               <button
                 type="button"
                 onClick={goPrev}
-                aria-label="Previous image"
+                aria-label={t("previousImage")}
                 className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <ChevronLeft />
@@ -782,7 +762,7 @@ export default function ProductConfigurator({ product }: Props) {
                   <button
                     type="button"
                     onClick={goPrev}
-                    aria-label="Previous image"
+                    aria-label={t("previousImage")}
                     className="lg:hidden absolute left-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
                   >
                     <ChevronLeft />
@@ -790,7 +770,7 @@ export default function ProductConfigurator({ product }: Props) {
                   <button
                     type="button"
                     onClick={goNext}
-                    aria-label="Next image"
+                    aria-label={t("nextImage")}
                     className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/90 backdrop-blur shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 z-20"
                   >
                     <ChevronRight />
@@ -803,7 +783,7 @@ export default function ProductConfigurator({ product }: Props) {
               <button
                 type="button"
                 onClick={goNext}
-                aria-label="Next image"
+                aria-label={t("nextImage")}
                 className="group hidden lg:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 backdrop-blur shadow-md hover:shadow-lg hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <ChevronRight />
@@ -828,7 +808,7 @@ export default function ProductConfigurator({ product }: Props) {
                         key={src + i}
                         type="button"
                         onClick={() => setActiveIndex(i)}
-                        aria-label={`Image ${i + 1}`}
+                        aria-label={t("imageNumber", { number: i + 1 })}
                         className={cx(
                           "relative flex-none h-[52px] w-[42px] sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px] rounded-xl border transition focus:outline-none",
                           isActive ? "border-transparent" : "hover:opacity-90"
@@ -849,13 +829,12 @@ export default function ProductConfigurator({ product }: Props) {
           )}
 
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <TrustPill icon={<ShieldIcon />} text="Secure checkout" />
-            <TrustPill icon={<TruckIcon />} text="Tracked shipping" />
-            <TrustPill icon={<ChatIcon />} text="Fast support" />
+            <TrustPill icon={<ShieldIcon />} text={t("trustSecureCheckout")} />
+            <TrustPill icon={<TruckIcon />} text={t("trustTrackedShipping")} />
+            <TrustPill icon={<ChatIcon />} text={t("trustFastSupport")} />
           </div>
         </div>
 
-        {/* ===== CONFIGURATOR ===== */}
         <div className="card w-full p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 min-w-0">
           <header className="space-y-2">
             <div className="rounded-full bg-gray-100 h-2 overflow-hidden" aria-hidden="true">
@@ -873,12 +852,11 @@ export default function ProductConfigurator({ product }: Props) {
                   <span className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900">{money(rawUnitPrice)}</span>
                   {hasDiscount && (
                     <span className="ml-1 text-[11px] sm:text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-                      Save {discountPercent}%
+                      {t("savePercent", { percent: discountPercent })}
                     </span>
                   )}
                 </div>
 
-                {/* REAL rating */}
                 <div className="mt-1 text-[11px] sm:text-xs text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-1">
                   {reviewsLoading ? (
                     <span className="inline-flex items-center gap-2">
@@ -894,7 +872,7 @@ export default function ProductConfigurator({ product }: Props) {
                   ) : (
                     <span className="inline-flex items-center gap-2 text-gray-500">
                       <ReadOnlyStars value={0} />
-                      No reviews yet
+                      {t("noReviewsYet")}
                     </span>
                   )}
 
@@ -917,17 +895,16 @@ export default function ProductConfigurator({ product }: Props) {
                   className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] sm:text-sm text-amber-900"
                   role="status"
                 >
-                  <span className="font-semibold">Heads up:</span> {error}
+                  <span className="font-semibold">{t("headsUp")}</span> {error}
                 </motion.div>
               )}
             </AnimatePresence>
           </header>
 
-          {/* Size */}
           <div data-section="size" className="rounded-2xl border p-3 sm:p-4 bg-white/70">
             <div className="flex items-center justify-between gap-2">
               <div className="mb-2 text-[11px] sm:text-sm text-gray-700">
-                Size ({kid ? "Kids" : "Adult"}) <span className="text-red-500">*</span>
+                {t("size")} ({kid ? t("kids") : t("adult")}) <span className="text-red-500">*</span>
               </div>
 
               <button
@@ -935,7 +912,7 @@ export default function ProductConfigurator({ product }: Props) {
                 onClick={() => setOpenSizeGuide(true)}
                 className="text-[11px] sm:text-xs text-blue-700 hover:underline inline-flex items-center gap-1"
               >
-                Size guide <InfoIcon className="h-3.5 w-3.5" />
+                {t("sizeGuide")} <InfoIcon className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -951,7 +928,7 @@ export default function ProductConfigurator({ product }: Props) {
                       onClick={() => pickSize(s.size)}
                       disabled={unavailable}
                       aria-disabled={unavailable}
-                      title={unavailable ? "Unavailable" : `Select size ${s.size}`}
+                      title={unavailable ? t("unavailable") : t("selectSize", { size: s.size })}
                       className={cx(
                         "rounded-xl px-2.5 py-1.5 border text-[11px] sm:text-xs lg:text-sm transition",
                         unavailable && "opacity-50 line-through cursor-not-allowed",
@@ -966,7 +943,7 @@ export default function ProductConfigurator({ product }: Props) {
                 })}
               </div>
             ) : (
-              <div className="text-sm text-gray-500">No sizes available.</div>
+              <div className="text-sm text-gray-500">{t("noSizesAvailable")}</div>
             )}
 
             {stockHint && (
@@ -984,50 +961,48 @@ export default function ProductConfigurator({ product }: Props) {
             )}
 
             {kid && (
-              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">Ages are approximate. If in between, we recommend sizing up.</p>
+              <p className="mt-2 text-[11px] sm:text-xs text-gray-500">{t("kidsSizeNote")}</p>
             )}
           </div>
 
-          {/* Customization (FREE) */}
           {effectiveCustomizationGroup && effectiveCustomizationGroup.values.length > 0 && (
             <GroupBlock group={effectiveCustomizationGroup} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} forceFree />
           )}
 
-          {/* Personalization */}
           {showNameNumber && (
             <div className="rounded-2xl border p-3 sm:p-4 bg-white/70 space-y-3">
               <div className="text-sm text-gray-700 flex items-center justify-between">
                 <span>
-                  Personalization{" "}
+                  {t("personalization")}{" "}
                   <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                    FREE
+                    {t("free")}
                   </span>
                 </span>
-                <span className="text-[11px] sm:text-xs text-gray-500">Optional</span>
+                <span className="text-[11px] sm:text-xs text-gray-500">{t("optional")}</span>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
                 <label className="block">
-                  <span className="text-[11px] sm:text-xs text-gray-600">Name (uppercase)</span>
+                  <span className="text-[11px] sm:text-xs text-gray-600">{t("nameUppercase")}</span>
                   <input
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. BELLINGHAM"
+                    placeholder={t("namePlaceholder")}
                     value={custName}
                     onChange={(e) => setCustName(e.target.value.slice(0, 14))}
                     maxLength={14}
                   />
                   {custName.length > 0 && safeName !== custName.toUpperCase() && (
                     <span className="mt-1 block text-[10px] text-gray-500">
-                      Will be printed as: <span className="font-semibold">{safeName || "—"}</span>
+                      {t("willBePrintedAs")} <span className="font-semibold">{safeName || "—"}</span>
                     </span>
                   )}
                 </label>
 
                 <label className="block">
-                  <span className="text-[11px] sm:text-xs text-gray-600">Number (0–999)</span>
+                  <span className="text-[11px] sm:text-xs text-gray-600">{t("numberLabel")}</span>
                   <input
                     className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. 5"
+                    placeholder={t("numberPlaceholder")}
                     value={custNumber}
                     onChange={(e) => setCustNumber(e.target.value)}
                     inputMode="numeric"
@@ -1035,17 +1010,16 @@ export default function ProductConfigurator({ product }: Props) {
                   />
                   {custNumber.length > 0 && safeNumber !== custNumber && (
                     <span className="mt-1 block text-[10px] text-gray-500">
-                      Will be printed as: <span className="font-semibold">{safeNumber || "—"}</span>
+                      {t("willBePrintedAs")} <span className="font-semibold">{safeNumber || "—"}</span>
                     </span>
                   )}
                 </label>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-gray-500">Personalization will be printed in the club’s official style.</p>
+              <p className="text-[11px] sm:text-xs text-gray-500">{t("personalizationNote")}</p>
             </div>
           )}
 
-          {/* Badges */}
           {showBadgePicker && badgesGroup && (
             <GroupBlock
               group={badgesGroup}
@@ -1057,18 +1031,16 @@ export default function ProductConfigurator({ product }: Props) {
             />
           )}
 
-          {/* Other groups */}
           {otherGroups.map((g) => (
             <GroupBlock key={g.id} group={g} selected={selected} onPickRadio={setRadio} onToggleAddon={toggleAddon} />
           ))}
 
-          {/* Qty + Total */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <button
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
+                aria-label={t("decreaseQuantity")}
                 disabled={pending}
               >
                 −
@@ -1077,7 +1049,7 @@ export default function ProductConfigurator({ product }: Props) {
               <button
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={() => setQty((q) => q + 1)}
-                aria-label="Increase quantity"
+                aria-label={t("increaseQuantity")}
                 disabled={pending}
               >
                 +
@@ -1085,12 +1057,11 @@ export default function ProductConfigurator({ product }: Props) {
             </div>
 
             <div className="text-right sm:text-left">
-              <div className="text-xs sm:text-sm text-gray-600">Total</div>
+              <div className="text-xs sm:text-sm text-gray-600">{t("total")}</div>
               <div className="text-base sm:text-lg font-semibold">{money(finalPrice)}</div>
             </div>
           </div>
 
-          {/* CTAs */}
           <div className="grid sm:grid-cols-2 gap-2">
             <motion.button
               ref={addBtnRef}
@@ -1106,14 +1077,14 @@ export default function ProductConfigurator({ product }: Props) {
               {justAdded ? (
                 <>
                   <CheckIcon />
-                  Added!
+                  {t("added")}
                 </>
               ) : pending && !buyNow ? (
-                "Adding…"
+                t("adding")
               ) : (
                 <>
                   <CartIcon />
-                  Add to cart
+                  {t("addToCart")}
                 </>
               )}
             </motion.button>
@@ -1123,42 +1094,39 @@ export default function ProductConfigurator({ product }: Props) {
               className="w-full rounded-xl border border-gray-900 bg-gray-900 text-white px-4 py-2.5 text-sm sm:text-base font-semibold hover:bg-black transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
               disabled={pending || !canAddToCart}
             >
-              {pending && buyNow ? "Processing…" : "Buy now"}
+              {pending && buyNow ? t("processing") : t("buyNow")}
             </button>
           </div>
 
-          {/* ✅ ESTE É O “ESPAÇO BOM” (Shipping/Returns/Quality) */}
           <InfoAccordions />
 
-          {/* reassurance */}
           <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
             <div className="grid sm:grid-cols-3 gap-2 text-[11px] sm:text-xs text-gray-700">
               <div className="flex items-start gap-2">
                 <ShieldIcon className="h-4 w-4 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Secure payment</div>
-                  <div className="text-gray-500">Encrypted checkout</div>
+                  <div className="font-semibold">{t("securePayment")}</div>
+                  <div className="text-gray-500">{t("encryptedCheckout")}</div>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <TruckIcon className="h-4 w-4 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Tracked shipping</div>
+                  <div className="font-semibold">{t("trackedShipping")}</div>
                   <div className="text-gray-500">{DELIVERY_TEXT}</div>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <ChatIcon className="h-4 w-4 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Fast support</div>
-                  <div className="text-gray-500">We reply quickly</div>
+                  <div className="font-semibold">{t("fastSupport")}</div>
+                  <div className="text-gray-500">{t("weReplyQuickly")}</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Toast */}
         <AnimatePresence>
           {showToast && (
             <motion.div
@@ -1176,18 +1144,17 @@ export default function ProductConfigurator({ product }: Props) {
                   <CheckIcon className="h-4 w-4 text-green-700" />
                 </div>
                 <div className="text-sm">
-                  <div className="font-semibold">Item added to cart</div>
-                  <div className="text-gray-600">You can keep shopping or proceed to checkout.</div>
+                  <div className="font-semibold">{t("toastTitle")}</div>
+                  <div className="text-gray-600">{t("toastSubtitle")}</div>
                 </div>
                 <button className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100" onClick={() => setShowToast(false)}>
-                  Close
+                  {t("close")}
                 </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Sticky CTA (mobile) */}
         <AnimatePresence>
           {isMobile && stickyCta && (
             <motion.div
@@ -1199,7 +1166,7 @@ export default function ProductConfigurator({ product }: Props) {
             >
               <div className="mx-auto max-w-[520px] flex items-center gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] text-gray-600">Total</div>
+                  <div className="text-[11px] text-gray-600">{t("total")}</div>
                   <div className="text-sm font-semibold truncate">{money(finalPrice)}</div>
                 </div>
 
@@ -1215,7 +1182,7 @@ export default function ProductConfigurator({ product }: Props) {
                   className="ml-auto rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
                   disabled={pending}
                 >
-                  Add
+                  {t("addShort")}
                 </button>
 
                 <button
@@ -1230,14 +1197,13 @@ export default function ProductConfigurator({ product }: Props) {
                   className="rounded-xl bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-black transition disabled:opacity-60"
                   disabled={pending}
                 >
-                  Buy
+                  {t("buyShort")}
                 </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ✅ Size guide modal */}
         {mounted &&
           typeof document !== "undefined" &&
           createPortal(
@@ -1251,68 +1217,69 @@ export default function ProductConfigurator({ product }: Props) {
   );
 }
 
-/* ====================== Info accordions (Shipping/Returns/Quality) ====================== */
 function InfoAccordions() {
+  const t = useTranslations("ProductConfigurator");
+
   return (
     <div className="rounded-2xl border bg-white/70 overflow-hidden">
-      <AccordionRow icon={<TruckIcon className="h-4 w-4" />} title="Shipping & delivery" defaultOpen>
+      <AccordionRow icon={<TruckIcon className="h-4 w-4" />} title={t("shippingDelivery")} defaultOpen>
         <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              <b>Estimated delivery:</b> 7–20 business days (tracked shipping).
+              <b>{t("estimatedDeliveryBold")}</b> {t("estimatedDeliveryText")}
             </span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              You’ll receive a <b>tracking number</b> as soon as your order ships.
+              {t("trackingNumberText1")} <b>{t("trackingNumberBold")}</b> {t("trackingNumberText2")}
             </span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>If you need help with your order, our support replies fast.</span>
+            <span>{t("supportRepliesFast")}</span>
           </li>
         </ul>
       </AccordionRow>
 
       <Divider />
 
-      <AccordionRow icon={<RotateIcon className="h-4 w-4" />} title="Returns & support">
+      <AccordionRow icon={<RotateIcon className="h-4 w-4" />} title={t("returnsSupport")}>
         <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Got a problem? Contact us and we’ll make it right (support & guidance).</span>
+            <span>{t("gotProblem")}</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              Please keep the product <b>unused</b> and in original condition if a return is needed.
+              {t("keepProductText1")} <b>{t("unusedBold")}</b> {t("keepProductText2")}
             </span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Personalized items may have different return rules (name/number printing).</span>
+            <span>{t("personalizedItemsRule")}</span>
           </li>
         </ul>
       </AccordionRow>
 
       <Divider />
 
-      <AccordionRow icon={<StarBadgeIcon className="h-4 w-4" />} title="Quality details">
+      <AccordionRow icon={<StarBadgeIcon className="h-4 w-4" />} title={t("qualityDetails")}>
         <ul className="space-y-2 text-xs sm:text-sm text-gray-700">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>High-quality stitching & print finish.</span>
+            <span>{t("qualityStitching")}</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Comfortable fabric for daily wear.</span>
+            <span>{t("qualityComfort")}</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              For the best fit, use our <b>Size Guide</b> (recommended).
+              {t("bestFitText1")} <b>{t("sizeGuideBold")}</b> {t("bestFitText2")}
             </span>
           </li>
         </ul>
@@ -1350,7 +1317,6 @@ function AccordionRow({
   );
 }
 
-/* ====================== Group Subcomponent ====================== */
 function GroupBlock({
   group,
   selected,
@@ -1366,6 +1332,8 @@ function GroupBlock({
   onToggleBadge?: (group: OptionGroupUI, value: string, checked: boolean) => void;
   forceFree?: boolean;
 }) {
+  const t = useTranslations("ProductConfigurator");
+
   if (group.type === "SIZE") return null;
 
   if (group.type === "RADIO") {
@@ -1396,7 +1364,7 @@ function GroupBlock({
                   <span className="text-sm">{v.label}</span>
                 </div>
                 {forceFree ? (
-                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+                  <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">{t("free")}</span>
                 ) : null}
               </label>
             );
@@ -1439,7 +1407,7 @@ function GroupBlock({
                 <span className="text-sm">{v.label}</span>
               </div>
               {forceFree ? (
-                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">FREE</span>
+                <span className="text-[11px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded">{t("free")}</span>
               ) : null}
             </label>
           );
@@ -1449,8 +1417,8 @@ function GroupBlock({
   );
 }
 
-/* ====================== Size Guide Modal ====================== */
 function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultTab: "adult" | "kids" }) {
+  const t = useTranslations("ProductConfigurator");
   const [tab, setTab] = useState<"adult" | "kids">(defaultTab);
   const [unit, setUnit] = useState<Unit>("cm");
   const kids = useMemo(() => makeKidsTable(), []);
@@ -1483,11 +1451,11 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
       >
         <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold">Size Guide</div>
-            <div className="text-[11px] text-gray-500">Switch Adult/Kids and cm/inches.</div>
+            <div className="text-sm font-semibold">{t("sizeGuide")}</div>
+            <div className="text-[11px] text-gray-500">{t("sizeGuideSwitchText")}</div>
           </div>
-          <button onClick={onClose} className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100" aria-label="Close">
-            Close
+          <button onClick={onClose} className="rounded-lg px-2 py-1 text-sm hover:bg-gray-100" aria-label={t("close")}>
+            {t("close")}
           </button>
         </div>
 
@@ -1502,7 +1470,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                 onClick={() => setTab("adult")}
                 type="button"
               >
-                Adult
+                {t("adult")}
               </button>
               <button
                 className={cx(
@@ -1512,7 +1480,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                 onClick={() => setTab("kids")}
                 type="button"
               >
-                Kids
+                {t("kids")}
               </button>
             </div>
 
@@ -1535,14 +1503,14 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                 onClick={() => setUnit("in")}
                 type="button"
               >
-                inches
+                {t("inches")}
               </button>
             </div>
           </div>
 
           <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
             <div className="px-3 sm:px-4 py-2 bg-gray-50 border-b text-xs sm:text-sm">
-              Units: <b>{unit === "cm" ? "centimetres (cm)" : "inches (in)"}</b>
+              {t("units")}: <b>{unit === "cm" ? t("centimetres") : t("inchesFull")}</b>
             </div>
 
             <div className="-mx-4 sm:mx-0 overflow-x-auto">
@@ -1558,7 +1526,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <thead>
                       <tr className="bg-gray-50">
                         <th className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300">
-                          Measurement
+                          {t("measurement")}
                         </th>
                         {ADULT.sizes.map((s) => (
                           <th
@@ -1573,7 +1541,9 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <tbody>
                       {(["Length", "Width", "Height", "Weight"] as AdultRowKey[]).map((key, i) => (
                         <tr key={key} className={i % 2 ? "bg-white" : "bg-gray-50/40"}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">{key}</td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                            {t(`adultRow.${key}` as any)}
+                          </td>
                           {ADULT.sizes.map((s) => (
                             <td
                               key={s}
@@ -1597,7 +1567,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="text-center px-3 sm:px-4 py-2 sm:py-3 font-medium border border-gray-300">
-                          Measurement
+                          {t("measurement")}
                         </th>
                         {kids.sizes.map((s) => (
                           <th
@@ -1612,7 +1582,9 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
                     <tbody>
                       {(["Jersey length", "Chest (bust)", "Height", "Shorts length"] as KidsRowKey[]).map((rowKey, idx) => (
                         <tr key={rowKey} className={idx % 2 ? "bg-white" : "bg-gray-50/40"}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">{rowKey}</td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 font-semibold border border-gray-300 text-center">
+                            {t(`kidsRow.${rowKey}` as any)}
+                          </td>
                           {kids.sizes.map((s) => (
                             <td
                               key={s}
@@ -1630,7 +1602,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
             </div>
           </div>
 
-          <div className="text-[12px] text-gray-500">Tip: If you’re between sizes, we recommend sizing up for a more comfortable fit.</div>
+          <div className="text-[12px] text-gray-500">{t("sizeGuideTip")}</div>
         </div>
 
         <div className="px-4 py-3 border-t">
@@ -1638,7 +1610,7 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
             className="w-full rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
             onClick={onClose}
           >
-            Got it
+            {t("gotIt")}
           </button>
         </div>
       </motion.div>
@@ -1646,7 +1618,6 @@ function SizeGuideModal({ onClose, defaultTab }: { onClose: () => void; defaultT
   );
 }
 
-/* ====================== Stars (read-only) ====================== */
 function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
   const v = clamp(value, 0, 5);
   const full = Math.floor(v);
@@ -1673,7 +1644,6 @@ function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
-/* ====================== Trust pill ====================== */
 function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="rounded-xl border bg-gray-50 px-2.5 py-2 text-[11px] sm:text-xs text-gray-700 flex items-center justify-center gap-2">
@@ -1683,7 +1653,6 @@ function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
   );
 }
 
-/* ====================== Icons ====================== */
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">

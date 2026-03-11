@@ -1,0 +1,1110 @@
+{
+  "HomePage": {
+    "badge": "Lançamentos favoritos dos fãs",
+    "viewDetails": "Ver detalhes",
+    "viewAllArrow": "Ver tudo →",
+    "promoAlt": "Ofertas por tempo limitado",
+    "noProducts": "Ainda não há produtos para mostrar. Veja o catálogo completo.",
+    "hero": {
+      "badge1": "Lançamentos favoritos dos fãs",
+      "badge2": "Checkout seguro",
+      "badge3": "Envio com tracking",
+      "title": "A camisola que quer, feita por encomenda e enviada para todo o mundo.",
+      "description": "Compre camisolas de clubes e seleções, além de designs concept exclusivos. Escolha o seu tamanho, adicione nome e número (grátis), e enviaremos a sua encomenda com tracking do início ao fim.",
+      "shopButton": "Comprar Mais Vendidas",
+      "deliveryLabel": "Entrega típica:",
+      "deliveryValue": "7–20 dias úteis",
+      "features": {
+        "shipping": "Entrega mundial com tracking",
+        "pricing": "Preços justos",
+        "checkout": "Checkout seguro",
+        "support": "Suporte via Instagram"
+      }
+    },
+    "trustMarquee": {
+      "shipping": "ENVIO COM TRACKING INCLUÍDO",
+      "checkout": "CHECKOUT SEGURO (STRIPE)",
+      "payments": "MB WAY • MULTIBANCO • PAYPAL",
+      "personalization": "PERSONALIZAÇÃO DE NOME E NÚMERO",
+      "worldwide": "ENTREGA PARA TODO O MUNDO",
+      "exchange": "TROCA DE TAMANHO EM 14 DIAS (POLÍTICA APLICA-SE)",
+      "instagram": "SUPORTE VIA INSTAGRAM"
+    },
+    "spaces": {
+      "adult": {
+        "label": "Adulto",
+        "subtitle": "Tamanhos S–2XL"
+      },
+      "kids": {
+        "label": "Criança",
+        "subtitle": "Idades 2–13"
+      },
+      "retro": {
+        "label": "Retro",
+        "subtitle": "Clássicos intemporais"
+      },
+      "concept": {
+        "label": "Concept Kits",
+        "subtitle": "Designs originais"
+      }
+    },
+    "customers": {
+      "badge": "Avaliações dos Clientes",
+      "title": "Fotos reais. Feedback real.",
+      "text1": "Quer aparecer em destaque? Envie a sua review + foto por mensagem no Instagram em",
+      "sideNote": "Envio com tracking • Checkout seguro",
+      "review1": "Qualidade incrível e as costuras estão perfeitas. As atualizações de tracking foram claras e vou encomendar novamente.",
+      "review2": "Ótima relação qualidade/preço. A entrega demorou um pouco mais do que esperava, mas a camisola superou as minhas expectativas."
+    },
+    "collections": {
+      "title": "Comprar por coleção",
+      "subtitle": "Comece por uma categoria — depois escolha o seu design favorito."
+    },
+    "curated": {
+      "badge": "Escolhas selecionadas",
+      "title": "As melhores escolhas em todos os estilos",
+      "subtitle": "Faça scroll, clique e explore. Todos os produtos incluem envio com tracking e checkout seguro.",
+      "saveNote": "Poupe até 70% face aos preços oficiais"
+    },
+    "worldCup": {
+      "title": "Camisolas do FIFA World Cup 2026",
+      "subtitle": "Seleção exclusiva do Mundial 2026."
+    },
+    "groups": {
+      "jerseys": "Camisolas",
+      "retro": "Retro",
+      "conceptSpecial": "Concept & Especiais",
+      "training": "Treino",
+      "kidsWomen": "Criança & Mulher"
+    },
+    "categories": {
+      "currentSeason": {
+        "title": "Novidades da Época 25/26",
+        "subtitle": "Últimos lançamentos de clubes e seleções (corte não player)"
+      },
+      "jerseys": {
+        "title": "Camisolas Clássicas (Manga Curta)",
+        "subtitle": "Corte regular, a escolha mais popular"
+      },
+      "longSleeve": {
+        "title": "Camisolas de Manga Comprida",
+        "subtitle": "Manga comprida, corte não player"
+      },
+      "playerVersion": {
+        "title": "Versão Jogador (Corte de Campo)",
+        "subtitle": "Corte slim como os profissionais"
+      },
+      "playerVersionLongSleeve": {
+        "title": "Versão Jogador (Manga Comprida)",
+        "subtitle": "Corte de campo com manga comprida"
+      },
+      "retro": {
+        "title": "Camisolas Retro",
+        "subtitle": "Clássicos icónicos de épocas lendárias"
+      },
+      "retroLongSleeve": {
+        "title": "Retro Manga Comprida",
+        "subtitle": "Designs retro com manga comprida"
+      },
+      "conceptKits": {
+        "title": "Concept Kits",
+        "subtitle": "Designs originais que não encontra em lojas"
+      },
+      "preMatch": {
+        "title": "Pre-Match Tops",
+        "subtitle": "Estilos de aquecimento e pré-jogo"
+      },
+      "tracksuits": {
+        "title": "Fatos de Treino",
+        "subtitle": "Roupa casual para adeptos"
+      },
+      "trainingSleeveless": {
+        "title": "Conjuntos de Treino Sem Mangas",
+        "subtitle": "Conjunto de top + calções"
+      },
+      "trainingTracksuit": {
+        "title": "Fatos de Treino de Treino",
+        "subtitle": "Conjuntos de top de treino + calças"
+      },
+      "kidsKits": {
+        "title": "Equipamentos de Criança",
+        "subtitle": "Conjuntos completos para jovens adeptos"
+      },
+      "cropTops": {
+        "title": "Crop Tops",
+        "subtitle": "Tops curtos com estilo"
+      }
+    },
+    "howSection": {
+      "title": "Como funciona",
+      "subtitle": "Simples, rápido e com tracking do início ao fim."
+    },
+    "how": {
+      "choose": {
+        "title": "Escolha a sua camisola",
+        "text": "Escolha um equipamento de clube ou seleção (ou um concept exclusivo)."
+      },
+      "options": {
+        "title": "Selecione tamanho e opções",
+        "text": "Escolha o seu tamanho e adicione nome e número se quiser."
+      },
+      "made": {
+        "title": "Feito por encomenda",
+        "text": "O seu artigo é produzido por encomenda com grande atenção ao detalhe."
+      },
+      "delivery": {
+        "title": "Entrega com tracking",
+        "text": "Entrega mundial em 7–20 dias úteis com tracking."
+      }
+    },
+    "cta": {
+      "title": "Escolha a sua próxima camisola com confiança",
+      "subtitle": "Checkout seguro, envio com tracking e designs favoritos dos fãs — tudo num só lugar.",
+      "item1": "Personalização de nome e número",
+      "item2": "Pagamentos seguros via Stripe",
+      "item3": "Envio económico com tracking",
+      "shopNow": "Comprar agora",
+      "readFaq": "Ler FAQ"
+    },
+    "guarantees": {
+      "guarantee": {
+        "title": "Garantia de 14 dias",
+        "text": "Troca de tamanho/ajuste em 14 dias (política aplica-se)."
+      },
+      "checkout": {
+        "title": "Checkout seguro",
+        "text": "Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link — tudo processado com segurança via Stripe."
+      },
+      "made": {
+        "title": "Feito por encomenda",
+        "text": "Costuras detalhadas e estampagens nítidas."
+      },
+      "support": {
+        "title": "Suporte rápido",
+        "text": "Suporte em inglês por email e Instagram."
+      }
+    },
+    "faqSection": {
+      "title": "Perguntas frequentes"
+    },
+    "faq": {
+      "shipping": {
+        "q": "Quanto tempo demora o envio?",
+        "a": "A entrega demora 7–20 dias úteis. Receberá um código de tracking em todas as encomendas."
+      },
+      "personalization": {
+        "q": "Posso adicionar nome e número?",
+        "a": "Sim — pode personalizar a maioria das camisolas com nome e número."
+      },
+      "payments": {
+        "q": "Que métodos de pagamento são aceites?",
+        "a": "Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay e MB Way (via Stripe)."
+      },
+      "tracking": {
+        "q": "Como posso acompanhar a minha encomenda?",
+        "a": "Depois da sua encomenda ser enviada, receberá um email com o código de tracking e um link de acompanhamento."
+      },
+      "countries": {
+        "q": "Para que países enviam?",
+        "a": "Enviamos para todo o mundo. Os prazos de entrega variam consoante o destino."
+      },
+      "size": {
+        "q": "Como escolho o tamanho certo?",
+        "a": "Consulte a página do Guia de Tamanhos para medidas e dicas de ajuste."
+      }
+    }
+  },
+  "termsPage": {
+    "metadata": {
+      "title": "Termos de Serviço — FootballWorld",
+      "description": "Termos de Serviço da FootballWorld: encomendas, preços, envios, devoluções, personalizações, pagamentos, promoções, propriedade intelectual, utilização aceitável, responsabilidade, lei e contacto."
+    },
+    "hero": {
+      "title": "Termos de Serviço",
+      "description": "Estes Termos regulam a sua utilização da FootballWorld e quaisquer compras feitas aqui. Ao utilizar o nosso site, concorda com estes Termos. Para saber como recolhemos e tratamos os seus dados, consulte a nossa <privacy>Política de Privacidade</privacy>.",
+      "badges": {
+        "clear": "Política clara e simples",
+        "updated": "Última atualização: 09 Set 2025"
+      },
+      "quickLinks": {
+        "returns": "Devoluções e Reembolsos",
+        "payments": "Pagamentos"
+      }
+    },
+    "sidebar": {
+      "title": "Nesta página",
+      "links": {
+        "shipping": "Envio e Tracking",
+        "return": "Iniciar devolução"
+      },
+      "stats": {
+        "reply": {
+          "label": "Resposta média",
+          "value": "24–48h"
+        },
+        "coverage": {
+          "label": "Cobertura",
+          "value": "Mundial"
+        }
+      }
+    },
+    "sections": {
+      "intro": {
+        "label": "Introdução",
+        "title": "Introdução",
+        "body": "Estes Termos (“Termos”) aplicam-se ao website FootballWorld e às encomendas efetuadas através dele. Se não concordar, não utilize o site. Quando leis obrigatórias de defesa do consumidor no seu país concederem proteções adicionais, essas proteções prevalecem.",
+        "callout": "Dica: guarde o email de confirmação da encomenda — inclui o seu número de encomenda e links úteis."
+      },
+      "account": {
+        "label": "Elegibilidade e Conta",
+        "title": "Elegibilidade e Conta",
+        "items": [
+          "Deve ter capacidade legal para contratar na sua jurisdição.",
+          "É responsável pela atividade da sua conta e por manter as credenciais seguras.",
+          "Podemos suspender/encerrar contas por fraude, abuso ou violação destes Termos."
+        ]
+      },
+      "ordering": {
+        "label": "Processo de Encomenda",
+        "title": "Processo de Encomenda",
+        "items": [
+          "Receberá um email a confirmar a sua encomenda. O contrato é formado quando enviamos a confirmação de expedição/envio.",
+          "Reservamo-nos o direito de recusar/cancelar devido a stock, suspeita de fraude ou erro de preço (receberá reembolso).",
+          "Verifique as personalizações; os artigos são produzidos exatamente como foram introduzidos."
+        ]
+      },
+      "pricing": {
+        "label": "Preços e Taxas",
+        "title": "Preços e Taxas",
+        "items": [
+          "Os preços são normalmente em EUR, salvo indicação em contrário.",
+          "Impostos, taxas alfandegárias e taxas de importação podem ser cobrados pela transportadora no destino, dependendo do seu país.",
+          "Erros óbvios de preço podem ser corrigidos; entraremos em contacto antes do processamento."
+        ]
+      },
+      "shipping": {
+        "label": "Envio e Entrega",
+        "title": "Envio e Entrega",
+        "body": "Os tempos de produção e trânsito são estimativas e podem variar conforme a transportadora e a alfândega. Para um guia detalhado e dicas de tracking em tempo real, consulte <shipping>Envio e Tracking</shipping>.",
+        "stats": {
+          "production": {
+            "label": "Produção média",
+            "value": "3–5 dias"
+          },
+          "transit": {
+            "label": "Trânsito típico",
+            "value": "7-9 dias úteis"
+          },
+          "coverage": {
+            "label": "Cobertura",
+            "value": "Mundial"
+          }
+        }
+      },
+      "custom": {
+        "label": "Produtos Personalizados",
+        "title": "Produtos Personalizados",
+        "items": [
+          "Artigos personalizados (ex.: nome/número) são feitos por encomenda e não podem ser devolvidos, salvo defeito.",
+          "Verifique a ortografia, o número e o tamanho antes do checkout."
+        ],
+        "callout": "Antes de personalizar, consulte o nosso <sizeGuide>Guia de Tamanhos</sizeGuide> para garantir que o ajuste é perfeito."
+      },
+      "returns": {
+        "label": "Devoluções e Reembolsos",
+        "title": "Devoluções e Reembolsos",
+        "body": "Os artigos elegíveis podem ser devolvidos de acordo com a nossa política de <returns>Devoluções e Trocas</returns>. Os artigos devem ser novos, sem uso e com etiquetas. Artigos personalizados: apenas se estiverem defeituosos ou danificados."
+      },
+      "cancel": {
+        "label": "Cancelamentos e Alterações",
+        "title": "Cancelamentos e Alterações",
+        "items": [
+          "Processamos encomendas rapidamente — contacte-nos imediatamente para alterações/cancelamentos.",
+          "As encomendas já em produção ou enviadas não podem ser alteradas/canceladas. Os artigos personalizados normalmente entram em produção pouco depois da compra."
+        ]
+      },
+      "product": {
+        "label": "Informação do Produto e Tamanhos",
+        "title": "Informação do Produto e Tamanhos",
+        "body": "As cores podem variar ligeiramente devido às definições do ecrã. Para medidas e ajuste, consulte o <sizeGuide>Guia de Tamanhos</sizeGuide>."
+      },
+      "payments": {
+        "label": "Pagamentos e Segurança",
+        "title": "Pagamentos e Segurança",
+        "items": [
+          "Os pagamentos são tratados por processadores de confiança (ex.: Stripe, PayPal, Amazon Pay). Não armazenamos números completos de cartão.",
+          "Podemos realizar verificações antifraude para proteger os clientes e a loja."
+        ],
+        "callout": "Os dados de pagamento são tratados de forma segura por esses fornecedores. Consulte também as respetivas políticas de privacidade e segurança."
+      },
+      "promos": {
+        "label": "Promoções",
+        "title": "Promoções e Códigos de Desconto",
+        "items": [
+          "Os códigos devem ser aplicados no checkout e não podem ser aplicados retroativamente.",
+          "As promoções podem ser modificadas ou retiradas a qualquer momento."
+        ]
+      },
+      "ip": {
+        "label": "Propriedade Intelectual",
+        "title": "Propriedade Intelectual",
+        "body": "Todo o conteúdo (imagens, texto, gráficos e designs) é propriedade/licenciado da FootballWorld e protegido por lei. A utilização sem autorização prévia é proibida."
+      },
+      "acceptable": {
+        "label": "Utilização Aceitável",
+        "title": "Utilização Aceitável",
+        "items": [
+          "Não realize atividades ilegais, fraudulentas, que infrinjam direitos ou sejam prejudiciais.",
+          "Não interfira com a segurança, funcionamento do site ou experiência de outros utilizadores.",
+          "Sem scraping automatizado ou reutilização de conteúdo sem autorização."
+        ]
+      },
+      "third": {
+        "label": "Links de Terceiros",
+        "title": "Links de Terceiros",
+        "body": "Podemos referenciar sites de terceiros. Não somos responsáveis pelo respetivo conteúdo, políticas ou práticas — aceda por sua conta e risco e reveja os seus termos e avisos de privacidade."
+      },
+      "warranty": {
+        "label": "Garantias e Responsabilidade",
+        "title": "Garantias e Responsabilidade",
+        "items": [
+          "O site é fornecido “tal como está” e “conforme disponível”. Na máxima medida permitida por lei, excluímos garantias implícitas.",
+          "Não somos responsáveis por perdas indiretas ou consequenciais. A nossa responsabilidade total por qualquer reclamação limita-se ao montante pago pelo produto em causa.",
+          "Nada nestes Termos limita direitos do consumidor que não possam ser excluídos pela lei aplicável."
+        ]
+      },
+      "law": {
+        "label": "Lei Aplicável",
+        "title": "Lei Aplicável e Litígios",
+        "body": "Estes Termos são regidos pelas leis aplicáveis no nosso principal local de negócio, sem consideração pelas regras de conflitos de leis. Os litígios serão submetidos aos tribunais competentes desse local, sem prejuízo das proteções obrigatórias do consumidor no seu país."
+      },
+      "contact": {
+        "label": "Contacto",
+        "title": "Contacto",
+        "body": "Tem dúvidas sobre estes Termos? Contacte-nos através de <contact>Contacto</contact> ou por email para <email>myfootballworldstore@gmail.com</email>.",
+        "buttons": {
+          "privacy": "Política de Privacidade",
+          "returns": "Devoluções e Trocas"
+        }
+      }
+    }
+  },
+  "shippingPolicyPage": {
+    "metadata": {
+      "title": "Política de Envio — FootballWorld",
+      "description": "Política de Envio da FootballWorld: tempos de processamento, transportadoras, taxas, estimativas de entrega, tracking, alfândega/taxas, entregas falhadas, encomendas perdidas e contacto."
+    },
+    "hero": {
+      "badge": "Informação de envio transparente",
+      "title": "Política de Envio",
+      "description": "Aqui explicamos como processamos, enviamos e acompanhamos a sua encomenda. Se precisar de ajuda prática, visite <shippingTracking>Envio e Tracking</shippingTracking> para dicas e ferramentas em tempo real.",
+      "quickLinks": {
+        "customs": "Alfândega e Taxas",
+        "lost": "Encomendas perdidas"
+      }
+    },
+    "sidebar": {
+      "title": "Nesta página",
+      "links": {
+        "shippingTracking": "Envio e Tracking",
+        "startReturn": "Iniciar devolução"
+      },
+      "stats": {
+        "production": {
+          "label": "Produção",
+          "value": "2–6 dias"
+        },
+        "worldwide": {
+          "label": "Mundial",
+          "value": "Sim"
+        }
+      }
+    },
+    "sections": {
+      "intro": {
+        "label": "Introdução",
+        "title": "Introdução",
+        "body": "Enviamos para todo o mundo a partir das nossas instalações parceiras. Os tempos de processamento e trânsito são estimativas e podem variar devido ao volume, alfândega, condições meteorológicas e desempenho da transportadora."
+      },
+      "processing": {
+        "label": "Tempos de Processamento",
+        "title": "Tempos de Processamento",
+        "items": [
+          "Produção standard: 2–5 dias úteis para a maioria dos artigos.",
+          "Produtos personalizados/custom: normalmente 3–6 dias úteis.",
+          "Encomendas feitas ao fim de semana ou em feriados começam a ser processadas no dia útil seguinte."
+        ],
+        "stats": {
+          "standard": {
+            "label": "Produção standard",
+            "value": "2–5 dias"
+          },
+          "personalized": {
+            "label": "Artigos personalizados",
+            "value": "3–6 dias"
+          },
+          "cutoff": {
+            "label": "Corte",
+            "value": "Seg–Sex"
+          }
+        }
+      },
+      "carriers": {
+        "label": "Transportadoras e Métodos",
+        "title": "Transportadoras e Métodos",
+        "body": "Utilizamos parceiros postais e de courier fiáveis (varia consoante o destino) para entregar com segurança e rapidez. Receberá uma confirmação de envio com um link de tracking quando a encomenda sair das nossas instalações."
+      },
+      "rates": {
+        "label": "Taxas e Envio Grátis",
+        "title": "Taxas e Envio Grátis",
+        "items": [
+          "As taxas de envio são mostradas no checkout com base no destino, peso e método.",
+          "Ocasionalmente podemos oferecer promoções de envio grátis (veja o banner no topo do site).",
+          "Quaisquer encargos alfandegários adicionais são separados das taxas de envio cobradas no checkout."
+        ]
+      },
+      "estimates": {
+        "label": "Estimativas de Entrega",
+        "title": "Estimativas de Entrega (após expedição)",
+        "body": "Prazos típicos de trânsito abaixo. Áreas remotas podem necessitar de mais tempo.",
+        "regions": {
+          "europe": {
+            "label": "Europa",
+            "value": "7–9 dias úteis"
+          },
+          "northAmerica": {
+            "label": "América do Norte",
+            "value": "10–15 dias úteis"
+          },
+          "southAmerica": {
+            "label": "América do Sul",
+            "value": "15–20 dias úteis"
+          },
+          "asia": {
+            "label": "Ásia",
+            "value": "10–12 dias úteis"
+          },
+          "oceania": {
+            "label": "Oceânia",
+            "value": "9–12 dias úteis"
+          },
+          "middleEast": {
+            "label": "Médio Oriente",
+            "value": "7–15 dias úteis"
+          }
+        },
+        "callout": "As estimativas não incluem o tempo de produção/processamento. Inspeções alfandegárias podem prolongar a entrega."
+      },
+      "tracking": {
+        "label": "Tracking",
+        "title": "Tracking",
+        "body": "Use o link no seu email de envio ou visite <shippingTracking>Envio e Tracking</shippingTracking> para ferramentas da transportadora, resolução de problemas e explicações de estado."
+      },
+      "address": {
+        "label": "Alterações de Morada",
+        "title": "Alterações e Correções de Morada",
+        "items": [
+          "Contacte-nos imediatamente se introduziu a morada errada. Só conseguimos editar antes do envio.",
+          "Depois de estar em trânsito, alterações de morada raramente são possíveis e podem implicar uma taxa de reenvio se a encomenda regressar até nós."
+        ]
+      },
+      "customs": {
+        "label": "Alfândega e Taxas",
+        "title": "Alfândega, Taxas e Impostos",
+        "items": [
+          "Encomendas internacionais podem estar sujeitas a direitos de importação, impostos e taxas cobrados pelo país de destino.",
+          "Esses encargos são da responsabilidade do destinatário e não estão incluídos nos nossos preços de produto ou envio (salvo indicação explícita).",
+          "O processamento alfandegário pode adicionar tempo à janela de entrega."
+        ]
+      },
+      "failed": {
+        "label": "Entrega Falhada",
+        "title": "Entrega Falhada / Devolvida ao Remetente",
+        "items": [
+          "Se a entrega falhar devido a morada incorreta, indisponibilidade ou não levantamento, a transportadora pode devolver a encomenda.",
+          "Podemos reenviar quando ela regressar (custos adicionais de envio podem aplicar-se).",
+          "Se preferir reembolso após devolução, os portes não são reembolsáveis e os artigos personalizados não são elegíveis, exceto se tiverem defeito."
+        ]
+      },
+      "lost": {
+        "label": "Perdidas / Atrasadas",
+        "title": "Encomendas Perdidas ou Muito Atrasadas",
+        "items": [
+          "Se o tracking não atualizar durante vários dias, consulte primeiro as nossas dicas na página de Envio e Tracking.",
+          "Contacte-nos se a encomenda parecer perdida; abriremos uma investigação com a transportadora.",
+          "As resoluções podem incluir substituição ou reembolso, dependendo do resultado da investigação e do tipo de produto."
+        ]
+      },
+      "split": {
+        "label": "Envios Separados",
+        "title": "Envios Separados",
+        "body": "Encomendas com vários artigos podem ser enviadas separadamente para acelerar a entrega. Receberá números de tracking separados quando aplicável."
+      },
+      "preorders": {
+        "label": "Pré-encomendas",
+        "title": "Pré-encomendas e Back-orders",
+        "body": "Os produtos em pré-encomenda são enviados quando estiverem disponíveis. As janelas estimadas de envio são mostradas na página do produto e na confirmação da encomenda. Toda a encomenda pode ser retida para envio conjunto, salvo indicação em contrário."
+      },
+      "holidays": {
+        "label": "Feriados e Picos",
+        "title": "Feriados e Períodos de Pico",
+        "body": "Durante épocas de pico (ex.: Black Friday, férias de dezembro), a produção e as transportadoras podem sofrer atrasos. Faça a sua encomenda cedo para permitir mais tempo."
+      },
+      "force": {
+        "label": "Força Maior",
+        "title": "Interrupções de Serviço / Força Maior",
+        "body": "Não somos responsáveis por atrasos causados por eventos fora do nosso controlo (ex.: clima severo, greves, restrições pandémicas, fechos alfandegários). Trabalhamos sempre com as transportadoras para minimizar o impacto e mantê-lo informado."
+      },
+      "contact": {
+        "label": "Contacto",
+        "title": "Precisa de ajuda com o envio?",
+        "body": "Visite <shippingTracking>Envio e Tracking</shippingTracking> para soluções passo a passo. Ainda com dificuldades? <contactSupport>Contacte o Suporte</contactSupport> ou envie email para <email>myfootballworldstore@gmail.com</email>.",
+        "buttons": {
+          "returns": "Devoluções e Trocas",
+          "sizeGuide": "Guia de Tamanhos"
+        }
+      }
+    }
+  },
+  "returnRefundPolicyPage": {
+    "metadata": {
+      "title": "Política de Devolução e Reembolso — FootballWorld",
+      "description": "Como funcionam as devoluções, trocas e reembolsos na FootballWorld: elegibilidade, prazos, artigos não devolvíveis, produtos personalizados, custos e como iniciar uma devolução."
+    },
+    "hero": {
+      "badge": "Devoluções simples (resumo da política)",
+      "title": "Política de Devolução e Reembolso",
+      "description": "Queremos que adore a sua camisola. Abaixo encontra como funcionam devoluções, trocas e reembolsos. Para um processo guiado, use <returns>Devoluções e Trocas</returns>.",
+      "quickLinks": {
+        "refunds": "Reembolsos",
+        "defective": "Defeituoso"
+      }
+    },
+    "sidebar": {
+      "title": "Nesta página",
+      "links": {
+        "return": "Iniciar devolução",
+        "contact": "Contactar suporte"
+      },
+      "stats": {
+        "window": {
+          "label": "Prazo de devolução",
+          "value": "14 dias"
+        },
+        "refund": {
+          "label": "Tempo de reembolso",
+          "value": "2–5 dias úteis"
+        }
+      }
+    },
+    "sections": {
+      "intro": {
+        "label": "Introdução",
+        "title": "Introdução",
+        "body": "Esta política aplica-se a compras feitas diretamente na <brand>FootballWorld</brand>. Se comprou através de um marketplace de terceiros, consulte as regras de devolução deles. Os seus direitos legais mantêm-se inalterados quando aplicável."
+      },
+      "window": {
+        "label": "Prazo de Devolução",
+        "title": "Prazo de devolução",
+        "items": [
+          "Pode pedir uma devolução ou troca até 14 dias após a entrega.",
+          "O prazo conta a partir do dia em que o tracking marca a encomenda como entregue.",
+          "Para presentes de épocas festivas, podemos alargar o prazo — consulte o aviso sazonal ou contacte o suporte."
+        ],
+        "callout": "Dica: inicie a devolução assim que decidir. Início mais rápido = resolução mais rápida."
+      },
+      "condition": {
+        "label": "Estado do Artigo",
+        "title": "Requisitos de estado do artigo",
+        "items": [
+          "Sem uso, sem lavagem e em estado original.",
+          "Todas as etiquetas, selos de higiene e embalagem intactos.",
+          "Sem cheiros (ex.: perfume, fumo) nem sinais de uso.",
+          "Inclua quaisquer brindes/ofertas que vieram com a encomenda."
+        ],
+        "callout": "Artigos devolvidos em condição não revenda podem ser recusados ou sujeitos a reembolso parcial."
+      },
+      "nonreturn": {
+        "label": "Artigos Não Devolvíveis",
+        "title": "Artigos não devolvíveis",
+        "items": [
+          "Artigos de venda final claramente marcados como não devolvíveis.",
+          "Cartões-presente e produtos descarregáveis.",
+          "Artigos usados ou lavados."
+        ]
+      },
+      "personalized": {
+        "label": "Artigos Personalizados",
+        "title": "Produtos personalizados / custom",
+        "items": [
+          "Camisolas personalizadas (ex.: nome/número impresso, badges) não podem ser devolvidas nem reembolsadas, exceto se tiverem defeito ou se o erro for nosso.",
+          "Verifique cuidadosamente a ortografia, números e tamanho antes de encomendar."
+        ],
+        "callout": "Se um artigo personalizado chegar danificado ou incorreto, iremos reparar, substituir ou reembolsar consoante o problema — contacte-nos imediatamente com fotos."
+      },
+      "start": {
+        "label": "Iniciar Devolução",
+        "title": "Como iniciar uma devolução",
+        "items": [
+          "Vá à página dedicada: <returns>Devoluções e Trocas</returns>.",
+          "Use o número da encomenda e o email para pedir uma etiqueta ou instruções.",
+          "Embale os artigos com segurança; inclua o comprovativo da encomenda ou uma nota com nome, email e número da encomenda."
+        ],
+        "buttons": {
+          "return": "Iniciar devolução",
+          "contact": "Contactar suporte"
+        }
+      },
+      "exchanges": {
+        "label": "Trocas",
+        "title": "Trocas (tamanho / variante)",
+        "items": [
+          "As trocas dependem da disponibilidade. Se o tamanho/variante pedido estiver esgotado, ofereceremos alternativas ou reembolso.",
+          "Normalmente enviamos a substituição após receber e verificar a devolução, salvo acordo em contrário."
+        ]
+      },
+      "refunds": {
+        "label": "Reembolsos e Prazo",
+        "title": "Método e prazo de reembolso",
+        "items": [
+          "Os reembolsos são emitidos para o método de pagamento original, salvo acordo em contrário.",
+          "Depois de a devolução ser inspecionada e aprovada, processamos os reembolsos em 2–5 dias úteis.",
+          "O seu banco/emissor do cartão pode demorar tempo adicional até creditar o valor (até 10 dias úteis).",
+          "Os portes de envio originais não são reembolsáveis, exceto se o artigo tiver defeito ou se o erro for nosso."
+        ]
+      },
+      "costs": {
+        "label": "Custos de Devolução",
+        "title": "Custos e responsabilidade do envio de devolução",
+        "items": [
+          "Os portes de devolução são geralmente da responsabilidade do cliente, exceto se o artigo estiver defeituoso ou incorreto.",
+          "Se fornecermos uma etiqueta pré-paga, poderemos deduzir o custo ao reembolso, exceto se a devolução se dever a erro nosso.",
+          "Recomendamos um serviço com tracking; encomendas devolvidas perdidas sem prova de envio não podem ser reembolsadas."
+        ]
+      },
+      "defective": {
+        "label": "Defeituoso / Item Errado",
+        "title": "Artigo defeituoso, danificado ou errado recebido",
+        "items": [
+          "Inspecione a encomenda à chegada. Se houver um problema, contacte-nos dentro de 7 dias.",
+          "Inclua fotos nítidas e uma breve descrição do problema.",
+          "Iremos reparar, substituir ou reembolsar consoante o caso e a disponibilidade de stock."
+        ],
+        "callout": "Guarde toda a embalagem até confirmarmos os próximos passos. A transportadora pode exigir prova para uma reclamação."
+      },
+      "gifts": {
+        "label": "Presentes",
+        "title": "Presentes",
+        "items": [
+          "Se o artigo foi marcado como presente e enviado diretamente para si, poderá receber crédito em loja pelo valor da devolução após processamento.",
+          "Se a encomenda não foi marcada como presente, o reembolso será para o comprador original."
+        ]
+      },
+      "promos": {
+        "label": "Bundles / Descontos",
+        "title": "Bundles, promoções e devoluções parciais",
+        "items": [
+          "Em promoções bundle/BOGO, devolver parte do bundle pode ajustar o desconto.",
+          "Os brindes devem ser devolvidos se fizerem parte de uma promoção associada ao artigo devolvido."
+        ]
+      },
+      "contact": {
+        "label": "Precisa de Ajuda?",
+        "title": "Dúvidas ou casos especiais?",
+        "body": "A nossa equipa terá todo o gosto em ajudar com problemas de tamanho, encomendas danificadas ou situações específicas. Use <returns>Devoluções e Trocas</returns> ou <contact>Contactar Suporte</contact>. Também pode enviar email para <email>myfootballworldstore@gmail.com</email>."
+      }
+    },
+    "footer": {
+      "lastUpdatedLabel": "Última atualização:",
+      "lastUpdatedLocale": "pt-PT"
+    }
+  },
+  "aboutPage": {
+    "metadata": {
+      "title": "Sobre Nós — FootballWorld",
+      "description": "Saiba quem somos, como criamos camisolas de futebol concept e autênticas, e o que defendemos na FootballWorld."
+    },
+    "hero": {
+      "badge": "Desenhado com paixão desde 2026",
+      "title": "Sobre a FootballWorld",
+      "description": "Somos um estúdio focado em design que cria camisolas de futebol <authentic>autênticas</authentic> e <concept>concept</concept>. Qualidade por encomenda, preços justos e envio fiável para todo o mundo, para que possa viver o futebol à sua maneira.",
+      "pills": {
+        "secure": "Checkout seguro",
+        "shipping": "Envio com tracking",
+        "pricing": "Preços justos",
+        "worldwide": "Envia para todo o mundo"
+      }
+    },
+    "whatWeDo": {
+      "make": {
+        "title": "O que criamos",
+        "description": "Desde clássicos de clubes de elite até lançamentos concept ousados, cada camisola é produzida com tecidos premium, costuras de nível profissional e cores vibrantes. Personalização? Claro — nomes, números e badges em estilos corretos para cada clube.",
+        "items": [
+          "Camisolas autênticas",
+          "Camisolas concept",
+          "Personalização de nome e número"
+        ]
+      },
+      "build": {
+        "title": "Como produzimos",
+        "description": "O nosso estúdio junta <design>design</design> e <craft>execução</craft>. Os moldes são cortados com precisão, os painéis são cosidos para liberdade de movimento e os prints são aplicados com técnicas duráveis — tudo feito por encomenda para reduzir desperdício.",
+        "mini": [
+          "Cortes ajustados",
+          "Costura profissional",
+          "Controlo de qualidade"
+        ]
+      }
+    },
+    "values": {
+      "title": "Aquilo que defendemos",
+      "items": [
+        {
+          "title": "Qualidade em primeiro lugar",
+          "desc": "Materiais, ajuste e acabamento que sabem bem dentro e fora de campo."
+        },
+        {
+          "title": "Apoio ao cliente",
+          "desc": "Suporte humano e útil com tempos médios de resposta de 24–48h."
+        },
+        {
+          "title": "Preços justos",
+          "desc": "O modelo direto ao fã mantém os preços honestos e transparentes."
+        },
+        {
+          "title": "Cultura de design",
+          "desc": "Concepts originais com estética forte e identidade de clube."
+        }
+      ]
+    },
+    "sustainability": {
+      "title": "Sustentabilidade com intenção",
+      "description": "Trabalhamos maioritariamente numa base <madeToOrder>made-to-order</madeToOrder>, o que ajuda a evitar excesso de stock e reduz desperdício. Estamos sempre a melhorar a nossa embalagem e os nossos parceiros de produção para minimizar o impacto.",
+      "items": [
+        "Menos sobreprodução",
+        "Transportadoras globais com rotas consolidadas",
+        "Prints duráveis e longa utilização"
+      ]
+    },
+    "timeline": {
+      "title": "A Nossa História – Linha Temporal Rápida",
+      "items": [
+        {
+          "title": "Janeiro de 2026 — Pontapé de Saída",
+          "desc": "A FootBallWorld é lançada oficialmente, oferecendo aos fãs de futebol o melhor dos dois mundos: camisolas oficiais e concept kits exclusivos desenhados por nós."
+        },
+        {
+          "title": "Chegam os Primeiros Produtos",
+          "desc": "As nossas primeiras camisolas ficaram disponíveis online, uma mistura de camisolas oficiais e concept kits criativos, feitos para fãs verdadeiros."
+        },
+        {
+          "title": "Hoje — Feito para os Adeptos",
+          "desc": "Desde o primeiro dia, a FootBallWorld foi criada para amantes de futebol que querem algo diferente, seja uma camisola que conhecem ou um design que nunca viram."
+        },
+        {
+          "title": "Futuro — Muito Mais por Vir",
+          "desc": "Isto é só o começo. Novos produtos, concept kits frescos e mais formas de celebrar o futebol estão no horizonte."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Pronto para encontrar a sua próxima camisola?",
+      "description": "Explore os produtos ou fale com a nossa equipa de suporte — teremos todo o gosto em ajudar.",
+      "buttons": {
+        "shop": "Ver produtos",
+        "contact": "Contactar-nos"
+      }
+    },
+    "footer": {
+      "copyright": "© {year} FootballWorld — Feito por fãs, para fãs."
+    }
+  },
+  "signupPage": {
+    "title": "Criar conta",
+    "fields": {
+      "name": {
+        "label": "Nome",
+        "placeholder": "O seu nome"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "voce@exemplo.com"
+      },
+      "password": {
+        "label": "Palavra-passe",
+        "placeholder": "••••••••"
+      },
+      "confirm": {
+        "label": "Confirmar palavra-passe",
+        "placeholder": "Repita a sua palavra-passe"
+      }
+    },
+    "actions": {
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "create": "Criar conta",
+      "creating": "A criar conta…"
+    },
+    "errors": {
+      "passwordMin": "A palavra-passe deve ter pelo menos 8 caracteres.",
+      "passwordMismatch": "As palavras-passe não coincidem.",
+      "usernameTaken": "Já existe um utilizador com este nome. Escolha outro nome.",
+      "emailTaken": "Já existe uma conta com este email.",
+      "generic": "Não foi possível criar a conta. Tente novamente.",
+      "signupFailed": "O registo falhou"
+    },
+    "strength": {
+      "veryWeak": "Muito fraca",
+      "weak": "Fraca",
+      "fair": "Razoável",
+      "strong": "Forte",
+      "veryStrong": "Muito forte",
+      "tip": "Use pelo menos 8 caracteres. Misturar MAIÚSCULAS/minúsculas, números e símbolos torna-a mais forte."
+    },
+    "footer": {
+      "haveAccount": "Já tem conta?",
+      "login": "Iniciar sessão"
+    }
+  },
+  "loginPage": {
+    "title": "Iniciar sessão",
+    "loading": "A carregar…",
+    "fields": {
+      "identifier": {
+        "label": "Nome ou Email",
+        "placeholder": "oseunome ou voce@exemplo.com"
+      },
+      "password": {
+        "label": "Palavra-passe",
+        "placeholder": "••••••••"
+      }
+    },
+    "actions": {
+      "logIn": "Iniciar sessão",
+      "loggingIn": "A iniciar sessão…"
+    },
+    "links": {
+      "forgotPassword": "Esqueceu-se da palavra-passe?"
+    },
+    "footer": {
+      "noAccount": "Não tem conta?",
+      "signUp": "Criar conta"
+    },
+    "errors": {
+      "invalidCredentials": "Credenciais inválidas.",
+      "oauthNotLinked": "Este email já está associado a uma conta com credenciais. Inicie sessão com email e palavra-passe.",
+      "accessDenied": "Acesso negado.",
+      "configuration": "Erro de configuração da autenticação. Tente novamente mais tarde.",
+      "default": "Não foi possível iniciar sessão. Tente novamente.",
+      "generic": "Algo correu mal. Tente novamente.",
+      "unexpected": "Erro inesperado. Tente novamente."
+    }
+  },
+  "forgotPasswordPage": {
+    "title": "Redefinir palavra-passe",
+    "description": "Introduza o seu email e enviaremos um link para redefinir a sua palavra-passe.",
+    "success": "Se este email existir, enviámos um link de redefinição. Verifique a sua caixa de entrada (e spam).",
+    "securityNote": "Por motivos de segurança, não confirmamos se um email está registado.",
+    "fields": {
+      "email": {
+        "label": "Email",
+        "placeholder": "voce@exemplo.com"
+      }
+    },
+    "actions": {
+      "send": "Enviar link de redefinição",
+      "sending": "A enviar…"
+    },
+    "links": {
+      "backLogin": "Voltar ao login",
+      "createAccount": "Criar conta",
+      "useDifferent": "Usar outro email"
+    },
+    "errors": {
+      "generic": "Algo correu mal. Tente novamente.",
+      "network": "Erro de rede. Tente novamente."
+    }
+  },
+  "resetPasswordPage": {
+    "title": "Nova palavra-passe",
+    "description": "Escolha uma palavra-passe forte para manter a sua conta FootballWorld segura.",
+    "invalidLinkText": "Este link de redefinição parece inválido ou incompleto.",
+    "requestNew": "Peça um novo link",
+    "success": "Palavra-passe atualizada com sucesso. A redirecionar para login…",
+    "loginNow": "Ir para login agora",
+    "fields": {
+      "password": "Nova palavra-passe",
+      "confirm": "Confirmar palavra-passe",
+      "confirmPlaceholder": "Repita a sua palavra-passe"
+    },
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "actions": {
+      "reset": "Redefinir palavra-passe",
+      "resetting": "A redefinir…"
+    },
+    "links": {
+      "backLogin": "Voltar ao login",
+      "requestNew": "Pedir novo link"
+    },
+    "strength": {
+      "veryWeak": "Muito fraca",
+      "weak": "Fraca",
+      "fair": "Razoável",
+      "strong": "Forte",
+      "veryStrong": "Muito forte",
+      "tip": "Use pelo menos 8 caracteres. Misturar MAIÚSCULAS/minúsculas, números e símbolos torna-a mais forte.",
+      "security": "Regra de segurança: escolha pelo menos uma palavra-passe \"Razoável\"."
+    },
+    "errors": {
+      "invalidLink": "Este link de redefinição é inválido. Peça um novo.",
+      "minLength": "A palavra-passe deve ter pelo menos 8 caracteres.",
+      "weakPassword": "Escolha uma palavra-passe mais forte (pelo menos \"Razoável\").",
+      "passwordMismatch": "As palavras-passe não coincidem.",
+      "generic": "Não foi possível redefinir a palavra-passe.",
+      "network": "Erro de rede. Tente novamente."
+    },
+    "footer": "Se continuar a ter problemas, peça um novo link de redefinição."
+  },
+  "cartPage": {
+    "title": "O Seu Carrinho",
+    "empty": "O seu carrinho está vazio.",
+    "browseProducts": "Ver produtos",
+    "remove": "Remover",
+    "fromCart": "do carrinho",
+    "free": "GRÁTIS",
+    "noPromotion": "Sem promoção",
+    "checkout": "Ir para Checkout",
+    "orderSummary": "Resumo da Encomenda",
+    "cttBadge": "CTT • 2–3 dias úteis (Stock PT)",
+    "promoInfo": "Os artigos grátis são sempre os mais baratos. Máx. <max></max> artigos grátis por encomenda.",
+    "promotions": {
+      "buy2get3": "Compre 2 Leve 3",
+      "buy3get5": "Compre 3 Leve 5"
+    },
+    "promoPreview": {
+      "title": "Pré-visualização da Promoção",
+      "empty": "Adicione artigos para desbloquear promoções.",
+      "one": "Adicione mais 2 artigos para desbloquear: Compre 2 Leve 3 (receba 1 artigo grátis).",
+      "two": "Adicione mais 1 artigo para desbloquear: Compre 2 Leve 3 (receba 1 artigo grátis).",
+      "three": "Adicione mais 2 artigos para desbloquear: Compre 3 Leve 5 (receba 2 artigos grátis).",
+      "four": "Adicione mais 1 artigo para desbloquear: Compre 3 Leve 5 (receba 2 artigos grátis)."
+    },
+    "mixedCart": {
+      "title": "Problema no carrinho",
+      "message": "O seu carrinho tem artigos de <pt>Entrega em Portugal (CTT Stock PT)</pt> e artigos <normal>normais</normal>. O checkout deve ser feito separadamente para manter o envio correto.",
+      "link": "Ir para Entrega em Portugal (CTT)"
+    },
+    "ptStock": {
+      "title": "Entrega em Portugal (CTT Stock PT)",
+      "shippingTitle": "Envio CTT",
+      "info": "Regras CTT: <one></one>, <two></two>, <three></three>. Entrega: <delivery></delivery>."
+    },
+    "labels": {
+      "items": "Artigos",
+      "shipping": "Envio",
+      "freeItems": "Artigos grátis",
+      "name": "Nome",
+      "number": "Número",
+      "size": "Tamanho",
+      "badges": "Badges",
+      "unit": "Unidade",
+      "before": "Antes",
+      "qty": "Qtd",
+      "payFor": "Paga por",
+      "subtotal": "Subtotal",
+      "discount": "Desconto",
+      "total": "Total"
+    },
+    "summary": {
+      "freeItemsApplied": "Artigos grátis aplicados: <count></count> (sempre os mais baratos).",
+      "cttRules": "Regras de envio CTT: <one></one>, <two></two>, <three></three>.",
+      "unlockPromo": "Adicione mais artigos para desbloquear: <promo></promo>"
+    }
+  },
+  "checkoutAddressPage": {
+    "fields": {
+      "fullName": "Nome completo",
+      "phone": "Telefone (opcional)",
+      "email": "Email (opcional)",
+      "line1": "Morada linha 1",
+      "line2": "Morada linha 2 (opcional)",
+      "city": "Cidade",
+      "state": "Região / Distrito (opcional)",
+      "postalCode": "Código postal",
+      "country": "País"
+    },
+    "actions": {
+      "saving": "A guardar…",
+      "continue": "Continuar"
+    },
+    "errors": {
+      "saveFailed": "Falha ao guardar a morada"
+    }
+  },
+  "checkoutPage": {
+    "title": "Escolha o Método de Pagamento",
+    "loading": "A carregar…"
+  },
+  "ptStockPage": {
+    "title": "Camisolas em Stock em Portugal",
+    "shippingRules": {
+      "title": "Regras de Envio em Portugal",
+      "one": "1 camisola: 6€",
+      "two": "2 camisolas: 3€",
+      "three": "3+ camisolas: envio GRÁTIS"
+    },
+    "intro": {
+      "line1": "Nesta página só é possível comprar produtos que a <brand>FootBallWorld já tem em stock em Portugal</brand>, com entrega pelos CTT em <delivery>2–3 dias úteis</delivery>.",
+      "line2": "As promoções usadas noutras páginas <noApply>não se aplicam</noApply> aos produtos desta página. Em vez disso, esta página usa uma promoção especial de envio para stock em Portugal:",
+      "line3": "<one>1 camisola:</one> 6€ de envio • <two>2 camisolas:</two> 3€ de envio • <three>3 ou mais camisolas:</three> envio GRATUITO",
+      "whyTitle": "Porque é que os produtos em stock em Portugal são mais baratos?",
+      "whyLine1": "Porque estes produtos já se encontram armazenados em Portugal, evitamos custos de envio internacional, taxas de importação e margens adicionais de fornecedores.",
+      "whyLine2": "Assim conseguimos oferecer preços melhores e entregas mais rápidas em Portugal, mantendo exatamente a mesma qualidade do produto."
+    },
+    "empty": "Ainda não existem produtos em stock em Portugal.",
+    "badge": "CTT 2–3 dias",
+    "viewProduct": "Ver produto →"
+  },
+  "ptStockProductPage": {
+    "breadcrumbs": {
+      "home": "Início",
+      "ptStock": "PT Stock"
+    },
+    "labels": {
+      "season": "Época"
+    },
+    "stock": {
+      "title": "Estado do stock",
+      "inStock": "Em stock em Portugal",
+      "outOfStock": "Sem stock",
+      "units": "{count} unidade(s) disponível(eis)"
+    },
+    "sizes": {
+      "title": "Tamanhos",
+      "noSizes": "Sem tamanhos disponíveis.",
+      "availableOnly": "Apenas os tamanhos disponíveis podem ser enviados de imediato."
+    },
+    "shippingInfo": {
+      "title": "Informação de envio",
+      "oneShirt": "1 camisola",
+      "onePrice": "6€ de envio",
+      "twoShirts": "2 camisolas",
+      "twoPrice": "3€ de envio",
+      "threePlus": "3 ou mais camisolas",
+      "free": "Envio gratuito"
+    },
+    "ctt": {
+      "title": "Entrega com os CTT",
+      "description": "Este produto já se encontra em stock em Portugal e é enviado através dos <ctt>CTT</ctt>, com entrega rápida e local.",
+      "delivery": "Entrega estimada: 2–3 dias úteis"
+    },
+    "description": {
+      "title": "Descrição",
+      "fallback": "Sem descrição disponível para este produto."
+    },
+    "actions": {
+      "back": "Voltar ao PT Stock",
+      "browseMore": "Ver mais produtos"
+    }
+  }
+}

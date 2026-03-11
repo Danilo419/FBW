@@ -1,7 +1,7 @@
-// src/components/ProductOptions.tsx
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { formatMoney } from "@/lib/money";
 import type { OptionGroup, OptionValue, Product, SizeStock } from "@prisma/client";
 
@@ -11,6 +11,8 @@ type ProductWithOptions = Product & {
 };
 
 export function ProductOptions({ product }: { product: ProductWithOptions }) {
+  const t = useTranslations("ProductOptions");
+
   const [selected, setSelected] = useState<Record<string, string | boolean | undefined>>({
     customization: "none",
   });
@@ -22,6 +24,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
 
   const finalPrice = useMemo(() => {
     let total = product.basePrice;
+
     for (const g of product.options) {
       const choice = selected[g.key];
       if (!choice) continue;
@@ -35,6 +38,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
         if (v) total += v.priceDelta;
       }
     }
+
     return total;
   }, [product, selected]);
 
@@ -48,12 +52,11 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
   }
 
   function addToCart() {
-    // Basic required-option validation
     for (const g of product.options) {
       if (!g.required) continue;
       const v = selected[g.key];
       if (!v) {
-        alert(`Please select: ${g.label}`);
+        alert(t("pleaseSelect", { label: g.label }));
         return;
       }
     }
@@ -74,7 +77,6 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
 
   return (
     <div className="space-y-6">
-      {/* Size */}
       {sizeGroup && (
         <div>
           <div className="mb-1 font-medium">{sizeGroup.label}</div>
@@ -93,7 +95,7 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
                   className={`rounded-xl border px-3 py-2 text-sm ${
                     active ? "bg-blue-600 text-white" : "hover:bg-gray-50"
                   } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title={disabled ? "Out of stock" : "Available"}
+                  title={disabled ? t("outOfStock") : t("available")}
                 >
                   {v.label}
                 </button>
@@ -103,13 +105,13 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
         </div>
       )}
 
-      {/* Customization */}
       {custGroup && (
         <div>
           <div className="mb-1 font-medium">{custGroup.label}</div>
           <div className="grid gap-2">
             {custGroup.values.map((v) => {
               const checked = selected[custGroup.key] === v.value;
+
               return (
                 <label
                   key={v.value}
@@ -132,19 +134,18 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
             })}
           </div>
 
-          {/* Conditional: Name/Number */}
           {shouldAskNameNumber() && (
             <div className="mt-3 grid sm:grid-cols-2 gap-3">
               <input
                 className="rounded-xl border px-3 py-2"
-                placeholder="Name (jersey)"
+                placeholder={t("namePlaceholder")}
                 maxLength={12}
                 value={nameText}
                 onChange={(e) => setNameText(e.target.value)}
               />
               <input
                 className="rounded-xl border px-3 py-2"
-                placeholder="Number"
+                placeholder={t("numberPlaceholder")}
                 inputMode="numeric"
                 maxLength={2}
                 value={numberText}
@@ -157,13 +158,13 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
         </div>
       )}
 
-      {/* Add-ons: shorts/socks */}
       {product.options
         .filter((o) => o.type === "ADDON")
         .map((g) => {
           const chosen =
             selected[g.key] === true || selected[g.key] === "yes";
           const delta = g.values[0]?.priceDelta ?? 0;
+
           return (
             <label
               key={g.key}
@@ -186,11 +187,10 @@ export function ProductOptions({ product }: { product: ProductWithOptions }) {
           );
         })}
 
-      {/* Total + CTA */}
       <div className="flex items-center justify-between pt-1">
         <div className="text-xl font-bold">{formatMoney(finalPrice)}</div>
         <button onClick={addToCart} className="btn-primary">
-          Add to cart
+          {t("addToCart")}
         </button>
       </div>
     </div>

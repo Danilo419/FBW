@@ -1,11 +1,10 @@
-// src/components/Header.tsx
 "use client";
 
-import Link from "next/link";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronDown,
   LogOut,
@@ -17,6 +16,7 @@ import {
   ShoppingCart,
   Search,
   Truck,
+  Check,
 } from "lucide-react";
 
 /**
@@ -24,6 +24,11 @@ import {
  * e.g. <Header cartCount={cart.totalQty} />
  */
 export default function Header({ cartCount = 0 }: { cartCount?: number }) {
+  const t = useTranslations("Header");
+  const locale = useLocale() as "en" | "pt";
+  const pathname = usePathname();
+  const router = useRouter();
+
   const { data: session, status, update } = useSession();
   const isAdmin = (session?.user as any)?.isAdmin === true;
 
@@ -74,13 +79,13 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   useEffect(() => {
     const onDocPointerDown = (e: PointerEvent) => {
       if (!userOpen) return;
-      const t = e.target as Node;
+      const target = e.target as Node;
 
       const insideDesktop =
-        userMenuRef.current?.contains(t) || userBtnRef.current?.contains(t);
+        userMenuRef.current?.contains(target) || userBtnRef.current?.contains(target);
       const insideMobile =
-        userMenuMobileRef.current?.contains(t) ||
-        userBtnMobileRef.current?.contains(t);
+        userMenuMobileRef.current?.contains(target) ||
+        userBtnMobileRef.current?.contains(target);
 
       if (insideDesktop || insideMobile) return;
       setUserOpen(false);
@@ -94,7 +99,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       }
     };
 
-    // pointerdown is better for touch than mousedown
     document.addEventListener("pointerdown", onDocPointerDown);
     document.addEventListener("keydown", onEsc);
     return () => {
@@ -139,7 +143,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   }, [status, update]);
 
   const avatarSrc = session?.user?.image || undefined;
-  const displayName = session?.user?.name || session?.user?.email || "User";
+  const displayName = session?.user?.name || session?.user?.email || t("userFallback");
+
+  function handleChangeLocale(nextLocale: "en" | "pt") {
+    router.replace(pathname, { locale: nextLocale });
+  }
 
   return (
     <>
@@ -150,7 +158,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
       >
         {/* DESKTOP BAR */}
         <div className="container-fw hidden md:flex h-24 items-center gap-4">
-          {/* Logo (left) - more to the corner */}
+          {/* Logo (left) */}
           <Link
             href="/"
             className="flex items-center gap-3 shrink-0 md:-ml-4 lg:-ml-7"
@@ -166,43 +174,54 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          {/* Centered nav - slightly reduced spacing */}
+          {/* Centered nav */}
           <nav className="hidden lg:flex flex-1 items-center justify-center gap-11 xl:gap-12 text-[16px] font-medium">
             <Link href="/nations" className="hover:text-blue-700">
-              Nations
+              {t("nations")}
             </Link>
+
             <Link href="/leagues" className="hover:text-blue-700">
-              Leagues
+              {t("leagues")}
             </Link>
 
             <Link href="/clubs" className="hover:text-blue-700">
-              Clubs
+              {t("clubs")}
             </Link>
 
-            {/* REMOVIDO: Portugal Delivery (pt-stock) do header desktop */}
+            <Link
+              href="/pt-stock"
+              className="flex items-center gap-1 hover:text-blue-700 whitespace-nowrap"
+            >
+              <Truck className="h-4 w-4" />
+              <span className="whitespace-nowrap">{t("portugalDelivery")}</span>
+            </Link>
 
             <Link href="/faq" className="hover:text-blue-700">
-              FAQ
+              {t("faq")}
             </Link>
-
-            {/* REMOVIDO: link "Admin" no menu do topo */}
           </nav>
 
-          {/* Right: Search + Cart + User */}
+          {/* Right */}
           <div className="ml-auto flex items-center gap-3">
+            <LanguageSwitcher
+              locale={locale}
+              onChangeLocale={handleChangeLocale}
+              fullLabel
+            />
+
             <SearchBar className="hidden lg:block" />
 
             <Link
               href="/cart"
-              aria-label="Open cart"
+              aria-label={t("openCart")}
               className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-              title="Cart"
+              title={t("cart")}
               data-cart-anchor="true"
             >
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
                 <span
-                  aria-label={`${cartCount} items in cart`}
+                  aria-label={t("itemsInCart", { count: cartCount })}
                   className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
                 >
                   {cartCount > 99 ? "99+" : cartCount}
@@ -238,11 +257,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                     ref={userMenuRef}
                     id="user-menu"
                     role="menu"
-                    aria-label="User menu"
+                    aria-label={t("userMenu")}
                     className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white shadow-xl p-1"
                   >
                     <div className="px-3 py-2">
-                      <div className="text-xs text-gray-500">Signed in as</div>
+                      <div className="text-xs text-gray-500">{t("signedInAs")}</div>
                       <div className="truncate text-sm font-medium">
                         {displayName}
                       </div>
@@ -253,7 +272,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                       icon={<User className="h-4 w-4" />}
                       onClick={() => setUserOpen(false)}
                     >
-                      Account page
+                      {t("accountPage")}
                     </MenuItem>
 
                     {isAdmin && (
@@ -262,7 +281,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                         icon={<User className="h-4 w-4" />}
                         onClick={() => setUserOpen(false)}
                       >
-                        Admin panel
+                        {t("adminPanel")}
                       </MenuItem>
                     )}
 
@@ -273,14 +292,14 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                       icon={<HelpCircle className="h-4 w-4" />}
                       onClick={() => setUserOpen(false)}
                     >
-                      Help / FAQ
+                      {t("helpFaq")}
                     </MenuItem>
 
                     <MenuButton
-                      onClick={() => signOut({ callbackUrl: "/" })}
+                      onClick={() => signOut({ callbackUrl: `/${locale}` })}
                       icon={<LogOut className="h-4 w-4" />}
                     >
-                      Sign out
+                      {t("signOut")}
                     </MenuButton>
                   </div>
                 )}
@@ -291,7 +310,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 className="inline-flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 text-sm"
               >
                 <LogIn className="h-4 w-4" />
-                Sign up
+                {t("signUp")}
               </Link>
             )}
           </div>
@@ -300,7 +319,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         {/* MOBILE BAR */}
         <div className="container-fw md:hidden flex h-20 items-center justify-between">
           <button
-            aria-label="Open menu"
+            aria-label={t("openMenu")}
             onClick={() => setMobileOpen(true)}
             className="inline-flex items-center justify-center rounded-xl border px-3 py-2 hover:bg-gray-100"
           >
@@ -321,25 +340,25 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
 
           <div className="flex items-center gap-2">
             <button
-              aria-label="Open search"
+              aria-label={t("openSearch")}
               onClick={() => setShowSearchMobile((v) => !v)}
               className="inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-              title="Search"
+              title={t("search")}
             >
               <Search className="h-5 w-5" />
             </button>
 
             <Link
               href="/cart"
-              aria-label="Open cart"
+              aria-label={t("openCart")}
               className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-              title="Cart"
+              title={t("cart")}
               data-cart-anchor="true"
             >
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
                 <span
-                  aria-label={`${cartCount} items in cart`}
+                  aria-label={t("itemsInCart", { count: cartCount })}
                   className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 grid place-items-center rounded-full bg-blue-600 text-white text-[11px] leading-none font-semibold"
                 >
                   {cartCount > 99 ? "99+" : cartCount}
@@ -367,11 +386,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               <Link
                 href="/account/signup"
                 className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 hover:bg-gray-100 whitespace-nowrap"
-                aria-label="Sign up"
+                aria-label={t("signUp")}
               >
                 <LogIn className="h-4 w-4 shrink-0" />
                 <span className="text-[13px] font-medium leading-none whitespace-nowrap shrink-0">
-                  Sign up
+                  {t("signUp")}
                 </span>
               </Link>
             )}
@@ -396,7 +415,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           >
             <div className="mx-auto mt-2 w-full max-w-sm rounded-2xl border bg-white shadow-lg p-2">
               <div className="px-3 py-2">
-                <div className="text-xs text-gray-500">Signed in as</div>
+                <div className="text-xs text-gray-500">{t("signedInAs")}</div>
                 <div className="truncate text-sm font-medium">{displayName}</div>
               </div>
 
@@ -405,7 +424,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 icon={<User className="h-4 w-4" />}
                 onClick={() => setUserOpen(false)}
               >
-                Account page
+                {t("accountPage")}
               </MenuItem>
 
               {isAdmin && (
@@ -414,7 +433,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                   icon={<User className="h-4 w-4" />}
                   onClick={() => setUserOpen(false)}
                 >
-                  Admin panel
+                  {t("adminPanel")}
                 </MenuItem>
               )}
 
@@ -425,22 +444,22 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 icon={<HelpCircle className="h-4 w-4" />}
                 onClick={() => setUserOpen(false)}
               >
-                Help / FAQ
+                {t("helpFaq")}
               </MenuItem>
 
               <MenuButton
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => signOut({ callbackUrl: `/${locale}` })}
                 icon={<LogOut className="h-4 w-4" />}
               >
-                Sign out
+                {t("signOut")}
               </MenuButton>
             </div>
           </div>
         )}
       </header>
 
-      {/* MOBILE DRAWER (OUTSIDE HEADER) */}
-      <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)}>
+      {/* MOBILE DRAWER */}
+      <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} title={t("menu")}>
         <div className="px-4 pt-3 pb-6 border-b">
           <Link
             href="/"
@@ -459,31 +478,57 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </Link>
         </div>
 
+        <div className="px-4 py-4 border-b">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {t("language")}
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            <LanguageOptionButton
+              active={locale === "en"}
+              label={t("english")}
+              flag="🇬🇧"
+              onClick={() => {
+                handleChangeLocale("en");
+                setMobileOpen(false);
+              }}
+            />
+            <LanguageOptionButton
+              active={locale === "pt"}
+              label={t("portuguese")}
+              flag="🇵🇹"
+              onClick={() => {
+                handleChangeLocale("pt");
+                setMobileOpen(false);
+              }}
+            />
+          </div>
+        </div>
+
         <nav className="px-2 py-2 text-base">
           <MobileLink href="/nations" onClick={() => setMobileOpen(false)}>
-            Nations
+            {t("nations")}
           </MobileLink>
+
           <MobileLink href="/leagues" onClick={() => setMobileOpen(false)}>
-            Leagues
+            {t("leagues")}
           </MobileLink>
 
           <MobileLink href="/clubs" onClick={() => setMobileOpen(false)}>
-            Clubs
+            {t("clubs")}
           </MobileLink>
 
           <MobileLink href="/pt-stock" onClick={() => setMobileOpen(false)}>
-            Portugal Delivery
+            {t("portugalDelivery")}
           </MobileLink>
 
           <MobileLink href="/faq" onClick={() => setMobileOpen(false)}>
-            FAQ
+            {t("faq")}
           </MobileLink>
 
           <MobileLink href="/cart" onClick={() => setMobileOpen(false)}>
-            Cart
+            {t("cart")}
           </MobileLink>
-
-          {/* REMOVIDO: link "Admin" no menu mobile */}
         </nav>
 
         <div className="mt-auto p-3 border-t">
@@ -491,12 +536,12 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <button
               onClick={() => {
                 setMobileOpen(false);
-                signOut({ callbackUrl: "/" });
+                signOut({ callbackUrl: `/${locale}` });
               }}
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
             >
               <LogOut className="h-4 w-4" />
-              Sign out
+              {t("signOut")}
             </button>
           ) : (
             <Link
@@ -505,12 +550,82 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
               onClick={() => setMobileOpen(false)}
             >
               <LogIn className="h-4 w-4 shrink-0" />
-              <span className="whitespace-nowrap">Sign up</span>
+              <span className="whitespace-nowrap">{t("signUp")}</span>
             </Link>
           )}
         </div>
       </MobileDrawer>
     </>
+  );
+}
+
+/* ===== Language UI ===== */
+
+function LanguageSwitcher({
+  locale,
+  onChangeLocale,
+  fullLabel = false,
+}: {
+  locale: "en" | "pt";
+  onChangeLocale: (nextLocale: "en" | "pt") => void;
+  fullLabel?: boolean;
+}) {
+  const t = useTranslations("Header");
+
+  return (
+    <div className="hidden xl:flex items-center gap-2 rounded-full border px-2 py-1.5 bg-white/90">
+      <button
+        type="button"
+        onClick={() => onChangeLocale("en")}
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition ${
+          locale === "en" ? "bg-black text-white" : "hover:bg-gray-100"
+        }`}
+        aria-pressed={locale === "en"}
+      >
+        <span aria-hidden="true">🇬🇧</span>
+        <span>{fullLabel ? t("english") : "EN"}</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onChangeLocale("pt")}
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition ${
+          locale === "pt" ? "bg-black text-white" : "hover:bg-gray-100"
+        }`}
+        aria-pressed={locale === "pt"}
+      >
+        <span aria-hidden="true">🇵🇹</span>
+        <span>{fullLabel ? t("portuguese") : "PT"}</span>
+      </button>
+    </div>
+  );
+}
+
+function LanguageOptionButton({
+  active,
+  flag,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  flag: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
+        active ? "border-black bg-black text-white" : "hover:bg-gray-50"
+      }`}
+    >
+      <span className="inline-flex items-center gap-2">
+        <span aria-hidden="true">{flag}</span>
+        <span>{label}</span>
+      </span>
+      {active ? <Check className="h-4 w-4" /> : null}
+    </button>
   );
 }
 
@@ -534,7 +649,10 @@ function SearchBar({
   className?: string;
   onSubmitted?: () => void;
 }) {
+  const t = useTranslations("Header");
+  const locale = useLocale();
   const router = useRouter();
+
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -549,9 +667,9 @@ function SearchBar({
 
   useEffect(() => {
     const onDocPointerDown = (e: PointerEvent) => {
-      const t = e.target as Node;
+      const target = e.target as Node;
       if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(t)) {
+      if (!wrapRef.current.contains(target)) {
         setOpen(false);
         setActive(-1);
       }
@@ -576,8 +694,9 @@ function SearchBar({
 
       const aIdx = an.indexOf(phrase);
       const bIdx = bn.indexOf(phrase);
-      if (aIdx !== bIdx)
+      if (aIdx !== bIdx) {
         return (aIdx === -1 ? 1 : aIdx) - (bIdx === -1 ? 1 : bIdx);
+      }
 
       return a.name.localeCompare(b.name);
     });
@@ -593,17 +712,15 @@ function SearchBar({
 
     const url = `${SEARCH_API}?q=${encodeURIComponent(q)}&limit=12`;
     fetch(url, { signal: ctrl.signal })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const data = await r.json();
-        const arr: ProductSearchItem[] = Array.isArray(data?.items)
-          ? data.items
-          : [];
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        const arr: ProductSearchItem[] = Array.isArray(data?.items) ? data.items : [];
 
         const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-        const narrowed = arr.filter((it) => {
-          const hay = (it.name + " " + (it.clubName || "")).toLowerCase();
-          return terms.every((t) => hay.includes(t));
+        const narrowed = arr.filter((item) => {
+          const hay = (item.name + " " + (item.clubName || "")).toLowerCase();
+          return terms.every((termPart) => hay.includes(termPart));
         });
 
         const sorted = sortByRelevance(narrowed, q);
@@ -612,17 +729,18 @@ function SearchBar({
       })
       .catch((err) => {
         if ((err as any).name === "AbortError") return;
-        setError("Failed to load results");
+        setError(t("failedToLoadResults"));
         setItems([]);
         setOpen(true);
       })
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+
     if (term.trim().length < 2) {
       setItems([]);
       setOpen(Boolean(term.trim().length));
@@ -630,9 +748,11 @@ function SearchBar({
       setError(null);
       return;
     }
+
     debounceRef.current = window.setTimeout(() => {
       fetchResults(term.trim());
     }, 250);
+
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
@@ -643,13 +763,16 @@ function SearchBar({
     setOpen(false);
     setActive(-1);
     onSubmitted?.();
+
     const q = term.trim();
     if (!q) return;
+
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open) return;
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((i) => Math.min(i + 1, (items?.length ?? 0) - 1));
@@ -659,11 +782,11 @@ function SearchBar({
     } else if (e.key === "Enter") {
       if (active >= 0 && items[active]) {
         e.preventDefault();
-        const it = items[active];
+        const item = items[active];
         setOpen(false);
         setActive(-1);
         onSubmitted?.();
-        router.push(`/products/${it.slug}`);
+        router.push(`/products/${item.slug}`);
       }
     } else if (e.key === "Escape") {
       setOpen(false);
@@ -675,7 +798,7 @@ function SearchBar({
     <div ref={wrapRef} className={`relative ${className}`}>
       <form
         role="search"
-        aria-label="Site-wide"
+        aria-label={t("siteWideSearch")}
         action="/search"
         method="GET"
         onSubmit={onSubmit}
@@ -695,9 +818,9 @@ function SearchBar({
               }}
               onFocus={() => term.trim().length >= 2 && setOpen(true)}
               onKeyDown={onKeyDown}
-              placeholder="Search products…"
+              placeholder={t("searchProductsPlaceholder")}
               className="w-full sm:w-72 lg:w-80 xl:w-96 sm:group-focus-within:w-[28rem] transition-[width] duration-300 rounded-full bg-transparent pl-9 pr-24 py-2 text-sm outline-none"
-              aria-label="Search products"
+              aria-label={t("searchProducts")}
               aria-expanded={open}
               aria-controls="search-popover"
               autoComplete="off"
@@ -705,9 +828,9 @@ function SearchBar({
             <button
               type="submit"
               className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
-              aria-label="Submit search"
+              aria-label={t("submitSearch")}
             >
-              Search
+              {t("search")}
             </button>
           </div>
         </div>
@@ -717,24 +840,27 @@ function SearchBar({
         <div
           id="search-popover"
           role="listbox"
-          aria-label="Search suggestions"
+          aria-label={t("searchSuggestions")}
           className="absolute z-50 mt-2 w-[min(30rem,92vw)] rounded-2xl border bg-white/95 backdrop-blur shadow-2xl ring-1 ring-black/5 overflow-hidden"
         >
           {loading && (
-            <div className="p-4 text-sm text-gray-500">Searching…</div>
+            <div className="p-4 text-sm text-gray-500">{t("searching")}</div>
           )}
+
           {!loading && error && (
             <div className="p-4 text-sm text-red-600">{error}</div>
           )}
+
           {!loading && !error && term.trim().length >= 2 && items.length === 0 && (
             <div className="p-4 text-sm text-gray-600">
-              No results for “<span className="font-semibold">{term}</span>”.
+              {t("noResultsFor")} “<span className="font-semibold">{term}</span>”.
             </div>
           )}
+
           {!loading && !error && items.length > 0 && (
             <ul className="max-h-[70vh] overflow-auto">
-              {items.map((it, idx) => (
-                <li key={it.id}>
+              {items.map((item, idx) => (
+                <li key={item.id}>
                   <button
                     type="button"
                     role="option"
@@ -745,7 +871,7 @@ function SearchBar({
                       setOpen(false);
                       setActive(-1);
                       onSubmitted?.();
-                      router.push(`/products/${it.slug}`);
+                      router.push(`/products/${item.slug}`);
                     }}
                     className={`w-full flex items-center gap-3 p-2.5 text-left transition ${
                       active === idx ? "bg-blue-50" : "hover:bg-gray-50"
@@ -753,8 +879,8 @@ function SearchBar({
                   >
                     <div className="relative h-12 w-12 rounded-xl overflow-hidden border bg-white">
                       <Image
-                        src={it.imageUrl || "/placeholder.png"}
-                        alt={it.name}
+                        src={item.imageUrl || "/placeholder.png"}
+                        alt={item.name}
                         fill
                         sizes="48px"
                         className="object-cover"
@@ -762,20 +888,21 @@ function SearchBar({
                         loading="lazy"
                       />
                     </div>
+
                     <div className="flex-1 min-w-0">
-                      <div className="truncate text-sm font-medium">
-                        {it.name}
-                      </div>
+                      <div className="truncate text-sm font-medium">{item.name}</div>
                       <div className="truncate text-xs text-gray-500">
-                        {it.clubName || "Product"}
+                        {item.clubName || t("product")}
                       </div>
                     </div>
+
                     <div className="shrink-0 text-sm font-semibold">
-                      {formatPrice(it.price)}
+                      {formatPrice(item.price, locale)}
                     </div>
                   </button>
                 </li>
               ))}
+
               <li className="border-t">
                 <Link
                   href={`/search?q=${encodeURIComponent(term.trim())}`}
@@ -786,7 +913,7 @@ function SearchBar({
                   }}
                   className="flex items-center justify-center gap-2 p-2.5 text-sm font-medium hover:bg-gray-50"
                 >
-                  View all results for “{term.trim()}”
+                  {t("viewAllResultsFor")} “{term.trim()}”
                 </Link>
               </li>
             </ul>
@@ -797,9 +924,9 @@ function SearchBar({
   );
 }
 
-function formatPrice(price: number) {
+function formatPrice(price: number, locale: string) {
   try {
-    return new Intl.NumberFormat("pt-PT", {
+    return new Intl.NumberFormat(locale === "pt" ? "pt-PT" : "en-IE", {
       style: "currency",
       currency: "EUR",
     }).format(price);
@@ -866,14 +993,14 @@ function Avatar({
 }) {
   const initials = (name || "U")
     .split(" ")
-    .map((p) => p[0])
+    .map((part) => part[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
 
   if (src) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={name || "Avatar"}
@@ -922,16 +1049,22 @@ function MobileDrawer({
   open,
   onClose,
   children,
+  title,
 }: {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  title: string;
 }) {
+  const t = useTranslations("Header");
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!open) return;
+
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     return () => {
       document.body.style.overflow = prev;
     };
@@ -948,18 +1081,20 @@ function MobileDrawer({
         aria-hidden="true"
         onClick={onClose}
       />
+
       <aside
         className={`fixed inset-y-0 left-0 z-[1000] w-[86%] max-w-sm bg-white shadow-2xl md:hidden grid grid-rows-[auto_1fr]
           transition-transform duration-300 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
         role="dialog"
         aria-modal="true"
+        aria-label={title}
       >
         <div className="flex items-center justify-between p-3 border-b">
-          <div className="text-sm font-medium">Menu</div>
+          <div className="text-sm font-medium">{title}</div>
           <button
-            aria-label="Close menu"
+            aria-label={t("closeMenu")}
             onClick={onClose}
             className="inline-flex items-center justify-center rounded-xl border p-2 hover:bg-gray-100"
           >

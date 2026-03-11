@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from '@/i18n/navigation'
+import { useTranslations } from 'next-intl'
 import {
   motion,
   useMotionValue,
@@ -28,7 +30,6 @@ import {
   Shirt,
   Sparkles,
   Star,
-  Flame,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -49,6 +50,7 @@ function Spotlight({
     const r = e.currentTarget.getBoundingClientRect()
     setPos({ x: e.clientX - r.left, y: e.clientY - r.top })
   }, [])
+
   return (
     <div
       onMouseMove={onMouseMove}
@@ -76,7 +78,7 @@ function MagneticButton({
   href?: string
   onClick?: () => void
 }) {
-  const ref = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null)
+  const ref = useRef<HTMLElement | null>(null)
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const springX = useSpring(x, { stiffness: 300, damping: 20 })
@@ -91,26 +93,41 @@ function MagneticButton({
     x.set(mx * 0.3)
     y.set(my * 0.3)
   }
+
   const handleMouseLeave = () => {
     x.set(0)
     y.set(0)
   }
 
-  const Comp: any = href ? 'a' : 'button'
-  return (
+  const content = (
     <motion.div style={{ x: springX, y: springY }}>
-      <Comp
-        ref={ref as any}
-        href={href}
-        onClick={onClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className={`btn-primary ${className}`}
-      >
-        {children}
-      </Comp>
+      {href?.startsWith('#') ? (
+        <a
+          ref={ref as React.RefObject<HTMLAnchorElement>}
+          href={href}
+          onClick={onClick}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          className={`btn-primary ${className}`}
+        >
+          {children}
+        </a>
+      ) : (
+        <Link
+          ref={ref as React.RefObject<HTMLAnchorElement>}
+          href={href || '/'}
+          onClick={onClick}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          className={`btn-primary ${className}`}
+        >
+          {children}
+        </Link>
+      )}
     </motion.div>
   )
+
+  return content
 }
 
 function TiltCard({
@@ -502,8 +519,8 @@ function shuffle<T>(arr: T[]) {
 
 function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
   const fade = 800
-
   const orderRef = useRef<number[]>([])
+
   if (!orderRef.current.length) {
     orderRef.current = shuffle([...Array(heroImages.length).keys()])
   }
@@ -551,7 +568,6 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
 
     back.src = nextSrc
     back.style.transitionDuration = `${fade}ms`
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     back.offsetHeight
     back.classList.add('is-visible')
     front.classList.remove('is-visible')
@@ -651,97 +667,110 @@ function HeroImageCycler({ interval = 4200 }: { interval?: number }) {
 
 type HighlightSpace = {
   key: 'adult' | 'kids' | 'retro' | 'concept'
-  label: string
   href: string
   img: string
   alt?: string
-  subtitle?: string
 }
 
 const highlightSpaces: HighlightSpace[] = [
   {
     key: 'adult',
-    label: 'Adult',
     href: '/products/adult',
     img: '/images/spaces/adult.png',
     alt: 'Adult Collection',
-    subtitle: 'Sizes S–2XL',
   },
   {
     key: 'kids',
-    label: 'Kids',
     href: '/products/kids',
     img: '/images/spaces/kids.png',
     alt: 'Kids Collection',
-    subtitle: 'Ages 2–13',
   },
   {
     key: 'retro',
-    label: 'Retro',
     href: '/products/retro',
     img: '/images/spaces/retro.png',
     alt: 'Retro Collection',
-    subtitle: 'Timeless classics',
   },
   {
     key: 'concept',
-    label: 'Concept Kits',
     href: '/products/concept-kits',
     img: '/images/spaces/concept.png',
     alt: 'Concept Kits',
-    subtitle: 'Original designs',
   },
 ]
 
 function ImageSpaces() {
+  const t = useTranslations('HomePage')
+  const spaceMeta = useMemo(
+    () => ({
+      adult: {
+        label: t('spaces.adult.label'),
+        subtitle: t('spaces.adult.subtitle'),
+      },
+      kids: {
+        label: t('spaces.kids.label'),
+        subtitle: t('spaces.kids.subtitle'),
+      },
+      retro: {
+        label: t('spaces.retro.label'),
+        subtitle: t('spaces.retro.subtitle'),
+      },
+      concept: {
+        label: t('spaces.concept.label'),
+        subtitle: t('spaces.concept.subtitle'),
+      },
+    }),
+    [t]
+  )
+
   return (
     <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {highlightSpaces.map((s) => (
-        <motion.a
-          key={s.key}
-          href={s.href}
-          whileHover={{ y: -4 }}
-          className="group relative overflow-hidden rounded-3xl ring-1 ring-black/5"
-        >
-          <div className="relative aspect-[16/10] sm:aspect-[5/6]">
-            <img
-              src={s.img}
-              alt={s.alt || s.label}
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement
-                if ((img as any)._fallbackApplied) return
-                ;(img as any)._fallbackApplied = true
-                img.src = FALLBACK_IMG
-                img.style.objectPosition = 'center'
-              }}
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <div className="flex items-end justify-between gap-2">
-                <div>
-                  <h3 className="text-white text-lg font-semibold tracking-tight">
-                    {s.label}
-                  </h3>
-                  {s.subtitle && (
-                    <p className="text-white/85 text-xs">{s.subtitle}</p>
-                  )}
-                </div>
-                <div className="shrink-0 rounded-full bg-white/90 p-2 backdrop-blur-sm ring-1 ring-black/5 group-hover:bg-white transition">
-                  <ArrowRight className="h-4 w-4 text-blue-700" />
+        <motion.div key={s.key} whileHover={{ y: -4 }}>
+          <Link
+            href={s.href}
+            className="group relative block overflow-hidden rounded-3xl ring-1 ring-black/5"
+          >
+            <div className="relative aspect-[16/10] sm:aspect-[5/6]">
+              <img
+                src={s.img}
+                alt={s.alt || spaceMeta[s.key].label}
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement
+                  if ((img as any)._fallbackApplied) return
+                  ;(img as any)._fallbackApplied = true
+                  img.src = FALLBACK_IMG
+                  img.style.objectPosition = 'center'
+                }}
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
+              <div className="absolute inset-x-0 bottom-0 p-4">
+                <div className="flex items-end justify-between gap-2">
+                  <div>
+                    <h3 className="text-white text-lg font-semibold tracking-tight">
+                      {spaceMeta[s.key].label}
+                    </h3>
+                    <p className="text-white/85 text-xs">
+                      {spaceMeta[s.key].subtitle}
+                    </p>
+                  </div>
+                  <div className="shrink-0 rounded-full bg-white/90 p-2 backdrop-blur-sm ring-1 ring-black/5 group-hover:bg-white transition">
+                    <ArrowRight className="h-4 w-4 text-blue-700" />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </motion.a>
+          </Link>
+        </motion.div>
       ))}
     </div>
   )
 }
 
 /* ======================================================================================
-   ✅ FROM OUR CUSTOMERS (2 REVIEWS)
+   ✅ FROM OUR CUSTOMERS
 ====================================================================================== */
 
 type CustomerReview = {
@@ -750,7 +779,7 @@ type CustomerReview = {
   name: string
   handle: string
   rating: number
-  text: string
+  textKey: 'review1' | 'review2'
 }
 
 const CUSTOMER_REVIEWS: CustomerReview[] = [
@@ -760,7 +789,7 @@ const CUSTOMER_REVIEWS: CustomerReview[] = [
     name: 'Cristiano Silva',
     handle: '@criscristiano.silva',
     rating: 5,
-    text: 'Amazing quality and the stitching is on point. Tracking updates were clear and I’ll definitely order again.',
+    textKey: 'review1',
   },
   {
     id: '2',
@@ -768,7 +797,7 @@ const CUSTOMER_REVIEWS: CustomerReview[] = [
     name: 'João Silvestre',
     handle: '@_j.silvestre._',
     rating: 4,
-    text: 'Great value for the price. Delivery took a bit longer than expected, but the jersey exceeded my expectations.',
+    textKey: 'review2',
   },
 ]
 
@@ -790,6 +819,8 @@ function Stars({ rating }: { rating: number }) {
 }
 
 function FromOurCustomers({ compact = false }: { compact?: boolean }) {
+  const t = useTranslations('HomePage')
+
   return (
     <div className={compact ? '' : 'mt-12'}>
       <div
@@ -802,21 +833,21 @@ function FromOurCustomers({ compact = false }: { compact?: boolean }) {
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 ring-1 ring-amber-100">
               <Star className="h-4 w-4 text-amber-600" />
               <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-amber-800">
-                Customer Reviews
+                {t('customers.badge')}
               </span>
             </div>
             <h3 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Real photos. Real feedback.
+              {t('customers.title')}
             </h3>
             <p className="mt-1 text-sm text-slate-500 max-w-xl">
-              Want to be featured? Send your review + photo via Instagram DM at{' '}
+              {t('customers.text1')}{' '}
               <span className="font-semibold">@footballworld_store</span>.
             </p>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <ShieldCheck className="h-4 w-4 text-blue-600" />
-            Tracked shipping • Secure checkout
+            {t('customers.sideNote')}
           </div>
         </div>
 
@@ -852,7 +883,7 @@ function FromOurCustomers({ compact = false }: { compact?: boolean }) {
               </div>
 
               <p className="mt-4 text-sm text-slate-600 leading-relaxed">
-                {review.text}
+                {t(`customers.${review.textKey}`)}
               </p>
             </div>
           ))}
@@ -1082,6 +1113,7 @@ function isJerseyLikeProduct(p: HomeProduct): boolean {
 /* ---------- Product Card ---------- */
 
 function ProductCard({ product }: { product: HomeProduct }) {
+  const t = useTranslations('HomePage')
   const href = `/products/${product.slug ?? product.id}`
 
   const imgSrc = getProductImage(product)
@@ -1091,58 +1123,59 @@ function ProductCard({ product }: { product: HomeProduct }) {
   const team = (product.team ?? product.club ?? product.clubName ?? '') as string
 
   return (
-    <motion.a
-      href={href}
-      whileHover={{ y: -6 }}
-      className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[50%] max-w-[50%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px]"
-    >
-      <div className="relative h-[200px] sm:h-[260px] md:h-[320px] bg-slate-50">
-        <img
-          src={imgSrc}
-          alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement
-            if ((img as any)._fallbackApplied) return
-            ;(img as any)._fallbackApplied = true
-            img.src = FALLBACK_IMG
-          }}
-        />
-        {discountPercent != null && (
-          <div className="absolute left-2 top-2 sm:left-3 sm:top-3 rounded-full bg-red-600 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-white shadow">
-            -{discountPercent}%
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col px-2 py-2 sm:px-4 sm:py-3">
-        {team && (
-          <div className="text-[9px] sm:text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
-            {team}
-          </div>
-        )}
-        <h3 className="mt-0.5 sm:mt-1 text-[11px] sm:text-[15px] font-semibold leading-snug line-clamp-2">
-          {product.name}
-        </h3>
-
-        <div className="mt-2 sm:mt-3 flex items-baseline gap-1 sm:gap-2">
-          {hasDiscount && (
-            <span className="text-[10px] sm:text-xs text-gray-400 line-through">
-              {formatEurFromCents(compareAtCents)}
-            </span>
+    <motion.div whileHover={{ y: -6 }}>
+      <Link
+        href={href}
+        className="group product-hover transition rounded-3xl overflow-hidden bg-white ring-1 ring-black/5 flex flex-col hover:ring-blue-200 hover:shadow-lg min-w-[50%] max-w-[50%] sm:min-w-[240px] sm:max-w-[240px] md:min-w-[260px] md:max-w-[260px]"
+      >
+        <div className="relative h-[200px] sm:h-[260px] md:h-[320px] bg-slate-50">
+          <img
+            src={imgSrc}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement
+              if ((img as any)._fallbackApplied) return
+              ;(img as any)._fallbackApplied = true
+              img.src = FALLBACK_IMG
+            }}
+          />
+          {discountPercent != null && (
+            <div className="absolute left-2 top-2 sm:left-3 sm:top-3 rounded-full bg-red-600 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-white shadow">
+              -{discountPercent}%
+            </div>
           )}
-          <span className="text-sm sm:text-lg font-semibold text-blue-800">
-            {formatEurFromCents(priceCents)}
-          </span>
         </div>
 
-        <div className="mt-2 sm:mt-4 flex items-center text-[11px] sm:text-sm text-blue-700">
-          View details
-          <ArrowRight className="ml-1 h-3 w-3" />
+        <div className="flex flex-1 flex-col px-2 py-2 sm:px-4 sm:py-3">
+          {team && (
+            <div className="text-[9px] sm:text-[11px] font-semibold tracking-[0.16em] text-blue-700 uppercase">
+              {team}
+            </div>
+          )}
+          <h3 className="mt-0.5 sm:mt-1 text-[11px] sm:text-[15px] font-semibold leading-snug line-clamp-2">
+            {product.name}
+          </h3>
+
+          <div className="mt-2 sm:mt-3 flex items-baseline gap-1 sm:gap-2">
+            {hasDiscount && (
+              <span className="text-[10px] sm:text-xs text-gray-400 line-through">
+                {formatEurFromCents(compareAtCents)}
+              </span>
+            )}
+            <span className="text-sm sm:text-lg font-semibold text-blue-800">
+              {formatEurFromCents(priceCents)}
+            </span>
+          </div>
+
+          <div className="mt-2 sm:mt-4 flex items-center text-[11px] sm:text-sm text-blue-700">
+            {t('viewDetails')}
+            <ArrowRight className="ml-1 h-3 w-3" />
+          </div>
         </div>
-      </div>
-    </motion.a>
+      </Link>
+    </motion.div>
   )
 }
 
@@ -1152,7 +1185,6 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
   if (!products.length) return null
 
   const duplicated = useMemo(() => [...products, ...products], [products])
-
   const trackRef = useRef<HTMLDivElement | null>(null)
   const baseWidthRef = useRef<number>(0)
   const x = useMotionValue(0)
@@ -1205,6 +1237,8 @@ function ProductMarquee({ products }: { products: HomeProduct[] }) {
 ====================================================================================== */
 
 export default function Home() {
+  const t = useTranslations('HomePage')
+
   const { scrollY } = useScroll()
   const START = 420
   const SPAN = 560
@@ -1224,15 +1258,18 @@ export default function Home() {
     v > 0.2 ? '0 10px 30px -15px rgba(2,8,23,0.12)' : 'none'
   )
 
-  const trustMarquee = [
-    'TRACKED SHIPPING INCLUDED',
-    'SECURE CHECKOUT (STRIPE)',
-    'MB WAY • MULTIBANCO • PAYPAL',
-    'NAME & NUMBER PERSONALIZATION',
-    'WORLDWIDE DELIVERY',
-    '14-DAY SIZE EXCHANGE (POLICY APPLIES)',
-    'SUPPORT VIA INSTAGRAM',
-  ]
+  const trustMarquee = useMemo(
+    () => [
+      t('trustMarquee.shipping'),
+      t('trustMarquee.checkout'),
+      t('trustMarquee.payments'),
+      t('trustMarquee.personalization'),
+      t('trustMarquee.worldwide'),
+      t('trustMarquee.exchange'),
+      t('trustMarquee.instagram'),
+    ],
+    [t]
+  )
 
   const [homeProducts, setHomeProducts] = useState<HomeProduct[]>([])
   const [loadingHomeProducts, setLoadingHomeProducts] = useState(true)
@@ -1345,120 +1382,217 @@ export default function Home() {
     subtitle?: string
     href: string
     group: string
-  }[] = [
-    {
-      key: 'currentSeason',
-      title: 'New Season 25/26 Drops',
-      subtitle: 'Latest club & national-team releases (non-player fit)',
-      href: '/products/current-season-25-26',
-      group: 'Jerseys',
-    },
-    {
-      key: 'jerseys',
-      title: 'Classic Jerseys (Short Sleeve)',
-      subtitle: 'Everyday fit, the most popular choice',
-      href: '/products/jerseys',
-      group: 'Jerseys',
-    },
-    {
-      key: 'longSleeve',
-      title: 'Long Sleeve Jerseys',
-      subtitle: 'Long sleeve, non-player fit',
-      href: '/products/long-sleeve-jerseys',
-      group: 'Jerseys',
-    },
-    {
-      key: 'playerVersion',
-      title: 'Player Version (On-Pitch Fit)',
-      subtitle: 'Slim fit like the pros',
-      href: '/products/player-version-jerseys',
-      group: 'Jerseys',
-    },
-    {
-      key: 'playerVersionLongSleeve',
-      title: 'Player Version (Long Sleeve)',
-      subtitle: 'On-pitch fit with long sleeves',
-      href: '/products/player-version-long-sleeve-jerseys',
-      group: 'Jerseys',
-    },
-    {
-      key: 'retro',
-      title: 'Retro Jerseys',
-      subtitle: 'Iconic classics from legendary seasons',
-      href: '/products/retro-jerseys',
-      group: 'Retro',
-    },
-    {
-      key: 'retroLongSleeve',
-      title: 'Retro Long Sleeve',
-      subtitle: 'Retro designs with long sleeves',
-      href: '/products/retro-long-sleeve-jerseys',
-      group: 'Retro',
-    },
-    {
-      key: 'conceptKits',
-      title: 'Concept Kits',
-      subtitle: 'Original designs you won’t find in stores',
-      href: '/products/concept-kits',
-      group: 'Concept & Special',
-    },
-    {
-      key: 'preMatch',
-      title: 'Pre-Match Tops',
-      subtitle: 'Warm-up & pre-game styles',
-      href: '/products/pre-match-jerseys',
-      group: 'Concept & Special',
-    },
-    {
-      key: 'tracksuits',
-      title: 'Tracksuits',
-      subtitle: 'Everyday streetwear for fans',
-      href: '/products/tracksuits',
-      group: 'Concept & Special',
-    },
-    {
-      key: 'trainingSleeveless',
-      title: 'Sleeveless Training Sets',
-      subtitle: 'Tank + shorts training combo',
-      href: '/products/training-sleeveless-sets',
-      group: 'Training',
-    },
-    {
-      key: 'trainingTracksuit',
-      title: 'Training Tracksuits',
-      subtitle: 'Training top + pants sets',
-      href: '/products/training-tracksuits',
-      group: 'Training',
-    },
-    {
-      key: 'kidsKits',
-      title: 'Kids Kits',
-      subtitle: 'Full sets for young fans',
-      href: '/products/kids-kits',
-      group: 'Kids & Women',
-    },
-    {
-      key: 'cropTops',
-      title: 'Crop Tops',
-      subtitle: 'Stylish cropped tops',
-      href: '/products/crop-tops',
-      group: 'Kids & Women',
-    },
-  ]
+  }[] = useMemo(
+    () => [
+      {
+        key: 'currentSeason',
+        title: t('categories.currentSeason.title'),
+        subtitle: t('categories.currentSeason.subtitle'),
+        href: '/products/current-season-25-26',
+        group: t('groups.jerseys'),
+      },
+      {
+        key: 'jerseys',
+        title: t('categories.jerseys.title'),
+        subtitle: t('categories.jerseys.subtitle'),
+        href: '/products/jerseys',
+        group: t('groups.jerseys'),
+      },
+      {
+        key: 'longSleeve',
+        title: t('categories.longSleeve.title'),
+        subtitle: t('categories.longSleeve.subtitle'),
+        href: '/products/long-sleeve-jerseys',
+        group: t('groups.jerseys'),
+      },
+      {
+        key: 'playerVersion',
+        title: t('categories.playerVersion.title'),
+        subtitle: t('categories.playerVersion.subtitle'),
+        href: '/products/player-version-jerseys',
+        group: t('groups.jerseys'),
+      },
+      {
+        key: 'playerVersionLongSleeve',
+        title: t('categories.playerVersionLongSleeve.title'),
+        subtitle: t('categories.playerVersionLongSleeve.subtitle'),
+        href: '/products/player-version-long-sleeve-jerseys',
+        group: t('groups.jerseys'),
+      },
+      {
+        key: 'retro',
+        title: t('categories.retro.title'),
+        subtitle: t('categories.retro.subtitle'),
+        href: '/products/retro-jerseys',
+        group: t('groups.retro'),
+      },
+      {
+        key: 'retroLongSleeve',
+        title: t('categories.retroLongSleeve.title'),
+        subtitle: t('categories.retroLongSleeve.subtitle'),
+        href: '/products/retro-long-sleeve-jerseys',
+        group: t('groups.retro'),
+      },
+      {
+        key: 'conceptKits',
+        title: t('categories.conceptKits.title'),
+        subtitle: t('categories.conceptKits.subtitle'),
+        href: '/products/concept-kits',
+        group: t('groups.conceptSpecial'),
+      },
+      {
+        key: 'preMatch',
+        title: t('categories.preMatch.title'),
+        subtitle: t('categories.preMatch.subtitle'),
+        href: '/products/pre-match-jerseys',
+        group: t('groups.conceptSpecial'),
+      },
+      {
+        key: 'tracksuits',
+        title: t('categories.tracksuits.title'),
+        subtitle: t('categories.tracksuits.subtitle'),
+        href: '/products/tracksuits',
+        group: t('groups.conceptSpecial'),
+      },
+      {
+        key: 'trainingSleeveless',
+        title: t('categories.trainingSleeveless.title'),
+        subtitle: t('categories.trainingSleeveless.subtitle'),
+        href: '/products/training-sleeveless-sets',
+        group: t('groups.training'),
+      },
+      {
+        key: 'trainingTracksuit',
+        title: t('categories.trainingTracksuit.title'),
+        subtitle: t('categories.trainingTracksuit.subtitle'),
+        href: '/products/training-tracksuits',
+        group: t('groups.training'),
+      },
+      {
+        key: 'kidsKits',
+        title: t('categories.kidsKits.title'),
+        subtitle: t('categories.kidsKits.subtitle'),
+        href: '/products/kids-kits',
+        group: t('groups.kidsWomen'),
+      },
+      {
+        key: 'cropTops',
+        title: t('categories.cropTops.title'),
+        subtitle: t('categories.cropTops.subtitle'),
+        href: '/products/crop-tops',
+        group: t('groups.kidsWomen'),
+      },
+    ],
+    [t]
+  )
 
-  const GROUP_ORDER = [
-    'Jerseys',
-    'Retro',
-    'Concept & Special',
-    'Training',
-    'Kids & Women',
-  ]
+  const GROUP_ORDER = useMemo(
+    () => [
+      t('groups.jerseys'),
+      t('groups.retro'),
+      t('groups.conceptSpecial'),
+      t('groups.training'),
+      t('groups.kidsWomen'),
+    ],
+    [t]
+  )
 
   const WORLD_CUP_2026_HREF = '/products/fifa-world-cup-2026-jerseys'
 
+  const heroFeatureItems = useMemo(
+    () => [
+      { Icon: Truck, text: t('hero.features.shipping') },
+      { Icon: BadgePercent, text: t('hero.features.pricing') },
+      { Icon: Shield, text: t('hero.features.checkout') },
+      { Icon: Globe2, text: t('hero.features.support') },
+    ],
+    [t]
+  )
+
+  const howItWorks = useMemo(
+    () => [
+      {
+        icon: <Shirt className="h-5 w-5 text-blue-600" />,
+        title: t('how.choose.title'),
+        text: t('how.choose.text'),
+      },
+      {
+        icon: <MousePointer2 className="h-5 w-5 text-blue-600" />,
+        title: t('how.options.title'),
+        text: t('how.options.text'),
+      },
+      {
+        icon: <Send className="h-5 w-5 text-blue-600" />,
+        title: t('how.made.title'),
+        text: t('how.made.text'),
+      },
+      {
+        icon: <Truck className="h-5 w-5 text-blue-600" />,
+        title: t('how.delivery.title'),
+        text: t('how.delivery.text'),
+      },
+    ],
+    [t]
+  )
+
+  const guaranteeItems = useMemo(
+    () => [
+      {
+        Icon: ShieldCheck,
+        title: t('guarantees.guarantee.title'),
+        desc: t('guarantees.guarantee.text'),
+      },
+      {
+        Icon: CreditCard,
+        title: t('guarantees.checkout.title'),
+        desc: t('guarantees.checkout.text'),
+      },
+      {
+        Icon: Package,
+        title: t('guarantees.made.title'),
+        desc: t('guarantees.made.text'),
+      },
+      {
+        Icon: HeartHandshake,
+        title: t('guarantees.support.title'),
+        desc: t('guarantees.support.text'),
+      },
+    ],
+    [t]
+  )
+
+  const faqItems = useMemo(
+    () => [
+      {
+        q: t('faq.shipping.q'),
+        a: t('faq.shipping.a'),
+      },
+      {
+        q: t('faq.personalization.q'),
+        a: t('faq.personalization.a'),
+      },
+      {
+        q: t('faq.payments.q'),
+        a: t('faq.payments.a'),
+      },
+      {
+        q: t('faq.tracking.q'),
+        a: t('faq.tracking.a'),
+      },
+      {
+        q: t('faq.countries.q'),
+        a: t('faq.countries.a'),
+      },
+      {
+        q: t('faq.size.q'),
+        a: t('faq.size.a'),
+      },
+    ],
+    [t]
+  )
+
   return (
     <div className="min-h-screen">
-      {/* HERO */}
       <section className="relative overflow-hidden">
         <motion.div
           style={{ y: y2 }}
@@ -1476,53 +1610,45 @@ export default function Home() {
           >
             <div className="grid items-center gap-12 lg:grid-cols-2">
               <div>
-                {/* Trust badge */}
                 <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-white/70 px-3 py-1 ring-1 ring-black/5 backdrop-blur-sm">
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold tracking-[0.16em] uppercase text-blue-800">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Fan-favorite drops
+                    {t('hero.badge1')}
                   </span>
                   <span className="h-1 w-1 rounded-full bg-slate-300" />
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
                     <ShieldCheck className="h-4 w-4 text-blue-600" />
-                    Secure checkout
+                    {t('hero.badge2')}
                   </span>
                   <span className="h-1 w-1 rounded-full bg-slate-300" />
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
                     <Truck className="h-4 w-4 text-blue-600" />
-                    Tracked shipping
+                    {t('hero.badge3')}
                   </span>
                 </div>
 
                 <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
-                  The jersey you want, made to order and shipped worldwide.
+                  {t('hero.title')}
                 </h1>
 
                 <p className="mt-4 text-gray-600 max-w-prose">
-                  Shop club & national-team jerseys plus exclusive concept
-                  designs. Pick your size, add name & number (free), and we’ll
-                  ship your order with tracking from start to finish.
+                  {t('hero.description')}
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <MagneticButton href="#products" className="!px-5">
-                    Shop Best Sellers <ArrowRight className="h-4 w-4" />
+                    {t('hero.shopButton')} <ArrowRight className="h-4 w-4" />
                   </MagneticButton>
                 </div>
 
                 <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  {[
-                    { Icon: Truck, t: 'Tracked worldwide delivery' },
-                    { Icon: BadgePercent, t: 'Fair pricing' },
-                    { Icon: Shield, t: 'Secure checkout' },
-                    { Icon: Globe2, t: 'Support via Instagram' },
-                  ].map(({ Icon, t }) => (
+                  {heroFeatureItems.map(({ Icon, text }) => (
                     <div
-                      key={t}
+                      key={text}
                       className="flex items-center gap-2 rounded-xl border glass px-3 py-2"
                     >
                       <Icon className="h-4 w-4 text-blue-600" />
-                      <span>{t}</span>
+                      <span>{text}</span>
                     </div>
                   ))}
                 </div>
@@ -1538,13 +1664,12 @@ export default function Home() {
                   <HeroImageCycler interval={4200} />
                 </TiltCard>
 
-                {/* Keep ONLY typical delivery pill */}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 ring-1 ring-black/5">
                     <Clock className="h-4 w-4 text-slate-700" />
                     <span className="text-xs text-slate-700">
-                      Typical delivery:{' '}
-                      <span className="font-semibold">7–20 business days</span>
+                      {t('hero.deliveryLabel')}{' '}
+                      <span className="font-semibold">{t('hero.deliveryValue')}</span>
                     </span>
                   </div>
                 </div>
@@ -1553,7 +1678,6 @@ export default function Home() {
           </motion.div>
         </Spotlight>
 
-        {/* trust marquee */}
         <section className="relative border-y bg-white overflow-hidden">
           <div className="w-full py-3">
             <div className="marquee-track flex gap-6 whitespace-nowrap">
@@ -1584,7 +1708,6 @@ export default function Home() {
           `}</style>
         </section>
 
-        {/* PROMO (REMOVED "Promo live now Ends soon • While stock lasts") */}
         <section className="bg-white">
           <div className="container-fw pt-4 pb-10">
             <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
@@ -1599,7 +1722,7 @@ export default function Home() {
                 />
                 <img
                   src="/images/promos/home-promo.png"
-                  alt="Limited-time offers"
+                  alt={t('promoAlt')}
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement
@@ -1611,7 +1734,6 @@ export default function Home() {
               </picture>
             </div>
 
-            {/* Reviews stay UP here */}
             <div className="mt-8">
               <FromOurCustomers compact />
             </div>
@@ -1619,15 +1741,14 @@ export default function Home() {
         </section>
       </section>
 
-      {/* HIGHLIGHTS + PRODUCTS */}
       <section id="products" className="container-fw section-gap">
         <div className="flex items-end mb-8">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Shop by collection
+              {t('collections.title')}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Start with a category — then pick your favorite design.
+              {t('collections.subtitle')}
             </p>
           </div>
         </div>
@@ -1640,19 +1761,18 @@ export default function Home() {
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                   <Sparkles className="h-3 w-3" />
-                  Curated picks
+                  {t('curated.badge')}
                 </div>
                 <h3 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight">
-                  Best picks across every style
+                  {t('curated.title')}
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-gray-500 max-w-md">
-                  Scroll, click, and explore. Every product includes tracked
-                  shipping and secure checkout.
+                  {t('curated.subtitle')}
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
                 <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-red-600">
-                  Save up to 70% vs official prices
+                  {t('curated.saveNote')}
                 </span>
               </div>
             </div>
@@ -1687,18 +1807,18 @@ export default function Home() {
                     <div className="flex items-baseline justify-between gap-2">
                       <div>
                         <h4 className="text-lg sm:text-xl font-semibold tracking-tight">
-                          FIFA World Cup 2026 Jerseys
+                          {t('worldCup.title')}
                         </h4>
                         <p className="text-xs sm:text-sm text-gray-500">
-                          Exclusive World Cup 2026 selection.
+                          {t('worldCup.subtitle')}
                         </p>
                       </div>
-                      <a
+                      <Link
                         href={WORLD_CUP_2026_HREF}
                         className="text-xs sm:text-sm text-blue-700 hover:underline"
                       >
-                        View all →
-                      </a>
+                        {t('viewAllArrow')}
+                      </Link>
                     </div>
 
                     <ProductMarquee products={categories.worldCup2026} />
@@ -1741,12 +1861,12 @@ export default function Home() {
                                     </p>
                                   )}
                                 </div>
-                                <a
+                                <Link
                                   href={href}
                                   className="text-xs sm:text-sm text-blue-700 hover:underline"
                                 >
-                                  View all →
-                                </a>
+                                  {t('viewAllArrow')}
+                                </Link>
                               </div>
 
                               <ProductMarquee products={list} />
@@ -1762,14 +1882,13 @@ export default function Home() {
 
             {!loadingHomeProducts && (!categories || homeProducts.length === 0) && (
               <p className="text-sm text-gray-500">
-                No products to show yet. Please check the full catalog.
+                {t('noProducts')}
               </p>
             )}
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
       <section id="how" className="bg-white/70 border-y">
         <motion.div
           style={{ boxShadow: sectionShadow as any }}
@@ -1778,37 +1897,16 @@ export default function Home() {
           <div className="flex items-end justify-between gap-3 mb-6">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                How it works
+                {t('howSection.title')}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Simple, fast, and tracked from start to finish.
+                {t('howSection.subtitle')}
               </p>
             </div>
           </div>
 
           <div className="grid lg:grid-cols-4 gap-6">
-            {[
-              {
-                icon: <Shirt className="h-5 w-5 text-blue-600" />,
-                t: 'Choose your jersey',
-                s: 'Pick a club or national-team kit (or an exclusive concept).',
-              },
-              {
-                icon: <MousePointer2 className="h-5 w-5 text-blue-600" />,
-                t: 'Select size & options',
-                s: 'Choose your size and add name & number if you want.',
-              },
-              {
-                icon: <Send className="h-5 w-5 text-blue-600" />,
-                t: 'Made to order',
-                s: 'Your item is produced on demand with great detail.',
-              },
-              {
-                icon: <Truck className="h-5 w-5 text-blue-600" />,
-                t: 'Tracked delivery',
-                s: 'Worldwide delivery in 7–20 business days with tracking.',
-              },
-            ].map((f, i) => (
+            {howItWorks.map((f, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -1819,9 +1917,9 @@ export default function Home() {
               >
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-blue-50 p-2">{f.icon}</div>
-                  <h3 className="font-semibold">{f.t}</h3>
+                  <h3 className="font-semibold">{f.title}</h3>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">{f.s}</p>
+                <p className="mt-2 text-sm text-gray-600">{f.text}</p>
                 <div className="mt-4 h-1 rounded bg-gradient-to-r from-blue-600 to-cyan-400 w-0 group-hover:w-full transition-all" />
               </motion.div>
             ))}
@@ -1829,70 +1927,43 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* CTA */}
       <section className="container-fw pb-20 pt-12">
         <TiltCard>
           <div className="grid md:grid-cols-2 gap-6 items-center p-8">
             <div>
               <h3 className="text-2xl font-bold">
-                Choose your next jersey with confidence
+                {t('cta.title')}
               </h3>
               <p className="mt-2 text-gray-600">
-                Secure checkout, tracked shipping, and fan-favorite designs — all
-                in one place.
+                {t('cta.subtitle')}
               </p>
               <ul className="mt-4 space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" /> Name & number
-                  personalization
+                  <CheckCircle2 className="h-4 w-4 text-green-600" /> {t('cta.item1')}
                 </li>
                 <li className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-blue-600" /> Secure payments
-                  via Stripe
+                  <ShieldCheck className="h-4 w-4 text-blue-600" /> {t('cta.item2')}
                 </li>
                 <li className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-600" /> Economy shipping with
-                  tracking
+                  <Clock className="h-4 w-4 text-amber-600" /> {t('cta.item3')}
                 </li>
               </ul>
             </div>
             <div className="flex md:justify-end items-center gap-3">
               <MagneticButton href="#products">
-                Shop now <Zap className="h-4 w-4" />
+                {t('cta.shopNow')} <Zap className="h-4 w-4" />
               </MagneticButton>
               <a href="#faq" className="btn-outline">
-                Read the FAQ
+                {t('cta.readFaq')}
               </a>
             </div>
           </div>
         </TiltCard>
       </section>
 
-      {/* GUARANTEES */}
       <section className="bg-white/70 border-y">
         <div className="container-fw section-gap grid md:grid-cols-4 gap-6">
-          {[
-            {
-              Icon: ShieldCheck,
-              title: '14-day guarantee',
-              desc: 'Size/fit exchange within 14 days (policy applies).',
-            },
-            {
-              Icon: CreditCard,
-              title: 'Secure checkout',
-              desc: 'Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, Link — all processed securely via Stripe.',
-            },
-            {
-              Icon: Package,
-              title: 'Made on demand',
-              desc: 'High-detail stitching and crisp prints.',
-            },
-            {
-              Icon: HeartHandshake,
-              title: 'Fast support',
-              desc: 'Support in English via email and Instagram.',
-            },
-          ].map((f, i) => (
+          {guaranteeItems.map((f, i) => (
             <div key={i} className="group card p-5 hover:shadow-xl">
               <div className="flex items-center gap-3">
                 <f.Icon className="h-5 w-5 text-blue-600" />
@@ -1905,38 +1976,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
       <section id="faq" className="container-fw pb-24 pt-16">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6">
-          Frequently asked questions
+          {t('faqSection.title')}
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
-          {[
-            {
-              q: 'How long does shipping take?',
-              a: 'Delivery takes 7–20 business days. You’ll get a tracking code for every order.',
-            },
-            {
-              q: 'Can I add name and number?',
-              a: 'Yes — you can personalize most jerseys with name and number.',
-            },
-            {
-              q: 'Which payment methods are accepted?',
-              a: 'Visa, Mastercard, AmEx, PayPal, Amazon Pay, Multibanco (PT), Revolut Pay, Klarna, Satispay, and MB Way (via Stripe).',
-            },
-            {
-              q: 'How can I track my order?',
-              a: 'After your order is shipped you’ll receive an email with your tracking code and a tracking link.',
-            },
-            {
-              q: 'Which countries do you ship to?',
-              a: 'We ship worldwide. Delivery times vary by destination.',
-            },
-            {
-              q: 'How do I pick the right size?',
-              a: 'Check the Size Guide page for measurements and fit tips.',
-            },
-          ].map((f, i) => (
+          {faqItems.map((f, i) => (
             <details key={i} className="group card px-5 py-4 open:shadow-md">
               <summary className="flex cursor-pointer items-center justify-between font-medium">
                 {f.q}

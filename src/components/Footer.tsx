@@ -1,22 +1,24 @@
-// src/components/Footer.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   Mail,
   MapPin,
   ArrowUp,
   Instagram,
   Youtube,
-  Facebook, // ✅ ADICIONADO
+  Facebook,
   ShieldCheck,
   Truck,
   BadgePercent,
 } from "lucide-react";
 
 export default function Footer() {
+  const t = useTranslations("Footer");
+
   const [email, setEmail] = useState("");
   const [status, setStatus] =
     useState<"idle" | "ok" | "err" | "loading">("idle");
@@ -43,9 +45,7 @@ export default function Footer() {
         body: JSON.stringify({ email: trimmed }),
       });
 
-      // ✅ IMPORTANTE: não ignorar 404 (senão "finge" sucesso)
       if (!res.ok) {
-        // tenta ler mensagem do backend se existir
         let msg = "Failed";
         try {
           const data = await res.json();
@@ -69,7 +69,6 @@ export default function Footer() {
 
   return (
     <footer className="relative border-t bg-white">
-      {/* Top CTA / Newsletter */}
       <div className="container-fw py-10 grid gap-8 md:grid-cols-[1.2fr_1fr]">
         <div className="flex items-center gap-4 rounded-2xl border p-5 glass">
           <Image
@@ -81,24 +80,23 @@ export default function Footer() {
             priority
           />
           <div>
-            <h3 className="text-xl font-semibold">Join our newsletter</h3>
+            <h3 className="text-xl font-semibold">{t("newsletterTitle")}</h3>
             <p className="text-gray-600 text-sm">
-              New drops, discounts and featured products. No spam — unsubscribe
-              anytime.
+              {t("newsletterText")}
             </p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
               <Badge
                 icon={<ShieldCheck className="h-3.5 w-3.5 text-green-600" />}
               >
-                Secure checkout
+                {t("secureCheckout")}
               </Badge>
               <Badge icon={<Truck className="h-3.5 w-3.5 text-blue-600" />}>
-                Global shipping
+                {t("globalShipping")}
               </Badge>
               <Badge
                 icon={<BadgePercent className="h-3.5 w-3.5 text-amber-600" />}
               >
-                Fair prices
+                {t("fairPrices")}
               </Badge>
             </div>
           </div>
@@ -107,16 +105,16 @@ export default function Footer() {
         <form
           onSubmit={onSubscribe}
           className="rounded-2xl border p-5 glass flex flex-col sm:flex-row items-stretch gap-3"
-          aria-label="Newsletter sign-up"
+          aria-label={t("newsletterAria")}
         >
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Your email"
+            placeholder={t("yourEmail")}
             className="flex-1 rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Email address"
+            aria-label={t("emailAddress")}
             autoComplete="email"
           />
           <button
@@ -124,27 +122,24 @@ export default function Footer() {
             disabled={status === "loading"}
             className="inline-flex items-center justify-center rounded-xl border px-5 py-3 font-medium hover:bg-gray-50 disabled:opacity-60"
           >
-            {status === "loading" ? "Subscribing…" : "Subscribe"}
+            {status === "loading" ? t("subscribing") : t("subscribe")}
           </button>
 
           {status === "ok" && (
             <div className="text-green-700 text-sm self-center">
-              Subscribed! 🎉
+              {t("subscribed")}
             </div>
           )}
           {status === "err" && (
             <div className="text-red-600 text-sm self-center">
-              Something went wrong.
+              {t("somethingWentWrong")}
             </div>
           )}
         </form>
       </div>
 
-      {/* Middle: columns */}
       <div className="container-fw pb-8">
-        {/* 5 colunas: Brand, Shop, Support, Contact, Information */}
         <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
-          {/* Brand / About */}
           <div>
             <Link href="/" className="inline-flex items-center gap-3">
               <Image
@@ -157,13 +152,10 @@ export default function Footer() {
               <span className="sr-only">FootballWorld</span>
             </Link>
             <p className="mt-3 text-sm text-gray-600 max-w-xs">
-              Authentic & Concept football kits with a focus on design and quality.
-              Built-to-order, global tracked shipping and secure payments.
+              {t("brandText")}
             </p>
 
-            {/* Socials */}
             <div className="mt-4 flex items-center gap-3">
-
               <Social
                 href="https://www.facebook.com/profile.php?id=61577992120797"
                 label="Facebook"
@@ -194,24 +186,21 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Shop */}
-          <FooterCol title="Shop">
-            <FooterLink href="/nations">Nations</FooterLink>
-            <FooterLink href="/leagues">Leagues</FooterLink>
-            <FooterLink href="/clubs">Clubs</FooterLink>
-            <FooterLink href="/faq">FAQ</FooterLink>
+          <FooterCol title={t("shop")}>
+            <FooterLink href="/nations">{t("nations")}</FooterLink>
+            <FooterLink href="/leagues">{t("leagues")}</FooterLink>
+            <FooterLink href="/clubs">{t("clubs")}</FooterLink>
+            <FooterLink href="/faq">{t("faq")}</FooterLink>
           </FooterCol>
 
-          {/* Support */}
-          <FooterCol title="Support">
-            <FooterLink href="/shipping">Shipping & Tracking</FooterLink>
-            <FooterLink href="/returns">Returns & Exchanges</FooterLink>
-            <FooterLink href="/size-guide">Size Guide</FooterLink>
-            <FooterLink href="/contact">Contact us</FooterLink>
+          <FooterCol title={t("support")}>
+            <FooterLink href="/shipping">{t("shippingTracking")}</FooterLink>
+            <FooterLink href="/returns">{t("returnsExchanges")}</FooterLink>
+            <FooterLink href="/size-guide">{t("sizeGuide")}</FooterLink>
+            <FooterLink href="/contact">{t("contactUs")}</FooterLink>
           </FooterCol>
 
-          {/* Contact */}
-          <FooterCol title="Contact">
+          <FooterCol title={t("contact")}>
             <FooterContact
               icon={<Mail className="h-4 w-4" />}
               text="myfootballworldstore@gmail.com"
@@ -219,22 +208,20 @@ export default function Footer() {
             />
             <FooterContact
               icon={<MapPin className="h-4 w-4" />}
-              text="Worldwide shipping"
+              text={t("worldwideShipping")}
             />
           </FooterCol>
 
-          {/* Information */}
-          <FooterCol title="Information">
-            <FooterLink href="/privacy-policy">Privacy Policy</FooterLink>
-            <FooterLink href="/terms-of-service">Terms of Service</FooterLink>
-            <FooterLink href="/shipping-policy">Shipping Policy</FooterLink>
+          <FooterCol title={t("information")}>
+            <FooterLink href="/privacy-policy">{t("privacyPolicy")}</FooterLink>
+            <FooterLink href="/terms-of-service">{t("termsOfService")}</FooterLink>
+            <FooterLink href="/shipping-policy">{t("shippingPolicy")}</FooterLink>
             <FooterLink href="/return-and-refund-policy">
-              Return and Refund Policy
+              {t("returnRefundPolicy")}
             </FooterLink>
-            <FooterLink href="/about">About Us</FooterLink>
+            <FooterLink href="/about">{t("aboutUs")}</FooterLink>
           </FooterCol>
 
-          {/* Payment marks */}
           <div className="lg:col-span-5 sm:col-span-2 flex items-center justify-end flex-wrap gap-2 mt-1">
             <PayMark title="Visa">
               <VisaSvg />
@@ -270,16 +257,14 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="border-t">
         <div className="container-fw py-5 text-xs text-gray-500 flex items-center justify-center text-center">
-          <p>© {new Date().getFullYear()} FootBallWorld. All rights reserved.</p>
+          <p>{t("copyright", { year: new Date().getFullYear() })}</p>
         </div>
       </div>
 
-      {/* Back to top */}
       <button
-        aria-label="Back to top"
+        aria-label={t("backToTop")}
         onClick={scrollTop}
         className={`fixed bottom-6 right-6 z-[60] inline-flex items-center justify-center rounded-full border bg-white shadow-lg p-3 transition-all ${
           showTop
@@ -293,7 +278,6 @@ export default function Footer() {
   );
 }
 
-/* =============== small UI helpers =============== */
 function FooterCol({
   title,
   children,
@@ -328,7 +312,6 @@ function FooterLink({
   );
 }
 
-/** Item de contacto em <li>, com alinhamento no topo e quebra de linha */
 function FooterContact({
   icon,
   text,
@@ -393,7 +376,6 @@ function Badge({
   );
 }
 
-/* ===== payment mark wrapper ===== */
 function PayMark({
   title,
   children,
@@ -413,7 +395,6 @@ function PayMark({
   );
 }
 
-/* ===== inline SVG marks ===== */
 function PayPalSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
@@ -529,7 +510,6 @@ function LinkSvg() {
   );
 }
 
-/* ===== common card brands ===== */
 function VisaSvg() {
   return (
     <svg width="30" height="18" viewBox="0 0 32 20" aria-hidden="true">
@@ -576,7 +556,6 @@ function AmexSvg() {
   );
 }
 
-/* TikTok logo */
 function TikTokIcon({ className }: { className?: string }) {
   return (
     <svg

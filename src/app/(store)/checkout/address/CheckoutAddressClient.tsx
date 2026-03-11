@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import CountrySelect from '@/components/checkout/CountrySelect';
 
 type Shipping = {
@@ -23,13 +24,23 @@ type Address = NonNullable<Shipping['address']>;
 type AddressKey = keyof Address;
 
 export default function CheckoutAddressClient() {
+  const t = useTranslations('checkoutAddressPage');
   const router = useRouter();
+
   const [ship, setShip] = useState<Shipping>({
     name: '',
     email: '',
     phone: '',
-    address: { line1: '', line2: '', city: '', state: '', postal_code: '', country: '' },
+    address: {
+      line1: '',
+      line2: '',
+      city: '',
+      state: '',
+      postal_code: '',
+      country: '',
+    },
   });
+
   const [loading, setLoading] = useState(false);
 
   function up<K extends keyof Shipping>(k: K, v: Shipping[K]) {
@@ -46,86 +57,99 @@ export default function CheckoutAddressClient() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
     try {
       const res = await fetch('/api/checkout/shipping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipping: ship }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save address');
-      router.push('/checkout'); // Step 2: payment methods
+
+      if (!res.ok) {
+        throw new Error(data.error || t('errors.saveFailed'));
+      }
+
+      router.push('/checkout');
     } catch (err: any) {
-      alert(err?.message || 'Error saving address');
+      alert(err?.message || t('errors.saveFailed'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-2xl border bg-white p-5 space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border bg-white p-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input
           className="rounded-xl border px-4 py-3"
-          placeholder="Full name"
+          placeholder={t('fields.fullName')}
           required
           value={ship.name || ''}
           onChange={(e) => up('name', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3"
-          placeholder="Phone (optional)"
+          placeholder={t('fields.phone')}
           value={ship.phone || ''}
           onChange={(e) => up('phone', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3 sm:col-span-2"
-          placeholder="Email (optional)"
+          placeholder={t('fields.email')}
           type="email"
           value={ship.email || ''}
           onChange={(e) => up('email', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3 sm:col-span-2"
-          placeholder="Address line 1"
+          placeholder={t('fields.line1')}
           required
           value={ship.address?.line1 || ''}
           onChange={(e) => upAddr('line1', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3 sm:col-span-2"
-          placeholder="Address line 2 (optional)"
+          placeholder={t('fields.line2')}
           value={ship.address?.line2 || ''}
           onChange={(e) => upAddr('line2', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3"
-          placeholder="City"
+          placeholder={t('fields.city')}
           required
           value={ship.address?.city || ''}
           onChange={(e) => upAddr('city', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3"
-          placeholder="Region / State (optional)"
+          placeholder={t('fields.state')}
           value={ship.address?.state || ''}
           onChange={(e) => upAddr('state', e.target.value)}
         />
+
         <input
           className="rounded-xl border px-4 py-3"
-          placeholder="Postal code"
+          placeholder={t('fields.postalCode')}
           required
           value={ship.address?.postal_code || ''}
           onChange={(e) => upAddr('postal_code', e.target.value)}
         />
-        {/* Country com pesquisa */}
+
         <div>
           <CountrySelect
             name="country"
             required
             value={ship.address?.country || ''}
             onChange={(v) => upAddr('country', v)}
-            placeholder="Country"
+            placeholder={t('fields.country')}
             className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -136,7 +160,7 @@ export default function CheckoutAddressClient() {
         disabled={loading}
         className="w-full rounded-2xl border px-5 py-3 font-semibold hover:bg-gray-50 disabled:opacity-60"
       >
-        {loading ? 'Saving…' : 'Continue'}
+        {loading ? t('actions.saving') : t('actions.continue')}
       </button>
     </form>
   );

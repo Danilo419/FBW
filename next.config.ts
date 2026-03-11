@@ -1,12 +1,18 @@
 // next.config.ts
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  // ✅ Deixa os builds passarem mesmo com avisos de ESLint/TS enquanto iteras.
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 
-  // ✅ Permitir imagens remotas do Vercel Blob
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   images: {
     remotePatterns: [
       {
@@ -17,8 +23,8 @@ const nextConfig: NextConfig = {
   },
 
   webpack: (config) => {
-    return config; // comportamento padrão do webpack
+    return config;
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);
