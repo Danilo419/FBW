@@ -7,12 +7,12 @@ import HomeClient from "../HomeClient";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
-export default function Page({
+export default async function Page({
   params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const { locale } = params;
+  const { locale } = await params;
 
   // define o locale da página (/en ou /pt)
   setRequestLocale(locale);
