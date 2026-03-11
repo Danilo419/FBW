@@ -48,6 +48,13 @@ type ProductUI = {
   allowNameNumber?: boolean | null;
 };
 
+type PageProps = {
+  params: Promise<{
+    locale: string;
+    slug: string;
+  }>;
+};
+
 /* ===================== Helpers ===================== */
 
 function toUIGroupType(t: string): "SIZE" | "RADIO" | "ADDON" {
@@ -55,8 +62,8 @@ function toUIGroupType(t: string): "SIZE" | "RADIO" | "ADDON" {
   return "RADIO";
 }
 
-function ensureArray<T>(arr: T[] | null | undefined): T[] {
-  return Array.isArray(arr) ? arr : [];
+function ensureArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
 }
 
 function toUISizes(
@@ -89,7 +96,7 @@ function mapValuesByGroup(
       id: String(v.id),
       value: v.value,
       label: v.label ?? v.value,
-      priceDelta: v.priceDelta ?? 0,
+      priceDelta: Number(v.priceDelta ?? 0),
     });
 
     by.set(gid, list);
@@ -140,12 +147,8 @@ export async function generateStaticParams() {
 
 /* ===================== Page ===================== */
 
-export default async function ProductPage({
-  params,
-}: {
-  params: { locale: string; slug: string };
-}) {
-  const { locale, slug } = params;
+export default async function ProductPage({ params }: PageProps) {
+  const { locale, slug } = await params;
 
   setRequestLocale(locale);
 
@@ -196,7 +199,7 @@ export default async function ProductPage({
   const valuesByGroup = mapValuesByGroup(valuesDb);
   let optionGroups = toUIGroups(groupsDb, valuesByGroup);
 
-  const selectedBadges = ensureArray(core.badges);
+  const selectedBadges = ensureArray<string>(core.badges).map(String);
 
   optionGroups = optionGroups
     .map((g) => {
@@ -227,7 +230,9 @@ export default async function ProductPage({
 
         return { ...g, values: filtered };
       })
-      .filter((g) => !(g.key === "customization" && (g.values?.length ?? 0) === 0));
+      .filter(
+        (g) => !(g.key === "customization" && (g.values?.length ?? 0) === 0)
+      );
   }
 
   const uiProduct: ProductUI = {
@@ -237,7 +242,7 @@ export default async function ProductPage({
     team: core.team,
     description: core.description,
     basePrice: Number(core.basePrice ?? 0),
-    images: ensureArray(core.imageUrls).map(String),
+    images: ensureArray<unknown>(core.imageUrls).map(String),
     sizes,
     optionGroups,
     badges: selectedBadges,
