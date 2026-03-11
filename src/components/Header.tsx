@@ -712,7 +712,8 @@ function SearchBar({
       const aIdx = an.indexOf(phrase);
       const bIdx = bn.indexOf(phrase);
       if (aIdx !== bIdx) {
-        return (aIdx === -1 ? 1 : aIdx) - (bIdx === -1 ? 1 : bIdx);
+        return (aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx) -
+          (bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx);
       }
 
       return a.name.localeCompare(b.name);
@@ -828,7 +829,13 @@ function SearchBar({
         className="group relative"
       >
         <div className="rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 p-[1.5px] shadow-[0_6px_20px_-8px_rgba(59,130,246,0.45)]">
-          <div className="relative rounded-full bg-white/80 ring-1 ring-black/5 backdrop-blur transition hover:ring-gray-300 focus-within:ring-blue-500">
+          <div
+            className="relative rounded-full bg-white/80 ring-1 ring-black/5 backdrop-blur transition hover:ring-gray-300 focus-within:ring-blue-500"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls="search-popover"
+            aria-haspopup="listbox"
+          >
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               ref={inputRef}
@@ -844,7 +851,7 @@ function SearchBar({
               placeholder={t("searchProductsPlaceholder")}
               className="w-full rounded-full bg-transparent py-2 pl-9 pr-24 text-sm outline-none transition-[width] duration-300 sm:w-72 sm:group-focus-within:w-[28rem] lg:w-80 xl:w-96"
               aria-label={t("searchProducts")}
-              aria-expanded={open}
+              aria-autocomplete="list"
               aria-controls="search-popover"
               autoComplete="off"
             />

@@ -69,23 +69,6 @@ function extractCustomerEmail(order: any) {
   );
 }
 
-function extractCustomerName(order: any) {
-  const direct =
-    (typeof order?.shippingFullName === "string" && order.shippingFullName.trim()) ||
-    (typeof order?.name === "string" && order.name.trim()) ||
-    (typeof order?.user?.name === "string" && order.user.name.trim()) ||
-    "";
-
-  if (direct) return direct;
-
-  const j = safeParseJSON(order?.shippingJson);
-  return (
-    pickStr(j, ["fullName", "name", "recipient", "ship_name"]) ||
-    pickStr(j?.shipping, ["fullName", "name"]) ||
-    null
-  );
-}
-
 /* -------------------- status mapping -------------------- */
 
 function mapShippingStatusToOrderStatus(shippingStatus: string) {
@@ -234,7 +217,10 @@ export async function sendShipmentEmailAction(formData: FormData) {
   });
 
   /* -------- email -------- */
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) throw new Error("Missing RESEND_API_KEY");
+
+  const resend = new Resend(resendApiKey);
 
   const orderShort = `#${orderId.slice(0, 7)}`;
   const track17Url = `https://www.17track.net/en?nums=${encodeURIComponent(trackingCode)}`;
@@ -257,6 +243,6 @@ export async function sendShipmentEmailAction(formData: FormData) {
   });
 
   revalidatePath(`/admin/orders/${orderId}`);
-  revalidatePath(`/admin`);
+  revalidatePath("/admin");
   revalidatePath(`/orders/${orderId}`);
 }

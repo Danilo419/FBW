@@ -278,9 +278,9 @@ export default function MetricChart({
     };
   }, [qs]);
 
-  const labels = payload?.labels ?? [];
-  const series = payload?.series ?? {};
-  const totals = payload?.totals ?? {};
+  const labels = useMemo(() => payload?.labels ?? [], [payload]);
+  const series = useMemo(() => payload?.series ?? {}, [payload]);
+  const totals = useMemo(() => payload?.totals ?? {}, [payload]);
 
   const metricSeries = useMemo(() => {
     if (metric === "pageviews") {
@@ -294,7 +294,7 @@ export default function MetricChart({
     if (metric === "orders") return pickSeries(series, ["orders"]);
     if (metric === "conversion") return pickSeries(series, ["conversion"]);
     return [];
-  }, [series, metric]);
+  }, [metric, series]);
 
   const chartData = useMemo(() => {
     const arr = Array.isArray(metricSeries) ? metricSeries : [];
@@ -319,11 +319,17 @@ export default function MetricChart({
 
   const { yDomain, yTicks } = useMemo(() => {
     if (!(metric === "sales" || metric === "profit" || metric === "conversion")) {
-      return { yDomain: undefined as [number, number] | undefined, yTicks: undefined as number[] | undefined };
+      return {
+        yDomain: undefined as [number, number] | undefined,
+        yTicks: undefined as number[] | undefined,
+      };
     }
 
     if (chartData.length === 0) {
-      return { yDomain: undefined as [number, number] | undefined, yTicks: undefined as number[] | undefined };
+      return {
+        yDomain: undefined as [number, number] | undefined,
+        yTicks: undefined as number[] | undefined,
+      };
     }
 
     let min = Infinity;
@@ -337,7 +343,10 @@ export default function MetricChart({
     }
 
     if (!Number.isFinite(min) || !Number.isFinite(max)) {
-      return { yDomain: undefined as [number, number] | undefined, yTicks: undefined as number[] | undefined };
+      return {
+        yDomain: undefined as [number, number] | undefined,
+        yTicks: undefined as number[] | undefined,
+      };
     }
 
     min = Math.min(0, min);
@@ -377,7 +386,15 @@ export default function MetricChart({
     }
 
     return 0;
-  }, [payload, metric, totalsPageviews, totalsVisitorsUnique, totalsOrders, totalsSales, totalsProfit]);
+  }, [
+    metric,
+    payload,
+    totalsOrders,
+    totalsPageviews,
+    totalsProfit,
+    totalsSales,
+    totalsVisitorsUnique,
+  ]);
 
   const totalText = useMemo(() => {
     if (metric === "sales" || metric === "profit") return formatEUR(totalValue);
@@ -428,6 +445,7 @@ export default function MetricChart({
             return (
               <button
                 key={p.key}
+                type="button"
                 onClick={() => setPeriod(p.key)}
                 className={[
                   "rounded-lg border px-4 py-2 text-sm transition",
@@ -465,7 +483,9 @@ export default function MetricChart({
             />
           </div>
 
-          <div className="text-xs text-gray-500">(Depois de mudar datas, o gráfico atualiza automaticamente.)</div>
+          <div className="text-xs text-gray-500">
+            (Depois de mudar datas, o gráfico atualiza automaticamente.)
+          </div>
         </div>
       )}
 
