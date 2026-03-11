@@ -1,8 +1,8 @@
-// src/app/products/adult/page.tsx
+// src/app/[locale]/products/adult/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Search } from "lucide-react";
 
 /* ============================ Tipagem ============================ */
@@ -62,7 +62,7 @@ function pricePartsFromCents(cents: number) {
   return { int: euros, dec, sym: "€" };
 }
 
-/* ========= NOME DO CLUBE/SELEÇÃO (FIX TOTAL: nunca “CLUB”, nunca cores/PRIMARY, etc.) ========= */
+/* ========= NOME DO CLUBE/SELEÇÃO ========= */
 
 function normalizeStr(s?: string | null) {
   return (s ?? "").replace(/\s{2,}/g, " ").trim();
@@ -95,9 +95,7 @@ function toTitleCaseSmart(input: string) {
     .join(" ");
 }
 
-// ✅ FIX Madrid (Real Madrid só com "real madrid")
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  // Espanha
   [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
@@ -106,7 +104,6 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
 
-  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -147,7 +144,6 @@ const COLOR_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
-// palavras “lixo” comuns
 const VARIANT_WORDS = new Set(
   [
     "PRIMARY",
@@ -161,7 +157,6 @@ const VARIANT_WORDS = new Set(
     "4TH",
     "FIRST",
     "SECOND",
-
     "CLUB",
     "TEAM",
     "MEN",
@@ -169,7 +164,6 @@ const VARIANT_WORDS = new Set(
     "KID",
     "KIDS",
     "YOUTH",
-
     "GOALKEEPER",
     "GK",
     "JERSEY",
@@ -190,7 +184,6 @@ const VARIANT_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
-// descritores/coleções que NÃO podem ficar no label do clube
 const DESCRIPTOR_WORDS = new Set(
   [
     "TRICOLOR",
@@ -207,8 +200,6 @@ const DESCRIPTOR_WORDS = new Set(
     "MULTI-COLOUR",
     "COLORWAY",
     "COLOURWAY",
-
-    // ✅ exemplos do teu problema (genérico)
     "SHADOW",
     "SAMURAI",
     "DRAGON",
@@ -225,10 +216,6 @@ const DESCRIPTOR_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
-/**
- * ✅ Lista de “começos” que normalmente fazem parte de nomes multi-palavra
- * (para NÃO cortar "Real Madrid", "Manchester City", "South Korea", etc.)
- */
 const MULTIWORD_STARTERS = new Set(
   [
     "REAL",
@@ -273,13 +260,11 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // se vier "X & Y" (cores), mantemos só a esquerda
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo
   const tokens = s.split(/\s+/);
-  let out = tokens.slice();
+  const out = tokens.slice();
 
   while (out.length > 1) {
     const lastRaw = out[out.length - 1];
@@ -303,7 +288,6 @@ function cleanTeamValue(v?: string | null): string {
 
   let joined = normalizeStr(out.join(" "));
 
-  // fallback extra (variações com hífen / spelling)
   joined = joined.replace(
     /\s+(TRI-?COL(OU)?R|BI-?COL(OU)?R|MULTI-?COL(OU)?R)\b/gi,
     ""
@@ -322,16 +306,10 @@ function clubFromString(input?: string | null): string | null {
   return null;
 }
 
-/**
- * ✅ REGRA FINAL (a que estava a faltar):
- * Se depois de limpar ainda vier "Chelsea Shadow" / "Japan Samurai",
- * cortamos para só o clube (primeira palavra), EXCETO em casos multi-palavra.
- */
 function hardClampClubName(label: string): string {
   const s = normalizeStr(label);
   if (!s) return "";
 
-  // se bater nos patterns, devolve exatamente o “canon”
   const byPattern = clubFromString(s);
   if (byPattern) return byPattern;
 
@@ -340,11 +318,9 @@ function hardClampClubName(label: string): string {
 
   const firstUp = parts[0].toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý]/g, "");
   if (MULTIWORD_STARTERS.has(firstUp)) {
-    // mantém como veio (já limpo), porque provavelmente é multi-palavra legítimo
     return s;
   }
 
-  // se a 2ª palavra for descriptor (Shadow/Samurai/etc), corta
   const secondUp = (parts[1] ?? "")
     .toUpperCase()
     .replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
@@ -353,18 +329,9 @@ function hardClampClubName(label: string): string {
     return parts[0];
   }
 
-  // ✅ regra “garantia”: se for 2+ palavras e NÃO for multiword starter,
-  // e o teu objetivo é “NUNCA aparecer apelido”, então corta sempre no 1º token.
-  // (isto é o que garante que "Chelsea Shadow" vira "Chelsea" SEM lista infinita)
   return parts[0];
 }
 
-/**
- * Inferir nome (clube/seleção) pelo nome do produto:
- * - "Argentina Primary Goalkeeper Jersey 2026 – World Cup" -> "Argentina"
- * - "Arsenal Red & Black Training Tracksuit 25/26" -> "Arsenal"
- * - "Chelsea Shadow Training Sleeveless Set 24/25" -> "Chelsea"
- */
 function inferClubFromName(name?: string | null): string {
   const s = normalizeStr(name);
   if (!s) return "";
@@ -380,13 +347,10 @@ function inferClubFromName(name?: string | null): string {
     )
   );
 
-  // limpa lixo e depois aplica clamp final
   return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ label final: team -> patterns -> infer; SEMPRE passa pelo clamp final */
 function getClubLabel(p: UIProduct): string {
-  // 1) team
   const teamClean = cleanTeamValue(p.team ?? null);
   if (teamClean) {
     const clamped = hardClampClubName(teamClean);
@@ -394,11 +358,9 @@ function getClubLabel(p: UIProduct): string {
     return byTeamPattern ?? toTitleCaseSmart(clamped);
   }
 
-  // 2) patterns no nome
   const byNamePattern = clubFromString(p.name);
   if (byNamePattern) return byNamePattern;
 
-  // 3) infer pelo nome
   const inferred = inferClubFromName(p.name);
   if (inferred) return toTitleCaseSmart(inferred);
 
@@ -507,7 +469,6 @@ function ProductCard({ p }: { p: UIProduct }) {
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
-
   const teamLabel = getClubLabel(p);
 
   return (
@@ -588,7 +549,7 @@ function ProductCard({ p }: { p: UIProduct }) {
                 fill="currentColor"
                 aria-hidden="true"
               >
-                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 01-1.414 0z" />
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L10.586 10 7.293 6.707z" />
               </svg>
             </div>
           </div>
@@ -632,7 +593,6 @@ function buildPaginationRange(
 /* ============================ Página Adult ============================ */
 
 const PAGE_SIZE = 12;
-
 const SEARCH_QUERIES = ["a", "e", "i", "o", "u", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 export default function AdultPage() {
@@ -658,18 +618,22 @@ export default function AdultPage() {
           const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
             cache: "no-store",
           });
+
           if (!res.ok) continue;
+
           const json = await res.json();
           const list: any[] = Array.isArray(json?.products)
             ? json.products
             : Array.isArray(json)
-            ? json
-            : [];
+              ? json
+              : [];
+
           allRaw.push(...list);
         }
 
         const seen = new Set<string>();
         const uniqueRaw: any[] = [];
+
         for (const p of allRaw) {
           const key = String(p.id ?? p.slug ?? p.name ?? Math.random());
           if (seen.has(key)) continue;
@@ -695,6 +659,7 @@ export default function AdultPage() {
     };
 
     load();
+
     return () => {
       cancelled = true;
     };
@@ -735,9 +700,11 @@ export default function AdultPage() {
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
+
       if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
       return ta.localeCompare(tb);
     });
+
     return copy;
   }, [results, searchTerm, sort]);
 
@@ -757,9 +724,7 @@ export default function AdultPage() {
   }, [filteredSorted, page]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
 
   return (
@@ -819,7 +784,7 @@ export default function AdultPage() {
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40 sm:w-auto"

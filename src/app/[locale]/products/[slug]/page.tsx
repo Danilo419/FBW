@@ -1,3 +1,4 @@
+// src/app/[locale]/products/[slug]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -8,7 +9,8 @@ import ProductReviews from "@/components/ProductReviews";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
-/* ===================== UI types (match ProductConfigurator props) ===================== */
+/* ===================== UI types ===================== */
+
 type OptionValueUI = {
   id: string;
   value: string;
@@ -47,8 +49,10 @@ type ProductUI = {
 };
 
 /* ===================== Helpers ===================== */
+
 function toUIGroupType(t: string): "SIZE" | "RADIO" | "ADDON" {
-  return t === "SIZE" || t === "RADIO" || t === "ADDON" ? t : "RADIO";
+  if (t === "SIZE" || t === "RADIO" || t === "ADDON") return t;
+  return "RADIO";
 }
 
 function ensureArray<T>(arr: T[] | null | undefined): T[] {
@@ -114,7 +118,8 @@ function toUIGroups(
   }));
 }
 
-/* ---------- Static params (guarded on Vercel) ---------- */
+/* ===================== Static params ===================== */
+
 export async function generateStaticParams() {
   if (process.env.VERCEL) return [];
 
@@ -134,12 +139,13 @@ export async function generateStaticParams() {
 }
 
 /* ===================== Page ===================== */
+
 export default async function ProductPage({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>;
+  params: { locale: string; slug: string };
 }) {
-  const { locale, slug } = await params;
+  const { locale, slug } = params;
 
   setRequestLocale(locale);
 
@@ -166,15 +172,23 @@ export default async function ProductPage({
       orderBy: { id: "asc" },
       select: { id: true, size: true, available: true },
     }),
+
     prisma.optionGroup.findMany({
       where: { productId: core.id },
       orderBy: { id: "asc" },
       select: { id: true, key: true, label: true, type: true, required: true },
     }),
+
     prisma.optionValue.findMany({
       where: { group: { productId: core.id } },
       orderBy: { id: "asc" },
-      select: { id: true, groupId: true, value: true, label: true, priceDelta: true },
+      select: {
+        id: true,
+        groupId: true,
+        value: true,
+        label: true,
+        priceDelta: true,
+      },
     }),
   ]);
 
@@ -223,7 +237,7 @@ export default async function ProductPage({
     team: core.team,
     description: core.description,
     basePrice: Number(core.basePrice ?? 0),
-    images: ensureArray(core.imageUrls),
+    images: ensureArray(core.imageUrls).map(String),
     sizes,
     optionGroups,
     badges: selectedBadges,
