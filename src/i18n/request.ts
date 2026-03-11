@@ -5,14 +5,16 @@ import { routing } from "@/i18n/routing";
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
 
-  // Garantir que locale nunca é undefined
-  const locale: (typeof routing.locales)[number] =
+  // Garantir que o locale é válido
+  const locale =
     requested && routing.locales.includes(requested as (typeof routing.locales)[number])
       ? (requested as (typeof routing.locales)[number])
       : routing.defaultLocale;
 
+  const messages = (await import(`../../messages/${locale}.json`)).default;
+
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    messages,
   };
 });
