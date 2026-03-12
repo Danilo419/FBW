@@ -12,6 +12,16 @@ const intlMiddleware = createMiddleware(routing);
 export default function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
+  // Ignorar ficheiros internos / assets
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_vercel") ||
+    /\.[^/]+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   // Proteção das rotas /admin
   if (pathname.startsWith(ADMIN_PREFIX)) {
     const isPublicAdminRoute = PUBLIC_UNDER_ADMIN.some(
@@ -25,14 +35,16 @@ export default function middleware(req: NextRequest) {
 
       if (!hasSession) {
         const url = req.nextUrl.clone();
-        url.pathname = "/login";
+        url.pathname = "/admin/login";
+        url.search = "";
         url.searchParams.set("next", pathname + search);
         return NextResponse.redirect(url);
       }
     }
+
+    return NextResponse.next();
   }
 
-  // next-intl middleware
   return intlMiddleware(req);
 }
 

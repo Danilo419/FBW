@@ -2,8 +2,13 @@
 import { defineRouting } from "next-intl/routing";
 
 export const routing = defineRouting({
-  locales: ["en", "pt"],
+  // Idiomas disponíveis na loja
+  locales: ["en", "pt"] as const,
+
+  // Idioma padrão
   defaultLocale: "en",
+
+  // Sempre mostrar o prefixo no URL (/en, /pt)
   localePrefix: "always"
 });
 
