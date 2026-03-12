@@ -1187,5 +1187,46 @@
       "back": "Voltar ao PT Stock",
       "browseMore": "Ver mais produtos"
     }
+  },
+  "sizeGuidePage": {
+    "breadcrumb": {
+      "home": "Início",
+      "current": "Guia de Tamanhos"
+    },
+    "header": {
+      "title": "Guia de Tamanhos",
+      "description": "Use este guia para comparar tamanhos de <adult>adulto</adult> e <kids>criança</kids>. As medidas estão disponíveis em <cm>cm</cm> e <inches>polegadas</inches>."
+    },
+    "tabs": {
+      "adult": "Adulto",
+      "kids": "Criança"
+    },
+    "table": {
+      "units": "Unidades:",
+      "centimetres": "Centímetros",
+      "inches": "Polegadas",
+      "measurement": "Medida"
+    },
+    "adult": {
+      "sectionCm": "Guia de Tamanhos Adulto (cm)",
+      "sectionIn": "Guia de Tamanhos Adulto (in)",
+      "rows": {
+        "Length": "Comprimento",
+        "Width": "Largura",
+        "Height": "Altura",
+        "Weight": "Peso"
+      }
+    },
+    "kids": {
+      "sectionCm": "Guia de Tamanhos Criança (cm)",
+      "sectionIn": "Guia de Tamanhos Criança (in)",
+      "ageYears": "{age} anos",
+      "rows": {
+        "Jersey length": "Comprimento da camisola",
+        "Chest (bust)": "Peito (busto)",
+        "Height": "Altura",
+        "Shorts length": "Comprimento dos calções"
+      }
+    }
   }
 }

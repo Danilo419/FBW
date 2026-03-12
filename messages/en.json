@@ -1187,5 +1187,46 @@
       "back": "Back to PT Stock",
       "browseMore": "Browse more products"
     }
+  },
+  "sizeGuidePage": {
+    "breadcrumb": {
+      "home": "Home",
+      "current": "Size Guide"
+    },
+    "header": {
+      "title": "Size Guide",
+      "description": "Use this guide to compare <adult>adult</adult> and <kids>kids</kids> sizes. Measurements are available in <cm>cm</cm> and <inches>inches</inches>."
+    },
+    "tabs": {
+      "adult": "Adult",
+      "kids": "Kids"
+    },
+    "table": {
+      "units": "Units:",
+      "centimetres": "Centimetres",
+      "inches": "Inches",
+      "measurement": "Measurement"
+    },
+    "adult": {
+      "sectionCm": "Adult Size Guide (cm)",
+      "sectionIn": "Adult Size Guide (in)",
+      "rows": {
+        "Length": "Length",
+        "Width": "Width",
+        "Height": "Height",
+        "Weight": "Weight"
+      }
+    },
+    "kids": {
+      "sectionCm": "Kids Size Guide (cm)",
+      "sectionIn": "Kids Size Guide (in)",
+      "ageYears": "{age} years",
+      "rows": {
+        "Jersey length": "Jersey length",
+        "Chest (bust)": "Chest (bust)",
+        "Height": "Height",
+        "Shorts length": "Shorts length"
+      }
+    }
   }
 }
