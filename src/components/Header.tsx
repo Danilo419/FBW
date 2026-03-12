@@ -170,48 +170,60 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         <div className="container-fw hidden h-24 items-center md:flex">
           <Link
             href="/"
-            className="flex shrink-0 items-center md:-ml-8 lg:-ml-10 xl:-ml-12"
+            className="flex shrink-0 items-center md:-ml-8 lg:-ml-12 xl:-ml-14 2xl:-ml-16"
             aria-label="FootballWorld"
           >
             <Image
               src="/logo.png"
               alt="FootballWorld"
-              width={118}
-              height={118}
+              width={120}
+              height={120}
               priority
-              className="h-[58px] w-auto object-contain lg:h-[60px]"
+              className="h-[56px] w-auto object-contain lg:h-[58px] xl:h-[60px]"
             />
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          <div className="ml-4 flex min-w-0 flex-1 items-center">
-            <nav className="hidden min-w-0 flex-1 items-center gap-5 text-[15px] font-medium text-gray-900 lg:flex xl:gap-7 2xl:gap-8">
-              <Link href="/nations" className="whitespace-nowrap transition hover:text-blue-700">
+          <div className="ml-3 flex min-w-0 flex-1 items-center">
+            <nav className="hidden min-w-0 flex-1 items-center justify-center gap-5 text-[15px] font-medium text-gray-900 lg:flex xl:gap-7 2xl:gap-8">
+              <Link
+                href="/nations"
+                className="whitespace-nowrap transition-colors hover:text-blue-700"
+              >
                 {t("nations")}
               </Link>
 
-              <Link href="/leagues" className="whitespace-nowrap transition hover:text-blue-700">
+              <Link
+                href="/leagues"
+                className="whitespace-nowrap transition-colors hover:text-blue-700"
+              >
                 {t("leagues")}
               </Link>
 
-              <Link href="/clubs" className="whitespace-nowrap transition hover:text-blue-700">
+              <Link
+                href="/clubs"
+                className="whitespace-nowrap transition-colors hover:text-blue-700"
+              >
                 {t("clubs")}
               </Link>
 
               <Link
                 href="/pt-stock"
-                className="inline-flex items-center gap-1.5 whitespace-nowrap transition hover:text-blue-700"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap transition-colors hover:text-blue-700"
               >
                 <Truck className="h-4 w-4 shrink-0" />
                 <span className="whitespace-nowrap">{t("portugalDelivery")}</span>
               </Link>
 
-              <Link href="/faq" className="whitespace-nowrap transition hover:text-blue-700">
+              <Link
+                href="/faq"
+                className="whitespace-nowrap transition-colors hover:text-blue-700"
+              >
                 {t("faq")}
               </Link>
             </nav>
 
-            <div className="ml-5 flex shrink-0 items-center gap-2.5 xl:gap-3">
+            <div className="ml-4 flex shrink-0 items-center gap-2 lg:ml-5 xl:gap-2.5">
               <SearchBar className="hidden lg:block" />
 
               <Link
@@ -920,7 +932,7 @@ function SearchBar({
               onFocus={() => term.trim().length >= 2 && setOpen(true)}
               onKeyDown={onKeyDown}
               placeholder={t("searchProductsPlaceholder")}
-              className="w-full rounded-full bg-transparent py-2.5 pl-9 pr-24 text-sm outline-none transition-[width] duration-300 sm:w-[18rem] sm:group-focus-within:w-[23rem] lg:w-[20rem] xl:w-[24rem] 2xl:w-[29rem]"
+              className="w-full rounded-full bg-transparent py-2.5 pl-9 pr-24 text-sm outline-none transition-[width] duration-300 sm:w-[18rem] sm:group-focus-within:w-[22rem] lg:w-[18.5rem] xl:w-[21rem] 2xl:w-[25rem]"
               aria-label={t("searchProducts")}
               aria-autocomplete="list"
               aria-controls="search-popover"
