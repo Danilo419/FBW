@@ -17,6 +17,7 @@ import {
   Search,
   Truck,
   Check,
+  Languages,
 } from "lucide-react";
 
 function normalizeUrl(u?: string | null) {
@@ -183,7 +184,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          <nav className="hidden flex-1 items-center justify-center gap-11 text-[16px] font-medium lg:flex xl:gap-12">
+          <nav className="hidden flex-1 items-center justify-center gap-9 text-[16px] font-medium lg:flex xl:gap-10">
             <Link href="/nations" className="hover:text-blue-700">
               {t("nations")}
             </Link>
@@ -210,12 +211,6 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <LanguageSwitcher
-              locale={locale}
-              onChangeLocale={handleChangeLocale}
-              fullLabel
-            />
-
             <SearchBar className="hidden lg:block" />
 
             <Link
@@ -271,9 +266,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                   >
                     <div className="px-3 py-2">
                       <div className="text-xs text-gray-500">{t("signedInAs")}</div>
-                      <div className="truncate text-sm font-medium">
-                        {displayName}
-                      </div>
+                      <div className="truncate text-sm font-medium">{displayName}</div>
                     </div>
 
                     <MenuItem
@@ -322,6 +315,11 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 {t("signUp")}
               </Link>
             )}
+
+            <CompactLanguageSwitcher
+              locale={locale}
+              onChangeLocale={handleChangeLocale}
+            />
           </div>
         </div>
 
@@ -406,6 +404,12 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
                 </span>
               </Link>
             )}
+
+            <CompactLanguageSwitcher
+              locale={locale}
+              onChangeLocale={handleChangeLocale}
+              mobile
+            />
           </div>
         </div>
 
@@ -573,44 +577,109 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   );
 }
 
-/* ===== Language UI ===== */
+/* ===== Compact language UI ===== */
 
-function LanguageSwitcher({
+function CompactLanguageSwitcher({
   locale,
   onChangeLocale,
-  fullLabel = false,
+  mobile = false,
 }: {
   locale: "en" | "pt";
   onChangeLocale: (nextLocale: "en" | "pt") => void;
-  fullLabel?: boolean;
+  mobile?: boolean;
 }) {
   const t = useTranslations("Header");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onDocPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (!wrapRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onDocPointerDown);
+    document.addEventListener("keydown", onEsc);
+
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, []);
+
+  const currentLabel = locale === "en" ? "EN" : "PT";
+  const currentFlag = locale === "en" ? "🇬🇧" : "🇵🇹";
 
   return (
-    <div className="hidden items-center gap-2 rounded-full border bg-white/90 px-2 py-1.5 xl:flex">
+    <div ref={wrapRef} className="relative shrink-0">
       <button
         type="button"
-        onClick={() => onChangeLocale("en")}
-        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition ${
-          locale === "en" ? "bg-black text-white" : "hover:bg-gray-100"
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-full border bg-white px-3 py-2 text-sm font-medium hover:bg-gray-100 ${
+          mobile ? "px-2.5" : ""
         }`}
-        aria-pressed={locale === "en"}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t("language")}
+        title={t("language")}
       >
-        <span aria-hidden="true">🇬🇧</span>
-        <span>{fullLabel ? t("english") : "EN"}</span>
+        <Languages className="h-4 w-4" />
+        <span aria-hidden="true">{currentFlag}</span>
+        {!mobile && <span>{currentLabel}</span>}
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      <button
-        type="button"
-        onClick={() => onChangeLocale("pt")}
-        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition ${
-          locale === "pt" ? "bg-black text-white" : "hover:bg-gray-100"
-        }`}
-        aria-pressed={locale === "pt"}
-      >
-        <span aria-hidden="true">🇵🇹</span>
-        <span>{fullLabel ? t("portuguese") : "PT"}</span>
-      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label={t("language")}
+          className="absolute right-0 mt-2 min-w-[150px] overflow-hidden rounded-2xl border bg-white p-1 shadow-xl"
+        >
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={locale === "en"}
+            onClick={() => {
+              onChangeLocale("en");
+              setOpen(false);
+            }}
+            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
+              locale === "en" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden="true">🇬🇧</span>
+              <span>{t("english")}</span>
+            </span>
+            {locale === "en" ? <Check className="h-4 w-4" /> : null}
+          </button>
+
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={locale === "pt"}
+            onClick={() => {
+              onChangeLocale("pt");
+              setOpen(false);
+            }}
+            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition ${
+              locale === "pt" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden="true">🇵🇹</span>
+              <span>{t("portuguese")}</span>
+            </span>
+            {locale === "pt" ? <Check className="h-4 w-4" /> : null}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
