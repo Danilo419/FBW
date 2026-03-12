@@ -167,159 +167,161 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
           hidden ? "-translate-y-full" : "translate-y-0"
         }`}
       >
-        <div className="container-fw hidden h-24 items-center gap-4 md:flex">
+        <div className="container-fw hidden h-24 items-center md:flex">
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-3 md:-ml-4 lg:-ml-7"
+            className="flex shrink-0 items-center md:-ml-8 lg:-ml-10 xl:-ml-12"
             aria-label="FootballWorld"
           >
             <Image
               src="/logo.png"
               alt="FootballWorld"
-              width={120}
-              height={120}
+              width={118}
+              height={118}
               priority
-              className="h-16 w-auto object-contain"
+              className="h-[58px] w-auto object-contain lg:h-[60px]"
             />
             <span className="sr-only">FootballWorld</span>
           </Link>
 
-          <nav className="hidden flex-1 items-center justify-center gap-9 text-[16px] font-medium lg:flex xl:gap-10">
-            <Link href="/nations" className="hover:text-blue-700">
-              {t("nations")}
-            </Link>
+          <div className="ml-4 flex min-w-0 flex-1 items-center">
+            <nav className="hidden min-w-0 flex-1 items-center gap-5 text-[15px] font-medium text-gray-900 lg:flex xl:gap-7 2xl:gap-8">
+              <Link href="/nations" className="whitespace-nowrap transition hover:text-blue-700">
+                {t("nations")}
+              </Link>
 
-            <Link href="/leagues" className="hover:text-blue-700">
-              {t("leagues")}
-            </Link>
+              <Link href="/leagues" className="whitespace-nowrap transition hover:text-blue-700">
+                {t("leagues")}
+              </Link>
 
-            <Link href="/clubs" className="hover:text-blue-700">
-              {t("clubs")}
-            </Link>
+              <Link href="/clubs" className="whitespace-nowrap transition hover:text-blue-700">
+                {t("clubs")}
+              </Link>
 
-            <Link
-              href="/pt-stock"
-              className="flex items-center gap-1 whitespace-nowrap hover:text-blue-700"
-            >
-              <Truck className="h-4 w-4" />
-              <span className="whitespace-nowrap">{t("portugalDelivery")}</span>
-            </Link>
+              <Link
+                href="/pt-stock"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap transition hover:text-blue-700"
+              >
+                <Truck className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">{t("portugalDelivery")}</span>
+              </Link>
 
-            <Link href="/faq" className="hover:text-blue-700">
-              {t("faq")}
-            </Link>
-          </nav>
+              <Link href="/faq" className="whitespace-nowrap transition hover:text-blue-700">
+                {t("faq")}
+              </Link>
+            </nav>
 
-          <div className="ml-auto flex items-center gap-3">
-            <SearchBar className="hidden lg:block" />
+            <div className="ml-5 flex shrink-0 items-center gap-2.5 xl:gap-3">
+              <SearchBar className="hidden lg:block" />
 
-            <Link
-              href="/cart"
-              aria-label={t("openCart")}
-              className="relative inline-flex items-center justify-center rounded-full border p-2 hover:bg-gray-100"
-              title={t("cart")}
-              data-cart-anchor="true"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span
-                  aria-label={t("itemsInCart", { count: cartCount })}
-                  className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-blue-600 px-1 text-[11px] font-semibold leading-none text-white"
-                >
-                  {cartCount > 99 ? "99+" : cartCount}
-                </span>
-              )}
-            </Link>
-
-            {status === "authenticated" ? (
-              <div className="relative">
-                <button
-                  ref={userBtnRef}
-                  type="button"
-                  onClick={() => setUserOpen((v) => !v)}
-                  className="group inline-flex items-center gap-2 rounded-full border px-3 py-2 hover:bg-gray-100"
-                  aria-haspopup="menu"
-                  aria-expanded={userOpen}
-                  aria-controls="user-menu"
-                  aria-label={t("userMenu")}
-                >
-                  <Avatar
-                    key={avatarSrc || "__"}
-                    src={avatarSrc}
-                    name={displayName}
-                    size={40}
-                  />
-                  <ChevronDown
-                    className={`h-5 w-5 transition-transform ${
-                      userOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {userOpen && (
-                  <div
-                    ref={userMenuRef}
-                    id="user-menu"
-                    role="menu"
-                    aria-label={t("userMenu")}
-                    className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white p-1 shadow-xl"
+              <Link
+                href="/cart"
+                aria-label={t("openCart")}
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-black/15 bg-white hover:bg-gray-100"
+                title={t("cart")}
+                data-cart-anchor="true"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span
+                    aria-label={t("itemsInCart", { count: cartCount })}
+                    className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-blue-600 px-1 text-[11px] font-semibold leading-none text-white"
                   >
-                    <div className="px-3 py-2">
-                      <div className="text-xs text-gray-500">{t("signedInAs")}</div>
-                      <div className="truncate text-sm font-medium">{displayName}</div>
-                    </div>
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
+              </Link>
 
-                    <MenuItem
-                      href="/account"
-                      icon={<User className="h-4 w-4" />}
-                      onClick={() => setUserOpen(false)}
+              {status === "authenticated" ? (
+                <div className="relative">
+                  <button
+                    ref={userBtnRef}
+                    type="button"
+                    onClick={() => setUserOpen((v) => !v)}
+                    className="group inline-flex h-12 items-center gap-2 rounded-full border border-black/15 bg-white px-2.5 pr-3 hover:bg-gray-100"
+                    aria-haspopup="menu"
+                    aria-expanded={userOpen}
+                    aria-controls="user-menu"
+                    aria-label={t("userMenu")}
+                  >
+                    <Avatar
+                      key={avatarSrc || "__"}
+                      src={avatarSrc}
+                      name={displayName}
+                      size={38}
+                    />
+                    <ChevronDown
+                      className={`h-4.5 w-4.5 transition-transform ${
+                        userOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {userOpen && (
+                    <div
+                      ref={userMenuRef}
+                      id="user-menu"
+                      role="menu"
+                      aria-label={t("userMenu")}
+                      className="absolute right-0 mt-2 w-56 rounded-2xl border bg-white p-1 shadow-xl"
                     >
-                      {t("accountPage")}
-                    </MenuItem>
+                      <div className="px-3 py-2">
+                        <div className="text-xs text-gray-500">{t("signedInAs")}</div>
+                        <div className="truncate text-sm font-medium">{displayName}</div>
+                      </div>
 
-                    {isAdmin && (
                       <MenuItem
-                        href="/admin"
+                        href="/account"
                         icon={<User className="h-4 w-4" />}
                         onClick={() => setUserOpen(false)}
                       >
-                        {t("adminPanel")}
+                        {t("accountPage")}
                       </MenuItem>
-                    )}
 
-                    <div className="my-1 h-px bg-gray-100" />
+                      {isAdmin && (
+                        <MenuItem
+                          href="/admin"
+                          icon={<User className="h-4 w-4" />}
+                          onClick={() => setUserOpen(false)}
+                        >
+                          {t("adminPanel")}
+                        </MenuItem>
+                      )}
 
-                    <MenuItem
-                      href="/faq"
-                      icon={<HelpCircle className="h-4 w-4" />}
-                      onClick={() => setUserOpen(false)}
-                    >
-                      {t("helpFaq")}
-                    </MenuItem>
+                      <div className="my-1 h-px bg-gray-100" />
 
-                    <MenuButton
-                      onClick={() => signOut({ callbackUrl: `/${locale}` })}
-                      icon={<LogOut className="h-4 w-4" />}
-                    >
-                      {t("signOut")}
-                    </MenuButton>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                href="/account/signup"
-                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:bg-gray-100"
-              >
-                <LogIn className="h-4 w-4" />
-                {t("signUp")}
-              </Link>
-            )}
+                      <MenuItem
+                        href="/faq"
+                        icon={<HelpCircle className="h-4 w-4" />}
+                        onClick={() => setUserOpen(false)}
+                      >
+                        {t("helpFaq")}
+                      </MenuItem>
 
-            <CompactLanguageSwitcher
-              locale={locale}
-              onChangeLocale={handleChangeLocale}
-            />
+                      <MenuButton
+                        onClick={() => signOut({ callbackUrl: `/${locale}` })}
+                        icon={<LogOut className="h-4 w-4" />}
+                      >
+                        {t("signOut")}
+                      </MenuButton>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/account/signup"
+                  className="inline-flex h-12 items-center gap-2 rounded-full border border-black/15 bg-white px-4 text-sm font-medium hover:bg-gray-100"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="whitespace-nowrap">{t("signUp")}</span>
+                </Link>
+              )}
+
+              <CompactLanguageSwitcher
+                locale={locale}
+                onChangeLocale={handleChangeLocale}
+              />
+            </div>
           </div>
         </div>
 
@@ -621,8 +623,8 @@ function CompactLanguageSwitcher({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 rounded-full border bg-white px-3 py-2 text-sm font-medium hover:bg-gray-100 ${
-          mobile ? "px-2.5" : ""
+        className={`inline-flex h-12 items-center gap-1.5 rounded-full border border-black/15 bg-white px-3 text-sm font-medium hover:bg-gray-100 ${
+          mobile ? "px-2.5" : "pr-2.5"
         }`}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -631,7 +633,7 @@ function CompactLanguageSwitcher({
       >
         <Languages className="h-4 w-4" />
         <span aria-hidden="true">{currentFlag}</span>
-        {!mobile && <span>{currentLabel}</span>}
+        {!mobile && <span className="text-[13px]">{currentLabel}</span>}
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -918,7 +920,7 @@ function SearchBar({
               onFocus={() => term.trim().length >= 2 && setOpen(true)}
               onKeyDown={onKeyDown}
               placeholder={t("searchProductsPlaceholder")}
-              className="w-full rounded-full bg-transparent py-2 pl-9 pr-24 text-sm outline-none transition-[width] duration-300 sm:w-72 sm:group-focus-within:w-[28rem] lg:w-80 xl:w-96"
+              className="w-full rounded-full bg-transparent py-2.5 pl-9 pr-24 text-sm outline-none transition-[width] duration-300 sm:w-[18rem] sm:group-focus-within:w-[23rem] lg:w-[20rem] xl:w-[24rem] 2xl:w-[29rem]"
               aria-label={t("searchProducts")}
               aria-autocomplete="list"
               aria-controls="search-popover"
@@ -926,7 +928,7 @@ function SearchBar({
             />
             <button
               type="submit"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700 active:bg-blue-800"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 active:bg-blue-800"
               aria-label={t("submitSearch")}
             >
               {t("search")}
@@ -940,7 +942,7 @@ function SearchBar({
           id="search-popover"
           role="listbox"
           aria-label={t("searchSuggestions")}
-          className="absolute z-50 mt-2 w-[min(30rem,92vw)] overflow-hidden rounded-2xl border bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur"
+          className="absolute right-0 z-50 mt-2 w-[min(30rem,92vw)] overflow-hidden rounded-2xl border bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur"
         >
           {loading && (
             <div className="p-4 text-sm text-gray-500">{t("searching")}</div>
