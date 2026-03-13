@@ -1745,5 +1745,300 @@
         "note": "This page is provided for transparency and does not constitute legal advice."
       }
     }
+  },
+  "faqPage": {
+    "metadata": {
+      "title": "FAQ — FootballWorld",
+      "description": "FootballWorld FAQ: orders, shipping times, tracking, payments, sizes, customization (name/number), returns, and support."
+    },
+    "hero": {
+      "badge": "Help Center",
+      "title": "Frequently Asked Questions",
+      "subtitle": "Quick answers about orders, shipping, tracking, sizing, payments, and returns.",
+      "buttons": {
+        "shippingPolicy": "Read Shipping Policy",
+        "cart": "Go to Cart",
+        "orders": "My Orders"
+      }
+    },
+    "sections": {
+      "orders": {
+        "title": "Orders",
+        "items": {
+          "placeOrder": {
+            "q": "How do I place an order?",
+            "a1": "Pick your product, choose the options (size / version), and add to cart. Then go to <cart>Cart</cart> and complete checkout.",
+            "a2": "Tip: Use the search bar in the header to find a kit fast.",
+            "tags": ["order", "checkout"]
+          },
+          "confirmation": {
+            "q": "Will I receive an order confirmation?",
+            "a": "Yes — after payment you’ll see a confirmation screen and you will receive an email confirmation. If you don’t see it, check Spam/Promotions.",
+            "tags": ["email", "confirmation"]
+          },
+          "changeCancel": {
+            "q": "Can I change or cancel my order?",
+            "a1": "Contact us immediately after placing your order. If the order is already processed or shipped, changes/cancellation may no longer be possible.",
+            "a2": "Please include your order number and what you want to change.",
+            "tags": ["cancel", "change"]
+          }
+        }
+      },
+      "shipping": {
+        "title": "Shipping & Delivery",
+        "items": {
+          "estimates": {
+            "q": "What are the delivery estimates by region?",
+            "a1": "Typical delivery estimates (business days):",
+            "a2": "Estimates can vary due to customs inspection, peak seasons, weather, and local carrier delays.",
+            "regions": {
+              "europe": {
+                "label": "Europe:",
+                "value": "7–9"
+              },
+              "northAmerica": {
+                "label": "North America:",
+                "value": "10–15"
+              },
+              "southAmerica": {
+                "label": "South America:",
+                "value": "15–20"
+              },
+              "asia": {
+                "label": "Asia:",
+                "value": "10–12"
+              },
+              "oceania": {
+                "label": "Oceania:",
+                "value": "9–12"
+              },
+              "middleEast": {
+                "label": "Middle East:",
+                "value": "7–15"
+              }
+            },
+            "tags": ["delivery", "times"]
+          },
+          "tracking": {
+            "q": "Do you provide tracking?",
+            "a": "Yes. After your order ships, tracking is provided and can be used to follow the shipment until delivery.",
+            "tags": ["tracking"]
+          },
+          "customs": {
+            "q": "Do I have to pay customs or duties?",
+            "a": "Customs/VAT/import fees can apply depending on your country and are paid by the recipient.",
+            "tags": ["customs", "duties"]
+          },
+          "address": {
+            "q": "What if my address is wrong or incomplete?",
+            "a1": "Contact support immediately with your order number and the correct address. If the parcel is returned or fails delivery due to an incorrect address, reshipping may require an additional fee.",
+            "a2": "Always double-check postal code, city, and apartment number before paying.",
+            "tags": ["address"]
+          }
+        }
+      },
+      "products": {
+        "title": "Products & Quality",
+        "items": {
+          "original": {
+            "q": "Are the products original?",
+            "a1": "Yes. FootballWorld sells original football products.",
+            "a2": "To keep your item in top condition, wash inside-out on a gentle cycle and avoid high heat.",
+            "tags": ["original", "quality"]
+          },
+          "size": {
+            "q": "How do I choose the right size?",
+            "a1": "Choose your usual size for a regular fit. For a looser fit, size up. “Player Version” is a slimmer fit — sizing up is recommended.",
+            "a2": "If you are between two sizes, choose the larger one.",
+            "tags": ["size", "fit"]
+          },
+          "personalization": {
+            "q": "Can I add name & number personalization?",
+            "a": "Yes — when the product supports customization, you can enter name and number in the configurator before adding to cart.",
+            "tags": ["custom", "name", "number"]
+          }
+        }
+      },
+      "payments": {
+        "title": "Payments",
+        "items": {
+          "methods": {
+            "q": "What payment methods do you accept?",
+            "a1": "We accept the following payment methods:",
+            "a2": "All payments are processed securely via Stripe.",
+            "list": [
+              "Visa",
+              "Mastercard",
+              "American Express",
+              "PayPal",
+              "Amazon Pay",
+              "Multibanco (PT)",
+              "Revolut Pay",
+              "Klarna",
+              "Satispay",
+              "Link"
+            ],
+            "tags": ["payment", "stripe", "visa", "paypal", "multibanco"]
+          },
+          "secure": {
+            "q": "Is checkout secure?",
+            "a": "Yes — payments are processed through secure providers and your card details are not stored on FootballWorld servers.",
+            "tags": ["secure"]
+          }
+        }
+      },
+      "returns": {
+        "title": "Returns & Issues",
+        "items": {
+          "policy": {
+            "q": "What is your return policy?",
+            "a": "Returns are accepted for unused items in original packaging. Personalized items (name/number/badges) are not eligible for return, except in case of defect or an error in the customization.",
+            "tags": ["returns"]
+          },
+          "damaged": {
+            "q": "My item arrived damaged or wrong — what now?",
+            "a": "Contact support with your order number and clear photos of the issue (item + packaging). We will review and provide a replacement or solution.",
+            "tags": ["issue", "damaged", "wrong item"]
+          }
+        }
+      },
+      "support": {
+        "title": "Support",
+        "items": {
+          "contact": {
+            "q": "How do I contact support?",
+            "a1": "Contact support through our official email: <email></email>. Please include your order number for faster help.",
+            "a2": "We answer as fast as possible during business hours.",
+            "buttons": {
+              "orders": "My orders",
+              "shipping": "Shipping policy"
+            },
+            "tags": ["support", "contact"]
+          }
+        }
+      }
+    },
+    "footer": {
+      "badge": "Need more help?",
+      "title": "We’re here to help with your order.",
+      "subtitle": "Contact us with your order number and we’ll help you as fast as possible.",
+      "buttons": {
+        "orders": "My orders",
+        "shippingPolicy": "Shipping policy"
+      }
+    },
+    "lastUpdateLabel": "Last update:",
+    "lastUpdateLocale": "en-GB"
+  },
+  "contactPage": {
+    "hero": {
+      "badge": "We’re here to help",
+      "title": "Contact FootballWorld Support",
+      "description": "We answer most messages within <time>24–48h</time>. Include your order number for the fastest help.",
+      "badges": {
+        "secure": "Secure & private",
+        "reply": "24–48h reply",
+        "shipping": "Global shipping"
+      }
+    },
+    "toast": {
+      "success": "Thanks! Your message was sent — we’ll reply by email.",
+      "error": "Something went wrong. Please try again or email us directly."
+    },
+    "chips": {
+      "trackingHelp": "Tracking help",
+      "startReturn": "Start a return",
+      "orderStatus": "Order status / tracking",
+      "changeSizeAddress": "Change size or address",
+      "returnExchange": "Return / exchange",
+      "productQuestion": "Product question"
+    },
+    "presetAria": "Use subject: {label}",
+    "form": {
+      "name": {
+        "label": "Your name",
+        "placeholder": "e.g. John Doe"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "you@example.com",
+        "hint": "We never share it"
+      },
+      "order": {
+        "label": "Order number (optional)",
+        "placeholder": "e.g. #FW12345"
+      },
+      "subject": {
+        "label": "Subject",
+        "placeholder": "How can we help?"
+      },
+      "message": {
+        "label": "Message",
+        "placeholder": "Write your message here…"
+      }
+    },
+    "actions": {
+      "send": "Send message",
+      "sending": "Sending…",
+      "openMail": "Open email app",
+      "copyNote": "You’ll also receive a copy of your message."
+    },
+    "next": {
+      "title": "What happens next?",
+      "steps": [
+        {
+          "title": "Copy by email",
+          "text": "We’ll send a confirmation of your message to your inbox."
+        },
+        {
+          "title": "24–48h reply",
+          "text": "Our team answers on business days as quickly as possible."
+        },
+        {
+          "title": "Photos help",
+          "text": "For defects or exchanges, send clear photos when we reply."
+        }
+      ]
+    },
+    "sidebar": {
+      "quickHelp": {
+        "title": "Quick help",
+        "links": {
+          "shipping": "Shipping & Tracking",
+          "returns": "Returns & Exchanges",
+          "faq": "FAQ"
+        },
+        "stats": {
+          "replyLabel": "Avg reply",
+          "replyValue": "24–48h",
+          "hoursLabel": "Hours",
+          "hoursValue": "Mon–Fri"
+        }
+      },
+      "email": {
+        "title": "Prefer email?",
+        "description": "You can email us directly — we’ll reply from our support inbox.",
+        "copy": "Copy",
+        "copied": "Copied!"
+      },
+      "usefulLinks": {
+        "title": "Useful links",
+        "privacy": {
+          "title": "Privacy Policy",
+          "text": "How we protect your data"
+        },
+        "sizeGuide": {
+          "title": "Size Guide",
+          "text": "Find your perfect fit"
+        }
+      }
+    },
+    "mailFallbackSubject": "Support request from {name}",
+    "mailCustomer": "customer",
+    "mailBody": {
+      "name": "Name",
+      "email": "Email",
+      "order": "Order"
+    }
   }
 }

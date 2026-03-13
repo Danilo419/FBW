@@ -1745,5 +1745,300 @@
         "note": "Esta página é fornecida por transparência e não constitui aconselhamento jurídico."
       }
     }
+  },
+  "faqPage": {
+    "metadata": {
+      "title": "FAQ — FootballWorld",
+      "description": "FAQ da FootballWorld: encomendas, prazos de envio, tracking, pagamentos, tamanhos, personalização (nome/número), devoluções e suporte."
+    },
+    "hero": {
+      "badge": "Centro de Ajuda",
+      "title": "Perguntas Frequentes",
+      "subtitle": "Respostas rápidas sobre encomendas, envios, tracking, tamanhos, pagamentos e devoluções.",
+      "buttons": {
+        "shippingPolicy": "Ler Política de Envio",
+        "cart": "Ir para o Carrinho",
+        "orders": "As Minhas Encomendas"
+      }
+    },
+    "sections": {
+      "orders": {
+        "title": "Encomendas",
+        "items": {
+          "placeOrder": {
+            "q": "Como faço uma encomenda?",
+            "a1": "Escolha o seu produto, selecione as opções (tamanho / versão) e adicione ao carrinho. Depois vá ao <cart>Carrinho</cart> e conclua o checkout.",
+            "a2": "Dica: use a barra de pesquisa no header para encontrar rapidamente um equipamento.",
+            "tags": ["encomenda", "checkout"]
+          },
+          "confirmation": {
+            "q": "Vou receber confirmação da encomenda?",
+            "a": "Sim — após o pagamento verá um ecrã de confirmação e receberá um email de confirmação. Se não o encontrar, verifique Spam/Promoções.",
+            "tags": ["email", "confirmação"]
+          },
+          "changeCancel": {
+            "q": "Posso alterar ou cancelar a minha encomenda?",
+            "a1": "Contacte-nos imediatamente após fazer a encomenda. Se a encomenda já estiver processada ou enviada, alterações/cancelamento podem já não ser possíveis.",
+            "a2": "Inclua o número da encomenda e o que pretende alterar.",
+            "tags": ["cancelar", "alterar"]
+          }
+        }
+      },
+      "shipping": {
+        "title": "Envio e Entrega",
+        "items": {
+          "estimates": {
+            "q": "Quais são as estimativas de entrega por região?",
+            "a1": "Estimativas típicas de entrega (dias úteis):",
+            "a2": "As estimativas podem variar devido a inspeções alfandegárias, épocas de pico, condições meteorológicas e atrasos da transportadora local.",
+            "regions": {
+              "europe": {
+                "label": "Europa:",
+                "value": "7–9"
+              },
+              "northAmerica": {
+                "label": "América do Norte:",
+                "value": "10–15"
+              },
+              "southAmerica": {
+                "label": "América do Sul:",
+                "value": "15–20"
+              },
+              "asia": {
+                "label": "Ásia:",
+                "value": "10–12"
+              },
+              "oceania": {
+                "label": "Oceânia:",
+                "value": "9–12"
+              },
+              "middleEast": {
+                "label": "Médio Oriente:",
+                "value": "7–15"
+              }
+            },
+            "tags": ["entrega", "prazos"]
+          },
+          "tracking": {
+            "q": "Disponibilizam tracking?",
+            "a": "Sim. Depois da sua encomenda ser enviada, o tracking é disponibilizado e pode ser usado para acompanhar o envio até à entrega.",
+            "tags": ["tracking"]
+          },
+          "customs": {
+            "q": "Tenho de pagar alfândega ou taxas?",
+            "a": "Podem aplicar-se taxas alfandegárias/IVA/importação dependendo do seu país, e essas taxas são pagas pelo destinatário.",
+            "tags": ["alfândega", "taxas"]
+          },
+          "address": {
+            "q": "E se a minha morada estiver errada ou incompleta?",
+            "a1": "Contacte o suporte imediatamente com o número da encomenda e a morada correta. Se a encomenda for devolvida ou falhar a entrega devido a uma morada incorreta, o reenvio pode exigir uma taxa adicional.",
+            "a2": "Verifique sempre o código postal, cidade e número do apartamento antes de pagar.",
+            "tags": ["morada"]
+          }
+        }
+      },
+      "products": {
+        "title": "Produtos e Qualidade",
+        "items": {
+          "original": {
+            "q": "Os produtos são originais?",
+            "a1": "Sim. A FootballWorld vende produtos de futebol originais.",
+            "a2": "Para manter o seu artigo em ótimo estado, lave-o do avesso num ciclo suave e evite calor elevado.",
+            "tags": ["original", "qualidade"]
+          },
+          "size": {
+            "q": "Como escolho o tamanho certo?",
+            "a1": "Escolha o seu tamanho habitual para um ajuste regular. Para um ajuste mais largo, escolha acima. A “Versão Jogador” tem um corte mais justo — recomendamos escolher um tamanho acima.",
+            "a2": "Se estiver entre dois tamanhos, escolha o maior.",
+            "tags": ["tamanho", "ajuste"]
+          },
+          "personalization": {
+            "q": "Posso adicionar personalização de nome e número?",
+            "a": "Sim — quando o produto suporta personalização, pode inserir o nome e o número no configurador antes de adicionar ao carrinho.",
+            "tags": ["personalização", "nome", "número"]
+          }
+        }
+      },
+      "payments": {
+        "title": "Pagamentos",
+        "items": {
+          "methods": {
+            "q": "Que métodos de pagamento aceitam?",
+            "a1": "Aceitamos os seguintes métodos de pagamento:",
+            "a2": "Todos os pagamentos são processados com segurança via Stripe.",
+            "list": [
+              "Visa",
+              "Mastercard",
+              "American Express",
+              "PayPal",
+              "Amazon Pay",
+              "Multibanco (PT)",
+              "Revolut Pay",
+              "Klarna",
+              "Satispay",
+              "Link"
+            ],
+            "tags": ["pagamento", "stripe", "visa", "paypal", "multibanco"]
+          },
+          "secure": {
+            "q": "O checkout é seguro?",
+            "a": "Sim — os pagamentos são processados através de fornecedores seguros e os dados do seu cartão não são armazenados nos servidores da FootballWorld.",
+            "tags": ["seguro"]
+          }
+        }
+      },
+      "returns": {
+        "title": "Devoluções e Problemas",
+        "items": {
+          "policy": {
+            "q": "Qual é a vossa política de devolução?",
+            "a": "As devoluções são aceites para artigos sem uso e na embalagem original. Artigos personalizados (nome/número/badges) não são elegíveis para devolução, exceto em caso de defeito ou erro na personalização.",
+            "tags": ["devoluções"]
+          },
+          "damaged": {
+            "q": "O meu artigo chegou danificado ou errado — e agora?",
+            "a": "Contacte o suporte com o número da encomenda e fotos nítidas do problema (artigo + embalagem). Vamos analisar e fornecer uma substituição ou solução.",
+            "tags": ["problema", "danificado", "artigo errado"]
+          }
+        }
+      },
+      "support": {
+        "title": "Suporte",
+        "items": {
+          "contact": {
+            "q": "Como contacto o suporte?",
+            "a1": "Contacte o suporte através do nosso email oficial: <email></email>. Inclua o número da sua encomenda para receber ajuda mais rapidamente.",
+            "a2": "Respondemos o mais rápido possível durante o horário de funcionamento.",
+            "buttons": {
+              "orders": "As minhas encomendas",
+              "shipping": "Política de envio"
+            },
+            "tags": ["suporte", "contacto"]
+          }
+        }
+      }
+    },
+    "footer": {
+      "badge": "Precisa de mais ajuda?",
+      "title": "Estamos aqui para ajudar com a sua encomenda.",
+      "subtitle": "Contacte-nos com o número da sua encomenda e ajudaremos o mais rápido possível.",
+      "buttons": {
+        "orders": "As minhas encomendas",
+        "shippingPolicy": "Política de envio"
+      }
+    },
+    "lastUpdateLabel": "Última atualização:",
+    "lastUpdateLocale": "pt-PT"
+  },
+  "contactPage": {
+    "hero": {
+      "badge": "Estamos aqui para ajudar",
+      "title": "Contactar o Suporte FootballWorld",
+      "description": "Respondemos à maioria das mensagens em <time>24–48h</time>. Inclua o seu número de encomenda para receber ajuda mais rapidamente.",
+      "badges": {
+        "secure": "Seguro e privado",
+        "reply": "Resposta em 24–48h",
+        "shipping": "Envio global"
+      }
+    },
+    "toast": {
+      "success": "Obrigado! A sua mensagem foi enviada — responderemos por email.",
+      "error": "Algo correu mal. Tente novamente ou envie-nos email diretamente."
+    },
+    "chips": {
+      "trackingHelp": "Ajuda com tracking",
+      "startReturn": "Iniciar devolução",
+      "orderStatus": "Estado da encomenda / tracking",
+      "changeSizeAddress": "Alterar tamanho ou morada",
+      "returnExchange": "Devolução / troca",
+      "productQuestion": "Questão sobre produto"
+    },
+    "presetAria": "Usar assunto: {label}",
+    "form": {
+      "name": {
+        "label": "O seu nome",
+        "placeholder": "ex.: João Silva"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "voce@exemplo.com",
+        "hint": "Nunca o partilhamos"
+      },
+      "order": {
+        "label": "Número da encomenda (opcional)",
+        "placeholder": "ex.: #FW12345"
+      },
+      "subject": {
+        "label": "Assunto",
+        "placeholder": "Como podemos ajudar?"
+      },
+      "message": {
+        "label": "Mensagem",
+        "placeholder": "Escreva a sua mensagem aqui…"
+      }
+    },
+    "actions": {
+      "send": "Enviar mensagem",
+      "sending": "A enviar…",
+      "openMail": "Abrir app de email",
+      "copyNote": "Também receberá uma cópia da sua mensagem."
+    },
+    "next": {
+      "title": "O que acontece a seguir?",
+      "steps": [
+        {
+          "title": "Cópia por email",
+          "text": "Enviaremos uma confirmação da sua mensagem para a sua caixa de entrada."
+        },
+        {
+          "title": "Resposta em 24–48h",
+          "text": "A nossa equipa responde em dias úteis o mais rapidamente possível."
+        },
+        {
+          "title": "As fotos ajudam",
+          "text": "Para defeitos ou trocas, envie fotos nítidas quando respondermos."
+        }
+      ]
+    },
+    "sidebar": {
+      "quickHelp": {
+        "title": "Ajuda rápida",
+        "links": {
+          "shipping": "Envio e Tracking",
+          "returns": "Devoluções e Trocas",
+          "faq": "FAQ"
+        },
+        "stats": {
+          "replyLabel": "Resposta média",
+          "replyValue": "24–48h",
+          "hoursLabel": "Horário",
+          "hoursValue": "Seg–Sex"
+        }
+      },
+      "email": {
+        "title": "Prefere email?",
+        "description": "Pode enviar-nos email diretamente — responderemos a partir da nossa caixa de suporte.",
+        "copy": "Copiar",
+        "copied": "Copiado!"
+      },
+      "usefulLinks": {
+        "title": "Links úteis",
+        "privacy": {
+          "title": "Política de Privacidade",
+          "text": "Como protegemos os seus dados"
+        },
+        "sizeGuide": {
+          "title": "Guia de Tamanhos",
+          "text": "Encontre o seu ajuste perfeito"
+        }
+      }
+    },
+    "mailFallbackSubject": "Pedido de suporte de {name}",
+    "mailCustomer": "cliente",
+    "mailBody": {
+      "name": "Nome",
+      "email": "Email",
+      "order": "Encomenda"
+    }
   }
 }
