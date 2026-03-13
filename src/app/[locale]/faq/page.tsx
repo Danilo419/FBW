@@ -1,5 +1,5 @@
-// src/app/faq/page.tsx
-import Link from "next/link";
+// src/app/[locale]/faq/page.tsx
+import { Link } from "@/i18n/navigation";
 import {
   HelpCircle,
   Truck,
@@ -19,7 +19,7 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 const SUPPORT_EMAIL = "myfootballworldstore@gmail.com";
 
@@ -40,8 +40,13 @@ type FaqSection = {
   items: FaqItem[];
 };
 
-export async function generateMetadata() {
-  const t = await getTranslations("faqPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "faqPage.metadata" });
 
   return {
     title: t("title"),
@@ -49,8 +54,15 @@ export async function generateMetadata() {
   };
 }
 
-export default async function FAQPage() {
-  const t = await getTranslations("faqPage");
+export default async function FAQPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "faqPage" });
 
   const FAQ: FaqSection[] = [
     {
