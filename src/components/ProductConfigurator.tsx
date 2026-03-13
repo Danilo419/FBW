@@ -46,6 +46,7 @@ type ProductUI = {
 
 type SelectedState = Record<string, string | string[] | null>;
 type Props = { product: ProductUI };
+type TFn = (key: string, values?: Record<string, string | number>) => string;
 
 const ADULT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const KID_SIZES = ["2-3", "3-4", "4-5", "6-7", "8-9", "10-11", "12-13"] as const;
@@ -53,6 +54,65 @@ const isKidProduct = (name: string) => /kid/i.test(name);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+/* ====================== Translation helpers ====================== */
+function normalizeKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/\+/g, " plus ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function translateGroupLabel(group: OptionGroupUI, t: TFn) {
+  const byKey = normalizeKey(group.key);
+  const byLabel = normalizeKey(group.label);
+
+  const mappedByKey: Record<string, string> = {
+    customization: t("customization"),
+    badges: t("badges"),
+    size: t("size"),
+  };
+
+  const mappedByLabel: Record<string, string> = {
+    customization: t("customization"),
+    badges: t("badges"),
+    size: t("size"),
+  };
+
+  return mappedByKey[byKey] ?? mappedByLabel[byLabel] ?? group.label;
+}
+
+function translateOptionLabel(group: OptionGroupUI, option: OptionValueUI, t: TFn) {
+  const rawValue = normalizeKey(option.value);
+  const rawLabel = normalizeKey(option.label);
+
+  if (group.key === "customization") {
+    const map: Record<string, string> = {
+      "no-customization": t("optionNoCustomization"),
+      "without-customization": t("optionNoCustomization"),
+      none: t("optionNoCustomization"),
+
+      "name-number": t("optionNameNumber"),
+      "name-and-number": t("optionNameNumber"),
+
+      badge: t("optionCompetitionBadge"),
+      "competition-badge": t("optionCompetitionBadge"),
+
+      "name-number-badge": t("optionNameNumberCompetitionBadge"),
+      "name-and-number-badge": t("optionNameNumberCompetitionBadge"),
+      "name-number-competition-badge": t("optionNameNumberCompetitionBadge"),
+      "name-and-number-competition-badge": t("optionNameNumberCompetitionBadge"),
+    };
+
+    return map[rawValue] ?? map[rawLabel] ?? option.label;
+  }
+
+  return option.label;
 }
 
 /* ============ Badge helpers ============ */
@@ -543,17 +603,18 @@ export default function ProductConfigurator({ product }: Props) {
 
     for (const g of requiredGroups) {
       const v = selected[g.key];
+      const translatedLabel = translateGroupLabel(g, t);
 
       if (g.type === "RADIO") {
-        if (!v || typeof v !== "string") missing.push(g.label);
+        if (!v || typeof v !== "string") missing.push(translatedLabel);
       } else {
         const arr = Array.isArray(v) ? v : typeof v === "string" && v ? [v] : [];
-        if (arr.length === 0) missing.push(g.label);
+        if (arr.length === 0) missing.push(translatedLabel);
       }
     }
 
     return missing;
-  }, [requiredGroups, selected]);
+  }, [requiredGroups, selected, t]);
 
   const canAddToCart = useMemo(() => {
     if (!selectedSize) return false;
@@ -1494,7 +1555,7 @@ function GroupBlock({
     return (
       <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
         <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-          {group.label} {group.required && <span className="text-red-500">*</span>}
+          {translateGroupLabel(group, t)} {group.required && <span className="text-red-500">*</span>}
         </div>
 
         <div className="grid gap-2">
@@ -1517,7 +1578,7 @@ function GroupBlock({
                     checked={!!active}
                     onChange={() => onPickRadio(group.key, v.value)}
                   />
-                  <span className="text-sm">{v.label}</span>
+                  <span className="text-sm">{translateOptionLabel(group, v, t)}</span>
                 </div>
 
                 {forceFree ? (
@@ -1540,7 +1601,7 @@ function GroupBlock({
   return (
     <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
       <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-        {group.label} {group.required && <span className="text-red-500">*</span>}
+        {translateGroupLabel(group, t)} {group.required && <span className="text-red-500">*</span>}
       </div>
 
       <div className="grid gap-2">
@@ -1566,7 +1627,7 @@ function GroupBlock({
                       : onToggleAddon(group.key, v.value, e.target.checked)
                   }
                 />
-                <span className="text-sm">{v.label}</span>
+                <span className="text-sm">{translateOptionLabel(group, v, t)}</span>
               </div>
 
               {forceFree ? (

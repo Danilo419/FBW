@@ -1261,6 +1261,10 @@
     "free": "GRÁTIS",
     "optional": "Opcional",
     "personalization": "Personalização",
+    "optionNoCustomization": "Sem personalização",
+    "optionNameNumber": "Nome & Número",
+    "optionCompetitionBadge": "Badge da competição",
+    "optionNameNumberCompetitionBadge": "Nome & Número + Badge da competição",
     "nameUppercase": "Nome (maiúsculas)",
     "namePlaceholder": "ex.: BELLINGHAM",
     "willBePrintedAs": "Será impresso como:",
@@ -1817,18 +1821,27 @@
             "q": "Como faço uma encomenda?",
             "a1": "Escolha o seu produto, selecione as opções (tamanho / versão) e adicione ao carrinho. Depois vá ao <cart>Carrinho</cart> e conclua o checkout.",
             "a2": "Dica: use a barra de pesquisa no header para encontrar rapidamente um equipamento.",
-            "tags": ["encomenda", "checkout"]
+            "tags": [
+              "encomenda",
+              "checkout"
+            ]
           },
           "confirmation": {
             "q": "Vou receber confirmação da encomenda?",
             "a": "Sim — após o pagamento verá um ecrã de confirmação e receberá um email de confirmação. Se não o encontrar, verifique Spam/Promoções.",
-            "tags": ["email", "confirmação"]
+            "tags": [
+              "email",
+              "confirmação"
+            ]
           },
           "changeCancel": {
             "q": "Posso alterar ou cancelar a minha encomenda?",
             "a1": "Contacte-nos imediatamente após fazer a encomenda. Se a encomenda já estiver processada ou enviada, alterações/cancelamento podem já não ser possíveis.",
             "a2": "Inclua o número da encomenda e o que pretende alterar.",
-            "tags": ["cancelar", "alterar"]
+            "tags": [
+              "cancelar",
+              "alterar"
+            ]
           }
         }
       },
@@ -1865,23 +1878,33 @@
                 "value": "7–15"
               }
             },
-            "tags": ["entrega", "prazos"]
+            "tags": [
+              "entrega",
+              "prazos"
+            ]
           },
           "tracking": {
             "q": "Disponibilizam tracking?",
             "a": "Sim. Depois da sua encomenda ser enviada, o tracking é disponibilizado e pode ser usado para acompanhar o envio até à entrega.",
-            "tags": ["tracking"]
+            "tags": [
+              "tracking"
+            ]
           },
           "customs": {
             "q": "Tenho de pagar alfândega ou taxas?",
             "a": "Podem aplicar-se taxas alfandegárias/IVA/importação dependendo do seu país, e essas taxas são pagas pelo destinatário.",
-            "tags": ["alfândega", "taxas"]
+            "tags": [
+              "alfândega",
+              "taxas"
+            ]
           },
           "address": {
             "q": "E se a minha morada estiver errada ou incompleta?",
             "a1": "Contacte o suporte imediatamente com o número da encomenda e a morada correta. Se a encomenda for devolvida ou falhar a entrega devido a uma morada incorreta, o reenvio pode exigir uma taxa adicional.",
             "a2": "Verifique sempre o código postal, cidade e número do apartamento antes de pagar.",
-            "tags": ["morada"]
+            "tags": [
+              "morada"
+            ]
           }
         }
       },
@@ -1892,18 +1915,28 @@
             "q": "Os produtos são originais?",
             "a1": "Sim. A FootballWorld vende produtos de futebol originais.",
             "a2": "Para manter o seu artigo em ótimo estado, lave-o do avesso num ciclo suave e evite calor elevado.",
-            "tags": ["original", "qualidade"]
+            "tags": [
+              "original",
+              "qualidade"
+            ]
           },
           "size": {
             "q": "Como escolho o tamanho certo?",
             "a1": "Escolha o seu tamanho habitual para um ajuste regular. Para um ajuste mais largo, escolha acima. A “Versão Jogador” tem um corte mais justo — recomendamos escolher um tamanho acima.",
             "a2": "Se estiver entre dois tamanhos, escolha o maior.",
-            "tags": ["tamanho", "ajuste"]
+            "tags": [
+              "tamanho",
+              "ajuste"
+            ]
           },
           "personalization": {
             "q": "Posso adicionar personalização de nome e número?",
             "a": "Sim — quando o produto suporta personalização, pode inserir o nome e o número no configurador antes de adicionar ao carrinho.",
-            "tags": ["personalização", "nome", "número"]
+            "tags": [
+              "personalização",
+              "nome",
+              "número"
+            ]
           }
         }
       },
@@ -1926,12 +1959,20 @@
               "Satispay",
               "Link"
             ],
-            "tags": ["pagamento", "stripe", "visa", "paypal", "multibanco"]
+            "tags": [
+              "pagamento",
+              "stripe",
+              "visa",
+              "paypal",
+              "multibanco"
+            ]
           },
           "secure": {
             "q": "O checkout é seguro?",
             "a": "Sim — os pagamentos são processados através de fornecedores seguros e os dados do seu cartão não são armazenados nos servidores da FootballWorld.",
-            "tags": ["seguro"]
+            "tags": [
+              "seguro"
+            ]
           }
         }
       },
@@ -1941,12 +1982,18 @@
           "policy": {
             "q": "Qual é a vossa política de devolução?",
             "a": "As devoluções são aceites para artigos sem uso e na embalagem original. Artigos personalizados (nome/número/badges) não são elegíveis para devolução, exceto em caso de defeito ou erro na personalização.",
-            "tags": ["devoluções"]
+            "tags": [
+              "devoluções"
+            ]
           },
           "damaged": {
             "q": "O meu artigo chegou danificado ou errado — e agora?",
             "a": "Contacte o suporte com o número da encomenda e fotos nítidas do problema (artigo + embalagem). Vamos analisar e fornecer uma substituição ou solução.",
-            "tags": ["problema", "danificado", "artigo errado"]
+            "tags": [
+              "problema",
+              "danificado",
+              "artigo errado"
+            ]
           }
         }
       },
@@ -1961,7 +2008,10 @@
               "orders": "As minhas encomendas",
               "shipping": "Política de envio"
             },
-            "tags": ["suporte", "contacto"]
+            "tags": [
+              "suporte",
+              "contacto"
+            ]
           }
         }
       }
