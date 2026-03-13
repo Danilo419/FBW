@@ -1,6 +1,6 @@
-// src/app/returns/page.tsx
+// src/app/[locale]/returns/page.tsx
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import {
   RotateCcw,
   BadgeDollarSign,
@@ -17,15 +17,20 @@ import {
   Info,
   Camera,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 // Use a literal (not an expression) to avoid "Unsupported node type BinaryExpression"
 export const revalidate = 3600; // 1h
 
 const SUPPORT_EMAIL = "myfootballworldstore@gmail.com";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("returnsPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "returnsPage.metadata" });
 
   return {
     title: t("title"),
@@ -33,8 +38,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function ReturnsPage() {
-  const t = await getTranslations("returnsPage");
+export default async function ReturnsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "returnsPage" });
 
   return (
     <div className="container-fw section-gap">

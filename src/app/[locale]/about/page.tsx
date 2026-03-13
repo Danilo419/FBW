@@ -1,5 +1,5 @@
-// src/app/about/page.tsx
-import Link from "next/link";
+// src/app/[locale]/about/page.tsx
+import { Link } from "@/i18n/navigation";
 import {
   Sparkles,
   ShieldCheck,
@@ -17,13 +17,18 @@ import {
   ArrowRight,
   Rocket,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { prisma } from "@/lib/prisma";
 import LiveStats from "@/components/LiveStats";
 
-export async function generateMetadata() {
-  const t = await getTranslations("aboutPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "aboutPage.metadata" });
 
   return {
     title: t("title"),
@@ -49,8 +54,15 @@ async function loadInitialStats() {
   };
 }
 
-export default async function AboutPage() {
-  const t = await getTranslations("aboutPage");
+export default async function AboutPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "aboutPage" });
   const s = await loadInitialStats();
 
   return (

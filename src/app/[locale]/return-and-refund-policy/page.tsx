@@ -1,5 +1,5 @@
-// src/app/return-and-refund-policy/page.tsx
-import Link from "next/link";
+// src/app/[locale]/return-and-refund-policy/page.tsx
+import { Link } from "@/i18n/navigation";
 import {
   Undo2,
   RotateCcw,
@@ -19,11 +19,16 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 /* ---------- meta ---------- */
-export async function generateMetadata() {
-  const t = await getTranslations("returnRefundPolicyPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "returnRefundPolicyPage.metadata" });
 
   return {
     title: t("title"),
@@ -32,8 +37,8 @@ export async function generateMetadata() {
 }
 
 /* ---------- section index ---------- */
-async function getSections() {
-  const t = await getTranslations("returnRefundPolicyPage");
+async function getSections(locale: string) {
+  const t = await getTranslations({ locale, namespace: "returnRefundPolicyPage" });
 
   return [
     { id: "intro", label: t("sections.intro.label"), icon: <FileText className="h-4 w-4" /> },
@@ -52,9 +57,16 @@ async function getSections() {
   ];
 }
 
-export default async function ReturnRefundPolicyPage() {
-  const t = await getTranslations("returnRefundPolicyPage");
-  const sections = await getSections();
+export default async function ReturnRefundPolicyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "returnRefundPolicyPage" });
+  const sections = await getSections(locale);
 
   const lastUpdated = new Intl.DateTimeFormat(t("footer.lastUpdatedLocale"), {
     day: "2-digit",

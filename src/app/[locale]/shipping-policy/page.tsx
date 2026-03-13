@@ -1,6 +1,6 @@
-// src/app/shipping-policy/page.tsx
+// src/app/[locale]/shipping-policy/page.tsx
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import {
   Truck,
   PackageCheck,
@@ -17,11 +17,16 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 /* ---------- meta ---------- */
-export async function generateMetadata() {
-  const t = await getTranslations("shippingPolicyPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "shippingPolicyPage.metadata" });
 
   return {
     title: t("title"),
@@ -30,8 +35,8 @@ export async function generateMetadata() {
 }
 
 /* ---------- section index ---------- */
-async function getSections() {
-  const t = await getTranslations("shippingPolicyPage");
+async function getSections(locale: string) {
+  const t = await getTranslations({ locale, namespace: "shippingPolicyPage" });
 
   return [
     { id: "intro", label: t("sections.intro.label"), icon: <Info className="h-4 w-4" /> },
@@ -52,9 +57,16 @@ async function getSections() {
   ];
 }
 
-export default async function ShippingPolicyPage() {
-  const t = await getTranslations("shippingPolicyPage");
-  const sections = await getSections();
+export default async function ShippingPolicyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "shippingPolicyPage" });
+  const sections = await getSections(locale);
 
   return (
     <main className="container-fw pb-24 pt-16 md:pt-24">

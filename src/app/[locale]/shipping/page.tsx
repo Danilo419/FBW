@@ -1,4 +1,4 @@
-// src/app/shipping/page.tsx
+// src/app/[locale]/shipping/page.tsx
 import type { Metadata } from "next";
 import {
   Truck,
@@ -12,13 +12,18 @@ import {
   BadgePercent,
   ClipboardList,
 } from "lucide-react";
-import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 export const revalidate = 3600; // revalidates every hour
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("shippingPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "shippingPage.metadata" });
 
   return {
     title: t("title"),
@@ -26,8 +31,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function ShippingPage() {
-  const t = await getTranslations("shippingPage");
+export default async function ShippingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "shippingPage" });
 
   return (
     <div className="container-fw section-gap">
@@ -165,8 +177,16 @@ export default async function ShippingPage() {
 
           <ul className="mt-3 space-y-2 text-sm text-gray-700">
             <li>• {t("delays.items.0")}</li>
-            <li>• {t("delays.items.1.before")}<b>{t("delays.items.1.highlight")}</b>{t("delays.items.1.after")}</li>
-            <li>• {t("delays.items.2.before")}<b>{t("delays.items.2.highlight")}</b>{t("delays.items.2.after")}</li>
+            <li>
+              • {t("delays.items.1.before")}
+              <b>{t("delays.items.1.highlight")}</b>
+              {t("delays.items.1.after")}
+            </li>
+            <li>
+              • {t("delays.items.2.before")}
+              <b>{t("delays.items.2.highlight")}</b>
+              {t("delays.items.2.after")}
+            </li>
           </ul>
         </Card>
       </section>
