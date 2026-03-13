@@ -1,5 +1,5 @@
-// src/app/terms-of-service/page.tsx
-import Link from "next/link";
+// src/app/[locale]/terms-of-service/page.tsx
+import { Link } from "@/i18n/navigation";
 import {
   FileText,
   ShieldCheck,
@@ -19,11 +19,16 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 /* ---------- meta ---------- */
-export async function generateMetadata() {
-  const t = await getTranslations("termsPage.metadata");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "termsPage.metadata" });
 
   return {
     title: t("title"),
@@ -32,8 +37,8 @@ export async function generateMetadata() {
 }
 
 /* ---------- section index ---------- */
-async function getSections() {
-  const t = await getTranslations("termsPage");
+async function getSections(locale: string) {
+  const t = await getTranslations({ locale, namespace: "termsPage" });
 
   return [
     { id: "intro", label: t("sections.intro.label"), icon: <FileText className="h-4 w-4" /> },
@@ -56,9 +61,16 @@ async function getSections() {
   ];
 }
 
-export default async function TermsOfServicePage() {
-  const t = await getTranslations("termsPage");
-  const sections = await getSections();
+export default async function TermsOfServicePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "termsPage" });
+  const sections = await getSections(locale);
 
   return (
     <main className="container-fw pb-24 pt-16 md:pt-24">
@@ -164,9 +176,18 @@ export default async function TermsOfServicePage() {
               })}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <Stat label={t("sections.shipping.stats.production.label")} value={t("sections.shipping.stats.production.value")} />
-              <Stat label={t("sections.shipping.stats.transit.label")} value={t("sections.shipping.stats.transit.value")} />
-              <Stat label={t("sections.shipping.stats.coverage.label")} value={t("sections.shipping.stats.coverage.value")} />
+              <Stat
+                label={t("sections.shipping.stats.production.label")}
+                value={t("sections.shipping.stats.production.value")}
+              />
+              <Stat
+                label={t("sections.shipping.stats.transit.label")}
+                value={t("sections.shipping.stats.transit.value")}
+              />
+              <Stat
+                label={t("sections.shipping.stats.coverage.label")}
+                value={t("sections.shipping.stats.coverage.value")}
+              />
             </div>
           </Section>
 
@@ -359,8 +380,14 @@ export default async function TermsOfServicePage() {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-              <StatMini label={t("sidebar.stats.reply.label")} value={t("sidebar.stats.reply.value")} />
-              <StatMini label={t("sidebar.stats.coverage.label")} value={t("sidebar.stats.coverage.value")} />
+              <StatMini
+                label={t("sidebar.stats.reply.label")}
+                value={t("sidebar.stats.reply.value")}
+              />
+              <StatMini
+                label={t("sidebar.stats.coverage.label")}
+                value={t("sidebar.stats.coverage.value")}
+              />
             </div>
           </div>
         </aside>
