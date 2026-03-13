@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
-import Link from "next/link";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 
 /* ------------------------ password strength ------------------------ */
@@ -32,11 +32,31 @@ function passwordStrength(pw: string): Strength {
   const score = Math.max(0, Math.min(4, scoreNum)) as 0 | 1 | 2 | 3 | 4;
 
   const map: Record<number, Omit<Strength, "score">> = {
-    0: { labelKey: "veryWeak", barClass: "bg-red-200", textClass: "text-red-600" },
-    1: { labelKey: "weak", barClass: "bg-red-300", textClass: "text-red-600" },
-    2: { labelKey: "fair", barClass: "bg-amber-300", textClass: "text-amber-700" },
-    3: { labelKey: "strong", barClass: "bg-green-400", textClass: "text-green-700" },
-    4: { labelKey: "veryStrong", barClass: "bg-emerald-500", textClass: "text-emerald-700" },
+    0: {
+      labelKey: "veryWeak",
+      barClass: "bg-red-200",
+      textClass: "text-red-600",
+    },
+    1: {
+      labelKey: "weak",
+      barClass: "bg-red-300",
+      textClass: "text-red-600",
+    },
+    2: {
+      labelKey: "fair",
+      barClass: "bg-amber-300",
+      textClass: "text-amber-700",
+    },
+    3: {
+      labelKey: "strong",
+      barClass: "bg-green-400",
+      textClass: "text-green-700",
+    },
+    4: {
+      labelKey: "veryStrong",
+      barClass: "bg-emerald-500",
+      textClass: "text-emerald-700",
+    },
   };
 
   const { labelKey, barClass, textClass } = map[score];
@@ -49,8 +69,7 @@ export default function SignupClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const s = useSession();
-  const status = s?.status;
+  const { status } = useSession();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -121,7 +140,9 @@ export default function SignupClient() {
           callbackUrl: next,
         });
 
-        if (!result) router.replace(next);
+        if (!result) {
+          router.replace(next);
+        }
         return;
       }
 
@@ -154,7 +175,6 @@ export default function SignupClient() {
           </p>
         )}
 
-        {/* Name */}
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium">
             {t("fields.name.label")}
@@ -172,7 +192,6 @@ export default function SignupClient() {
           />
         </div>
 
-        {/* Email */}
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             {t("fields.email.label")}
@@ -190,7 +209,6 @@ export default function SignupClient() {
           />
         </div>
 
-        {/* Password */}
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium">
             {t("fields.password.label")}
@@ -218,7 +236,6 @@ export default function SignupClient() {
           </div>
         </div>
 
-        {/* Confirm password */}
         <div className="space-y-2">
           <label htmlFor="confirm" className="text-sm font-medium">
             {t("fields.confirm.label")}
@@ -246,10 +263,11 @@ export default function SignupClient() {
           </div>
 
           {confirm.length > 0 && confirm !== password && (
-            <p className="text-xs text-red-600">{t("errors.passwordMismatch")}</p>
+            <p className="text-xs text-red-600">
+              {t("errors.passwordMismatch")}
+            </p>
           )}
 
-          {/* Strength meter */}
           <div className="mt-2">
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
@@ -259,21 +277,19 @@ export default function SignupClient() {
                     strength.score === 0
                       ? "10%"
                       : strength.score === 1
-                      ? "25%"
-                      : strength.score === 2
-                      ? "50%"
-                      : strength.score === 3
-                      ? "75%"
-                      : "100%",
+                        ? "25%"
+                        : strength.score === 2
+                          ? "50%"
+                          : strength.score === 3
+                            ? "75%"
+                            : "100%",
                 }}
               />
             </div>
             <div className={`mt-1 text-xs ${strength.textClass}`}>
               {t(`strength.${strength.labelKey}`)}
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              {t("strength.tip")}
-            </p>
+            <p className="mt-1 text-xs text-gray-500">{t("strength.tip")}</p>
           </div>
         </div>
 
