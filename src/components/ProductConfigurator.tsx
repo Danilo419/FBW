@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState, useTransition } from "reac
 import { createPortal } from "react-dom";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { addToCartAction } from "@/app/(store)/cart/actions";
+import { addToCartAction } from "@/app/[locale]/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
 

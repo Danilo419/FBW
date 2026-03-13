@@ -24,9 +24,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // ✅ moved out of experimental (Next.js 15+)
-  typedRoutes: true,
-
   webpack(config) {
     return config;
   },
