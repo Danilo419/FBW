@@ -305,7 +305,7 @@
       "description": "Estes Termos regulam a sua utilização da FootballWorld e quaisquer compras feitas aqui. Ao utilizar o nosso site, concorda com estes Termos. Para saber como recolhemos e tratamos os seus dados, consulte a nossa <privacy>Política de Privacidade</privacy>.",
       "badges": {
         "clear": "Política clara e simples",
-        "updated": "Última atualização: 09 Set 2025"
+        "updated": "Última atualização: 30 Jan 2026"
       },
       "quickLinks": {
         "returns": "Devoluções e Reembolsos",
@@ -1226,6 +1226,523 @@
         "Chest (bust)": "Peito (busto)",
         "Height": "Altura",
         "Shorts length": "Comprimento dos calções"
+      }
+    }
+  },
+  "ProductConfigurator": {
+    "savePercent": "Poupe {percent}%",
+    "noReviewsYet": "Ainda sem avaliações",
+    "deliveryText": "Entrega estimada: 7–20 dias úteis",
+    "headsUp": "Atenção:",
+    "chooseSizeToContinue": "Por favor, escolha um tamanho para continuar.",
+    "sizeUnavailable": "Este tamanho não está disponível. Escolha outro.",
+    "quantityMin": "A quantidade deve ser pelo menos 1.",
+    "pleaseSelect": "Por favor, selecione: {items}.",
+    "addToCartError": "Algo correu mal ao adicionar ao carrinho. Tente novamente.",
+    "itemAddedLive": "Artigo adicionado ao carrinho.",
+    "itemAddedTitle": "Artigo adicionado ao carrinho",
+    "itemAddedDescription": "Pode continuar a comprar ou avançar para o checkout.",
+    "close": "Fechar",
+    "size": "Tamanho",
+    "kids": "Criança",
+    "adult": "Adulto",
+    "sizeGuide": "Guia de tamanhos",
+    "unavailable": "Indisponível",
+    "selectSize": "Selecionar tamanho {size}",
+    "noSizesAvailable": "Sem tamanhos disponíveis.",
+    "sizeSoldOut": "Este tamanho está esgotado.",
+    "onlyLeftInSize": "Só restam {count} neste tamanho.",
+    "lowStockInSize": "Pouco stock neste tamanho.",
+    "inStockReadyToShip": "Em stock, pronto para envio.",
+    "agesApproximate": "As idades são aproximadas. Se estiver entre tamanhos, recomendamos escolher o acima.",
+    "free": "GRÁTIS",
+    "optional": "Opcional",
+    "personalization": "Personalização",
+    "nameUppercase": "Nome (maiúsculas)",
+    "namePlaceholder": "ex.: BELLINGHAM",
+    "willBePrintedAs": "Será impresso como:",
+    "numberRange": "Número (0–999)",
+    "numberPlaceholder": "ex.: 5",
+    "personalizationPrinted": "A personalização será impressa no estilo oficial do clube.",
+    "decreaseQuantity": "Diminuir quantidade",
+    "increaseQuantity": "Aumentar quantidade",
+    "total": "Total",
+    "added": "Adicionado!",
+    "adding": "A adicionar…",
+    "processing": "A processar…",
+    "addToCart": "Adicionar ao carrinho",
+    "buyNow": "Comprar agora",
+    "add": "Adicionar",
+    "buy": "Comprar",
+    "shippingDelivery": "Envio e entrega",
+    "estimatedDeliveryBold": "Entrega estimada:",
+    "estimatedDeliveryText": "7–20 dias úteis (envio com tracking).",
+    "trackingNumberText1": "Vai receber um",
+    "trackingNumberBold": "código de tracking",
+    "trackingNumberText2": "assim que a sua encomenda for enviada.",
+    "supportRepliesFast": "Se precisar de ajuda com a sua encomenda, o nosso suporte responde rapidamente.",
+    "returnsSupport": "Devoluções e suporte",
+    "returnsLine1": "Tem algum problema? Contacte-nos e ajudaremos da melhor forma possível.",
+    "returnsLine2Text1": "Por favor, mantenha o produto",
+    "returnsLine2Bold": "sem uso",
+    "returnsLine2Text2": "e em estado original caso seja necessária uma devolução.",
+    "returnsLine3": "Artigos personalizados podem ter regras de devolução diferentes (impressão de nome/número).",
+    "qualityDetails": "Detalhes de qualidade",
+    "qualityLine1": "Costuras e acabamento de estampagem de alta qualidade.",
+    "qualityLine2": "Tecido confortável para uso diário.",
+    "qualityLine3Text1": "Para o melhor ajuste, use o nosso",
+    "qualityLine3Bold": "Guia de Tamanhos",
+    "qualityLine3Text2": "(recomendado).",
+    "secureCheckout": "Checkout seguro",
+    "trackedShipping": "Envio com tracking",
+    "fastSupport": "Suporte rápido",
+    "securePayment": "Pagamento seguro",
+    "encryptedCheckout": "Checkout encriptado",
+    "replyQuickly": "Respondemos rapidamente",
+    "gotIt": "Percebi",
+    "switchAdultKids": "Alterne entre Adulto/Criança e cm/polegadas.",
+    "units": "Unidades:",
+    "centimetres": "centímetros (cm)",
+    "inchesLabel": "polegadas (in)",
+    "measurement": "Medida",
+    "length": "Comprimento",
+    "width": "Largura",
+    "height": "Altura",
+    "weight": "Peso",
+    "jerseyLength": "Comprimento da camisola",
+    "chestBust": "Peito (busto)",
+    "shortsLength": "Comprimento dos calções",
+    "sizeGuideTip": "Dica: se estiver entre tamanhos, recomendamos escolher o tamanho acima para um ajuste mais confortável.",
+    "badges": "Badges",
+    "ratingAria": "{value} de 5"
+  },
+  "ProductReviews": {
+    "title": "Avaliações dos Clientes",
+    "loginRequired": "Tem de iniciar sessão para deixar uma avaliação.",
+    "yourRating": "A sua avaliação",
+    "clickStar": "Clique numa estrela para avaliar",
+    "ratingAllowed": "Avaliação permitida",
+    "selected": "Selecionado {count}/5",
+    "shareDetails": "Partilhe mais detalhes sobre este produto",
+    "addImages": "Adicionar imagens",
+    "imagesOptional": "Imagens opcionais",
+    "dragDrop": "Arraste e largue",
+    "browse": "procurar",
+    "selectedCount": "{count} imagem(ns) selecionada(s)",
+    "choose": "Escolher",
+    "submitReview": "Enviar avaliação",
+    "distribution": "Distribuição",
+    "reviewCount": "{count} avaliação(ões)",
+    "recentReviews": "Avaliações recentes",
+    "noReviews": "Ainda não há avaliações"
+  },
+  "nationsPage": {
+    "title": "Seleções",
+    "subtitle": "Explore todas as seleções com produtos <brand>FootballWorld</brand> disponíveis.",
+    "totalNations": "Total de seleções",
+    "viewJerseys": "Ver camisolas",
+    "nationImageAlt": "Coleção de camisolas de {nation}",
+    "empty": "Ainda não há seleções disponíveis."
+  },
+  "leaguesPage": {
+    "title": "Ligas",
+    "subtitle": "Explore as ligas de futebol mais prestigiadas do mundo com produtos <brand>FootballWorld</brand> disponíveis.",
+    "totalLeagues": "Total de ligas",
+    "viewClubs": "Ver clubes",
+    "leagueImageAlt": "Coleção da liga {league}",
+    "empty": "Ainda não há ligas disponíveis."
+  },
+  "clubsPage": {
+    "title": "Clubes",
+    "subtitle": "Explore todos os clubes com produtos <brand>FootballWorld</brand> disponíveis.",
+    "totalClubs": "Total de clubes",
+    "viewJerseys": "Ver camisolas",
+    "clubImageAlt": "Coleção de camisolas de {club}",
+    "empty": "Ainda não há clubes disponíveis."
+  },
+  "shippingPage": {
+    "metadata": {
+      "title": "Envio e Tracking – FootballWorld",
+      "description": "Envio mundial com tracking. Janela única de entrega de 7–20 dias úteis após expedição, além dos tempos de processamento e de como acompanhar a sua encomenda."
+    },
+    "header": {
+      "title": "Envio e Tracking",
+      "description": {
+        "before": "Enviamos para todo o mundo com entrega acompanhada por tracking. Existe uma única janela de entrega:",
+        "highlight": " 7–20 dias úteis após expedição",
+        "after": ". Abaixo encontra os tempos de processamento e como acompanhar a sua encomenda quando estiver a caminho."
+      }
+    },
+    "standard": {
+      "title": "Entrega Standard com Tracking",
+      "description": "Um serviço fiável e totalmente rastreável para todos os destinos.",
+      "details": {
+        "transit": "Trânsito típico: 7–20 dias úteis",
+        "worldwide": "Disponível para todo o mundo",
+        "checkout": "Preço mostrado no checkout"
+      }
+    },
+    "handling": {
+      "title": "Processamento e Produção",
+      "items": {
+        "0": {
+          "before": "Os nossos kits são feitos por encomenda. O tempo de produção é normalmente de ",
+          "highlight": "2–6 dias úteis",
+          "after": "."
+        },
+        "1": "As encomendas feitas em fins de semana/feriados são processadas no dia útil seguinte.",
+        "2": "Receberá um email com o seu código de tracking imediatamente após a expedição."
+      }
+    },
+    "address": {
+      "title": "Alterações de Morada",
+      "items": {
+        "0": {
+          "before": "Precisa de alterar a sua morada? Contacte-nos ",
+          "highlight": "antes",
+          "after": " de a encomenda ser enviada."
+        },
+        "1": "Depois de estar em trânsito, as alterações de morada ficam sujeitas à política da transportadora e podem não ser possíveis."
+      }
+    },
+    "tracking": {
+      "title": "Como acompanhar a sua encomenda",
+      "steps": {
+        "0": "Encontre o código de tracking que lhe enviámos por email após a expedição.",
+        "1": "Use o site da sua transportadora (link no email) ou qualquer rastreador universal abaixo.",
+        "2": "Os eventos podem demorar 24–48h a aparecer após a recolha — isto é normal."
+      },
+      "tip": "Dica: cole o seu número de tracking num dos serviços acima; na maioria dos casos, ele deteta automaticamente a transportadora."
+    },
+    "customs": {
+      "title": "Alfândega, Taxas e Impostos",
+      "items": {
+        "0": "Os envios internacionais podem estar sujeitos a direitos de importação/IVA definidos pelo seu país.",
+        "1": "Quaisquer encargos desse tipo são da responsabilidade do destinatário e não são cobrados por nós.",
+        "2": "A recusa em pagar taxas pode fazer com que a encomenda seja devolvida ou destruída pela alfândega."
+      }
+    },
+    "delays": {
+      "title": "Atrasos e Encomendas Perdidas",
+      "items": {
+        "0": "Condições meteorológicas, inspeções alfandegárias e épocas de pico podem prolongar os prazos de entrega.",
+        "1": {
+          "before": "Se o seu tracking não for atualizado durante ",
+          "highlight": "15+ dias úteis",
+          "after": ", contacte-nos — iremos investigar com a transportadora."
+        },
+        "2": {
+          "before": "Declarada como perdida: normalmente após a janela de investigação da transportadora (frequentemente ",
+          "highlight": "30–45 dias após a expedição",
+          "after": ")."
+        }
+      }
+    },
+    "help": {
+      "title": "Precisa de ajuda com a sua encomenda?",
+      "description": "Consulte a nossa <faq>FAQ</faq> ou contacte-nos com o seu número de encomenda e código de tracking.",
+      "button": "Contactar suporte"
+    }
+  },
+  "returnsPage": {
+    "metadata": {
+      "title": "Devoluções e Trocas – FootballWorld",
+      "description": "Prazo de devolução, regras de elegibilidade, como iniciar uma devolução ou pedir uma troca, e tempos de processamento de reembolso."
+    },
+    "header": {
+      "title": "Devoluções e Trocas",
+      "description": "Queremos que adore a sua camisola. Se algo não estiver certo, pode pedir uma devolução ou troca de tamanho dentro do prazo da nossa política. Leia as condições abaixo e inicie o seu pedido quando estiver pronto."
+    },
+    "glance": {
+      "returnWindow": {
+        "title": "Prazo de devolução",
+        "items": {
+          "0": {
+            "before": "Devoluções/trocas aceites no prazo de ",
+            "highlight": "14 dias após a entrega",
+            "after": "."
+          },
+          "1": "Contacte-nos primeiro para obter instruções e a morada correta para devolução."
+        }
+      },
+      "itemCondition": {
+        "title": "Estado do artigo",
+        "items": {
+          "0": "Sem uso, sem lavagem, sem cheiros ou marcas.",
+          "1": "Todas as etiquetas/embalagens originais intactas.",
+          "2": "Pode experimentar — basta manter as etiquetas colocadas."
+        }
+      },
+      "refundsCosts": {
+        "title": "Reembolsos e custos",
+        "items": {
+          "0": "Reembolso para o método de pagamento original.",
+          "1": "Os portes originais não são reembolsáveis.",
+          "2": "Os portes de devolução são pagos pelo cliente (exceto em artigos defeituosos/incorretos)."
+        }
+      }
+    },
+    "eligibility": {
+      "eligible": {
+        "title": "Artigos elegíveis",
+        "items": {
+          "0": "Camisolas e vestuário standard em estado original.",
+          "1": "Acessórios por abrir e sem uso.",
+          "2": "Pedidos enviados no prazo de 14 dias após a entrega."
+        }
+      },
+      "notReturnable": {
+        "title": "Não devolvível",
+        "items": {
+          "0": {
+            "highlight": "Camisolas personalizadas",
+            "after": " (patches de nome/número) — feitas por encomenda e venda final."
+          },
+          "1": "Artigos alterados ou lavados.",
+          "2": "Produtos de liquidação ou marcados como “venda final”.",
+          "3": "Artigos devolvidos sem nos contactar primeiro."
+        }
+      }
+    },
+    "start": {
+      "title": "Como iniciar uma devolução/troca",
+      "steps": {
+        "0": "Envie-nos um email para <email></email> ou use o <contact>formulário de contacto</contact> com o seu <order>número de encomenda</order>, o seu pedido (devolução ou troca) e o motivo.",
+        "1": {
+          "before": "(Opcional) Anexe fotos nítidas se existir defeito/dano ",
+          "highlight": "(isto ajuda-nos a acelerar o processo)",
+          "after": "."
+        },
+        "2": "Responderemos com a autorização de devolução e a morada correta para envio. Por favor, não envie nada antes de a receber.",
+        "3": "Embale os artigos com segurança. Use um serviço com tracking e guarde o comprovativo até o seu pedido estar concluído."
+      },
+      "note": "Nota: Para trocas, reservaremos o tamanho pedido assim que a sua encomenda devolvida mostrar movimento no tracking (ou na chegada, dependendo do stock)."
+    },
+    "exchanges": {
+      "size": {
+        "title": "Trocas de tamanho",
+        "items": {
+          "0": "Peça a troca no prazo de 14 dias após a entrega.",
+          "1": "O artigo deve estar em estado original e com etiquetas.",
+          "2": "O cliente paga o envio de volta para nós; nós pagamos o envio da substituição (opção standard).",
+          "3": "Se o tamanho pedido não estiver disponível, podemos reembolsar ou emitir crédito em loja — a escolha é sua."
+        }
+      },
+      "damaged": {
+        "title": "Artigos danificados / incorretos",
+        "items": {
+          "0": {
+            "before": "Se a sua encomenda chegou danificada, defeituosa ou incorreta, contacte-nos no prazo de ",
+            "highlight": "7 dias",
+            "after": " após a entrega."
+          },
+          "1": "Inclua fotos do problema e da embalagem exterior/etiquetas.",
+          "2": "Iremos substituir ou reembolsar sem custo adicional após verificação (pode ser necessária investigação da transportadora)."
+        }
+      }
+    },
+    "refundTiming": {
+      "title": "Prazo de reembolso",
+      "description": {
+        "before1": "Assim que a sua devolução for entregue e inspecionada, os reembolsos são normalmente emitidos em ",
+        "highlight1": "3–5 dias úteis",
+        "between": ". O seu banco ou emissor do cartão pode demorar mais ",
+        "highlight2": "3–10 dias úteis",
+        "after": " a refletir o valor na sua conta. Enviar-lhe-emos um email de confirmação assim que for processado."
+      }
+    },
+    "cancellations": {
+      "title": "Cancelamentos de encomenda",
+      "items": {
+        "0": {
+          "before": "Podemos cancelar e reembolsar ",
+          "highlight": "antes de",
+          "after": " a produção/expedição começar."
+        },
+        "1": "As encomendas já produzidas ou enviadas seguem a política de devolução acima após a entrega."
+      }
+    },
+    "assistance": {
+      "title": "Precisa de ajuda?",
+      "description": "Consulte a nossa <faq>FAQ</faq> ou contacte-nos com o seu número de encomenda — teremos todo o gosto em ajudar.",
+      "button": "Contactar suporte"
+    }
+  },
+  "privacyPolicyPage": {
+    "hero": {
+      "title": "Política de Privacidade",
+      "lastUpdated": "Última atualização: 30 Jan 2026",
+      "description": "Respeitamos a sua privacidade. Esta página explica o que recolhemos, porque o fazemos e como pode controlar a sua informação."
+    },
+    "mobileNav": {
+      "ariaLabel": "Secções"
+    },
+    "sidebar": {
+      "title": "Nesta página",
+      "backToTop": "Voltar ao topo"
+    },
+    "sections": {
+      "intro": {
+        "label": "O que esta política abrange",
+        "title": "O que esta política abrange",
+        "body": "Esta Política de Privacidade explica como a <brand>FootballWorld</brand> (“nós”, “nos”, “nosso/a”) recolhe, utiliza, divulga e protege a sua informação quando visita o nosso website, cria uma conta, faz uma encomenda ou contacta o suporte. Ao utilizar os nossos serviços, concorda com as práticas descritas aqui."
+      },
+      "data": {
+        "label": "Dados que recolhemos",
+        "title": "Dados que recolhemos",
+        "items": {
+          "account": {
+            "title": "Dados de conta e encomenda:",
+            "text": "nome, email, morada de envio, telefone (opcional), detalhes da encomenda, escolhas de personalização."
+          },
+          "payment": {
+            "title": "Dados de pagamento:",
+            "text": "tratados por fornecedores de pagamento (ex.: Stripe, PayPal). Não armazenamos números completos de cartão."
+          },
+          "support": {
+            "title": "Mensagens de suporte:",
+            "text": "conteúdo enviado por formulários/email, mais metadados (hora, IP, informação do browser)."
+          },
+          "usage": {
+            "title": "Dados de utilização:",
+            "text": "páginas visitadas, cliques, dispositivo/browser, localização aproximada, origem de referência (via cookies/analytics)."
+          },
+          "cookies": {
+            "title": "Cookies:",
+            "text": "essenciais para carrinho/sessão e cookies opcionais de analytics/marketing (ver secção de Cookies)."
+          }
+        }
+      },
+      "use": {
+        "label": "Como usamos os dados",
+        "title": "Como usamos os seus dados",
+        "items": [
+          "Processar e entregar encomendas, incluindo atualizações de envio.",
+          "Prestar apoio ao cliente e tratar devoluções/trocas.",
+          "Personalizar produtos (ex.: nome/número em camisolas).",
+          "Melhorar o desempenho, funcionalidades e experiência do website.",
+          "Prevenir fraude e garantir a segurança da plataforma.",
+          "Enviar emails transacionais e (com consentimento, quando exigido) newsletters ou promoções — pode cancelar a subscrição a qualquer momento."
+        ]
+      },
+      "legal": {
+        "label": "Bases legais",
+        "title": "Bases legais (RGPD)",
+        "items": {
+          "contract": {
+            "title": "Contrato:",
+            "text": "cumprimento de compras e prestação de serviços."
+          },
+          "legitimateInterests": {
+            "title": "Interesses legítimos:",
+            "text": "segurança, prevenção de fraude, melhoria de serviços."
+          },
+          "consent": {
+            "title": "Consentimento:",
+            "text": "analytics/marketing opcionais e algumas comunicações."
+          },
+          "legalObligation": {
+            "title": "Obrigação legal:",
+            "text": "cumprimento fiscal/contabilístico."
+          }
+        }
+      },
+      "sharing": {
+        "label": "Partilha e processadores",
+        "title": "Partilha e processadores",
+        "intro": "Partilhamos dados com fornecedores de confiança que ajudam a operar o nosso negócio:",
+        "items": {
+          "payments": {
+            "title": "Processadores de pagamento:",
+            "text": "ex.: Stripe, PayPal, Amazon Pay."
+          },
+          "shipping": {
+            "title": "Envio e logística:",
+            "text": "transportadoras e serviços de tracking."
+          },
+          "analytics": {
+            "title": "Analytics:",
+            "text": "ferramentas amigas da privacidade e/ou grandes plataformas de analytics (configuradas legalmente)."
+          },
+          "infrastructure": {
+            "title": "Infraestrutura e alojamento:",
+            "text": "cloud e CDNs."
+          }
+        },
+        "outro": "Exigimos que os processadores tratem os dados apenas segundo as nossas instruções e os protejam adequadamente. Não vendemos os seus dados pessoais."
+      },
+      "payments": {
+        "label": "Pagamentos",
+        "title": "Pagamentos",
+        "body": "Os pagamentos são tratados por processadores terceiros. Nunca armazenamos os dados completos do seu cartão nos nossos servidores. Consulte a política de privacidade do fornecedor selecionado para mais detalhes."
+      },
+      "shipping": {
+        "label": "Envio",
+        "title": "Envio",
+        "body": "Para a entrega, partilhamos a informação necessária (nome, morada, telefone, conteúdo da encomenda) com parceiros de envio para criação da encomenda e tracking. Consulte a nossa página de <shippingLink>Envio e Tracking</shippingLink> para níveis de serviço e prazos."
+      },
+      "cookies": {
+        "label": "Analytics e cookies",
+        "title": "Analytics e cookies",
+        "intro": "Usamos cookies essenciais para funcionalidades principais (carrinho, sessão). Com consentimento, quando exigido, podemos usar cookies de analytics/marketing para compreender a utilização e melhorar o site.",
+        "items": {
+          "essential": {
+            "title": "Essenciais:",
+            "text": "estritamente necessários; não podem ser desativados."
+          },
+          "analytics": {
+            "title": "Analytics:",
+            "text": "ajudam a medir e melhorar o desempenho."
+          },
+          "marketing": {
+            "title": "Marketing:",
+            "text": "opcionais; usados para mostrar ofertas relevantes."
+          }
+        }
+      },
+      "retention": {
+        "label": "Conservação",
+        "title": "Conservação de dados",
+        "body": "Mantemos os dados pessoais apenas pelo tempo necessário para os fins descritos nesta política, incluindo requisitos legais, contabilísticos ou de reporte. Os períodos de conservação variam conforme o tipo de dado e as obrigações legais."
+      },
+      "rights": {
+        "label": "Os seus direitos",
+        "title": "Os seus direitos",
+        "intro": "Dependendo da sua localização, poderá ter direitos para:",
+        "items": [
+          "Aceder, corrigir ou eliminar os seus dados pessoais.",
+          "Opor-se ou restringir determinado tratamento.",
+          "Portabilidade dos dados.",
+          "Retirar o consentimento quando o tratamento se basear em consentimento.",
+          "Apresentar reclamação a uma autoridade de controlo."
+        ],
+        "outro": "Para exercer estes direitos, contacte-nos através de <email>myfootballworldstore@gmail.com</email>."
+      },
+      "security": {
+        "label": "Segurança",
+        "title": "Segurança",
+        "body": "Implementamos medidas técnicas e organizativas adequadas para proteger os seus dados. No entanto, nenhum método de transmissão ou armazenamento é 100% seguro; não podemos garantir segurança absoluta."
+      },
+      "transfers": {
+        "label": "Transferências internacionais",
+        "title": "Transferências internacionais",
+        "body": "A sua informação pode ser transferida e tratada em países fora do seu. Quando exigido, implementamos salvaguardas (ex.: cláusulas contratuais-tipo) para proteger os seus dados."
+      },
+      "children": {
+        "label": "Privacidade de crianças",
+        "title": "Privacidade de crianças",
+        "body": "Os nossos serviços não são dirigidos a crianças com idade inferior à exigida pela lei aplicável. Não recolhemos conscientemente dados de crianças. Se acredita que uma criança forneceu dados pessoais, contacte-nos para solicitar a eliminação."
+      },
+      "changes": {
+        "label": "Alterações",
+        "title": "Alterações a esta política",
+        "body": "Podemos atualizar esta política ocasionalmente. Publicaremos a nova versão nesta página e atualizaremos a data de “Última atualização” acima."
+      },
+      "contact": {
+        "label": "Contacte-nos",
+        "title": "Contacte-nos",
+        "body": "Tem dúvidas sobre esta política ou sobre os seus dados? Envie email para <email>myfootballworldstore@gmail.com</email>.",
+        "note": "Esta página é fornecida por transparência e não constitui aconselhamento jurídico."
       }
     }
   }

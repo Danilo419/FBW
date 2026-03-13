@@ -305,7 +305,7 @@
       "description": "These Terms govern your use of FootballWorld and any purchases you make here. By using our site, you agree to these Terms. For how we collect and handle your data, see our <privacy>Privacy Policy</privacy>.",
       "badges": {
         "clear": "Clear & simple policy",
-        "updated": "Last updated: 09 Sep 2025"
+        "updated": "Last updated: 30 Jan 2026"
       },
       "quickLinks": {
         "returns": "Returns & Refunds",
@@ -1226,6 +1226,523 @@
         "Chest (bust)": "Chest (bust)",
         "Height": "Height",
         "Shorts length": "Shorts length"
+      }
+    }
+  },
+  "ProductConfigurator": {
+    "savePercent": "Save {percent}%",
+    "noReviewsYet": "No reviews yet",
+    "deliveryText": "Estimated delivery: 7–20 business days",
+    "headsUp": "Heads up:",
+    "chooseSizeToContinue": "Please choose a size to continue.",
+    "sizeUnavailable": "This size is unavailable. Please choose another.",
+    "quantityMin": "Quantity must be at least 1.",
+    "pleaseSelect": "Please select: {items}.",
+    "addToCartError": "Something went wrong while adding to cart. Please try again.",
+    "itemAddedLive": "Item added to cart.",
+    "itemAddedTitle": "Item added to cart",
+    "itemAddedDescription": "You can keep shopping or proceed to checkout.",
+    "close": "Close",
+    "size": "Size",
+    "kids": "Kids",
+    "adult": "Adult",
+    "sizeGuide": "Size guide",
+    "unavailable": "Unavailable",
+    "selectSize": "Select size {size}",
+    "noSizesAvailable": "No sizes available.",
+    "sizeSoldOut": "This size is sold out.",
+    "onlyLeftInSize": "Only {count} left in this size.",
+    "lowStockInSize": "Low stock in this size.",
+    "inStockReadyToShip": "In stock, ready to ship.",
+    "agesApproximate": "Ages are approximate. If in between, we recommend sizing up.",
+    "free": "FREE",
+    "optional": "Optional",
+    "personalization": "Personalization",
+    "nameUppercase": "Name (uppercase)",
+    "namePlaceholder": "e.g. BELLINGHAM",
+    "willBePrintedAs": "Will be printed as:",
+    "numberRange": "Number (0–999)",
+    "numberPlaceholder": "e.g. 5",
+    "personalizationPrinted": "Personalization will be printed in the club’s official style.",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
+    "total": "Total",
+    "added": "Added!",
+    "adding": "Adding…",
+    "processing": "Processing…",
+    "addToCart": "Add to cart",
+    "buyNow": "Buy now",
+    "add": "Add",
+    "buy": "Buy",
+    "shippingDelivery": "Shipping & delivery",
+    "estimatedDeliveryBold": "Estimated delivery:",
+    "estimatedDeliveryText": "7–20 business days (tracked shipping).",
+    "trackingNumberText1": "You’ll receive a",
+    "trackingNumberBold": "tracking number",
+    "trackingNumberText2": "as soon as your order ships.",
+    "supportRepliesFast": "If you need help with your order, our support replies fast.",
+    "returnsSupport": "Returns & support",
+    "returnsLine1": "Got a problem? Contact us and we’ll make it right (support & guidance).",
+    "returnsLine2Text1": "Please keep the product",
+    "returnsLine2Bold": "unused",
+    "returnsLine2Text2": "and in original condition if a return is needed.",
+    "returnsLine3": "Personalized items may have different return rules (name/number printing).",
+    "qualityDetails": "Quality details",
+    "qualityLine1": "High-quality stitching & print finish.",
+    "qualityLine2": "Comfortable fabric for daily wear.",
+    "qualityLine3Text1": "For the best fit, use our",
+    "qualityLine3Bold": "Size Guide",
+    "qualityLine3Text2": "(recommended).",
+    "secureCheckout": "Secure checkout",
+    "trackedShipping": "Tracked shipping",
+    "fastSupport": "Fast support",
+    "securePayment": "Secure payment",
+    "encryptedCheckout": "Encrypted checkout",
+    "replyQuickly": "We reply quickly",
+    "gotIt": "Got it",
+    "switchAdultKids": "Switch Adult/Kids and cm/inches.",
+    "units": "Units:",
+    "centimetres": "centimetres (cm)",
+    "inchesLabel": "inches (in)",
+    "measurement": "Measurement",
+    "length": "Length",
+    "width": "Width",
+    "height": "Height",
+    "weight": "Weight",
+    "jerseyLength": "Jersey length",
+    "chestBust": "Chest (bust)",
+    "shortsLength": "Shorts length",
+    "sizeGuideTip": "Tip: If you’re between sizes, we recommend sizing up for a more comfortable fit.",
+    "badges": "Badges",
+    "ratingAria": "{value} out of 5"
+  },
+  "ProductReviews": {
+    "title": "Customer Reviews",
+    "loginRequired": "You must be logged in to leave a review.",
+    "yourRating": "Your rating",
+    "clickStar": "Click a star to rate",
+    "ratingAllowed": "Rating allowed",
+    "selected": "Selected {count}/5",
+    "shareDetails": "Share more details about this product",
+    "addImages": "Add images",
+    "imagesOptional": "Images optional",
+    "dragDrop": "Drag & drop",
+    "browse": "browse",
+    "selectedCount": "{count} image(s) selected",
+    "choose": "Choose",
+    "submitReview": "Submit review",
+    "distribution": "Distribution",
+    "reviewCount": "{count} review(s)",
+    "recentReviews": "Recent reviews",
+    "noReviews": "No reviews yet"
+  },
+  "nationsPage": {
+    "title": "Nations",
+    "subtitle": "Browse all nations with <brand>FootballWorld</brand> products available.",
+    "totalNations": "Total nations",
+    "viewJerseys": "View jerseys",
+    "nationImageAlt": "{nation} jersey collection",
+    "empty": "No nations available yet."
+  },
+  "leaguesPage": {
+    "title": "Leagues",
+    "subtitle": "Explore the world's most prestigious football leagues with <brand>FootballWorld</brand> products available.",
+    "totalLeagues": "Total leagues",
+    "viewClubs": "View clubs",
+    "leagueImageAlt": "{league} league collection",
+    "empty": "No leagues available yet."
+  },
+  "clubsPage": {
+    "title": "Clubs",
+    "subtitle": "Browse all clubs with <brand>FootballWorld</brand> products available.",
+    "totalClubs": "Total clubs",
+    "viewJerseys": "View jerseys",
+    "clubImageAlt": "{club} jersey collection",
+    "empty": "No clubs available yet."
+  },
+  "shippingPage": {
+    "metadata": {
+      "title": "Shipping & Tracking – FootballWorld",
+      "description": "Worldwide tracked shipping. Single delivery window of 7–20 business days after dispatch, plus handling times and how to track your order."
+    },
+    "header": {
+      "title": "Shipping & Tracking",
+      "description": {
+        "before": "We ship worldwide with tracked delivery. There is a single delivery window:",
+        "highlight": " 7–20 business days after dispatch",
+        "after": ". Below you’ll find handling times and how to track your order once it’s on the way."
+      }
+    },
+    "standard": {
+      "title": "Standard Tracked Delivery",
+      "description": "One reliable, fully tracked service for all destinations.",
+      "details": {
+        "transit": "Typical transit: 7–20 business days",
+        "worldwide": "Available worldwide",
+        "checkout": "Price shown at checkout"
+      }
+    },
+    "handling": {
+      "title": "Handling & Production",
+      "items": {
+        "0": {
+          "before": "Our kits are made to order. Production time is typically ",
+          "highlight": "2–6 business days",
+          "after": "."
+        },
+        "1": "Orders placed on weekends/holidays are processed the next business day.",
+        "2": "You’ll receive an email with your tracking number immediately after dispatch."
+      }
+    },
+    "address": {
+      "title": "Address Changes",
+      "items": {
+        "0": {
+          "before": "Need to change your address? Contact us ",
+          "highlight": "before",
+          "after": " the order ships."
+        },
+        "1": "Once in transit, address changes are subject to the carrier’s policy and may not be possible."
+      }
+    },
+    "tracking": {
+      "title": "How to track your order",
+      "steps": {
+        "0": "Find the tracking code we emailed you after dispatch.",
+        "1": "Use your carrier’s website (link in the email) or any universal tracker below.",
+        "2": "Events may take 24–48h to appear after pickup — this is normal."
+      },
+      "tip": "Tip: paste your tracking number into one of the services above; it will auto-detect the carrier in most cases."
+    },
+    "customs": {
+      "title": "Customs, Duties & Taxes",
+      "items": {
+        "0": "International shipments may be subject to import duties/VAT set by your country.",
+        "1": "Any such charges are the recipient’s responsibility and are not collected by us.",
+        "2": "Refusal to pay duties may result in the parcel being returned or destroyed by customs."
+      }
+    },
+    "delays": {
+      "title": "Delays & Lost Parcels",
+      "items": {
+        "0": "Weather, customs inspections and peak seasons can extend delivery times.",
+        "1": {
+          "before": "If your tracking hasn’t updated for ",
+          "highlight": "15+ business days",
+          "after": ", please reach out — we’ll investigate with the carrier."
+        },
+        "2": {
+          "before": "Declared lost: usually after the carrier’s investigation window (often ",
+          "highlight": "30–45 days from dispatch",
+          "after": ")."
+        }
+      }
+    },
+    "help": {
+      "title": "Need help with your shipment?",
+      "description": "Check our <faq>FAQ</faq> or contact us with your order number and tracking code.",
+      "button": "Contact support"
+    }
+  },
+  "returnsPage": {
+    "metadata": {
+      "title": "Returns & Exchanges – FootballWorld",
+      "description": "Return window, eligibility rules, how to start a return or request an exchange, and refund processing times."
+    },
+    "header": {
+      "title": "Returns & Exchanges",
+      "description": "We want you to love your jersey. If something isn’t right, you can request a return or size exchange within our policy window. Read the conditions below and start your request when ready."
+    },
+    "glance": {
+      "returnWindow": {
+        "title": "Return window",
+        "items": {
+          "0": {
+            "before": "Returns/exchanges accepted within ",
+            "highlight": "14 days of delivery",
+            "after": "."
+          },
+          "1": "Contact us first to obtain instructions and the correct return address."
+        }
+      },
+      "itemCondition": {
+        "title": "Item condition",
+        "items": {
+          "0": "Unused, unwashed, no smells or marks.",
+          "1": "All original tags/packaging intact.",
+          "2": "Try-ons are OK — just keep tags attached."
+        }
+      },
+      "refundsCosts": {
+        "title": "Refunds & costs",
+        "items": {
+          "0": "Refund to original payment method.",
+          "1": "Original shipping is non-refundable.",
+          "2": "Return postage paid by customer (except faulty/incorrect items)."
+        }
+      }
+    },
+    "eligibility": {
+      "eligible": {
+        "title": "Eligible items",
+        "items": {
+          "0": "Standard jerseys and apparel in original condition.",
+          "1": "Accessories that are unopened and unused.",
+          "2": "Requests submitted within 14 days of delivery."
+        }
+      },
+      "notReturnable": {
+        "title": "Not returnable",
+        "items": {
+          "0": {
+            "highlight": "Customized jerseys",
+            "after": " (name/number patches) — made to order and final sale."
+          },
+          "1": "Altered or washed items.",
+          "2": "Clearance or “final sale” marked products.",
+          "3": "Items returned without contacting us first."
+        }
+      }
+    },
+    "start": {
+      "title": "How to start a return/exchange",
+      "steps": {
+        "0": "Email us at <email></email> or use the <contact>contact form</contact> with your <order>order number</order>, your request (return or exchange) and the reason.",
+        "1": {
+          "before": "(Optional) Attach clear photos if there is a defect/damage ",
+          "highlight": "(helps us speed things up)",
+          "after": "."
+        },
+        "2": "We’ll reply with the return authorization and the correct return address. Please do not send anything before receiving it.",
+        "3": "Pack items securely. Use a tracked service and keep the receipt until your request is completed."
+      },
+      "note": "Note: For exchanges, we’ll reserve the requested size once your parcel shows movement in tracking (or upon arrival, depending on stock)."
+    },
+    "exchanges": {
+      "size": {
+        "title": "Size exchanges",
+        "items": {
+          "0": "Request within 14 days of delivery.",
+          "1": "Item must be in original condition with tags.",
+          "2": "You cover the postage back to us; we cover the replacement dispatch (standard option).",
+          "3": "If the requested size is unavailable, we can refund or issue store credit — your choice."
+        }
+      },
+      "damaged": {
+        "title": "Damaged / incorrect items",
+        "items": {
+          "0": {
+            "before": "If your order arrived damaged, defective or incorrect, contact us within ",
+            "highlight": "7 days",
+            "after": " of delivery."
+          },
+          "1": "Include photos of the issue and the outer packaging/labels.",
+          "2": "We will replace or refund at no extra cost after verification (carrier investigation may be required)."
+        }
+      }
+    },
+    "refundTiming": {
+      "title": "Refund timing",
+      "description": {
+        "before1": "Once your return is delivered and inspected, refunds are typically issued within ",
+        "highlight1": "3–5 business days",
+        "between": ". Your bank or card provider may take an additional ",
+        "highlight2": "3–10 business days",
+        "after": " to post the funds back to your account. We’ll email you a confirmation as soon as it’s processed."
+      }
+    },
+    "cancellations": {
+      "title": "Order cancellations",
+      "items": {
+        "0": {
+          "before": "We can cancel and refund ",
+          "highlight": "before",
+          "after": " production/dispatch starts."
+        },
+        "1": "Orders already produced or shipped follow the return policy above once delivered."
+      }
+    },
+    "assistance": {
+      "title": "Need assistance?",
+      "description": "Check our <faq>FAQ</faq> or contact us with your order number — we’re happy to help.",
+      "button": "Contact support"
+    }
+  },
+  "privacyPolicyPage": {
+    "hero": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: 30 Jan 2026",
+      "description": "We respect your privacy. This page explains what we collect, why we collect it, and how you can control your information."
+    },
+    "mobileNav": {
+      "ariaLabel": "Sections"
+    },
+    "sidebar": {
+      "title": "On this page",
+      "backToTop": "Back to top"
+    },
+    "sections": {
+      "intro": {
+        "label": "What this policy covers",
+        "title": "What this policy covers",
+        "body": "This Privacy Policy explains how <brand>FootballWorld</brand> (“we”, “us”, “our”) collects, uses, discloses, and safeguards your information when you visit our website, create an account, place an order, or contact support. By using our services you agree to the practices described here."
+      },
+      "data": {
+        "label": "Data we collect",
+        "title": "Data we collect",
+        "items": {
+          "account": {
+            "title": "Account & order data:",
+            "text": "name, email, shipping address, phone (optional), order details, personalization choices."
+          },
+          "payment": {
+            "title": "Payment data:",
+            "text": "handled by payment providers (e.g., Stripe, PayPal). We do not store full card numbers."
+          },
+          "support": {
+            "title": "Support messages:",
+            "text": "content you send via forms/email, plus metadata (time, IP, browser info)."
+          },
+          "usage": {
+            "title": "Usage data:",
+            "text": "pages viewed, clicks, device/browser, approximate location, referrer (via cookies/analytics)."
+          },
+          "cookies": {
+            "title": "Cookies:",
+            "text": "essential for cart/session and optional analytics/marketing cookies (see Cookies section)."
+          }
+        }
+      },
+      "use": {
+        "label": "How we use data",
+        "title": "How we use your data",
+        "items": [
+          "Process and deliver orders, including shipping updates.",
+          "Provide customer support and handle returns/exchanges.",
+          "Personalize products (e.g., name/number on jerseys).",
+          "Improve website performance, features, and experience.",
+          "Prevent fraud and ensure platform security.",
+          "Send transactional emails and (with consent where required) newsletters or promotions — you can unsubscribe anytime."
+        ]
+      },
+      "legal": {
+        "label": "Legal bases",
+        "title": "Legal bases (GDPR)",
+        "items": {
+          "contract": {
+            "title": "Contract:",
+            "text": "fulfilling purchases and providing services."
+          },
+          "legitimateInterests": {
+            "title": "Legitimate interests:",
+            "text": "security, fraud prevention, improving services."
+          },
+          "consent": {
+            "title": "Consent:",
+            "text": "optional analytics/marketing and some communications."
+          },
+          "legalObligation": {
+            "title": "Legal obligation:",
+            "text": "tax/accounting compliance."
+          }
+        }
+      },
+      "sharing": {
+        "label": "Sharing & processors",
+        "title": "Sharing & processors",
+        "intro": "We share data with trusted providers who help operate our business:",
+        "items": {
+          "payments": {
+            "title": "Payment processors:",
+            "text": "e.g., Stripe, PayPal, Amazon Pay."
+          },
+          "shipping": {
+            "title": "Shipping & logistics:",
+            "text": "carriers and tracking services."
+          },
+          "analytics": {
+            "title": "Analytics:",
+            "text": "privacy-friendly tools and/or major analytics (lawfully configured)."
+          },
+          "infrastructure": {
+            "title": "Infrastructure & hosting:",
+            "text": "cloud and CDNs."
+          }
+        },
+        "outro": "We require processors to handle data only on our instructions and protect it appropriately. We do not sell your personal data."
+      },
+      "payments": {
+        "label": "Payments",
+        "title": "Payments",
+        "body": "Payments are handled by third-party processors. We never store your full card details on our servers. Refer to your selected provider’s privacy policy for more details."
+      },
+      "shipping": {
+        "label": "Shipping",
+        "title": "Shipping",
+        "body": "For delivery, we share necessary information (name, address, phone, order contents) with shipping partners for parcel creation and tracking. See our <shippingLink>Shipping & Tracking</shippingLink> page for service levels and timings."
+      },
+      "cookies": {
+        "label": "Analytics & cookies",
+        "title": "Analytics & cookies",
+        "intro": "We use essential cookies for core features (cart, session). With consent where required, we may use analytics/marketing cookies to understand usage and improve the site.",
+        "items": {
+          "essential": {
+            "title": "Essential:",
+            "text": "strictly necessary; cannot be switched off."
+          },
+          "analytics": {
+            "title": "Analytics:",
+            "text": "help measure and improve performance."
+          },
+          "marketing": {
+            "title": "Marketing:",
+            "text": "optional; used to show relevant offers."
+          }
+        }
+      },
+      "retention": {
+        "label": "Retention",
+        "title": "Data retention",
+        "body": "We keep personal data only as long as necessary for purposes described in this policy, including legal, accounting, or reporting requirements. Retention periods vary by data type and legal obligations."
+      },
+      "rights": {
+        "label": "Your rights",
+        "title": "Your rights",
+        "intro": "Depending on your location, you may have rights to:",
+        "items": [
+          "Access, correct, or delete your personal data.",
+          "Object to or restrict certain processing.",
+          "Data portability.",
+          "Withdraw consent where processing relies on consent.",
+          "Lodge a complaint with a supervisory authority."
+        ],
+        "outro": "To exercise these rights, contact us at <email>myfootballworldstore@gmail.com</email>."
+      },
+      "security": {
+        "label": "Security",
+        "title": "Security",
+        "body": "We implement appropriate technical and organizational measures to protect your data. However, no method of transmission or storage is 100% secure; we cannot guarantee absolute security."
+      },
+      "transfers": {
+        "label": "International transfers",
+        "title": "International transfers",
+        "body": "Your information may be transferred to and processed in countries outside your own. Where required, we implement safeguards (e.g., standard contractual clauses) to protect your data."
+      },
+      "children": {
+        "label": "Children’s privacy",
+        "title": "Children’s privacy",
+        "body": "Our services are not directed to children under the age required by applicable law. We do not knowingly collect data from children. If you believe a child has provided personal data, please contact us to request deletion."
+      },
+      "changes": {
+        "label": "Changes",
+        "title": "Changes to this policy",
+        "body": "We may update this policy from time to time. We will post the new version on this page and update the “Last updated” date above."
+      },
+      "contact": {
+        "label": "Contact us",
+        "title": "Contact us",
+        "body": "Questions about this policy or your data? Email <email>myfootballworldstore@gmail.com</email>.",
+        "note": "This page is provided for transparency and does not constitute legal advice."
       }
     }
   }
