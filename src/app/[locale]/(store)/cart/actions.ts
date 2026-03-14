@@ -1,4 +1,4 @@
-// src/app/(store)/cart/actions.ts
+// src/app/[locale]/(store)/cart/actions.ts
 "use server";
 
 import { cookies } from "next/headers";
@@ -29,9 +29,16 @@ const AddToCartSchema = z.object({
 type AddToCartInput = z.infer<typeof AddToCartSchema>;
 
 /* ========= helpers ========= */
-function normalizeOptions(obj?: Record<string, string | null>) {
+function normalizeOptions(obj?: Record<string, string | null>): Record<string, string> {
   if (!obj) return {};
-  const entries = Object.entries(obj).filter(([, v]) => v != null && v !== "");
+
+  const entries = Object.entries(obj).filter(
+    (entry): entry is [string, string] => {
+      const [, value] = entry;
+      return value != null && value !== "";
+    }
+  );
+
   entries.sort(([a], [b]) => a.localeCompare(b));
   return Object.fromEntries(entries);
 }
@@ -54,35 +61,98 @@ function sanitizeNumber(v: unknown) {
   return only || null;
 }
 
+function getCookieExpiryDate() {
+  return new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+}
+
+async function setCartCookies(values: { sid?: string | null; cartId?: string | null }) {
+  const jar = await cookies();
+  const expires = getCookieExpiryDate();
+
+  if (values.sid) {
+    jar.set("sid", values.sid, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      expires,
+      secure: true,
+    });
+  }
+
+  if (values.cartId) {
+    jar.set("cartId", values.cartId, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      expires,
+      secure: true,
+    });
+  }
+}
+
 async function getOrCreateCart() {
   const jar = await cookies();
 
   const existingSid = jar.get("sid")?.value ?? null;
+  const existingCartId = jar.get("cartId")?.value ?? null;
   const userId: string | null = null;
 
   if (existingSid) {
-    const found = await prisma.cart.findFirst({
+    const foundBySid = await prisma.cart.findFirst({
       where: { sessionId: existingSid },
     });
-    if (found) return found;
+
+    if (foundBySid) {
+      await setCartCookies({
+        sid: foundBySid.sessionId,
+        cartId: foundBySid.id,
+      });
+      return foundBySid;
+    }
   }
 
-  const newSid: string =
+  if (existingCartId) {
+    const foundByCartId = await prisma.cart.findUnique({
+      where: { id: existingCartId },
+    });
+
+    if (foundByCartId) {
+      const ensuredSid =
+        foundByCartId.sessionId ||
+        existingSid ||
+        globalThis.crypto?.randomUUID?.() ||
+        `${Date.now()}-${Math.random()}`;
+
+      const cart =
+        foundByCartId.sessionId === ensuredSid
+          ? foundByCartId
+          : await prisma.cart.update({
+              where: { id: foundByCartId.id },
+              data: { sessionId: ensuredSid },
+            });
+
+      await setCartCookies({
+        sid: cart.sessionId,
+        cartId: cart.id,
+      });
+
+      return cart;
+    }
+  }
+
+  const newSid =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
-  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-
-  jar.set("sid", newSid, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    expires,
-    secure: true,
-  });
-
-  return prisma.cart.create({
+  const cart = await prisma.cart.create({
     data: { sessionId: newSid, userId: userId ?? null },
   });
+
+  await setCartCookies({
+    sid: cart.sessionId,
+    cartId: cart.id,
+  });
+
+  return cart;
 }
 
 async function getBaseUnitPrice(productId: string): Promise<number> {
@@ -92,7 +162,7 @@ async function getBaseUnitPrice(productId: string): Promise<number> {
   });
 
   if (!product) throw new Error("Product not found");
-  return product.basePrice;
+  return Number(product.basePrice);
 }
 
 function emptySummary() {
@@ -110,6 +180,13 @@ function emptySummary() {
   };
 }
 
+async function revalidateCartUi() {
+  revalidatePath("/cart");
+  revalidatePath("/", "layout");
+  revalidatePath("/pt", "layout");
+  revalidatePath("/en", "layout");
+}
+
 /* ========= actions ========= */
 export async function addToCartAction(raw: AddToCartInput) {
   try {
@@ -117,6 +194,11 @@ export async function addToCartAction(raw: AddToCartInput) {
 
     const cart = await getOrCreateCart();
     const unitPrice = await getBaseUnitPrice(input.productId);
+
+    await setCartCookies({
+      sid: cart.sessionId,
+      cartId: cart.id,
+    });
 
     const optionsJson = normalizeOptions(input.options ?? undefined);
 
@@ -133,7 +215,7 @@ export async function addToCartAction(raw: AddToCartInput) {
           }
         : null;
 
-    const optionsJsonWithPersonalization: Record<string, any> = {
+    const optionsJsonWithPersonalization: Record<string, string> = {
       ...optionsJson,
     };
 
@@ -158,7 +240,7 @@ export async function addToCartAction(raw: AddToCartInput) {
     );
 
     if (existing) {
-      const newQty = Math.min(99, existing.qty + input.qty);
+      const newQty = Math.min(99, Number(existing.qty) + input.qty);
 
       await prisma.cartItem.update({
         where: { id: existing.id },
@@ -184,9 +266,14 @@ export async function addToCartAction(raw: AddToCartInput) {
       });
     }
 
-    revalidatePath("/cart");
+    await revalidateCartUi();
 
-    const count = await prisma.cartItem.count({ where: { cartId: cart.id } });
+    const allItems = await prisma.cartItem.findMany({
+      where: { cartId: cart.id },
+      select: { qty: true },
+    });
+
+    const count = allItems.reduce((acc, item) => acc + Number(item.qty), 0);
 
     return {
       ok: true as const,
@@ -203,11 +290,19 @@ export async function addToCartAction(raw: AddToCartInput) {
 export async function getCartSummary() {
   const jar = await cookies();
   const sid = jar.get("sid")?.value ?? null;
+  const cartId = jar.get("cartId")?.value ?? null;
 
-  if (!sid) return emptySummary();
+  let cartWhere:
+    | { cart: { sessionId: string } }
+    | { cartId: string }
+    | null = null;
+
+  if (sid) cartWhere = { cart: { sessionId: sid } };
+  else if (cartId) cartWhere = { cartId };
+  else return emptySummary();
 
   const rawItems = await prisma.cartItem.findMany({
-    where: { cart: { sessionId: sid } },
+    where: cartWhere,
     select: {
       id: true,
       qty: true,
@@ -254,7 +349,7 @@ export async function getCartSummary() {
         : 0;
 
     return {
-      count: rawItems.length,
+      count: rawItems.reduce((acc, it) => acc + Number(it.qty), 0),
       subtotal,
       discount: 0,
       shipping,
@@ -267,14 +362,11 @@ export async function getCartSummary() {
     };
   }
 
-  // GLOBAL e MIXED:
-  // sem promoções de bundle / buy X get Y
-  // envio grátis a partir de 70€, caso contrário 5€
   const shipping = subtotal >= 70 ? 0 : 5;
   const total = subtotal + shipping;
 
   return {
-    count: rawItems.length,
+    count: rawItems.reduce((acc, it) => acc + Number(it.qty), 0),
     subtotal,
     discount: 0,
     shipping,
@@ -292,10 +384,22 @@ export async function removeItem(formData: FormData) {
   if (!id || typeof id !== "string") return;
 
   try {
+    const item = await prisma.cartItem.findUnique({
+      where: { id },
+      select: { cartId: true, cart: { select: { sessionId: true } } },
+    });
+
+    if (item) {
+      await setCartCookies({
+        sid: item.cart?.sessionId ?? null,
+        cartId: item.cartId,
+      });
+    }
+
     await prisma.cartItem.delete({ where: { id } });
   } catch {}
 
-  revalidatePath("/cart");
+  await revalidateCartUi();
 }
 
 export async function updateQty(formData: FormData) {
@@ -309,10 +413,19 @@ export async function updateQty(formData: FormData) {
   try {
     const item = await prisma.cartItem.findUnique({
       where: { id },
-      select: { unitPrice: true },
+      select: {
+        unitPrice: true,
+        cartId: true,
+        cart: { select: { sessionId: true } },
+      },
     });
 
     if (!item) return;
+
+    await setCartCookies({
+      sid: item.cart?.sessionId ?? null,
+      cartId: item.cartId,
+    });
 
     const q = Math.min(99, Math.floor(qty));
 
@@ -320,10 +433,10 @@ export async function updateQty(formData: FormData) {
       where: { id },
       data: {
         qty: q,
-        totalPrice: item.unitPrice * q,
+        totalPrice: Number(item.unitPrice) * q,
       },
     });
   } catch {}
 
-  revalidatePath("/cart");
+  await revalidateCartUi();
 }

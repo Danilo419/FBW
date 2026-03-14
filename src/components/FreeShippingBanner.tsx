@@ -1,7 +1,7 @@
 "use client";
 
 import { Truck, CheckCircle2, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
 
 type FreeShippingBannerProps = {
@@ -35,41 +35,57 @@ export default function FreeShippingBanner({
 
   const [liveSubtotal, setLiveSubtotal] = useState<number>(Math.max(0, Number(subtotal) || 0));
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     setLiveSubtotal(Math.max(0, Number(subtotal) || 0));
   }, [subtotal]);
 
-  useEffect(() => {
-    let cancelled = false;
+  async function refreshSubtotal() {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
-    async function refreshSubtotal() {
-      try {
-        const res = await fetch("/api/cart/subtotal", {
-          method: "GET",
-          cache: "no-store",
-        });
+    try {
+      const res = await fetch(`/api/cart/subtotal?ts=${Date.now()}`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-        if (!res.ok) return;
+      if (!res.ok) return;
 
-        const data = (await res.json()) as { subtotal?: number };
-        if (!cancelled) {
-          setLiveSubtotal(Math.max(0, Number(data?.subtotal) || 0));
-        }
-      } catch {}
+      const data = (await res.json()) as { subtotal?: number };
+      setLiveSubtotal(Math.max(0, Number(data?.subtotal) || 0));
+    } catch {
+      // ignore
+    } finally {
+      isFetchingRef.current = false;
     }
+  }
 
+  useEffect(() => {
     refreshSubtotal();
 
     const onCartUpdated = () => {
       refreshSubtotal();
+      window.setTimeout(() => refreshSubtotal(), 150);
+      window.setTimeout(() => refreshSubtotal(), 500);
+      window.setTimeout(() => refreshSubtotal(), 1200);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshSubtotal();
+      }
     };
 
     window.addEventListener("cart-updated", onCartUpdated);
+    window.addEventListener("focus", refreshSubtotal);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      cancelled = true;
       window.removeEventListener("cart-updated", onCartUpdated);
+      window.removeEventListener("focus", refreshSubtotal);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

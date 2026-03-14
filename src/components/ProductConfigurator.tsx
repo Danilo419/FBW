@@ -794,11 +794,14 @@ export default function ProductConfigurator({ product }: Props) {
           personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
         });
 
+        router.refresh();
+
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("cart-updated"));
+          window.setTimeout(() => window.dispatchEvent(new Event("cart-updated")), 150);
+          window.setTimeout(() => window.dispatchEvent(new Event("cart-updated")), 500);
+          window.setTimeout(() => window.dispatchEvent(new Event("cart-updated")), 1200);
         }
-
-        router.refresh();
 
         setJustAdded(true);
         setShowToast(true);
