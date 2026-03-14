@@ -1,14 +1,13 @@
-// src/app/forgot-password/page.tsx
+// src/app/[locale]/forgot-password/page.tsx
 "use client";
 
 import React, { FormEvent, useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("forgotPasswordPage");
-
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
@@ -16,18 +15,40 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const preservedQuery = useMemo(() => {
+  const loginHref = useMemo(() => {
     const qpNext = searchParams.get("next");
     const qpFrom = searchParams.get("from");
     const qpCallback = searchParams.get("callbackUrl");
 
-    const params = new URLSearchParams();
-    if (qpNext) params.set("next", qpNext);
-    else if (qpFrom) params.set("from", qpFrom);
-    else if (qpCallback) params.set("callbackUrl", qpCallback);
+    const query = qpNext
+      ? { next: qpNext }
+      : qpFrom
+        ? { from: qpFrom }
+        : qpCallback
+          ? { callbackUrl: qpCallback }
+          : undefined;
 
-    const s = params.toString();
-    return s ? `?${s}` : "";
+    return query
+      ? { pathname: "/account/login" as const, query }
+      : { pathname: "/account/login" as const };
+  }, [searchParams]);
+
+  const signupHref = useMemo(() => {
+    const qpNext = searchParams.get("next");
+    const qpFrom = searchParams.get("from");
+    const qpCallback = searchParams.get("callbackUrl");
+
+    const query = qpNext
+      ? { next: qpNext }
+      : qpFrom
+        ? { from: qpFrom }
+        : qpCallback
+          ? { callbackUrl: qpCallback }
+          : undefined;
+
+    return query
+      ? { pathname: "/account/signup" as const, query }
+      : { pathname: "/account/signup" as const };
   }, [searchParams]);
 
   async function handleSubmit(e: FormEvent) {
@@ -60,9 +81,7 @@ export default function ForgotPasswordPage() {
         <div className="rounded-2xl border bg-white/80 p-6 shadow-sm sm:p-8">
           <h1 className="text-3xl font-extrabold">{t("title")}</h1>
 
-          <p className="mt-2 text-sm text-gray-600">
-            {t("description")}
-          </p>
+          <p className="mt-2 text-sm text-gray-600">{t("description")}</p>
 
           {err && (
             <p className="mt-5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -78,7 +97,7 @@ export default function ForgotPasswordPage() {
 
               <div className="flex items-center justify-between gap-3">
                 <Link
-                  href={`/account/login${preservedQuery}`}
+                  href={loginHref}
                   className="text-sm text-blue-600 hover:underline"
                 >
                   {t("links.backLogin")}
@@ -125,14 +144,14 @@ export default function ForgotPasswordPage() {
 
               <div className="flex items-center justify-between gap-3">
                 <Link
-                  href={`/account/login${preservedQuery}`}
+                  href={loginHref}
                   className="text-sm text-blue-600 hover:underline"
                 >
                   {t("links.backLogin")}
                 </Link>
 
                 <Link
-                  href={`/account/signup${preservedQuery}`}
+                  href={signupHref}
                   className="text-sm text-gray-600 hover:underline"
                 >
                   {t("links.createAccount")}

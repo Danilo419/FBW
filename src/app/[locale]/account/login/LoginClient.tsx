@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 
+type SafeRoute = "/" | "/account" | "/admin";
+
 /**
  * Rules:
  * - Do not auto-redirect just for being authenticated.
@@ -31,29 +33,27 @@ export default function LoginClient() {
   const preferredCallback = qpNext || qpFrom || qpCallback || "";
 
   const forgotPasswordHref = useMemo(() => {
-    const query =
-      qpNext
-        ? { next: qpNext }
-        : qpFrom
-          ? { from: qpFrom }
-          : qpCallback
-            ? { callbackUrl: qpCallback }
-            : undefined;
+    const query = qpNext
+      ? { next: qpNext }
+      : qpFrom
+        ? { from: qpFrom }
+        : qpCallback
+          ? { callbackUrl: qpCallback }
+          : undefined;
 
     return query
-      ? { pathname: "/account/forgot-password", query }
-      : { pathname: "/account/forgot-password" };
+      ? { pathname: "/forgot-password", query }
+      : { pathname: "/forgot-password" };
   }, [qpNext, qpFrom, qpCallback]);
 
   const signupHref = useMemo(() => {
-    const query =
-      qpNext
-        ? { next: qpNext }
-        : qpFrom
-          ? { from: qpFrom }
-          : qpCallback
-            ? { callbackUrl: qpCallback }
-            : undefined;
+    const query = qpNext
+      ? { next: qpNext }
+      : qpFrom
+        ? { from: qpFrom }
+        : qpCallback
+          ? { callbackUrl: qpCallback }
+          : undefined;
 
     return query
       ? { pathname: "/account/signup", query }
@@ -75,7 +75,7 @@ export default function LoginClient() {
     setErr(map[e] || t("errors.default"));
   }, [searchParams, t]);
 
-  const decideNext = (isAdmin: boolean, cb?: string | null) => {
+  const decideNext = (isAdmin: boolean, cb?: string | null): string | SafeRoute => {
     const clean = (cb || "").trim();
 
     if (!isAdmin && clean.startsWith("/admin")) return "/account";
@@ -116,7 +116,12 @@ export default function LoginClient() {
         const s = await getSession();
         const isAdmin = (s?.user as any)?.isAdmin === true;
         const next = decideNext(isAdmin, preferredCallback);
-        router.replace(next as "/account" | "/admin" | "/");
+
+        if (next === "/" || next === "/account" || next === "/admin") {
+          router.replace(next);
+        } else {
+          router.replace(next as never);
+        }
       }
     } catch {
       setErr(t("errors.unexpected"));
