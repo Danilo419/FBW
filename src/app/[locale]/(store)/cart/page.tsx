@@ -1,4 +1,4 @@
-// src/app/(store)/cart/page.tsx
+// src/app/[locale]/(store)/cart/page.tsx
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { cookies } from "next/headers";
@@ -8,8 +8,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import type { Prisma, CartItem } from "@prisma/client";
-import { removeItem } from "./actions";
 import { getShippingForCart } from "@/lib/shipping";
+import RemoveCartItemButton from "@/components/cart/RemoveCartItemButton";
 
 export const dynamic = "force-dynamic";
 
@@ -776,20 +776,12 @@ export default async function CartPage() {
                       <span className="font-medium">{it.qty}</span>
                     </div>
 
-                    <form action={removeItem}>
-                      <input
-                        type="hidden"
-                        name="itemId"
-                        value={String(it.id)}
-                      />
-                      <button
-                        type="submit"
-                        className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm transition hover:bg-red-50 hover:text-red-700"
-                        aria-label={`${t("cartPage.remove")} ${it.product.name} ${t("cartPage.fromCart")}`}
-                      >
-                        {t("cartPage.remove")}
-                      </button>
-                    </form>
+                    <RemoveCartItemButton
+                      itemId={String(it.id)}
+                      productName={it.product.name}
+                      label={t("cartPage.remove")}
+                      ariaLabel={`${t("cartPage.remove")} ${it.product.name} ${t("cartPage.fromCart")}`}
+                    />
                   </div>
                 </div>
               </div>
