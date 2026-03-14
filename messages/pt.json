@@ -927,7 +927,7 @@
     },
     "errors": {
       "passwordMin": "A palavra-passe deve ter pelo menos 8 caracteres.",
-      "passwordMismatch": "As palavras-passe não coincidem.",
+      "passwordMismatch": "As palavras-passes não coincidem.",
       "usernameTaken": "Já existe um utilizador com este nome. Escolha outro nome.",
       "emailTaken": "Já existe uma conta com este email.",
       "generic": "Não foi possível criar a conta. Tente novamente.",
@@ -1040,7 +1040,7 @@
       "invalidLink": "Este link de redefinição é inválido. Peça um novo.",
       "minLength": "A palavra-passe deve ter pelo menos 8 caracteres.",
       "weakPassword": "Escolha uma palavra-passe mais forte (pelo menos \"Razoável\").",
-      "passwordMismatch": "As palavras-passe não coincidem.",
+      "passwordMismatch": "As palavras-passes não coincidem.",
       "generic": "Não foi possível redefinir a palavra-passe.",
       "network": "Erro de rede. Tente novamente."
     },
@@ -1260,6 +1260,7 @@
     "kidsSizeNote": "As idades são aproximadas. Se estiver entre tamanhos, recomendamos escolher o acima.",
     "free": "GRÁTIS",
     "optional": "Opcional",
+    "customization": "Personalização",
     "personalization": "Personalização",
     "optionNoCustomization": "Sem personalização",
     "optionNameNumber": "Nome & Número",
