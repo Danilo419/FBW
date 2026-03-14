@@ -1,10 +1,10 @@
-// src/app/account/login/LoginClient.tsx
+// src/app/[locale]/account/login/LoginClient.tsx
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSession, signIn, getSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 
 /**
@@ -30,13 +30,34 @@ export default function LoginClient() {
   const qpCallback = searchParams.get("callbackUrl");
   const preferredCallback = qpNext || qpFrom || qpCallback || "";
 
-  const preservedQuery = useMemo(() => {
-    const params = new URLSearchParams();
-    if (qpNext) params.set("next", qpNext);
-    else if (qpFrom) params.set("from", qpFrom);
-    else if (qpCallback) params.set("callbackUrl", qpCallback);
-    const s = params.toString();
-    return s ? `?${s}` : "";
+  const forgotPasswordHref = useMemo(() => {
+    const query =
+      qpNext
+        ? { next: qpNext }
+        : qpFrom
+          ? { from: qpFrom }
+          : qpCallback
+            ? { callbackUrl: qpCallback }
+            : undefined;
+
+    return query
+      ? { pathname: "/account/forgot-password", query }
+      : { pathname: "/account/forgot-password" };
+  }, [qpNext, qpFrom, qpCallback]);
+
+  const signupHref = useMemo(() => {
+    const query =
+      qpNext
+        ? { next: qpNext }
+        : qpFrom
+          ? { from: qpFrom }
+          : qpCallback
+            ? { callbackUrl: qpCallback }
+            : undefined;
+
+    return query
+      ? { pathname: "/account/signup", query }
+      : { pathname: "/account/signup" };
   }, [qpNext, qpFrom, qpCallback]);
 
   useEffect(() => {
@@ -89,12 +110,13 @@ export default function LoginClient() {
           CredentialsSignin: t("errors.invalidCredentials"),
           Configuration: t("errors.configuration"),
         };
+
         setErr(map[res.error] || t("errors.default"));
       } else {
         const s = await getSession();
         const isAdmin = (s?.user as any)?.isAdmin === true;
         const next = decideNext(isAdmin, preferredCallback);
-        router.replace(next);
+        router.replace(next as "/account" | "/admin" | "/");
       }
     } catch {
       setErr(t("errors.unexpected"));
@@ -126,6 +148,7 @@ export default function LoginClient() {
           <label htmlFor="identifier" className="text-sm font-medium">
             {t("fields.identifier.label")}
           </label>
+
           <input
             id="identifier"
             type="text"
@@ -157,7 +180,7 @@ export default function LoginClient() {
 
           <div className="text-right">
             <Link
-              href={`/forgot-password${preservedQuery}`}
+              href={forgotPasswordHref}
               className="text-sm text-blue-600 hover:underline"
             >
               {t("links.forgotPassword")}
@@ -176,10 +199,7 @@ export default function LoginClient() {
 
       <p className="mt-6 text-sm text-gray-600">
         {t("footer.noAccount")}{" "}
-        <Link
-          href={`/account/signup${preservedQuery}`}
-          className="text-blue-600 hover:underline"
-        >
+        <Link href={signupHref} className="text-blue-600 hover:underline">
           {t("footer.signUp")}
         </Link>
       </p>
