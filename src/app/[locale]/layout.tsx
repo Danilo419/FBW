@@ -1,6 +1,5 @@
 // src/app/[locale]/layout.tsx
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
@@ -21,18 +20,16 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-type LocaleLayoutProps = {
-  children: ReactNode;
-  params: Promise<{ locale: string }>;
-};
-
 export default async function LocaleLayout({
   children,
   params,
-}: LocaleLayoutProps) {
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
   const { locale } = await params;
 
-  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+  if (!routing.locales.includes(locale as "en" | "pt")) {
     notFound();
   }
 
@@ -41,23 +38,22 @@ export default async function LocaleLayout({
   const messages = await getMessages({ locale });
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body suppressHydrationWarning>
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <SessionProviderClient>
-            <Suspense fallback={null}>
-              <Tracker />
-            </Suspense>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <SessionProviderClient>
+        <Suspense fallback={null}>
+          <Tracker />
+        </Suspense>
 
-            <Suspense fallback={null}>
-              <>
-                <FreeShippingBannerServer />
-                <SiteChrome>{children}</SiteChrome>
-              </>
-            </Suspense>
-          </SessionProviderClient>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+        {/* Free Shipping Banner (global, above header) */}
+        <Suspense fallback={null}>
+          <FreeShippingBannerServer />
+        </Suspense>
+
+        {/* Main site layout */}
+        <Suspense fallback={null}>
+          <SiteChrome>{children}</SiteChrome>
+        </Suspense>
+      </SessionProviderClient>
+    </NextIntlClientProvider>
   );
 }
