@@ -1,9 +1,19 @@
+// src/app/api/cart/subtotal/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+function normalizeMoney(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+
+  // Se vier em cêntimos (ex: 3499), converte para euros (34.99)
+  if (value >= 1000) return value / 100;
+
+  return value;
+}
 
 export async function GET() {
   try {
@@ -54,8 +64,8 @@ export async function GET() {
 
     const subtotal = items.reduce((sum, item) => {
       const qty = Number(item.qty ?? 0);
-      const unitPrice = Number(item.unitPrice ?? 0);
-      const totalPrice = Number(item.totalPrice ?? 0);
+      const unitPrice = normalizeMoney(Number(item.unitPrice ?? 0));
+      const totalPrice = normalizeMoney(Number(item.totalPrice ?? 0));
 
       if (totalPrice > 0) return sum + totalPrice;
       return sum + unitPrice * qty;
