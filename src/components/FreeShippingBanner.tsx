@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
 
 type FreeShippingBannerProps = {
-  subtotal: number;
+  subtotal?: number;
   threshold?: number;
 };
 
@@ -23,7 +23,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export default function FreeShippingBanner({
-  subtotal,
+  subtotal = 0,
   threshold = 70,
 }: FreeShippingBannerProps) {
   const pathname = usePathname();
@@ -33,11 +33,48 @@ export default function FreeShippingBanner({
     pathname.startsWith("/admin/") ||
     pathname.includes("/admin");
 
-  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
-  const remaining = Math.max(0, threshold - safeSubtotal);
-  const targetProgress = clamp((safeSubtotal / threshold) * 100, 0, 100);
+  const [liveSubtotal, setLiveSubtotal] = useState<number>(Math.max(0, Number(subtotal) || 0));
+  const [animatedProgress, setAnimatedProgress] = useState(0);
 
-  const [animatedProgress, setAnimatedProgress] = useState(targetProgress);
+  useEffect(() => {
+    setLiveSubtotal(Math.max(0, Number(subtotal) || 0));
+  }, [subtotal]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshSubtotal() {
+      try {
+        const res = await fetch("/api/cart/subtotal", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!res.ok) return;
+
+        const data = (await res.json()) as { subtotal?: number };
+        if (!cancelled) {
+          setLiveSubtotal(Math.max(0, Number(data?.subtotal) || 0));
+        }
+      } catch {}
+    }
+
+    refreshSubtotal();
+
+    const onCartUpdated = () => {
+      refreshSubtotal();
+    };
+
+    window.addEventListener("cart-updated", onCartUpdated);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("cart-updated", onCartUpdated);
+    };
+  }, []);
+
+  const remaining = Math.max(0, threshold - liveSubtotal);
+  const targetProgress = clamp((liveSubtotal / threshold) * 100, 0, 100);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
@@ -48,7 +85,7 @@ export default function FreeShippingBanner({
   }, [targetProgress]);
 
   const message = useMemo(() => {
-    if (safeSubtotal <= 0) {
+    if (liveSubtotal <= 0) {
       return `Add your first item and get closer to free shipping. You need ${formatEUR(
         threshold
       )}.`;
@@ -73,7 +110,7 @@ export default function FreeShippingBanner({
     return `Free Shipping on orders above ${formatEUR(
       threshold
     )}. You’re ${formatEUR(remaining)} away.`;
-  }, [remaining, safeSubtotal, threshold]);
+  }, [liveSubtotal, remaining, threshold]);
 
   if (isAdminPage) return null;
 
@@ -87,7 +124,6 @@ export default function FreeShippingBanner({
             ) : (
               <Truck className="h-4 w-4 shrink-0 text-emerald-600" />
             )}
-
             <span>Free Shipping on orders above {formatEUR(threshold)}</span>
           </div>
 
@@ -106,7 +142,7 @@ export default function FreeShippingBanner({
           </div>
 
           <div className="min-w-fit text-[12px] font-semibold text-emerald-900 sm:text-sm">
-            {formatEUR(safeSubtotal)} / {formatEUR(threshold)}
+            {formatEUR(liveSubtotal)} / {formatEUR(threshold)}
           </div>
         </div>
       </div>

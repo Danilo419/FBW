@@ -794,6 +794,10 @@ export default function ProductConfigurator({ product }: Props) {
           personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
         });
 
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("cart-updated"));
+        }
+
         router.refresh();
 
         setJustAdded(true);
