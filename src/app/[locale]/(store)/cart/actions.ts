@@ -65,9 +65,14 @@ function getCookieExpiryDate() {
   return new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
 }
 
+function shouldUseSecureCookies() {
+  return process.env.NODE_ENV === "production";
+}
+
 async function setCartCookies(values: { sid?: string | null; cartId?: string | null }) {
   const jar = await cookies();
   const expires = getCookieExpiryDate();
+  const secure = shouldUseSecureCookies();
 
   if (values.sid) {
     jar.set("sid", values.sid, {
@@ -75,7 +80,7 @@ async function setCartCookies(values: { sid?: string | null; cartId?: string | n
       sameSite: "lax",
       path: "/",
       expires,
-      secure: true,
+      secure,
     });
   }
 
@@ -85,7 +90,7 @@ async function setCartCookies(values: { sid?: string | null; cartId?: string | n
       sameSite: "lax",
       path: "/",
       expires,
-      secure: true,
+      secure,
     });
   }
 }
@@ -265,6 +270,11 @@ export async function addToCartAction(raw: AddToCartInput) {
         },
       });
     }
+
+    await setCartCookies({
+      sid: cart.sessionId,
+      cartId: cart.id,
+    });
 
     await revalidateCartUi();
 
