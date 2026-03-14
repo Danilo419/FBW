@@ -5,7 +5,6 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { applyPromotions, type CartLine } from "@/lib/cartPromotions";
 import { getShippingForCart } from "@/lib/shipping";
 
 /* ========= validação ========= */
@@ -42,14 +41,14 @@ function sameJson(a: unknown, b: unknown) {
 }
 
 function sanitizeName(v: unknown) {
-  const s = (v == null ? "" : String(v)).trim();
+  const s = v == null ? "" : String(v).trim();
   if (!s) return null;
   const up = s.toUpperCase().slice(0, 14);
   return up || null;
 }
 
 function sanitizeNumber(v: unknown) {
-  const s = (v == null ? "" : String(v)).trim();
+  const s = v == null ? "" : String(v).trim();
   if (!s) return null;
   const only = s.replace(/\D/g, "").slice(0, 3);
   return only || null;
@@ -227,7 +226,7 @@ export async function getCartSummary() {
   if (!rawItems.length) return emptySummary();
 
   const subtotal = rawItems.reduce(
-    (acc, it) => acc + it.unitPrice * it.qty,
+    (acc, it) => acc + Number(it.unitPrice) * Number(it.qty),
     0
   );
 
@@ -268,35 +267,22 @@ export async function getCartSummary() {
     };
   }
 
-  const lines: CartLine[] = rawItems.map((it) => ({
-    id: String(it.id),
-    name: it.product?.name ?? "",
-    unitAmountCents: Math.max(0, Number(it.unitPrice ?? 0)),
-    qty: Math.max(0, Number(it.qty ?? 0)),
-    image: it.product?.imageUrls?.[0] ?? null,
-  }));
-
-  const promo = applyPromotions(lines);
-
-  const payableSubtotal = promo.lines.reduce(
-    (acc, l) => acc + l.payQty * l.unitAmountCents,
-    0
-  );
-
-  const discount = Math.max(0, subtotal - payableSubtotal);
-  const shipping = promo.shippingCents;
-  const total = payableSubtotal + shipping;
+  // GLOBAL e MIXED:
+  // sem promoções de bundle / buy X get Y
+  // envio grátis a partir de 70€, caso contrário 5€
+  const shipping = subtotal >= 70 ? 0 : 5;
+  const total = subtotal + shipping;
 
   return {
     count: rawItems.length,
     subtotal,
-    discount,
+    discount: 0,
     shipping,
     total,
     promotion: {
-      promoName: promo.promoName,
-      freeUnitsCount: promo.freeItemsApplied,
-      hasPromotion: promo.promoName !== "NONE" && promo.freeItemsApplied > 0,
+      promoName: "NONE" as const,
+      freeUnitsCount: 0,
+      hasPromotion: false,
     },
   };
 }

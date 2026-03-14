@@ -8,6 +8,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import SessionProviderClient from "@/components/auth/SessionProviderClient";
 import Tracker from "@/components/analytics/Tracker";
 import SiteChrome from "@/components/site/SiteChrome";
+import FreeShippingBannerServer from "@/components/FreeShippingBannerServer";
 import { routing } from "@/i18n/routing";
 
 export const metadata: Metadata = {
@@ -44,7 +45,10 @@ export default async function LocaleLayout({
         </Suspense>
 
         <Suspense fallback={null}>
-          <SiteChrome>{children}</SiteChrome>
+          <>
+            <FreeShippingBannerServer />
+            <SiteChrome>{children}</SiteChrome>
+          </>
         </Suspense>
       </SessionProviderClient>
     </NextIntlClientProvider>

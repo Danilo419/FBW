@@ -1,6 +1,6 @@
 // src/app/(store)/cart/page.tsx
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
@@ -9,13 +9,12 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import type { Prisma, CartItem } from "@prisma/client";
 import { removeItem } from "./actions";
-import {
-  applyPromotions,
-  MAX_FREE_ITEMS_PER_ORDER,
-} from "@/lib/cartPromotions";
 import { getShippingForCart } from "@/lib/shipping";
 
 export const dynamic = "force-dynamic";
+
+const FREE_SHIPPING_THRESHOLD = 70;
+const DEFAULT_SHIPPING_COST = 5;
 
 /* ========================= BADGE LABELS (same as ProductConfigurator) ========================= */
 const BADGE_LABELS: Record<string, string> = {
@@ -284,67 +283,6 @@ function optionsToRows(opts: Record<string, any> | null) {
     .filter(([, v]) => String(v).trim() !== "");
 }
 
-/* -------------------------- promo labels / banner -------------------------- */
-async function promoTitleFromName(
-  p: ReturnType<typeof applyPromotions>["promoName"],
-  t: Awaited<ReturnType<typeof getTranslations>>
-) {
-  if (p === "BUY_2_GET_3") return t("cartPage.promotions.buy2get3");
-  if (p === "BUY_3_GET_5") return t("cartPage.promotions.buy3get5");
-  return null;
-}
-
-async function promoBannerMessage(
-  totalQty: number,
-  t: Awaited<ReturnType<typeof getTranslations>>
-) {
-  if (totalQty <= 0) {
-    return {
-      title: t("cartPage.promoPreview.title"),
-      message: t("cartPage.promoPreview.empty"),
-      showPill: false,
-    };
-  }
-
-  if (totalQty === 1) {
-    return {
-      title: t("cartPage.promoPreview.title"),
-      message: t("cartPage.promoPreview.one"),
-      showPill: false,
-    };
-  }
-
-  if (totalQty === 2) {
-    return {
-      title: t("cartPage.promoPreview.title"),
-      message: t("cartPage.promoPreview.two"),
-      showPill: false,
-    };
-  }
-
-  if (totalQty === 3) {
-    return {
-      title: t("cartPage.promoPreview.title"),
-      message: t("cartPage.promoPreview.three"),
-      showPill: true,
-    };
-  }
-
-  if (totalQty === 4) {
-    return {
-      title: t("cartPage.promoPreview.title"),
-      message: t("cartPage.promoPreview.four"),
-      showPill: true,
-    };
-  }
-
-  return {
-    title: t("cartPage.promoPreview.title"),
-    message: null as string | null,
-    showPill: true,
-  };
-}
-
 /* -------------------------- shipping helpers (type-safe) -------------------------- */
 type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
 
@@ -457,6 +395,7 @@ export default async function CartPage() {
     (acc: number, it: any) => acc + it.displayTotal,
     0
   );
+
   const totalQty = displayItems.reduce(
     (acc: number, it: any) => acc + (it.qty ?? 0),
     0
@@ -473,48 +412,49 @@ export default async function CartPage() {
   const isMixedCart = cartChannel === "MIXED";
   const isPtStockCart = cartChannel === "PT_STOCK_CTT";
 
-  const promo = applyPromotions(
-    displayItems.map((it: any) => ({
-      id: String(it.id),
-      name: String(it.product?.name ?? it.name ?? "Item"),
-      unitAmountCents: Math.max(0, Number(it.displayUnit ?? 0)),
-      qty: Math.max(0, Number(it.qty ?? 0)),
-      image: (it.product?.imageUrls?.[0] ?? null) as any,
-    }))
-  );
+  const globalShippingCents =
+    subtotalCents === 0
+      ? 0
+      : subtotalCents >= FREE_SHIPPING_THRESHOLD * 100
+        ? 0
+        : DEFAULT_SHIPPING_COST * 100;
 
-  const freeQtyByItemId = new Map<string, number>();
-  for (const l of promo.lines) {
-    if (l.freeQty > 0) freeQtyByItemId.set(String(l.id), l.freeQty);
-  }
-
-  const payableSubtotalCentsGlobal = promo.lines.reduce(
-    (acc, l) => acc + l.payQty * l.unitAmountCents,
-    0
-  );
-  const discountCentsGlobal = Math.max(
+  const amountUntilFreeShippingCents = Math.max(
     0,
-    subtotalCents - payableSubtotalCentsGlobal
+    FREE_SHIPPING_THRESHOLD * 100 - subtotalCents
   );
-  const shippingCentsGlobal = promo.shippingCents;
-  const totalPayableCentsGlobal =
-    payableSubtotalCentsGlobal + shippingCentsGlobal;
 
-  const discountCentsPt = 0;
   const shippingCentsPt =
     typeof (shippingInfo as any)?.shippingCents === "number"
       ? Number((shippingInfo as any).shippingCents)
       : 0;
-  const totalPayableCentsPt = subtotalCents + shippingCentsPt;
 
-  const discountCents = isPtStockCart ? discountCentsPt : discountCentsGlobal;
-  const shippingCents = isPtStockCart ? shippingCentsPt : shippingCentsGlobal;
-  const totalPayableCents = isPtStockCart
-    ? totalPayableCentsPt
-    : totalPayableCentsGlobal;
+  const shippingCents = isPtStockCart ? shippingCentsPt : globalShippingCents;
+  const discountCents = 0;
+  const totalPayableCents = subtotalCents + shippingCents;
 
-  const promoTitle = await promoTitleFromName(promo.promoName, t);
-  const banner = await promoBannerMessage(totalQty, t);
+  const shippingBannerTitle = isPtStockCart
+    ? t("cartPage.ptStock.title")
+    : t("cartPage.labels.shipping");
+
+  const shippingBannerMessage = isPtStockCart
+    ? t.rich("cartPage.ptStock.info", {
+        one: () => (
+          <span className="font-semibold text-gray-900">1 item = 6€</span>
+        ),
+        two: () => (
+          <span className="font-semibold text-gray-900">2 items = 3€</span>
+        ),
+        three: () => (
+          <span className="font-semibold text-gray-900">3+ = FREE</span>
+        ),
+        delivery: () => (
+          <span className="font-semibold text-gray-900">2–3 business days</span>
+        ),
+      })
+    : subtotalCents >= FREE_SHIPPING_THRESHOLD * 100
+      ? t("cartPage.free")
+      : `${formatMoneyRight(amountUntilFreeShippingCents)} until free shipping`;
 
   return (
     <div className="container-fw py-12">
@@ -546,45 +486,12 @@ export default async function CartPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-sm font-semibold text-gray-900">
-              {isPtStockCart ? t("cartPage.ptStock.title") : banner.title}
+              {shippingBannerTitle}
             </div>
 
-            {!isPtStockCart ? (
-              <div className="text-sm text-gray-600">
-                {t.rich("cartPage.promoInfo", {
-                  max: () => (
-                    <span className="font-semibold text-gray-900">
-                      {MAX_FREE_ITEMS_PER_ORDER}
-                    </span>
-                  ),
-                })}
-              </div>
-            ) : (
-              <div className="text-sm text-gray-600">
-                {t.rich("cartPage.ptStock.info", {
-                  one: () => (
-                    <span className="font-semibold text-gray-900">
-                      1 item = 6€
-                    </span>
-                  ),
-                  two: () => (
-                    <span className="font-semibold text-gray-900">
-                      2 items = 3€
-                    </span>
-                  ),
-                  three: () => (
-                    <span className="font-semibold text-gray-900">
-                      3+ = FREE
-                    </span>
-                  ),
-                  delivery: () => (
-                    <span className="font-semibold text-gray-900">
-                      2–3 business days
-                    </span>
-                  ),
-                })}
-              </div>
-            )}
+            <div className="text-sm text-gray-600">
+              {shippingBannerMessage}
+            </div>
           </div>
 
           {isPtStockCart ? (
@@ -625,21 +532,21 @@ export default async function CartPage() {
                 </div>
               </div>
             </div>
-          ) : banner.showPill ? (
+          ) : (
             <div className="w-full sm:w-auto">
               <div className="rounded-2xl border bg-gray-50 px-4 py-3 sm:rounded-full sm:py-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <span className="text-sm font-semibold leading-tight text-gray-900">
-                    {promoTitle ?? t("cartPage.noPromotion")}
+                    Free shipping from 70€
                   </span>
 
                   <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-3">
                     <div className="inline-flex items-center justify-between gap-2">
                       <span className="text-gray-500">
-                        {t("cartPage.labels.freeItems")}
+                        {t("cartPage.labels.subtotal")}
                       </span>
                       <span className="tabular-nums font-semibold text-gray-900">
-                        {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
+                        {formatMoneyRight(subtotalCents)}
                       </span>
                     </div>
 
@@ -654,16 +561,26 @@ export default async function CartPage() {
                           {t("cartPage.free")}
                         </span>
                       ) : (
-                        <span className="font-semibold text-gray-900">5€</span>
+                        <span className="font-semibold text-gray-900">
+                          {formatMoneyRight(shippingCents)}
+                        </span>
                       )}
                     </div>
+
+                    {amountUntilFreeShippingCents > 0 && (
+                      <>
+                        <div className="hidden text-gray-300 sm:block">•</div>
+                        <div className="inline-flex items-center justify-between gap-2">
+                          <span className="text-gray-500">Missing</span>
+                          <span className="font-semibold text-gray-900">
+                            {formatMoneyRight(amountUntilFreeShippingCents)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-sm font-medium text-gray-700">
-              {banner.message ?? " "}
             </div>
           )}
         </div>
@@ -713,21 +630,14 @@ export default async function CartPage() {
             !!teamRaw.trim() &&
             teamRaw.trim().toLowerCase() !== nameRaw.trim().toLowerCase();
 
-          const freeQty = isPtStockCart
-            ? 0
-            : freeQtyByItemId.get(String(it.id)) ?? 0;
-
-          const payableQty = Math.max(0, (it.qty ?? 0) - freeQty);
-
           const lineBefore = it.displayTotal;
-          const lineAfter = (it.displayUnit ?? 0) * payableQty;
+          const lineAfter = it.displayTotal;
 
           const hasMetaBlock = !!(
             custName ||
             custNumber ||
             size ||
-            badgePills.length > 0 ||
-            freeQty > 0
+            badgePills.length > 0
           );
 
           return (
@@ -819,19 +729,6 @@ export default async function CartPage() {
                               </div>
                             </div>
                           )}
-
-                          {freeQty > 0 && (
-                            <div className="inline-flex flex-wrap items-center gap-2">
-                              <span className="rounded-full border bg-green-50 px-3 py-1 text-xs text-green-800">
-                                <span className="font-semibold">
-                                  {t("cartPage.free")}
-                                </span>{" "}
-                                <span className="text-green-700">
-                                  x{freeQty}
-                                </span>
-                              </span>
-                            </div>
-                          )}
                         </div>
                       )}
 
@@ -862,7 +759,7 @@ export default async function CartPage() {
                         {formatMoneyRight(lineAfter)}
                       </div>
 
-                      {freeQty > 0 && lineAfter !== lineBefore && (
+                      {lineAfter !== lineBefore && (
                         <div className="mt-0.5 text-xs text-gray-500">
                           {t("cartPage.labels.before")}:{" "}
                           <span className="line-through">
@@ -877,13 +774,6 @@ export default async function CartPage() {
                     <div className="text-sm text-gray-600">
                       {t("cartPage.labels.qty")}:{" "}
                       <span className="font-medium">{it.qty}</span>
-                      {freeQty > 0 && (
-                        <>
-                          {" "}
-                          • {t("cartPage.labels.payFor")}:{" "}
-                          <span className="font-medium">{payableQty}</span>
-                        </>
-                      )}
                     </div>
 
                     <form action={removeItem}>
@@ -926,16 +816,9 @@ export default async function CartPage() {
 
             <div className="flex items-center justify-between">
               <span className="text-gray-600">
-                {t("cartPage.labels.discount")}{" "}
-                {!isPtStockCart && promoTitle ? (
-                  <span className="text-gray-500">({promoTitle})</span>
-                ) : null}
+                {t("cartPage.labels.discount")}
               </span>
-              <span
-                className={`font-semibold ${discountCents > 0 ? "text-green-700" : ""}`}
-              >
-                -{formatMoneyRight(discountCents)}
-              </span>
+              <span className="font-semibold">-{formatMoneyRight(discountCents)}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -962,17 +845,7 @@ export default async function CartPage() {
               </span>
             </div>
 
-            {!isPtStockCart && promoTitle ? (
-              <div className="pt-3 text-xs text-gray-500">
-                {t.rich("cartPage.summary.freeItemsApplied", {
-                  count: () => (
-                    <span className="font-semibold text-gray-800">
-                      {promo.freeItemsApplied}/{MAX_FREE_ITEMS_PER_ORDER}
-                    </span>
-                  ),
-                })}
-              </div>
-            ) : isPtStockCart ? (
+            {isPtStockCart ? (
               <div className="pt-3 text-xs text-gray-500">
                 {t.rich("cartPage.summary.cttRules", {
                   one: () => (
@@ -992,15 +865,17 @@ export default async function CartPage() {
                   ),
                 })}
               </div>
-            ) : (
+            ) : amountUntilFreeShippingCents > 0 ? (
               <div className="pt-3 text-xs text-gray-500">
-                {t.rich("cartPage.summary.unlockPromo", {
-                  promo: () => (
-                    <span className="font-semibold text-gray-800">
-                      {t("cartPage.promotions.buy2get3")}
-                    </span>
-                  ),
-                })}
+                Add{" "}
+                <span className="font-semibold text-gray-800">
+                  {formatMoneyRight(amountUntilFreeShippingCents)}
+                </span>{" "}
+                more to unlock free shipping.
+              </div>
+            ) : (
+              <div className="pt-3 text-xs text-green-700">
+                Free shipping unlocked.
               </div>
             )}
           </div>
@@ -1008,7 +883,7 @@ export default async function CartPage() {
 
         <div className="flex sm:justify-end">
           <Link
-            href="/checkout/address"
+            href={{ pathname: "/checkout/address" }}
             className={`inline-flex w-full items-center justify-center rounded-xl px-6 py-3 font-semibold text-white sm:w-auto ${
               isMixedCart
                 ? "pointer-events-none cursor-not-allowed bg-gray-400"

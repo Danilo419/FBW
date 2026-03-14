@@ -28,9 +28,9 @@ import {
   Package,
   HeartHandshake,
   Clock,
-  Shirt,
   Sparkles,
   Star,
+  Shirt,
 } from 'lucide-react'
 
 /* ======================================================================================
@@ -1021,17 +1021,17 @@ function getProductPricing(p: HomeProduct) {
     typeof p.basePrice === 'number'
       ? p.basePrice
       : typeof p.priceCents === 'number'
-      ? p.priceCents
-      : typeof p.price === 'number'
-      ? Math.round(p.price * 100)
-      : null
+        ? p.priceCents
+        : typeof p.price === 'number'
+          ? Math.round(p.price * 100)
+          : null
 
   let compareAtCents: number | null =
     typeof p.compareAtPriceCents === 'number'
       ? p.compareAtPriceCents
       : typeof p.compareAtPrice === 'number'
-      ? Math.round(p.compareAtPrice * 100)
-      : null
+        ? Math.round(p.compareAtPrice * 100)
+        : null
 
   if (!compareAtCents && priceCents != null) {
     const mapped = SALE_MAP_CENTS[priceCents]
@@ -1315,8 +1315,8 @@ export default function Home() {
         const list = Array.isArray(data?.products)
           ? data.products
           : Array.isArray(data)
-          ? data
-          : []
+            ? data
+            : []
 
         if (!cancelled) setHomeProducts(list)
       } catch (err) {
@@ -1736,29 +1736,8 @@ export default function Home() {
         </section>
 
         <section className="bg-white">
-          <div className="container-fw pt-4 pb-10">
-            <div className="mt-3 relative w-full overflow-hidden rounded-3xl ring-1 ring-black/5 bg-slate-900/5 aspect-[1687/1024] md:aspect-[3689/1024]">
-              <div className="absolute inset-0 md:hidden">
-                <SafeFillImage
-                  src="/images/promos/home-promo2.png"
-                  alt={t('promoAlt')}
-                  sizes="100vw"
-                  className="object-cover"
-                />
-              </div>
-              <div className="absolute inset-0 hidden md:block">
-                <SafeFillImage
-                  src="/images/promos/home-promo.png"
-                  alt={t('promoAlt')}
-                  sizes="100vw"
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <FromOurCustomers compact />
-            </div>
+          <div className="container-fw pt-6 pb-10">
+            <FromOurCustomers compact />
           </div>
         </section>
       </section>
