@@ -1,19 +1,25 @@
 "use client";
 
 import { Truck, CheckCircle2, Sparkles } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
 
 type FreeShippingBannerProps = {
-  subtotal: number; // valor em euros
-  threshold?: number; // default 70
+  subtotal: number;
+  threshold?: number;
 };
 
 function formatEUR(value: number) {
   return new Intl.NumberFormat("pt-PT", {
     style: "currency",
     currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 export default function FreeShippingBanner({
@@ -27,9 +33,19 @@ export default function FreeShippingBanner({
     pathname.startsWith("/admin/") ||
     pathname.includes("/admin");
 
-  const safeSubtotal = Math.max(0, subtotal || 0);
+  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
   const remaining = Math.max(0, threshold - safeSubtotal);
-  const progress = Math.min((safeSubtotal / threshold) * 100, 100);
+  const targetProgress = clamp((safeSubtotal / threshold) * 100, 0, 100);
+
+  const [animatedProgress, setAnimatedProgress] = useState(targetProgress);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      setAnimatedProgress(targetProgress);
+    });
+
+    return () => window.cancelAnimationFrame(id);
+  }, [targetProgress]);
 
   const message = useMemo(() => {
     if (safeSubtotal <= 0) {
@@ -72,9 +88,7 @@ export default function FreeShippingBanner({
               <Truck className="h-4 w-4 shrink-0 text-emerald-600" />
             )}
 
-            <span>
-              Free Shipping on orders above {formatEUR(threshold)}
-            </span>
+            <span>Free Shipping on orders above {formatEUR(threshold)}</span>
           </div>
 
           <div className="flex items-center gap-2 text-[12px] text-emerald-800 sm:text-[13px]">
@@ -86,8 +100,8 @@ export default function FreeShippingBanner({
         <div className="flex items-center gap-3">
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-neutral-200 shadow-inner">
             <div
-              className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
+              className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700 ease-out"
+              style={{ width: `${animatedProgress}%` }}
             />
           </div>
 

@@ -794,6 +794,8 @@ export default function ProductConfigurator({ product }: Props) {
           personalization: showNameNumber ? { name: safeName, number: safeNumber } : null,
         });
 
+        router.refresh();
+
         setJustAdded(true);
         setShowToast(true);
         setError(null);

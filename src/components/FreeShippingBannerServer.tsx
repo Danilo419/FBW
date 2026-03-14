@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import FreeShippingBanner from "@/components/FreeShippingBanner";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type AnyRecord = Record<string, unknown>;
 
 function toNumber(value: unknown): number {
@@ -25,7 +28,9 @@ function toNumber(value: unknown): number {
 }
 
 function getObject(value: unknown): AnyRecord | null {
-  return typeof value === "object" && value !== null ? (value as AnyRecord) : null;
+  return typeof value === "object" && value !== null
+    ? (value as AnyRecord)
+    : null;
 }
 
 function getItemPrice(item: unknown): number {
@@ -34,10 +39,6 @@ function getItemPrice(item: unknown): number {
 
   const directPrice = toNumber(itemObj["price"]);
   if (directPrice > 0) return directPrice;
-
-  const variantObj = getObject(itemObj["variant"]);
-  const variantPrice = toNumber(variantObj?.["price"]);
-  if (variantPrice > 0) return variantPrice;
 
   const productObj = getObject(itemObj["product"]);
   const productPrice = toNumber(productObj?.["price"]);
