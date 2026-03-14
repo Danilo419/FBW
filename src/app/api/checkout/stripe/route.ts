@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { applyPromotions, MAX_FREE_ITEMS_PER_ORDER } from "@/lib/cartPromotions";
+import { applyPromotions } from "@/lib/cartPromotions";
 
 export const runtime = "nodejs";
 
@@ -75,7 +75,10 @@ async function getCheckoutBaseUrl(): Promise<string> {
   return normalizeBaseUrl(`${proto}://${host}`);
 }
 
-function toAbsoluteImage(url: string | null | undefined, APP: string): string | null {
+function toAbsoluteImage(
+  url: string | null | undefined,
+  APP: string
+): string | null {
   if (!url) return null;
   const t = String(url).trim();
   if (!t) return null;
@@ -217,6 +220,12 @@ function parseShippingFromBody(body: any): Shipping | null {
   return out;
 }
 
+/**
+ * ✅ Evita depender de export externo que pode não existir no cartPromotions.ts
+ * Ajusta este valor se a tua promoção tiver outro limite.
+ */
+const MAX_FREE_ITEMS_PER_ORDER = 2;
+
 /* ============================== ROUTE ============================== */
 
 export async function POST(req: NextRequest) {
@@ -238,7 +247,10 @@ export async function POST(req: NextRequest) {
     const sid = jar.get("sid")?.value ?? null;
 
     if (!sid) {
-      return NextResponse.json({ error: "Cart session not found" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Cart session not found" },
+        { status: 400 }
+      );
     }
 
     const cart = await prisma.cart.findFirst({
@@ -274,7 +286,10 @@ export async function POST(req: NextRequest) {
       totalPrice: (it as any).totalPrice ?? null,
     }));
 
-    const originalSubtotal = cartItems.reduce((acc, it) => acc + it.qty * it.unitPrice, 0);
+    const originalSubtotal = cartItems.reduce(
+      (acc, it) => acc + it.qty * it.unitPrice,
+      0
+    );
 
     // ✅ SINGLE SOURCE OF TRUTH: same as cart page
     const promo = applyPromotions(
@@ -312,7 +327,14 @@ export async function POST(req: NextRequest) {
     const shippingJsonFlat = shippingToFlatJson(shippingFromCookie);
 
     // ✅ Log útil (Vercel) para diagnosticar rapidamente
-    console.log("[checkout/stripe] sid:", sid, "shipCookie:", Boolean(rawShip), "hasShipping:", Boolean(shippingFromCookie));
+    console.log(
+      "[checkout/stripe] sid:",
+      sid,
+      "shipCookie:",
+      Boolean(rawShip),
+      "hasShipping:",
+      Boolean(shippingFromCookie)
+    );
 
     /* -------- Create local order (PENDING) -------- */
     const orderItemsCreate = promo.lines.flatMap((line) => {
@@ -440,6 +462,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);
-    return NextResponse.json({ error: err?.message ?? "Stripe error" }, { status: 400 });
+    return NextResponse.json(
+      { error: err?.message ?? "Stripe error" },
+      { status: 400 }
+    );
   }
 }
