@@ -84,7 +84,7 @@
     "title": "Envio grátis em encomendas acima de {threshold}",
     "messageEmpty": "Adicione o seu primeiro artigo e fique mais perto do envio grátis. Precisa de {threshold}.",
     "messageUnlocked": "Desbloqueou o envio grátis. A sua encomenda já se qualifica.",
-    "messageAlmostThere": "Está quase lá — faltam apenas {remaining} para desbloquear o envio grátis.",
+    "messageAlmostThere": "Está quase lá, faltam apenas {remaining} para desbloquear o envio grátis.",
     "messageGreatChoice": "Boa escolha. Adicione mais {remaining} para conseguir envio grátis.",
     "messageDefault": "Envio grátis em encomendas acima de {threshold}. Está a {remaining} de distância."
   },

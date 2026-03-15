@@ -11,12 +11,13 @@ type FreeShippingBannerProps = {
 };
 
 function formatEUR(value: number, locale: string) {
-  return new Intl.NumberFormat(locale === "pt" ? "pt-PT" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
+  const safeValue = Math.max(0, Number(value) || 0);
+  const formattedNumber = new Intl.NumberFormat(locale === "pt" ? "pt-PT" : "en-GB", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(safeValue);
+
+  return `${formattedNumber}€`;
 }
 
 function clamp(value: number, min: number, max: number) {
