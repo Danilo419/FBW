@@ -23,15 +23,15 @@ type ProductUI = {
   season?: string | null;
   description?: string | null;
   basePrice: number;
-  images: string[];
-  ptStockQty: number;
-  inStock: boolean;
-  sizes: ProductSizeUI[];
-  pricePresentation: {
-    hasDiscount: boolean;
-    discountPercent: number;
+  images?: string[] | null;
+  ptStockQty?: number | null;
+  inStock?: boolean | null;
+  sizes?: ProductSizeUI[] | null;
+  pricePresentation?: {
+    hasDiscount?: boolean;
+    discountPercent?: number;
     originalUnitPriceForMoney?: number;
-  };
+  } | null;
 };
 
 type Props = {
@@ -45,8 +45,8 @@ type ReviewsMeta = {
 };
 
 type ReviewItem = {
-  id: string;
-  rating: number;
+  id?: string;
+  rating?: number;
   title?: string | null;
   comment?: string | null;
   userName?: string | null;
@@ -146,6 +146,40 @@ function formatReviewDate(value?: string | null) {
 export default function PtStockProductConfigurator({ locale, product }: Props) {
   const router = useRouter();
 
+  const safeImages = useMemo(() => {
+    if (!Array.isArray(product?.images)) return ["/placeholder.png"];
+    const arr = product.images
+      .map((img) => String(img || "").trim())
+      .filter(Boolean);
+    return arr.length ? arr : ["/placeholder.png"];
+  }, [product?.images]);
+
+  const safeSizes = useMemo(() => {
+    if (!Array.isArray(product?.sizes)) return [];
+    return product.sizes.map((s) => ({
+      id: String(s?.id ?? s?.size ?? Math.random()),
+      size: String(s?.size ?? "").trim(),
+      available: !!s?.available,
+    }));
+  }, [product?.sizes]);
+
+  const safePricePresentation = useMemo(
+    () => ({
+      hasDiscount: !!product?.pricePresentation?.hasDiscount,
+      discountPercent: Number(product?.pricePresentation?.discountPercent ?? 0),
+      originalUnitPriceForMoney:
+        typeof product?.pricePresentation?.originalUnitPriceForMoney === "number"
+          ? product.pricePresentation.originalUnitPriceForMoney
+          : undefined,
+    }),
+    [product?.pricePresentation]
+  );
+
+  const safeStockQty = Number(product?.ptStockQty ?? 0);
+  const safeInStock = !!product?.inStock && safeStockQty > 0;
+  const safeBasePrice = Number(product?.basePrice ?? 0);
+  const safeName = product?.name || "Product";
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -164,8 +198,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
-  const images = product.images?.length ? product.images : ["/placeholder.png"];
-  const activeSrc = images[Math.min(activeIndex, images.length - 1)];
+  const activeSrc =
+    safeImages[Math.min(activeIndex, Math.max(0, safeImages.length - 1))] || "/placeholder.png";
 
   const imgWrapRef = useRef<HTMLDivElement | null>(null);
   const thumbsRef = useRef<HTMLDivElement | null>(null);
@@ -174,8 +208,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   const isMobile = useIsMobile(1024);
 
   const availableSizes = useMemo(
-    () => product.sizes.filter((s) => s.available),
-    [product.sizes]
+    () => safeSizes.filter((s) => s.available && s.size),
+    [safeSizes]
   );
 
   useEffect(() => {
@@ -189,16 +223,24 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   }, [availableSizes, selectedSize]);
 
   useEffect(() => {
+    if (activeIndex > safeImages.length - 1) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, safeImages.length]);
+
+  useEffect(() => {
     let alive = true;
     setReviewsLoading(true);
 
     fetchReviewsMeta(product.id)
       .then((data) => {
         if (!alive) return;
+
         setReviewsMeta({
           average: Number(data?.average ?? 0),
           total: Number(data?.total ?? 0),
         });
+
         setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
       })
       .catch(() => {
@@ -223,7 +265,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
     const itemWidth = THUMB_W + GAP;
     const maxScroll = cont.scrollWidth - cont.clientWidth;
 
-    const nearEnd = activeIndex >= images.length - 2;
+    const nearEnd = activeIndex >= safeImages.length - 2;
     const nearStart = activeIndex <= 1;
 
     let desired = Math.max(0, (activeIndex - 2) * itemWidth);
@@ -232,7 +274,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
     desired = Math.min(desired, Math.max(0, maxScroll));
     cont.scrollTo({ left: desired, behavior: "smooth" });
-  }, [activeIndex, images.length]);
+  }, [activeIndex, safeImages.length]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -254,28 +296,28 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   }, [isMobile]);
 
   const stockMessage = useMemo(
-    () => getStockUrgencyMessage(product.ptStockQty),
-    [product.ptStockQty]
+    () => getStockUrgencyMessage(safeStockQty),
+    [safeStockQty]
   );
 
   const canAddToCart = useMemo(() => {
-    if (!product.inStock) return false;
+    if (!safeInStock) return false;
     if (!selectedSize) return false;
     if (qty < 1) return false;
     return true;
-  }, [product.inStock, selectedSize, qty]);
+  }, [safeInStock, selectedSize, qty]);
 
-  const finalPrice = useMemo(() => product.basePrice * qty, [product.basePrice, qty]);
+  const finalPrice = useMemo(() => safeBasePrice * qty, [safeBasePrice, qty]);
 
   const progress = useMemo(() => {
     const step1 = !!selectedSize ? 1 : 0;
-    const step2 = product.inStock ? 1 : 0;
+    const step2 = safeInStock ? 1 : 0;
     const step3 = canAddToCart ? 1 : 0;
     return clamp(Math.round(((step1 + step2 + step3) / 3) * 100), 0, 100);
-  }, [selectedSize, product.inStock, canAddToCart]);
+  }, [selectedSize, safeInStock, canAddToCart]);
 
   function validateBeforeAdd(): string | null {
-    if (!product.inStock) return "This product is currently out of stock.";
+    if (!safeInStock) return "This product is currently out of stock.";
     if (!selectedSize) return "Please choose a size.";
     if (qty < 1) return "Please choose a valid quantity.";
     return null;
@@ -435,8 +477,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
     addToCartCore({ goCheckout: true });
   }
 
-  const goPrev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
-  const goNext = () => setActiveIndex((i) => (i + 1) % images.length);
+  const goPrev = () => setActiveIndex((i) => (i - 1 + safeImages.length) % safeImages.length);
+  const goNext = () => setActiveIndex((i) => (i + 1) % safeImages.length);
 
   return (
     <div className="w-full overflow-x-hidden px-2">
@@ -495,7 +537,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
         <div className="w-full rounded-2xl border bg-white p-3 lg:w-[560px] lg:flex-none lg:self-start lg:p-6 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3">
-            {images.length > 1 ? (
+            {safeImages.length > 1 ? (
               <button
                 type="button"
                 onClick={goPrev}
@@ -514,7 +556,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
             >
               <Image
                 src={activeSrc}
-                alt={product.name}
+                alt={safeName}
                 fill
                 className="object-contain"
                 sizes="(min-width: 1024px) 540px, 100vw"
@@ -522,13 +564,13 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 unoptimized={isExternalUrl(activeSrc)}
               />
 
-              {product.pricePresentation.hasDiscount && (
+              {safePricePresentation.hasDiscount && (
                 <div className="absolute left-3 top-3 flex items-center justify-center rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-md sm:left-4 sm:top-4 sm:text-sm">
-                  -{product.pricePresentation.discountPercent}%
+                  -{safePricePresentation.discountPercent}%
                 </div>
               )}
 
-              {images.length > 1 && (
+              {safeImages.length > 1 && (
                 <>
                   <button
                     type="button"
@@ -550,7 +592,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               )}
             </div>
 
-            {images.length > 1 ? (
+            {safeImages.length > 1 ? (
               <button
                 type="button"
                 onClick={goNext}
@@ -564,7 +606,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
             )}
           </div>
 
-          {images.length > 1 && (
+          {safeImages.length > 1 && (
             <div className="mt-3">
               <div
                 ref={thumbsRef}
@@ -572,11 +614,11 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               >
                 <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
                 <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
-                  {images.map((src, i) => {
+                  {safeImages.map((src, i) => {
                     const isActive = i === activeIndex;
                     return (
                       <button
-                        key={src + i}
+                        key={`${src}-${i}`}
                         type="button"
                         onClick={() => setActiveIndex(i)}
                         aria-label={`Image ${i + 1}`}
@@ -624,31 +666,31 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                {product.team && product.team !== product.name && (
+                {product.team && product.team !== safeName && (
                   <div className="mb-1 text-xs font-medium text-emerald-700 sm:text-sm">
                     {product.team}
                   </div>
                 )}
 
                 <h1 className="text-sm font-extrabold leading-snug tracking-tight sm:text-base lg:text-2xl">
-                  {product.name}
+                  {safeName}
                 </h1>
 
                 <div className="mt-1 flex items-baseline gap-2">
-                  {product.pricePresentation.hasDiscount &&
-                    product.pricePresentation.originalUnitPriceForMoney && (
+                  {safePricePresentation.hasDiscount &&
+                    safePricePresentation.originalUnitPriceForMoney != null && (
                       <span className="text-[11px] text-gray-400 line-through sm:text-xs">
-                        {money(product.pricePresentation.originalUnitPriceForMoney)}
+                        {money(safePricePresentation.originalUnitPriceForMoney)}
                       </span>
                     )}
 
                   <span className="text-sm font-semibold text-gray-900 sm:text-lg lg:text-xl">
-                    {money(product.basePrice)}
+                    {money(safeBasePrice)}
                   </span>
 
-                  {product.pricePresentation.hasDiscount && (
+                  {safePricePresentation.hasDiscount && (
                     <span className="ml-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 sm:text-xs">
-                      Save {product.pricePresentation.discountPercent}%
+                      Save {safePricePresentation.discountPercent}%
                     </span>
                   )}
                 </div>
@@ -710,17 +752,17 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               <span
                 className={cx(
                   "inline-flex rounded-full px-3 py-1 text-xs font-semibold sm:text-sm",
-                  product.inStock
+                  safeInStock
                     ? "bg-emerald-100 text-emerald-800"
                     : "bg-red-100 text-red-700"
                 )}
               >
-                {product.inStock ? "In stock" : "Out of stock"}
+                {safeInStock ? "In stock" : "Out of stock"}
               </span>
 
-              {product.inStock && (
+              {safeInStock && (
                 <span className="text-[11px] text-gray-600 sm:text-sm">
-                  {product.ptStockQty} units available
+                  {safeStockQty} units available
                 </span>
               )}
             </div>
@@ -740,9 +782,9 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               Size <span className="text-red-500">*</span>
             </div>
 
-            {product.sizes.length > 0 ? (
+            {safeSizes.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {product.sizes.map((s) => {
+                {safeSizes.map((s) => {
                   const unavailable = !s.available;
                   const isActive = selectedSize === s.size && !unavailable;
 
@@ -817,7 +859,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               ref={addBtnRef}
               onClick={addToCart}
               className={cx(
-                "btn-primary inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:text-base",
+                "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:text-base",
                 justAdded && "bg-green-600 hover:bg-green-600",
                 "disabled:opacity-60"
               )}
@@ -925,7 +967,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               <div className="space-y-3">
                 {reviews.slice(0, 6).map((review, index) => (
                   <div
-                    key={review.id || `${review.userName}-${index}`}
+                    key={review.id || `${review.userName || "customer"}-${index}`}
                     className="rounded-2xl border bg-white p-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
