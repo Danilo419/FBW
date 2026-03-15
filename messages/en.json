@@ -80,6 +80,14 @@
     "copyright": "© 2026 FootballWorld. All rights reserved.",
     "backToTop": "Back to top"
   },
+  "FreeShippingBanner": {
+    "title": "Free Shipping on orders above {threshold}",
+    "messageEmpty": "Add your first item and get closer to free shipping. You need {threshold}.",
+    "messageUnlocked": "You unlocked free shipping. Your order now qualifies.",
+    "messageAlmostThere": "You’re almost there — only {remaining} left to unlock free shipping.",
+    "messageGreatChoice": "Great choice. Add {remaining} more to get free shipping.",
+    "messageDefault": "Free Shipping on orders above {threshold}. You’re {remaining} away."
+  },
   "HomePage": {
     "badge": "Fan-favorite drops",
     "viewDetails": "View details",

@@ -3,14 +3,15 @@
 import { Truck, CheckCircle2, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
+import { useTranslations, useLocale } from "next-intl";
 
 type FreeShippingBannerProps = {
   subtotal?: number;
   threshold?: number;
 };
 
-function formatEUR(value: number) {
-  return new Intl.NumberFormat("pt-PT", {
+function formatEUR(value: number, locale: string) {
+  return new Intl.NumberFormat(locale === "pt" ? "pt-PT" : "en-GB", {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
@@ -27,13 +28,17 @@ export default function FreeShippingBanner({
   threshold = 70,
 }: FreeShippingBannerProps) {
   const pathname = usePathname();
+  const locale = useLocale();
+  const t = useTranslations("FreeShippingBanner");
 
   const isAdminPage =
     pathname === "/admin" ||
     pathname.startsWith("/admin/") ||
     pathname.includes("/admin");
 
-  const [liveSubtotal, setLiveSubtotal] = useState<number>(Math.max(0, Number(subtotal) || 0));
+  const [liveSubtotal, setLiveSubtotal] = useState<number>(
+    Math.max(0, Number(subtotal) || 0)
+  );
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const isFetchingRef = useRef(false);
 
@@ -100,33 +105,32 @@ export default function FreeShippingBanner({
     return () => window.cancelAnimationFrame(id);
   }, [targetProgress]);
 
+  const thresholdFormatted = formatEUR(threshold, locale);
+  const subtotalFormatted = formatEUR(liveSubtotal, locale);
+  const remainingFormatted = formatEUR(remaining, locale);
+
   const message = useMemo(() => {
     if (liveSubtotal <= 0) {
-      return `Add your first item and get closer to free shipping. You need ${formatEUR(
-        threshold
-      )}.`;
+      return t("messageEmpty", { threshold: thresholdFormatted });
     }
 
     if (remaining <= 0) {
-      return "You unlocked free shipping. Your order now qualifies.";
+      return t("messageUnlocked");
     }
 
     if (remaining <= 10) {
-      return `You’re almost there — only ${formatEUR(
-        remaining
-      )} left to unlock free shipping.`;
+      return t("messageAlmostThere", { remaining: remainingFormatted });
     }
 
     if (remaining <= 25) {
-      return `Great choice. Add ${formatEUR(
-        remaining
-      )} more to get free shipping.`;
+      return t("messageGreatChoice", { remaining: remainingFormatted });
     }
 
-    return `Free Shipping on orders above ${formatEUR(
-      threshold
-    )}. You’re ${formatEUR(remaining)} away.`;
-  }, [liveSubtotal, remaining, threshold]);
+    return t("messageDefault", {
+      threshold: thresholdFormatted,
+      remaining: remainingFormatted,
+    });
+  }, [liveSubtotal, remaining, remainingFormatted, t, thresholdFormatted]);
 
   if (isAdminPage) return null;
 
@@ -140,7 +144,7 @@ export default function FreeShippingBanner({
             ) : (
               <Truck className="h-4 w-4 shrink-0 text-emerald-600" />
             )}
-            <span>Free Shipping on orders above {formatEUR(threshold)}</span>
+            <span>{t("title", { threshold: thresholdFormatted })}</span>
           </div>
 
           <div className="flex items-center gap-2 text-[12px] text-emerald-800 sm:text-[13px]">
@@ -158,7 +162,7 @@ export default function FreeShippingBanner({
           </div>
 
           <div className="min-w-fit text-[12px] font-semibold text-emerald-900 sm:text-sm">
-            {formatEUR(liveSubtotal)} / {formatEUR(threshold)}
+            {subtotalFormatted} / {thresholdFormatted}
           </div>
         </div>
       </div>
