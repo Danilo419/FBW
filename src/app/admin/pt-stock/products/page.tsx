@@ -1,5 +1,6 @@
 // src/app/admin/pt-stock/products/page.tsx
 import Link from "next/link";
+import type { Route } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import DeletePtStockProductButton from "./DeletePtStockProductButton";
@@ -22,7 +23,7 @@ function formatMoneyRight(cents: number) {
 export default async function AdminPtStockProductsPage() {
   const products = await prisma.product.findMany({
     where: {
-      channel: "PT_STOCK_CTT" as any,
+      channel: "PT_STOCK_CTT" as const,
     },
     select: {
       id: true,
@@ -30,31 +31,32 @@ export default async function AdminPtStockProductsPage() {
       name: true,
       team: true,
       basePrice: true,
+      ptStockQty: true,
       updatedAt: true,
     },
     orderBy: [{ updatedAt: "desc" }],
   });
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="space-y-5 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">PT Stock • Products</h1>
           <p className="text-sm text-gray-600">
-            Produtos do canal <b>PT_STOCK_CTT</b> (CTT 2–3 dias úteis).
+            Products from the <b>PT_STOCK_CTT</b> channel (CTT 2–3 business days).
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/pt-stock"
+            href={"/pt-stock" as Route}
             className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50"
           >
-            Ver página PT Stock →
+            View PT Stock page →
           </Link>
 
           <Link
-            href="/admin/pt-stock/products/new"
+            href={"/admin/pt-stock/products/new" as Route}
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             + New PT Stock Product
@@ -62,69 +64,98 @@ export default async function AdminPtStockProductsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
-        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+      <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
           <div className="text-sm font-semibold text-gray-900">
             Total: <span className="tabular-nums">{products.length}</span>
           </div>
         </div>
 
         {products.length === 0 ? (
-          <div className="p-8 text-sm text-gray-600">Ainda não tens produtos PT Stock.</div>
+          <div className="p-8 text-sm text-gray-600">
+            You do not have any PT Stock products yet.
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[700px] w-full text-sm">
-              <thead className="bg-white sticky top-0">
-                <tr className="text-left border-b">
+            <table className="min-w-[820px] w-full text-sm">
+              <thead className="sticky top-0 bg-white">
+                <tr className="border-b text-left">
                   <th className="px-4 py-3 font-semibold text-gray-900">Name</th>
                   <th className="px-4 py-3 font-semibold text-gray-900">Team</th>
                   <th className="px-4 py-3 font-semibold text-gray-900">Price</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900">Stock</th>
                   <th className="px-4 py-3 font-semibold text-gray-900">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {products.map((p) => (
-                  <tr key={p.id} className="border-b last:border-b-0 hover:bg-gray-50/60">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-gray-900 break-words">{p.name}</div>
-                      <div className="text-xs text-gray-500">
-                        Updated:{" "}
-                        <span className="tabular-nums">
-                          {new Date(p.updatedAt).toLocaleString("pt-PT")}
+                {products.map((p) => {
+                  const stockQty = p.ptStockQty ?? 0;
+                  const viewHref = `/pt-stock/${p.slug}` as Route;
+                  const editHref = `/admin/pt-stock/products/${p.id}/edit` as Route;
+                  const stockHref = `/admin/pt-stock/products/${p.id}/stock` as Route;
+
+                  return (
+                    <tr key={p.id} className="border-b last:border-b-0 hover:bg-gray-50/60">
+                      <td className="px-4 py-3">
+                        <div className="break-words font-semibold text-gray-900">{p.name}</div>
+                        <div className="text-xs text-gray-500">
+                          Updated:{" "}
+                          <span className="tabular-nums">
+                            {new Date(p.updatedAt).toLocaleString("en-GB")}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="break-words px-4 py-3 text-gray-700">{p.team || "—"}</td>
+
+                      <td className="px-4 py-3 font-semibold tabular-nums text-gray-900">
+                        {formatMoneyRight(p.basePrice)}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            stockQty <= 0
+                              ? "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200"
+                              : stockQty <= 3
+                                ? "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200"
+                                : "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200"
+                          }`}
+                        >
+                          {stockQty} unit{stockQty === 1 ? "" : "s"}
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-4 py-3 text-gray-700 break-words">
-                      {p.team || "—"}
-                    </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={viewHref}
+                            className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50"
+                          >
+                            View
+                          </Link>
 
-                    <td className="px-4 py-3 font-semibold text-gray-900 tabular-nums">
-                      {formatMoneyRight(p.basePrice)}
-                    </td>
+                          <Link
+                            href={editHref}
+                            className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50"
+                          >
+                            Edit
+                          </Link>
 
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/pt-stock/${p.slug}`}
-                          className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50"
-                        >
-                          View
-                        </Link>
+                          <Link
+                            href={stockHref}
+                            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                          >
+                            Stock
+                          </Link>
 
-                        <Link
-                          href={`/admin/pt-stock/products/${p.id}/edit`}
-                          className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50"
-                        >
-                          Edit
-                        </Link>
-
-                        <DeletePtStockProductButton productId={p.id} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <DeletePtStockProductButton productId={p.id} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

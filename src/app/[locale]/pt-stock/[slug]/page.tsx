@@ -75,6 +75,41 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function getStockUrgencyMessage(stockQty: number) {
+  if (stockQty <= 0) {
+    return {
+      text: "Sold out right now.",
+      classes: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
+
+  if (stockQty === 1) {
+    return {
+      text: "Hurry, only 1 unit left in stock.",
+      classes: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
+
+  if (stockQty <= 3) {
+    return {
+      text: `Hurry, only ${stockQty} units left in stock.`,
+      classes: "border-orange-200 bg-orange-50 text-orange-700",
+    };
+  }
+
+  if (stockQty <= 6) {
+    return {
+      text: `Limited stock available — ${stockQty} units remaining.`,
+      classes: "border-amber-200 bg-amber-50 text-amber-700",
+    };
+  }
+
+  return {
+    text: `Ready to ship from Portugal — ${stockQty} units available.`,
+    classes: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  };
+}
+
 /* ====================== Discount map ====================== */
 
 const SALE_MAP_EUR: Record<string, number> = {
@@ -184,8 +219,10 @@ export default async function PtStockProductPage({ params }: PageProps) {
   const { hasDiscount, discountPercent, originalUnitPriceForMoney } =
     getPricePresentation(product.basePrice);
 
+  const hasPtStockQty = product.ptStockQty != null;
   const stockQty = Number(product.ptStockQty ?? 0);
   const inStock = stockQty > 0;
+  const stockMessage = hasPtStockQty ? getStockUrgencyMessage(stockQty) : null;
 
   return (
     <main className="min-h-screen bg-white">
@@ -287,31 +324,42 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Stock */}
-            <div className="rounded-2xl border bg-white/70 p-4">
-              <div className="mb-2 text-sm font-semibold text-gray-900">
-                {t("stock.title")}
-              </div>
+            {/* Stock - only show when ptStockQty exists */}
+            {hasPtStockQty && stockMessage && (
+              <div className="rounded-2xl border bg-white/70 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-900">
+                  {t("stock.title")}
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={cx(
+                      "inline-flex rounded-full px-3 py-1 text-sm font-semibold",
+                      inStock
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-red-100 text-red-700"
+                    )}
+                  >
+                    {inStock ? t("stock.inStock") : t("stock.outOfStock")}
+                  </span>
+
+                  {inStock && (
+                    <span className="text-sm text-gray-600">
+                      {t("stock.units", { count: stockQty })}
+                    </span>
+                  )}
+                </div>
+
+                <div
                   className={cx(
-                    "inline-flex rounded-full px-3 py-1 text-sm font-semibold",
-                    inStock
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-red-100 text-red-700"
+                    "mt-3 rounded-xl border px-3 py-2 text-sm font-semibold",
+                    stockMessage.classes
                   )}
                 >
-                  {inStock ? t("stock.inStock") : t("stock.outOfStock")}
-                </span>
-
-                {inStock && (
-                  <span className="text-sm text-gray-600">
-                    {t("stock.units", { count: stockQty })}
-                  </span>
-                )}
+                  {stockMessage.text}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Sizes */}
             <div className="rounded-2xl border bg-white/70 p-4">

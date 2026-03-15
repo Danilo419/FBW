@@ -126,7 +126,9 @@ model Product {
   channel ProductChannel @default(GLOBAL)
 
   /**
-   * 🔹 stock local em Portugal (opcional)
+   * 🔹 stock local em Portugal
+   * null = produto normal/global sem stock PT
+   * número = produto PT Stock com quantidade controlada
    */
   ptStockQty Int?
 
@@ -151,6 +153,7 @@ model Product {
   @@index([teamType, team])
   @@index([isVisible])
   @@index([channel])
+  @@index([ptStockQty])
 }
 
 model SizeStock {
