@@ -1,10 +1,9 @@
 // src/app/[locale]/pt-stock/[slug]/page.tsx
-import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { ProductChannel } from "@prisma/client";
-import { formatMoney } from "@/lib/money";
+import ProductConfigurator from "@/components/ProductConfigurator";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,22 +54,6 @@ function getImages(imageUrls: unknown): string[] {
   }
 }
 
-function formatMoneyRight(cents: number) {
-  const s = formatMoney(cents);
-
-  let m = s.match(/^-€\s*(.+)$/);
-  if (m) return `-${m[1]}€`;
-
-  m = s.match(/^€\s*(.+)$/);
-  if (m) return `${m[1]}€`;
-
-  return s;
-}
-
-function isExternalUrl(u: string) {
-  return /^https?:\/\//i.test(u) || u.startsWith("//");
-}
-
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -110,51 +93,6 @@ function getStockUrgencyMessage(stockQty: number) {
   };
 }
 
-/* ====================== Discount map ====================== */
-
-const SALE_MAP_EUR: Record<string, number> = {
-  "29.99": 70,
-  "34.99": 100,
-  "39.99": 120,
-  "44.99": 150,
-  "49.99": 165,
-  "59.99": 200,
-  "69.99": 230,
-};
-
-function getPricePresentation(basePrice: number) {
-  const rawUnitPrice = basePrice;
-  const candidateEur1 = rawUnitPrice;
-  const candidateEur2 = rawUnitPrice / 100;
-
-  let salePriceEur: number;
-  if (SALE_MAP_EUR[candidateEur1.toFixed(2)]) salePriceEur = candidateEur1;
-  else if (SALE_MAP_EUR[candidateEur2.toFixed(2)]) salePriceEur = candidateEur2;
-  else salePriceEur = rawUnitPrice > 100 ? candidateEur2 : candidateEur1;
-
-  const saleKey = salePriceEur.toFixed(2);
-  const originalPriceEur = SALE_MAP_EUR[saleKey];
-
-  let originalUnitPriceForMoney: number | undefined;
-  if (typeof originalPriceEur === "number") {
-    const factor = rawUnitPrice / salePriceEur;
-    originalUnitPriceForMoney = originalPriceEur * factor;
-  }
-
-  const hasDiscount =
-    typeof originalPriceEur === "number" && originalPriceEur > salePriceEur;
-
-  const discountPercent = hasDiscount
-    ? Math.round(((originalPriceEur - salePriceEur) / originalPriceEur) * 100)
-    : 0;
-
-  return {
-    hasDiscount,
-    discountPercent,
-    originalUnitPriceForMoney,
-  };
-}
-
 /* ====================== Types ====================== */
 
 type PageProps = {
@@ -164,10 +102,40 @@ type PageProps = {
   }>;
 };
 
-type ProductSizeUI = {
+type ProductConfiguratorOptionValue = {
+  id: string;
+  value: string;
+  label: string;
+  priceDelta: number;
+};
+
+type ProductConfiguratorOptionGroup = {
+  id: string;
+  key: string;
+  label: string;
+  type: "SIZE" | "RADIO" | "ADDON";
+  required: boolean;
+  values: ProductConfiguratorOptionValue[];
+};
+
+type ProductConfiguratorSize = {
   id: string;
   size: string;
-  available: boolean;
+  stock?: number | null;
+  available?: boolean | null;
+};
+
+type ProductConfiguratorProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  team?: string | null;
+  description?: string | null;
+  basePrice: number;
+  images: string[];
+  optionGroups: ProductConfiguratorOptionGroup[];
+  sizes?: ProductConfiguratorSize[];
+  badges?: string[];
 };
 
 /* ====================== Small UI ====================== */
@@ -304,6 +272,7 @@ export default async function PtStockProductPage({ params }: PageProps) {
       description: true,
       basePrice: true,
       imageUrls: true,
+      badges: true,
       ptStockQty: true,
       sizes: {
         orderBy: { size: "asc" },
@@ -311,6 +280,25 @@ export default async function PtStockProductPage({ params }: PageProps) {
           id: true,
           size: true,
           available: true,
+        },
+      },
+      options: {
+        orderBy: [{ key: "asc" }],
+        select: {
+          id: true,
+          key: true,
+          label: true,
+          type: true,
+          required: true,
+          values: {
+            orderBy: [{ label: "asc" }],
+            select: {
+              id: true,
+              value: true,
+              label: true,
+              priceDelta: true,
+            },
+          },
         },
       },
     },
@@ -342,28 +330,44 @@ export default async function PtStockProductPage({ params }: PageProps) {
     );
   }
 
-  const images = getImages(product.imageUrls);
-  const mainImage = images[0];
-
-  const sizes: ProductSizeUI[] = product.sizes.map((s) => ({
-    id: s.id,
-    size: s.size,
-    available: s.available,
-  }));
-
-  const availableSizes = sizes.filter((s) => s.available);
-
-  const { hasDiscount, discountPercent, originalUnitPriceForMoney } =
-    getPricePresentation(product.basePrice);
-
   const stockQty = Number(product.ptStockQty ?? 0);
   const inStock = stockQty > 0;
   const stockMessage = getStockUrgencyMessage(stockQty);
 
+  const productForConfigurator: ProductConfiguratorProduct = {
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+    team: product.team,
+    description: product.description,
+    basePrice: product.basePrice,
+    images: getImages(product.imageUrls),
+    badges: product.badges ?? [],
+    sizes: product.sizes.map((s) => ({
+      id: s.id,
+      size: s.size,
+      available: s.available,
+      stock: s.available ? stockQty : 0,
+    })),
+    optionGroups: product.options.map((group) => ({
+      id: group.id,
+      key: group.key,
+      label: group.label,
+      type: group.type,
+      required: group.required,
+      values: group.values.map((value) => ({
+        id: value.id,
+        value: value.value,
+        label: value.label,
+        priceDelta: value.priceDelta,
+      })),
+    })),
+  };
+
   return (
     <main className="min-h-screen bg-white">
-      <div className="w-full overflow-x-hidden px-2 py-4 sm:px-4 sm:py-6">
-        <div className="mx-auto mb-4 flex w-full max-w-[260px] flex-wrap items-center gap-2 text-[11px] text-gray-500 sm:max-w-[520px] sm:text-sm lg:max-w-none">
+      <div className="container-fw py-6 md:py-10">
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-gray-500 sm:text-sm">
           <Link href="/" locale={locale} className="hover:text-gray-900">
             {t("breadcrumbs.home")}
           </Link>
@@ -375,262 +379,103 @@ export default async function PtStockProductPage({ params }: PageProps) {
           <span className="text-gray-900">{product.name}</span>
         </div>
 
-        <div className="relative mx-auto flex w-full max-w-[260px] flex-col gap-6 sm:max-w-[520px] lg:max-w-none lg:flex-row lg:items-start lg:gap-8">
-          {/* LEFT COLUMN */}
-          <div className="w-full rounded-2xl border bg-white p-3 sm:p-4 lg:w-[560px] lg:flex-none lg:self-start lg:p-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden h-10 w-10 shrink-0 lg:block" />
-
-              <div className="relative mx-auto aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-xl bg-white sm:max-w-[320px] lg:max-w-none">
-                <Image
-                  src={mainImage}
-                  alt={product.name}
-                  fill
-                  className="object-contain"
-                  priority
-                  sizes="(min-width: 1024px) 540px, 100vw"
-                  unoptimized={isExternalUrl(mainImage)}
-                />
-
-                {hasDiscount && (
-                  <div className="absolute left-3 top-3 flex items-center justify-center rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-md sm:left-4 sm:top-4 sm:text-sm">
-                    -{discountPercent}%
-                  </div>
+        <div className="mb-5 grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                className={cx(
+                  "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold",
+                  inStock ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
                 )}
-
-                <div className="absolute right-3 top-3 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
-                  PT Stock
-                </div>
+              >
+                {inStock ? t("stock.inStock") : t("stock.outOfStock")}
               </div>
 
-              <div className="hidden h-10 w-10 shrink-0 lg:block" />
+              <div className="inline-flex items-center rounded-full border bg-gray-50 px-3 py-1 text-sm font-semibold text-gray-700">
+                {stockQty} unit{stockQty === 1 ? "" : "s"}
+              </div>
+
+              {product.season ? (
+                <div className="inline-flex items-center rounded-full border bg-white px-3 py-1 text-sm font-semibold text-gray-700">
+                  {t("labels.season")}: {product.season}
+                </div>
+              ) : null}
             </div>
 
-            {images.length > 1 && (
-              <div className="mt-3">
-                <div className="no-scrollbar mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 [scrollbar-width:none] [-ms-overflow-style:none]">
-                  <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                  <div className="inline-flex gap-2">
-                    {images.map((src, i) => (
-                      <div
-                        key={src + i}
-                        className={cx(
-                          "relative h-[52px] w-[42px] flex-none rounded-xl border sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px]",
-                          i === 0 ? "border-blue-600 ring-2 ring-blue-100" : "border-gray-200"
-                        )}
-                      >
-                        <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image
-                            src={src}
-                            alt={`${product.name} ${i + 1}`}
-                            fill
-                            className="object-contain"
-                            sizes="68px"
-                            unoptimized={isExternalUrl(src)}
-                          />
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            <div
+              className={cx(
+                "mt-3 rounded-xl border px-3 py-2 text-[11px] font-semibold sm:text-xs",
+                stockMessage.classes
+              )}
+            >
+              {stockMessage.text}
+            </div>
+          </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+            <div className="mb-2 text-[11px] font-semibold text-gray-700 sm:text-sm">
+              {t("shippingInfo.title")}
+            </div>
+
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                <span>{t("shippingInfo.oneShirt")}</span>
+                <span className="font-semibold text-gray-900">{t("shippingInfo.onePrice")}</span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                <span>{t("shippingInfo.twoShirts")}</span>
+                <span className="font-semibold text-gray-900">{t("shippingInfo.twoPrice")}</span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                <span>{t("shippingInfo.threePlus")}</span>
+                <span className="font-semibold text-emerald-700">{t("shippingInfo.free")}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ProductConfigurator product={productForConfigurator} />
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+            <div className="grid grid-cols-3 gap-2">
               <TrustPill icon={<ShieldIcon />} text={t("trustSecureCheckout")} />
               <TrustPill icon={<TruckIcon />} text={t("trustTrackedShipping")} />
               <TrustPill icon={<ChatIcon />} text={t("trustFastSupport")} />
             </div>
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="min-w-0 w-full flex-1 space-y-4 rounded-2xl border bg-white p-3 sm:p-4 lg:space-y-6 lg:p-6">
-            <header className="space-y-2">
-              <div className="h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
-                <div className="h-2 bg-blue-600" style={{ width: inStock ? "100%" : "35%" }} />
+          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-yellow-300 bg-white shadow-sm">
+                <span className="text-sm font-black text-yellow-500">CTT</span>
               </div>
 
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  {product.team && product.team !== product.name && (
-                    <div className="mb-1 text-xs font-medium text-emerald-700 sm:text-sm">
-                      {product.team}
-                    </div>
-                  )}
-
-                  <h1 className="text-sm font-extrabold leading-snug tracking-tight sm:text-base lg:text-2xl">
-                    {product.name}
-                  </h1>
-
-                  <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                    {hasDiscount && originalUnitPriceForMoney != null && (
-                      <span className="text-[11px] text-gray-400 line-through sm:text-xs">
-                        {formatMoneyRight(originalUnitPriceForMoney)}
-                      </span>
-                    )}
-
-                    <span className="text-sm font-semibold text-gray-900 sm:text-lg lg:text-xl">
-                      {formatMoneyRight(product.basePrice)}
-                    </span>
-
-                    {hasDiscount && (
-                      <span className="ml-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 sm:text-xs">
-                        Save {discountPercent}%
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
-                    <span className="inline-flex items-center gap-2">
-                      <TruckIcon className="h-3.5 w-3.5" />
-                      {t("ctt.delivery")}
-                    </span>
-
-                    {product.season && (
-                      <span className="inline-flex items-center gap-2">
-                        <StarBadgeIcon className="h-3.5 w-3.5" />
-                        {t("labels.season")}: {product.season}
-                      </span>
-                    )}
-                  </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 sm:text-base">
+                  {t("ctt.title")}
                 </div>
-              </div>
 
-              {product.description && (
-                <p className="mt-1.5 whitespace-pre-line text-xs text-gray-700 sm:text-sm">
-                  {product.description}
+                <p className="mt-1 text-[11px] text-gray-700 sm:text-sm">
+                  {t.rich("ctt.description", {
+                    ctt: (chunks) => <strong>{chunks}</strong>,
+                  })}
                 </p>
-              )}
-            </header>
 
-            {/* STOCK */}
-            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-                {t("stock.title")} <span className="text-red-500">*</span>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <div
-                  className={cx(
-                    "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold",
-                    inStock ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
-                  )}
-                >
-                  {inStock ? t("stock.inStock") : t("stock.outOfStock")}
-                </div>
-
-                <div className="inline-flex items-center rounded-full border bg-gray-50 px-3 py-1 text-sm font-semibold text-gray-700">
-                  {stockQty} unit{stockQty === 1 ? "" : "s"}
-                </div>
-              </div>
-
-              <div
-                className={cx(
-                  "mt-3 rounded-xl border px-3 py-2 text-[11px] sm:text-xs",
-                  stockMessage.classes
-                )}
-              >
-                {stockMessage.text}
-              </div>
-            </div>
-
-            {/* SIZES */}
-            <div data-section="size" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-                {t("sizes.title")}
-              </div>
-
-              {sizes.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {sizes.map((size) => (
-                    <span
-                      key={size.id}
-                      className={cx(
-                        "rounded-xl border px-2.5 py-1.5 text-[11px] sm:text-xs lg:text-sm",
-                        size.available
-                          ? "border-gray-300 bg-white text-gray-900"
-                          : "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through opacity-60"
-                      )}
-                    >
-                      {size.size}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">{t("sizes.noSizes")}</div>
-              )}
-
-              {availableSizes.length > 0 && (
-                <p className="mt-2 text-[11px] text-gray-500 sm:text-xs">
-                  {t("sizes.availableOnly")}
-                </p>
-              )}
-            </div>
-
-            {/* SHIPPING PRICE BOX */}
-            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-              <div className="mb-2 text-[11px] font-semibold text-gray-700 sm:text-sm">
-                {t("shippingInfo.title")}
-              </div>
-
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                  <span>{t("shippingInfo.oneShirt")}</span>
-                  <span className="font-semibold text-gray-900">{t("shippingInfo.onePrice")}</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                  <span>{t("shippingInfo.twoShirts")}</span>
-                  <span className="font-semibold text-gray-900">{t("shippingInfo.twoPrice")}</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                  <span>{t("shippingInfo.threePlus")}</span>
-                  <span className="font-semibold text-emerald-700">{t("shippingInfo.free")}</span>
+                <div className="mt-3 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-800 sm:text-xs">
+                  {t("ctt.delivery")}
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* CTT CARD */}
-            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-yellow-300 bg-white shadow-sm">
-                  <span className="text-sm font-black text-yellow-500">CTT</span>
-                </div>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <InfoAccordions t={t} />
 
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-gray-900 sm:text-base">
-                    {t("ctt.title")}
-                  </div>
-
-                  <p className="mt-1 text-[11px] text-gray-700 sm:text-sm">
-                    {t.rich("ctt.description", {
-                      ctt: (chunks) => <strong>{chunks}</strong>,
-                    })}
-                  </p>
-
-                  <div className="mt-3 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-800 sm:text-xs">
-                    {t("ctt.delivery")}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* DESCRIPTION */}
-            <div className="rounded-2xl border bg-white/70 p-4">
-              <div className="mb-2 text-sm font-semibold text-gray-900">
-                {t("description.title")}
-              </div>
-
-              <p className="whitespace-pre-line text-sm leading-6 text-gray-700">
-                {product.description?.trim() || t("description.fallback")}
-              </p>
-            </div>
-
-            {/* ACCORDIONS */}
-            <InfoAccordions t={t} />
-
-            {/* TRUST INFO */}
+          <div className="space-y-4">
             <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
               <div className="grid gap-2 text-[11px] text-gray-700 sm:grid-cols-3 sm:text-xs">
                 <div className="flex items-start gap-2">
@@ -659,7 +504,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* CTA */}
             <div className="grid gap-2 sm:grid-cols-2">
               <Link
                 href="/pt-stock"
