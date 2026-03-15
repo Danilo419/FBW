@@ -1,6 +1,6 @@
 // src/app/pt-stock/page.tsx
-import Link from "next/link";
 import Image from "next/image";
+import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
@@ -77,6 +77,7 @@ export default async function PtStockPage() {
       imageUrls: true,
       season: true,
       createdAt: true,
+      ptStockQty: true,
     },
     orderBy: [{ createdAt: "desc" }],
   });
@@ -96,17 +97,11 @@ export default async function PtStockPage() {
               {t("shippingRules.title")}
             </div>
             <div className="mt-1 flex flex-col text-sm text-gray-700 sm:flex-row sm:items-center sm:gap-3">
-              <span>
-                {t("shippingRules.one")}
-              </span>
+              <span>{t("shippingRules.one")}</span>
               <span className="hidden text-gray-300 sm:block">•</span>
-              <span>
-                {t("shippingRules.two")}
-              </span>
+              <span>{t("shippingRules.two")}</span>
               <span className="hidden text-gray-300 sm:block">•</span>
-              <span>
-                {t("shippingRules.three")}
-              </span>
+              <span>{t("shippingRules.three")}</span>
             </div>
           </div>
         </div>
@@ -138,13 +133,9 @@ export default async function PtStockPage() {
               {t("intro.whyTitle")}
             </p>
 
-            <p className="mt-1">
-              {t("intro.whyLine1")}
-            </p>
+            <p className="mt-1">{t("intro.whyLine1")}</p>
 
-            <p className="mt-2">
-              {t("intro.whyLine2")}
-            </p>
+            <p className="mt-2">{t("intro.whyLine2")}</p>
           </div>
         </div>
       </div>
@@ -158,6 +149,7 @@ export default async function PtStockPage() {
           {products.map((p) => {
             const cover = getCoverUrl(p.imageUrls);
             const external = isExternalUrl(cover);
+            const stockQty = p.ptStockQty ?? 0;
 
             return (
               <Link
@@ -205,6 +197,14 @@ export default async function PtStockPage() {
                       {t("viewProduct")}
                     </span>
                   </div>
+
+                  {stockQty > 0 && (
+                    <div className="mt-2 text-[11px] font-semibold text-emerald-700">
+                      {stockQty === 1
+                        ? "Only 1 unit left"
+                        : `${stockQty} units available`}
+                    </div>
+                  )}
                 </div>
               </Link>
             );

@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { ProductChannel } from "@prisma/client";
@@ -179,8 +178,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
   const product = await prisma.product.findFirst({
     where: {
       slug,
-      isVisible: true,
-      channel: ProductChannel.PT_STOCK_CTT,
     },
     select: {
       id: true,
@@ -192,6 +189,8 @@ export default async function PtStockProductPage({ params }: PageProps) {
       basePrice: true,
       imageUrls: true,
       ptStockQty: true,
+      isVisible: true,
+      channel: true,
       sizes: {
         orderBy: { size: "asc" },
         select: {
@@ -203,7 +202,70 @@ export default async function PtStockProductPage({ params }: PageProps) {
     },
   });
 
-  if (!product) notFound();
+  if (!product) {
+    return (
+      <main className="min-h-screen bg-white">
+        <div className="container-fw py-10">
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-extrabold text-gray-900">
+              Product not found
+            </h1>
+            <p className="mt-3 text-sm text-gray-600">
+              No product was found with this slug:
+            </p>
+            <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-900">
+              {slug}
+            </p>
+
+            <div className="mt-6">
+              <Link
+                href={`/${locale}/pt-stock`}
+                className="inline-flex items-center rounded-xl border px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
+              >
+                Back to PT Stock
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (product.channel !== ProductChannel.PT_STOCK_CTT || !product.isVisible) {
+    return (
+      <main className="min-h-screen bg-white">
+        <div className="container-fw py-10">
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-extrabold text-gray-900">
+              Product unavailable
+            </h1>
+
+            <div className="mt-4 space-y-2 text-sm text-gray-700">
+              <p>
+                <span className="font-semibold">Slug:</span> {product.slug}
+              </p>
+              <p>
+                <span className="font-semibold">Channel:</span> {product.channel}
+              </p>
+              <p>
+                <span className="font-semibold">Visible:</span>{" "}
+                {String(product.isVisible)}
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <Link
+                href={`/${locale}/pt-stock`}
+                className="inline-flex items-center rounded-xl border px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
+              >
+                Back to PT Stock
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const images = getImages(product.imageUrls);
   const mainImage = images[0];
@@ -227,7 +289,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-white">
       <div className="container-fw py-6 md:py-10">
-        {/* Breadcrumbs */}
         <nav className="mb-6 text-sm text-gray-500">
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/${locale}`} className="hover:text-gray-900">
@@ -243,7 +304,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-          {/* LEFT: Gallery */}
           <section>
             <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
               <div className="relative aspect-square w-full">
@@ -280,7 +340,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
             )}
           </section>
 
-          {/* RIGHT: Product info */}
           <section className="space-y-5">
             <div>
               {product.team && product.team !== product.name && (
@@ -303,7 +362,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Price */}
             <div className="rounded-2xl border bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="text-3xl font-extrabold text-gray-900">
@@ -324,7 +382,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Stock - only show when ptStockQty exists */}
             {hasPtStockQty && stockMessage && (
               <div className="rounded-2xl border bg-white/70 p-4">
                 <div className="mb-2 text-sm font-semibold text-gray-900">
@@ -361,7 +418,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* Sizes */}
             <div className="rounded-2xl border bg-white/70 p-4">
               <div className="mb-3 text-sm font-semibold text-gray-900">
                 {t("sizes.title")}
@@ -394,7 +450,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Shipping prices */}
             <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
               <div className="mb-2 text-[11px] font-semibold text-gray-700 sm:text-sm">
                 {t("shippingInfo.title")}
@@ -424,7 +479,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* CTT Highlight */}
             <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-yellow-300 bg-white shadow-sm">
@@ -449,7 +503,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Description */}
             <div className="rounded-2xl border bg-white/70 p-4">
               <div className="mb-2 text-sm font-semibold text-gray-900">
                 {t("description.title")}
@@ -460,7 +513,6 @@ export default async function PtStockProductPage({ params }: PageProps) {
               </p>
             </div>
 
-            {/* CTA / Links */}
             <div className="flex flex-wrap gap-3 pt-1">
               <Link
                 href={`/${locale}/pt-stock`}
