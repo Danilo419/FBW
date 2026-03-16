@@ -1,5 +1,5 @@
-// src/app/admin/pt-stock/products/page.tsx
-import Link from "next/link";
+// src/app/[locale]/admin/pt-stock/products/page.tsx
+import { Link } from "@/i18n/navigation";
 import type { Route } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
