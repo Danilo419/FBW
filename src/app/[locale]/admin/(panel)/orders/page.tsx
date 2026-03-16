@@ -1,10 +1,11 @@
-// src/app/admin/(panel)/orders/page.tsx
+// src/app/[locale]/admin/(panel)/orders/page.tsx
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import ResolveCheckbox from "@/components/admin/ResolveCheckbox";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Link } from "@/i18n/navigation";
 
 /* ============================ Config ============================ */
 const PAGE_SIZE = 20;
@@ -165,7 +166,6 @@ async function deleteOrderAction(formData: FormData): Promise<void> {
 
 /* ---------- page ---------- */
 type PageProps = {
-  // ✅ Next 15 types in your project expect searchParams as Promise
   searchParams?: Promise<{ page?: string }>;
 };
 
@@ -188,12 +188,10 @@ export default async function OrdersPage({ searchParams }: PageProps) {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // se o user meter ?page=999 e não existir, mandamos para a última válida
   if (currentPage > totalPages) {
     redirect(`/admin/orders?page=${totalPages}`);
   }
 
-  // janela de paginação (ex: mostra 7 páginas)
   const windowSize = 7;
   const half = Math.floor(windowSize / 2);
   let start = Math.max(1, currentPage - half);
@@ -206,17 +204,17 @@ export default async function OrdersPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold">Orders</h1>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Orders</h1>
         <p className="text-sm text-gray-500">
           Showing only paid orders. ({totalCount} total)
         </p>
       </header>
 
-      <section className="rounded-2xl bg-white p-5 shadow border">
+      <section className="rounded-2xl border bg-white p-5 shadow">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
+              <tr className="border-b text-left text-gray-500">
                 <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">Full name</th>
                 <th className="py-2 pr-3">Email</th>
@@ -243,8 +241,8 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 const isResolved = (ord?.status || "").toUpperCase() === "RESOLVED";
 
                 return (
-                  <tr key={ord.id} className="border-b last:border-0 align-top bg-yellow-50">
-                    <td className="py-2 pr-3 font-mono whitespace-nowrap">{ord.id}</td>
+                  <tr key={ord.id} className="align-top border-b bg-yellow-50 last:border-0">
+                    <td className="whitespace-nowrap py-2 pr-3 font-mono">{ord.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
                     <td className="py-2 pr-3 capitalize">{ord.status ?? "—"}</td>
@@ -260,7 +258,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
 
                     <td className="py-2 pr-3">
                       <div className="flex justify-end gap-2">
-                        <a
+                        <Link
                           href={`/admin/orders/${ord.id}`}
                           className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                           aria-label={`View order ${ord.id}`}
@@ -268,7 +266,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         >
                           <Eye className="h-4 w-4" />
                           View
-                        </a>
+                        </Link>
 
                         <form action={deleteOrderAction}>
                           <input type="hidden" name="orderId" value={ord.id} />
@@ -292,7 +290,6 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-gray-500">
@@ -301,7 +298,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
             </div>
 
             <nav className="flex items-center gap-1">
-              <a
+              <Link
                 href={`/admin/orders?page=${Math.max(1, currentPage - 1)}`}
                 aria-disabled={currentPage === 1}
                 className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs hover:bg-gray-50 ${
@@ -311,48 +308,46 @@ export default async function OrdersPage({ searchParams }: PageProps) {
               >
                 <ChevronLeft className="h-4 w-4" />
                 Prev
-              </a>
+              </Link>
 
-              {/* First page + ellipsis */}
               {start > 1 && (
                 <>
-                  <a
+                  <Link
                     href="/admin/orders?page=1"
                     className="inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                   >
                     1
-                  </a>
+                  </Link>
                   {start > 2 && <span className="px-1 text-gray-400">…</span>}
                 </>
               )}
 
               {pages.map((p) => (
-                <a
+                <Link
                   key={p}
                   href={`/admin/orders?page=${p}`}
                   className={`inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50 ${
-                    p === currentPage ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-900" : ""
+                    p === currentPage ? "border-gray-900 bg-gray-900 text-white hover:bg-gray-900" : ""
                   }`}
                   aria-current={p === currentPage ? "page" : undefined}
                 >
                   {p}
-                </a>
+                </Link>
               ))}
 
-              {/* Last page + ellipsis */}
               {end < totalPages && (
                 <>
                   {end < totalPages - 1 && <span className="px-1 text-gray-400">…</span>}
-                  <a
+                  <Link
                     href={`/admin/orders?page=${totalPages}`}
                     className="inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                   >
                     {totalPages}
-                  </a>
+                  </Link>
                 </>
               )}
 
-              <a
+              <Link
                 href={`/admin/orders?page=${Math.min(totalPages, currentPage + 1)}`}
                 aria-disabled={currentPage === totalPages}
                 className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs hover:bg-gray-50 ${
@@ -362,7 +357,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
-              </a>
+              </Link>
             </nav>
           </div>
         )}

@@ -1,8 +1,9 @@
+// src/app/[locale]/admin/(panel)/users/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
 import { User2, MessageSquareText } from "lucide-react";
 

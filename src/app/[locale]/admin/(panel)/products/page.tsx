@@ -1,10 +1,10 @@
-// src/app/admin/(panel)/products/page.tsx
+// src/app/[locale]/admin/(panel)/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
 import { Search as SearchIcon, Eye, EyeOff } from "lucide-react";
@@ -24,6 +24,7 @@ function clamp(n: number, min: number, max: number) {
 /* ---------- server action: delete product ---------- */
 async function deleteProductAction(formData: FormData) {
   "use server";
+
   const id = String(formData.get("id") || "");
   if (!id) return;
 
@@ -62,10 +63,13 @@ async function toggleVisibilityAction(formData: FormData) {
 
 /* ---------- page ---------- */
 export default async function ProductsPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
+  const { locale } = await params;
   const sp = await searchParams;
 
   const q = (sp?.q || "").trim();
@@ -101,8 +105,7 @@ export default async function ProductsPage({
       imageUrls: true,
       sizes: { select: { id: true, size: true, available: true } },
       createdAt: true,
-
-      isVisible: true, // ✅ NEW
+      isVisible: true,
     },
     skip: (page - 1) * LIMIT,
     take: LIMIT,
@@ -137,17 +140,19 @@ export default async function ProductsPage({
       <header className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold">Products</h1>
+            <h1 className="text-2xl font-extrabold md:text-3xl">Products</h1>
             <p className="text-sm text-gray-500">
               Manage your products.{" "}
-              {total > 0
-                ? `${total} result${total === 1 ? "" : "s"}.`
-                : "No results."}
+              {total > 0 ? `${total} result${total === 1 ? "" : "s"}.` : "No results."}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <form action="/admin/products" method="get" className="relative">
+            <form
+              action={`/${locale}/admin/products`}
+              method="get"
+              className="relative"
+            >
               <input
                 type="search"
                 name="q"
@@ -155,13 +160,13 @@ export default async function ProductsPage({
                 placeholder="Search products…"
                 className="w-64 rounded-xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input type="hidden" name="page" value="1" />
             </form>
 
             <Link
               href="/admin/products/new"
-              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900 transition"
+              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
             >
               Create New Product
             </Link>
@@ -169,11 +174,11 @@ export default async function ProductsPage({
         </div>
       </header>
 
-      <section className="rounded-2xl bg-white p-5 shadow border">
+      <section className="rounded-2xl border bg-white p-5 shadow">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
+              <tr className="border-b text-left text-gray-500">
                 <th className="py-2 pr-3">Image</th>
                 <th className="py-2 pr-3">Name</th>
                 <th className="py-2 pr-3">Team</th>
@@ -188,7 +193,7 @@ export default async function ProductsPage({
             <tbody>
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-3 text-gray-500 text-center">
+                  <td colSpan={8} className="py-3 text-center text-gray-500">
                     No products found.
                   </td>
                 </tr>
@@ -200,7 +205,7 @@ export default async function ProductsPage({
                 const isVisible = !!p.isVisible;
 
                 return (
-                  <tr key={p.id} className="border-b last:border-0 align-top">
+                  <tr key={p.id} className="align-top border-b last:border-0">
                     <td className="py-2 pr-3">
                       <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50">
                         {img ? (
@@ -231,12 +236,12 @@ export default async function ProductsPage({
 
                     <td className="py-2 pr-3">
                       {isVisible ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 border border-green-200">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
                           <Eye className="h-3.5 w-3.5" />
                           Visible
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 border">
+                        <span className="inline-flex items-center gap-1 rounded-full border bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600">
                           <EyeOff className="h-3.5 w-3.5" />
                           Hidden
                         </span>
@@ -252,7 +257,6 @@ export default async function ProductsPage({
                           Edit
                         </Link>
 
-                        {/* Toggle visible / invisible */}
                         <form action={toggleVisibilityAction}>
                           <input type="hidden" name="id" value={p.id} />
                           <input type="hidden" name="isVisible" value={isVisible ? "1" : "0"} />
@@ -261,7 +265,7 @@ export default async function ProductsPage({
                             className={
                               isVisible
                                 ? "inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
-                                : "inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs bg-black text-white hover:bg-gray-900"
+                                : "inline-flex items-center gap-1 rounded-xl border bg-black px-3 py-1.5 text-xs text-white hover:bg-gray-900"
                             }
                             title={isVisible ? "Hide product" : "Make product visible"}
                           >
@@ -289,10 +293,8 @@ export default async function ProductsPage({
           </table>
         </div>
 
-        {/* ---------- pagination ---------- */}
         {totalPages > 1 && (
           <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3">
-            {/* Previous */}
             <div>
               {hasPrev ? (
                 <Link
@@ -302,13 +304,12 @@ export default async function ProductsPage({
                   Previous
                 </Link>
               ) : (
-                <span className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400 cursor-not-allowed">
+                <span className="inline-flex cursor-not-allowed items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400">
                   Previous
                 </span>
               )}
             </div>
 
-            {/* Page numbers (max 5 visible) */}
             <ul className="flex flex-wrap items-center gap-1">
               {pageNumbers.map((pn) =>
                 pn === page ? (
@@ -330,7 +331,6 @@ export default async function ProductsPage({
               )}
             </ul>
 
-            {/* Next */}
             <div>
               {hasNext ? (
                 <Link
@@ -340,7 +340,7 @@ export default async function ProductsPage({
                   Next
                 </Link>
               ) : (
-                <span className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400 cursor-not-allowed">
+                <span className="inline-flex cursor-not-allowed items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400">
                   Next
                 </span>
               )}
