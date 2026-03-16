@@ -1,9 +1,9 @@
-// src/app/admin/(panel)/ClientAdminLayout.tsx
+// src/app/[locale]/admin/ClientAdminLayout.tsx
 "use client";
 
-import Link from "next/link";
+import { Link, usePathname } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 
 /**
  * Sidebar with:
@@ -33,7 +33,6 @@ export default function ClientAdminLayout({
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
-  /* ---------- load preferences ---------- */
   useEffect(() => {
     try {
       const w = localStorage.getItem(WIDTH_KEY);
@@ -44,12 +43,12 @@ export default function ClientAdminLayout({
         );
         if (!Number.isNaN(parsed)) setWidth(parsed);
       }
+
       const c = localStorage.getItem(COLLAPSED_KEY);
       if (c) setCollapsed(c === "1");
     } catch {}
   }, []);
 
-  /* ---------- persist preferences ---------- */
   useEffect(() => {
     try {
       if (!collapsed) localStorage.setItem(WIDTH_KEY, String(width));
@@ -57,7 +56,6 @@ export default function ClientAdminLayout({
     } catch {}
   }, [width, collapsed]);
 
-  /* ---------- drag to resize ---------- */
   const onDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
     if (collapsed) return;
     draggingRef.current = true;
@@ -77,14 +75,17 @@ export default function ClientAdminLayout({
       );
       setWidth(next);
     };
+
     const onUp = () => {
       if (!draggingRef.current) return;
       draggingRef.current = false;
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
     };
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
@@ -95,10 +96,9 @@ export default function ClientAdminLayout({
   const effectiveWidth = collapsed && !peeking ? COLLAPSED_WIDTH : width;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-gray-50">
       <aside
-        className="relative bg-white border-r"
+        className="relative border-r bg-white"
         style={{
           width: effectiveWidth,
           minWidth: effectiveWidth,
@@ -108,76 +108,24 @@ export default function ClientAdminLayout({
         onMouseEnter={() => collapsed && setPeeking(true)}
         onMouseLeave={() => setPeeking(false)}
       >
-        <div className="h-full p-3 md:p-4 flex flex-col">
-          {/* Top */}
-          <div className="mb-4 flex items-center justify-between">
-            {collapsed && !peeking ? (
-              <span className="sr-only">FootBallWorld • Admin</span>
-            ) : (
-              <Link
-                href="/"
-                className="block text-lg md:text-xl font-extrabold truncate"
-              >
-                FootBallWorld<span className="text-gray-400"> • Admin</span>
-              </Link>
-            )}
+        <div className="flex h-full flex-col p-3 md:p-4">
+          <SidebarTop
+            collapsed={collapsed}
+            peeking={peeking}
+            toggleCollapsed={toggleCollapsed}
+          />
 
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              className="ml-2 inline-flex items-center justify-center rounded-lg border px-2 py-1 text-sm hover:bg-gray-50"
-              title={collapsed ? "Expand" : "Collapse"}
-              aria-expanded={!collapsed}
-            >
-              <span className="font-bold">{collapsed ? "»" : "«"}</span>
-            </button>
-          </div>
-
-          {/* Navigation */}
           {collapsed && !peeking ? (
-            <div className="flex-1 flex items-center justify-center select-none text-gray-400">
+            <div className="flex flex-1 select-none items-center justify-center text-gray-400">
               <span aria-hidden className="text-2xl leading-none">
                 ⠿
               </span>
             </div>
           ) : (
             <>
-              <nav className="space-y-1">
-                <NavItem href="/admin" label="Dashboard" />
-
-                <NavItem href="/admin/orders" label="Orders" />
-
-                <NavItem
-                  href="/admin/pt-stock/orders"
-                  label="PT Stock Orders"
-                  indent
-                  badge="PT"
-                />
-
-                <NavItem href="/admin/products" label="Products" />
-
-                <NavItem
-                  href="/admin/pt-stock/products"
-                  label="PT Stock Products"
-                  indent
-                  badge="PT"
-                />
-
-                <NavItem href="/admin/users" label="Users" />
-                <NavItem href="/admin/newsletter" label="Newsletter" />
-                <NavItem href="/admin/analytics" label="Analytics" />
-              </nav>
-
+              <SidebarNav />
               <div className="flex-1" />
-
-              <form action="/admin/logout" method="POST" className="mt-4">
-                <button
-                  type="submit"
-                  className="w-full rounded-lg border px-3 py-2 hover:bg-gray-50"
-                >
-                  Log out
-                </button>
-              </form>
+              <SidebarLogout />
             </>
           )}
         </div>
@@ -190,13 +138,91 @@ export default function ClientAdminLayout({
               background:
                 "linear-gradient(to right, transparent 0, rgba(0,0,0,0.08) 50%, transparent 100%)",
             }}
+            title="Drag to resize"
           />
         )}
       </aside>
 
-      {/* Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-x-auto">{children}</main>
+      <main className="flex-1 overflow-x-auto p-4 md:p-8">{children}</main>
     </div>
+  );
+}
+
+function SidebarTop({
+  collapsed,
+  peeking,
+  toggleCollapsed,
+}: {
+  collapsed: boolean;
+  peeking: boolean;
+  toggleCollapsed: () => void;
+}) {
+  const locale = useLocale();
+
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      {collapsed && !peeking ? (
+        <span className="sr-only">FootBallWorld • Admin</span>
+      ) : (
+        <Link
+          href="/"
+          locale={locale}
+          className="block truncate text-lg font-extrabold md:text-xl"
+        >
+          FootBallWorld<span className="text-gray-400"> • Admin</span>
+        </Link>
+      )}
+
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        className="ml-2 inline-flex items-center justify-center rounded-lg border px-2 py-1 text-sm hover:bg-gray-50"
+        title={collapsed ? "Expand" : "Collapse"}
+        aria-expanded={!collapsed}
+      >
+        <span className="font-bold">{collapsed ? "»" : "«"}</span>
+      </button>
+    </div>
+  );
+}
+
+function SidebarNav() {
+  return (
+    <nav className="space-y-1">
+      <NavItem href="/admin" label="Dashboard" />
+      <NavItem href="/admin/orders" label="Orders" />
+      <NavItem
+        href="/admin/pt-stock/orders"
+        label="PT Stock Orders"
+        indent
+        badge="PT"
+      />
+      <NavItem href="/admin/products" label="Products" />
+      <NavItem
+        href="/admin/pt-stock/products"
+        label="PT Stock Products"
+        indent
+        badge="PT"
+      />
+      <NavItem href="/admin/users" label="Users" />
+      <NavItem href="/admin/newsletter" label="Newsletter" />
+      <NavItem href="/admin/analytics" label="Analytics" />
+    </nav>
+  );
+}
+
+function SidebarLogout() {
+  const locale = useLocale();
+
+  return (
+    <form action={`/${locale}/admin/logout`} method="POST" className="mt-4">
+      <button
+        type="submit"
+        className="w-full rounded-lg border px-3 py-2 hover:bg-gray-50"
+      >
+        Log out
+      </button>
+    </form>
   );
 }
 
@@ -213,6 +239,7 @@ function NavItem({
   badge?: string;
 }) {
   const pathname = usePathname();
+
   const active =
     pathname === href || (href !== "/admin" && pathname?.startsWith(href));
 
@@ -220,7 +247,7 @@ function NavItem({
     <Link
       href={href}
       className={[
-        "flex items-center justify-between rounded-lg px-3 py-2 transition truncate",
+        "flex items-center justify-between truncate rounded-lg px-3 py-2 transition",
         active ? "bg-gray-100 font-semibold" : "hover:bg-gray-100",
         indent ? "ml-4 text-sm" : "",
       ].join(" ")}
@@ -229,7 +256,7 @@ function NavItem({
       <span>{label}</span>
 
       {badge && (
-        <span className="ml-2 text-[10px] font-bold px-2 py-[2px] rounded-full bg-blue-600 text-white">
+        <span className="ml-2 rounded-full bg-blue-600 px-2 py-[2px] text-[10px] font-bold text-white">
           {badge}
         </span>
       )}
