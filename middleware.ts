@@ -5,14 +5,18 @@ import type { NextRequest } from "next/server";
 import { routing } from "./src/i18n/routing";
 
 const PUBLIC_UNDER_ADMIN = ["/admin/login", "/admin/logout"];
-
 const intlMiddleware = createMiddleware(routing);
+
+function getLocales(): string[] {
+  return [...routing.locales];
+}
 
 function getLocaleFromPathname(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0];
+  const locales = getLocales();
 
-  if (firstSegment && routing.locales.includes(firstSegment as (typeof routing.locales)[number])) {
+  if (firstSegment && locales.includes(firstSegment)) {
     return firstSegment;
   }
 
@@ -22,10 +26,11 @@ function getLocaleFromPathname(pathname: string): string {
 function stripLocaleFromPathname(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0];
+  const locales = getLocales();
 
-  if (firstSegment && routing.locales.includes(firstSegment as (typeof routing.locales)[number])) {
+  if (firstSegment && locales.includes(firstSegment)) {
     const stripped = "/" + segments.slice(1).join("/");
-    return stripped === "/" ? "/" : stripped;
+    return stripped || "/";
   }
 
   return pathname;
@@ -34,7 +39,6 @@ function stripLocaleFromPathname(pathname: string): string {
 export default function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // Ignorar ficheiros internos / assets
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -47,7 +51,6 @@ export default function middleware(req: NextRequest) {
   const locale = getLocaleFromPathname(pathname);
   const pathnameWithoutLocale = stripLocaleFromPathname(pathname);
 
-  // Proteção das rotas /[locale]/admin
   if (pathnameWithoutLocale.startsWith("/admin")) {
     const isPublicAdminRoute = PUBLIC_UNDER_ADMIN.some(
       (p) =>
@@ -68,8 +71,6 @@ export default function middleware(req: NextRequest) {
         return NextResponse.redirect(url);
       }
     }
-
-    return intlMiddleware(req);
   }
 
   return intlMiddleware(req);

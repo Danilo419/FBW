@@ -1,4 +1,4 @@
-// src/app/admin/(panel)/products/[id]/page.tsx
+// src/app/[locale]/admin/(panel)/products/[id]/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { updateProduct, setSelectedBadges } from "@/app/admin/(panel)/products/actions";
-import SizeAvailabilityToggle from "@/app/admin/(panel)/products/SizeAvailabilityToggle";
-import ImagesEditor from "@/app/admin/(panel)/products/ImagesEditor";
+import { updateProduct, setSelectedBadges } from "@/app/[locale]/admin/(panel)/products/actions";
+import SizeAvailabilityToggle from "@/app/[locale]/admin/(panel)/products/SizeAvailabilityToggle";
+import ImagesEditor from "@/app/[locale]/admin/(panel)/products/ImagesEditor";
 import type { OptionType } from "@prisma/client";
 import Script from "next/script";
 
@@ -93,7 +93,7 @@ async function addAdultSizeAction(formData: FormData): Promise<void> {
         sizes: {
           create: {
             size,
-            available: false, // começa indisponível
+            available: false,
           },
         },
       },
@@ -165,13 +165,10 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "scottish-premiership-champions", label: "Scottish Premiership – Champion" },
     ],
   },
-
-  /* ✅ NEW: Coppa Italia winners badge (coccarda tricolore) */
   {
     title: "Domestic Cups",
     items: [{ value: "coppa-italia-winners", label: "Coppa Italia – Winners (Coccarda)" }],
   },
-
   {
     title: "Domestic Leagues – Others mentioned",
     items: [
@@ -201,7 +198,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "uecl-winners", label: "UEFA Europa Conference League – Winners Badge" },
     ],
   },
-
   {
     title: "National Teams – FIFA",
     items: [
@@ -266,7 +262,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
       { value: "ofc-nations-cup-winners", label: "OFC Nations Cup – Winners Badge" },
     ],
   },
-
   {
     title: "International Club",
     items: [
@@ -276,7 +271,6 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
   },
 ];
 
-/* ✅ TeamType local (não depende do Prisma Client) */
 type TeamTypeLocal = "CLUB" | "NATION";
 
 export default async function ProductEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -286,17 +280,16 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
     where: { id },
     include: {
       sizes: true,
-      // ✅ precisamos das options todas para encontrar SIZE
       options: {
         include: { values: { select: { value: true, label: true } } },
       },
     },
   });
+
   if (!product) return notFound();
 
   const selectedInitial: string[] = (product as any).badges ?? [];
 
-  // ✅ encontrar o grupo SIZE (em vez de options[0])
   const sizeGroup =
     (product.options || []).find((o: any) => o?.type === ("SIZE" as OptionType)) ?? null;
 
@@ -322,6 +315,7 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
     if (!prev) dedupMap.set(key, s);
     else if (prev.available === false && s.available === true) dedupMap.set(key, s);
   }
+
   const completed = completeAdultsWithGhosts(Array.from(dedupMap.values()));
   const viewSizes = sortByOrder(completed, ADULT_ALLOWED_ORDER);
   const originCount = ADULT_ALLOWED_ORDER.length;
@@ -330,15 +324,7 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
   const BADGES_JSON = JSON.stringify(ALL_BADGES);
   const SELECTED_JSON = JSON.stringify(selectedInitial);
 
-  /* ✅ valor atual do teamType para prefill */
   const currentTeamType: TeamTypeLocal = ((product as any).teamType as TeamTypeLocal) ?? "CLUB";
-
-  /**
-   * ✅ FIX REAL (de acordo com o teu schema):
-   * - no Prisma tu tens Product.allowNameNumber
-   * - checkbox "disableCustomization" significa "remover Name & Number" => allowNameNumber=false
-   * Logo: disableCustomizationInitial = !allowNameNumber
-   */
   const disableCustomizationInitial: boolean = product.allowNameNumber === false;
 
   return (
@@ -349,13 +335,10 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
       </header>
 
       <section className="rounded-2xl bg-white p-5 shadow border">
-        {/* Utilitários sr-only (para esconder sem dar display:none) */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
-/* Esconder UI de URL sem bloquear interações programáticas */
 section .images-editor input[type="text"],
 section .images-editor [placeholder*="Paste an image URL"] {
   position:absolute !important;
@@ -368,7 +351,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* ====== Form principal: dados + imagens + personalization ====== */}
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
 
@@ -393,7 +375,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
               />
             </div>
 
-            {/* ✅ Team Type (Clubs vs Nations) */}
             <div>
               <label className="text-xs font-medium text-gray-600">Team type</label>
               <select
@@ -443,7 +424,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
             </div>
           </div>
 
-          {/* ====== Images (upload local + auto-add) ====== */}
           <div className="space-y-2 images-editor">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Images</label>
@@ -465,11 +445,9 @@ section .images-editor [placeholder*="Paste an image URL"] {
             <ImagesEditor name="imagesText" initialImages={(product as any).imageUrls ?? []} alt={product.name} />
           </div>
 
-          {/* ✅ Personalization (de acordo com Product.allowNameNumber) */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Personalization</label>
 
-            {/* ✅ GARANTE que sempre envia algum valor (quando checkbox não está marcado) */}
             <input type="hidden" name="disableCustomization" value="false" />
 
             <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
@@ -500,7 +478,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         </form>
 
-        {/* Script: esconder “Add” visualmente sem remover interação */}
         <Script
           id={`hide-add-button-${product.id}`}
           strategy="afterInteractive"
@@ -524,7 +501,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* ====== Form de badges (separado, grava em Product.badges) ====== */}
         <form action={saveBadgesAction} id="badges-form" className="space-y-3 mt-8">
           <input type="hidden" name="productId" value={product.id} />
 
@@ -565,7 +541,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         </form>
 
-        {/* Script: badges search */}
         <Script
           id={`badges-search-${product.id}`}
           strategy="afterInteractive"
@@ -678,7 +653,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        {/* Script: Upload local -> Vercel Blob (/api/upload) -> inserir no ImagesEditor */}
         <Script
           id={`blob-upload-auto-add-${product.id}`}
           strategy="afterInteractive"
@@ -793,7 +767,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
         />
       </section>
 
-      {/* ==== Sizes and Availability ==== */}
       <section className="rounded-2xl bg-white p-5 shadow border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Sizes & Availability</h3>

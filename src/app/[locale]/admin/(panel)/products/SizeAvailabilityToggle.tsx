@@ -1,8 +1,8 @@
-// src/app/admin/(panel)/products/SizeAvailabilityToggle.tsx
+// src/app/[locale]/admin/(panel)/products/SizeAvailabilityToggle.tsx
 "use client";
 
 import * as React from "react";
-import { setSizeUnavailable } from "@/app/admin/(panel)/products/actions";
+import { setSizeUnavailable } from "@/app/[locale]/admin/(panel)/products/actions";
 
 type Props = {
   sizeId: string;
@@ -14,7 +14,6 @@ export default function SizeAvailabilityToggle({
   sizeId,
   initialUnavailable = false,
 }: Props) {
-  // optimistic state
   const [unavailable, setUnavailable] = React.useState<boolean>(initialUnavailable);
   const [isPending, startTransition] = React.useTransition();
 
@@ -23,16 +22,14 @@ export default function SizeAvailabilityToggle({
   }
 
   function onToggle(e: React.ChangeEvent<HTMLInputElement>) {
-    const next = e.target.checked; // checked === Unavailable
+    const next = e.target.checked;
 
-    // optimistic update
     setUnavailable(next);
 
     startTransition(async () => {
       try {
         await persist(next);
       } catch (err) {
-        // rollback on failure
         console.error(err);
         setUnavailable(!next);
         alert("Failed to update size availability.");

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { toggleResolved } from "@/app/admin/(panel)/actions";
+import { toggleResolved } from "@/app/[locale]/admin/(panel)/actions";
 
 type Props = {
   orderId: string;
