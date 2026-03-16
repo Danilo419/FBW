@@ -1196,6 +1196,110 @@
       "browseMore": "Browse more products"
     }
   },
+  "PtStockProductConfigurator": {
+    "fallbackProductName": "Product",
+    "savePercent": "Save {percent}%",
+    "ptStockFastShipping": "PT Stock, fast shipping from Portugal",
+    "seasonLabel": "Season:",
+    "headsUp": "Heads up:",
+    "stockStatus": "Stock status",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "unitsAvailable": "{count} units available",
+    "size": "Size",
+    "noSizesAvailable": "No sizes available",
+    "availableSizesNote": "Only the available PT Stock sizes can be purchased.",
+    "total": "Total",
+    "added": "Added",
+    "adding": "Adding...",
+    "addToCart": "Add to cart",
+    "processing": "Processing...",
+    "buyNow": "Buy now",
+    "shippingInformation": "Shipping information",
+    "close": "Close",
+    "trust": {
+      "secureCheckout": "Secure checkout",
+      "trackedShipping": "Tracked shipping",
+      "fastSupport": "Fast support"
+    },
+    "shipping": {
+      "oneShirt": "1 shirt",
+      "twoShirts": "2 shirts",
+      "threeOrMore": "3 or more",
+      "free": "Free"
+    },
+    "bottomTrust": {
+      "securePayment": {
+        "title": "Secure payment",
+        "desc": "Encrypted checkout"
+      },
+      "trackedShipping": {
+        "title": "Tracked shipping",
+        "desc": "Fast shipping from Portugal"
+      },
+      "fastSupport": {
+        "title": "Fast support",
+        "desc": "We reply quickly"
+      }
+    },
+    "toast": {
+      "addedTitle": "Added to cart",
+      "addedDescription": "Your item is ready in the cart."
+    },
+    "sticky": {
+      "add": "Add",
+      "buy": "Buy"
+    },
+    "sr": {
+      "itemAdded": "Item added to cart."
+    },
+    "errors": {
+      "outOfStock": "This product is currently out of stock.",
+      "chooseSize": "Please choose a size.",
+      "invalidQuantity": "Please choose a valid quantity.",
+      "addToCartFailed": "Something went wrong while adding this product to the cart."
+    },
+    "stockUrgency": {
+      "soldOut": "Sold out right now.",
+      "onlyOne": "Hurry, only 1 unit left in stock.",
+      "onlyFew": "Hurry, only {count} units left in stock.",
+      "limited": "Limited stock available — {count} units remaining.",
+      "readyToShip": "Ready to ship from Portugal — {count} units available."
+    },
+    "accordions": {
+      "shipping": {
+        "title": "Shipping & delivery",
+        "point1Bold": "Fast Portugal dispatch.",
+        "point1Rest": "PT Stock items are shipped from Portugal.",
+        "point2Before": "A",
+        "point2Bold": "tracking number",
+        "point2After": "is provided via email when the item is shipped.",
+        "point3": "Support replies quickly if you need help with your order."
+      },
+      "returns": {
+        "title": "Returns & support",
+        "point1": "If there is a problem with your order, contact support as soon as possible.",
+        "point2Before": "Keep the product",
+        "point2Bold": "unused",
+        "point2After": "and in good condition if you need assistance.",
+        "point3": "Availability may change quickly on PT Stock items."
+      },
+      "quality": {
+        "title": "Quality details",
+        "point1": "Carefully selected football shirts and PT Stock products.",
+        "point2": "Comfortable fit and quality finish.",
+        "point3": "Choose an available size before adding to cart."
+      }
+    },
+    "aria": {
+      "previousImage": "Previous image",
+      "nextImage": "Next image",
+      "imageNumber": "Image {number}",
+      "thumbnailNumber": "Thumbnail {number}",
+      "decreaseQuantity": "Decrease quantity",
+      "increaseQuantity": "Increase quantity"
+    }
+  },
   "sizeGuidePage": {
     "breadcrumb": {
       "home": "Home",

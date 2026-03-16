@@ -1196,6 +1196,110 @@
       "browseMore": "Ver mais produtos"
     }
   },
+  "PtStockProductConfigurator": {
+    "fallbackProductName": "Produto",
+    "savePercent": "Poupe {percent}%",
+    "ptStockFastShipping": "PT Stock, envio rápido a partir de Portugal",
+    "seasonLabel": "Época:",
+    "headsUp": "Atenção:",
+    "stockStatus": "Estado do stock",
+    "inStock": "Em stock",
+    "outOfStock": "Esgotado",
+    "unitsAvailable": "{count} unidades disponíveis",
+    "size": "Tamanho",
+    "noSizesAvailable": "Nenhum tamanho disponível",
+    "availableSizesNote": "Só os tamanhos disponíveis em PT Stock podem ser comprados.",
+    "total": "Total",
+    "added": "Adicionado",
+    "adding": "A adicionar...",
+    "addToCart": "Adicionar ao carrinho",
+    "processing": "A processar...",
+    "buyNow": "Comprar agora",
+    "shippingInformation": "Informação de envio",
+    "close": "Fechar",
+    "trust": {
+      "secureCheckout": "Checkout seguro",
+      "trackedShipping": "Envio com rastreio",
+      "fastSupport": "Suporte rápido"
+    },
+    "shipping": {
+      "oneShirt": "1 camisola",
+      "twoShirts": "2 camisolas",
+      "threeOrMore": "3 ou mais",
+      "free": "Grátis"
+    },
+    "bottomTrust": {
+      "securePayment": {
+        "title": "Pagamento seguro",
+        "desc": "Checkout encriptado"
+      },
+      "trackedShipping": {
+        "title": "Envio com rastreio",
+        "desc": "Envio rápido a partir de Portugal"
+      },
+      "fastSupport": {
+        "title": "Suporte rápido",
+        "desc": "Respondemos rapidamente"
+      }
+    },
+    "toast": {
+      "addedTitle": "Adicionado ao carrinho",
+      "addedDescription": "O seu artigo já está pronto no carrinho."
+    },
+    "sticky": {
+      "add": "Adicionar",
+      "buy": "Comprar"
+    },
+    "sr": {
+      "itemAdded": "Artigo adicionado ao carrinho."
+    },
+    "errors": {
+      "outOfStock": "Este produto está atualmente esgotado.",
+      "chooseSize": "Por favor escolha um tamanho.",
+      "invalidQuantity": "Por favor escolha uma quantidade válida.",
+      "addToCartFailed": "Ocorreu um erro ao adicionar este produto ao carrinho."
+    },
+    "stockUrgency": {
+      "soldOut": "Esgotado neste momento.",
+      "onlyOne": "Rápido, só resta 1 unidade em stock.",
+      "onlyFew": "Rápido, só restam {count} unidades em stock.",
+      "limited": "Stock limitado — restam {count} unidades.",
+      "readyToShip": "Pronto para envio desde Portugal — {count} unidades disponíveis."
+    },
+    "accordions": {
+      "shipping": {
+        "title": "Envio & entrega",
+        "point1Bold": "Envio rápido em Portugal.",
+        "point1Rest": "Os artigos PT Stock são enviados a partir de Portugal.",
+        "point2Before": "Um",
+        "point2Bold": "número de rastreio",
+        "point2After": "é enviado por email quando o artigo for expedido.",
+        "point3": "O suporte responde rapidamente se precisar de ajuda com a sua encomenda."
+      },
+      "returns": {
+        "title": "Devoluções & suporte",
+        "point1": "Se existir algum problema com a sua encomenda, contacte o suporte o mais rápido possível.",
+        "point2Before": "Mantenha o produto",
+        "point2Bold": "sem uso",
+        "point2After": "e em boas condições caso precise de assistência.",
+        "point3": "A disponibilidade pode mudar rapidamente nos artigos PT Stock."
+      },
+      "quality": {
+        "title": "Detalhes de qualidade",
+        "point1": "Camisolas de futebol e produtos PT Stock cuidadosamente selecionados.",
+        "point2": "Ajuste confortável e acabamento de qualidade.",
+        "point3": "Escolha um tamanho disponível antes de adicionar ao carrinho."
+      }
+    },
+    "aria": {
+      "previousImage": "Imagem anterior",
+      "nextImage": "Próxima imagem",
+      "imageNumber": "Imagem {number}",
+      "thumbnailNumber": "Miniatura {number}",
+      "decreaseQuantity": "Diminuir quantidade",
+      "increaseQuantity": "Aumentar quantidade"
+    }
+  },
   "sizeGuidePage": {
     "breadcrumb": {
       "home": "Início",

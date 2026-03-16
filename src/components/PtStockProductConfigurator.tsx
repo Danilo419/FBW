@@ -3,8 +3,8 @@
 import Image from "next/image";
 import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { addToCartAction } from "@/app/[locale]/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
@@ -43,6 +43,8 @@ type Props = {
 type FlyRect = { left: number; top: number; width: number; height: number };
 type FlyState = { key: number; src: string; from: FlyRect; to: FlyRect };
 
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
+
 const THUMB_W = 68;
 const GAP = 8;
 
@@ -71,43 +73,44 @@ function useIsMobile(breakpointPx = 1024) {
   return isMobile;
 }
 
-function getStockUrgencyMessage(stockQty: number) {
+function getStockUrgencyMessage(stockQty: number, t: TFunction) {
   if (stockQty <= 0) {
     return {
-      text: "Sold out right now.",
+      text: t("stockUrgency.soldOut"),
       classes: "border-red-200 bg-red-50 text-red-700",
     };
   }
 
   if (stockQty === 1) {
     return {
-      text: "Hurry, only 1 unit left in stock.",
+      text: t("stockUrgency.onlyOne"),
       classes: "border-red-200 bg-red-50 text-red-700",
     };
   }
 
   if (stockQty <= 3) {
     return {
-      text: `Hurry, only ${stockQty} units left in stock.`,
+      text: t("stockUrgency.onlyFew", { count: stockQty }),
       classes: "border-orange-200 bg-orange-50 text-orange-700",
     };
   }
 
   if (stockQty <= 6) {
     return {
-      text: `Limited stock available — ${stockQty} units remaining.`,
+      text: t("stockUrgency.limited", { count: stockQty }),
       classes: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
 
   return {
-    text: `Ready to ship from Portugal — ${stockQty} units available.`,
+    text: t("stockUrgency.readyToShip", { count: stockQty }),
     classes: "border-emerald-200 bg-emerald-50 text-emerald-700",
   };
 }
 
 export default function PtStockProductConfigurator({ locale, product }: Props) {
   const router = useRouter();
+  const t = useTranslations("PtStockProductConfigurator");
 
   const safeImages = useMemo(() => {
     if (!Array.isArray(product?.images)) return ["/placeholder.png"];
@@ -148,7 +151,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   const safeStockQty = Number(product?.ptStockQty ?? 0);
   const safeInStock = !!product?.inStock && safeStockQty > 0;
   const safeBasePrice = Number(product?.basePrice ?? 0);
-  const safeName = product?.name || "Product";
+  const safeName = product?.name || t("fallbackProductName");
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
@@ -232,8 +235,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   }, [isMobile]);
 
   const stockMessage = useMemo(
-    () => getStockUrgencyMessage(safeStockQty),
-    [safeStockQty]
+    () => getStockUrgencyMessage(safeStockQty, t),
+    [safeStockQty, t]
   );
 
   const canAddToCart = useMemo(() => {
@@ -253,9 +256,9 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   }, [selectedSize, safeInStock, canAddToCart]);
 
   function validateBeforeAdd(): string | null {
-    if (!safeInStock) return "This product is currently out of stock.";
-    if (!selectedSize) return "Please choose a size.";
-    if (qty < 1) return "Please choose a valid quantity.";
+    if (!safeInStock) return t("errors.outOfStock");
+    if (!selectedSize) return t("errors.chooseSize");
+    if (qty < 1) return t("errors.invalidQuantity");
     return null;
   }
 
@@ -398,7 +401,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
         if (opts?.goCheckout) router.push("/checkout");
       } catch {
-        setError("Something went wrong while adding this product to the cart.");
+        setError(t("errors.addToCartFailed"));
       }
     });
   }
@@ -420,7 +423,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
     <div className="w-full overflow-x-hidden px-2">
       <div className="relative mx-auto flex w-full max-w-[260px] flex-col gap-6 sm:max-w-[520px] lg:max-w-none">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {showToast ? "Item added to cart." : ""}
+          {showToast ? t("sr.itemAdded") : ""}
         </div>
 
         {mounted &&
@@ -478,7 +481,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 <button
                   type="button"
                   onClick={goPrev}
-                  aria-label="Previous image"
+                  aria-label={t("aria.previousImage")}
                   className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
                 >
                   <ChevronLeft />
@@ -512,7 +515,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                     <button
                       type="button"
                       onClick={goPrev}
-                      aria-label="Previous image"
+                      aria-label={t("aria.previousImage")}
                       className="absolute left-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
                     >
                       <ChevronLeft />
@@ -520,7 +523,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                     <button
                       type="button"
                       onClick={goNext}
-                      aria-label="Next image"
+                      aria-label={t("aria.nextImage")}
                       className="absolute right-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
                     >
                       <ChevronRight />
@@ -533,7 +536,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 <button
                   type="button"
                   onClick={goNext}
-                  aria-label="Next image"
+                  aria-label={t("aria.nextImage")}
                   className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
                 >
                   <ChevronRight />
@@ -558,7 +561,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                           key={`${src}-${i}`}
                           type="button"
                           onClick={() => setActiveIndex(i)}
-                          aria-label={`Image ${i + 1}`}
+                          aria-label={t("aria.imageNumber", { number: i + 1 })}
                           className={cx(
                             "relative h-[52px] w-[42px] flex-none rounded-xl border transition focus:outline-none sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px]",
                             isActive ? "border-transparent" : "hover:opacity-90"
@@ -573,7 +576,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                           <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
                             <Image
                               src={src}
-                              alt={`thumb ${i + 1}`}
+                              alt={t("aria.thumbnailNumber", { number: i + 1 })}
                               fill
                               className="object-contain"
                               sizes="42px"
@@ -589,9 +592,9 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
             )}
 
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <TrustPill icon={<ShieldIcon />} text="Secure checkout" />
-              <TrustPill icon={<TruckIcon />} text="Tracked shipping" />
-              <TrustPill icon={<ChatIcon />} text="Fast support" />
+              <TrustPill icon={<ShieldIcon />} text={t("trust.secureCheckout")} />
+              <TrustPill icon={<TruckIcon />} text={t("trust.trackedShipping")} />
+              <TrustPill icon={<ChatIcon />} text={t("trust.fastSupport")} />
             </div>
           </div>
 
@@ -627,7 +630,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
                     {safePricePresentation.hasDiscount && (
                       <span className="ml-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 sm:text-xs">
-                        Save {safePricePresentation.discountPercent}%
+                        {t("savePercent", { percent: safePricePresentation.discountPercent })}
                       </span>
                     )}
                   </div>
@@ -635,7 +638,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
                     <span className="inline-flex items-center gap-2">
                       <TruckIcon className="h-3.5 w-3.5" />
-                      PT Stock, fast shipping from Portugal
+                      {t("ptStockFastShipping")}
                     </span>
                   </div>
                 </div>
@@ -643,7 +646,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
               {product.season && (
                 <div className="text-xs text-gray-600 sm:text-sm">
-                  Season: <span className="font-medium text-gray-900">{product.season}</span>
+                  {t("seasonLabel")}{" "}
+                  <span className="font-medium text-gray-900">{product.season}</span>
                 </div>
               )}
 
@@ -656,16 +660,14 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                     className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900 sm:text-sm"
                     role="status"
                   >
-                    <span className="font-semibold">Heads up:</span> {error}
+                    <span className="font-semibold">{t("headsUp")}</span> {error}
                   </motion.div>
                 )}
               </AnimatePresence>
             </header>
 
             <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-                Stock status
-              </div>
+              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">{t("stockStatus")}</div>
 
               <div className="flex flex-wrap items-center gap-2">
                 <span
@@ -676,12 +678,12 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                       : "bg-red-100 text-red-700"
                   )}
                 >
-                  {safeInStock ? "In stock" : "Out of stock"}
+                  {safeInStock ? t("inStock") : t("outOfStock")}
                 </span>
 
                 {safeInStock && (
                   <span className="text-[11px] text-gray-600 sm:text-sm">
-                    {safeStockQty} units available
+                    {t("unitsAvailable", { count: safeStockQty })}
                   </span>
                 )}
               </div>
@@ -698,7 +700,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
             <div data-section="size" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
               <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-                Size <span className="text-red-500">*</span>
+                {t("size")} <span className="text-red-500">*</span>
               </div>
 
               {safeSizes.length > 0 ? (
@@ -734,11 +736,11 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   })}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">No sizes available</div>
+                <div className="text-sm text-gray-500">{t("noSizesAvailable")}</div>
               )}
 
               <p className="mt-2 text-[11px] text-gray-500 sm:text-xs">
-                Only the available PT Stock sizes can be purchased.
+                {t("availableSizesNote")}
               </p>
             </div>
 
@@ -749,7 +751,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                     type="button"
                     className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    aria-label="Decrease quantity"
+                    aria-label={t("aria.decreaseQuantity")}
                     disabled={pending}
                   >
                     −
@@ -759,7 +761,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                     type="button"
                     className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
                     onClick={() => setQty((q) => q + 1)}
-                    aria-label="Increase quantity"
+                    aria-label={t("aria.increaseQuantity")}
                     disabled={pending}
                   >
                     +
@@ -767,7 +769,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 </div>
 
                 <div className="text-right sm:text-left">
-                  <div className="text-xs text-gray-600 sm:text-sm">Total</div>
+                  <div className="text-xs text-gray-600 sm:text-sm">{t("total")}</div>
                   <div className="text-base font-semibold sm:text-lg">{money(finalPrice)}</div>
                 </div>
               </div>
@@ -789,14 +791,14 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 {justAdded ? (
                   <>
                     <CheckIcon />
-                    Added
+                    {t("added")}
                   </>
                 ) : pending && !buyNow ? (
-                  "Adding..."
+                  t("adding")
                 ) : (
                   <>
                     <CartIcon />
-                    Add to cart
+                    {t("addToCart")}
                   </>
                 )}
               </motion.button>
@@ -807,77 +809,61 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-900 bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60 sm:text-base"
                 disabled={pending || !canAddToCart}
               >
-                {pending && buyNow ? "Processing..." : "Buy now"}
+                {pending && buyNow ? t("processing") : t("buyNow")}
               </button>
             </div>
 
             <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
               <div className="mb-2 text-[11px] font-semibold text-gray-700 sm:text-sm">
-                Shipping information
+                {t("shippingInformation")}
               </div>
 
               <div className="grid gap-2">
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                  <span>1 shirt</span>
+                  <span>{t("shipping.oneShirt")}</span>
                   <span className="font-semibold text-gray-900">6€</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                  <span>2 shirts</span>
+                  <span>{t("shipping.twoShirts")}</span>
                   <span className="font-semibold text-gray-900">3€</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                  <span>3 or more</span>
-                  <span className="font-semibold text-emerald-700">Free</span>
+                  <span>{t("shipping.threeOrMore")}</span>
+                  <span className="font-semibold text-emerald-700">{t("shipping.free")}</span>
                 </div>
               </div>
             </div>
 
-            <InfoAccordions />
+            <InfoAccordions t={t} />
 
             <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
               <div className="grid gap-2 text-[11px] text-gray-700 sm:grid-cols-3 sm:text-xs">
                 <div className="flex items-start gap-2">
                   <ShieldIcon className="mt-0.5 h-4 w-4" />
                   <div>
-                    <div className="font-semibold">Secure payment</div>
-                    <div className="text-gray-500">Encrypted checkout</div>
+                    <div className="font-semibold">{t("bottomTrust.securePayment.title")}</div>
+                    <div className="text-gray-500">{t("bottomTrust.securePayment.desc")}</div>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2">
                   <TruckIcon className="mt-0.5 h-4 w-4" />
                   <div>
-                    <div className="font-semibold">Tracked shipping</div>
-                    <div className="text-gray-500">Fast shipping from Portugal</div>
+                    <div className="font-semibold">{t("bottomTrust.trackedShipping.title")}</div>
+                    <div className="text-gray-500">{t("bottomTrust.trackedShipping.desc")}</div>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2">
                   <ChatIcon className="mt-0.5 h-4 w-4" />
                   <div>
-                    <div className="font-semibold">Fast support</div>
-                    <div className="text-gray-500">We reply quickly</div>
+                    <div className="font-semibold">{t("bottomTrust.fastSupport.title")}</div>
+                    <div className="text-gray-500">{t("bottomTrust.fastSupport.desc")}</div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-1">
-              <Link
-                href={`/${locale}/pt-stock`}
-                className="inline-flex items-center rounded-xl border px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
-              >
-                Back to PT Stock
-              </Link>
-
-              <Link
-                href={`/${locale}/clubs`}
-                className="inline-flex items-center rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-900"
-              >
-                Browse more
-              </Link>
             </div>
           </div>
         </div>
@@ -901,15 +887,15 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   <CheckIcon className="h-4 w-4 text-green-700" />
                 </div>
                 <div className="text-sm">
-                  <div className="font-semibold">Added to cart</div>
-                  <div className="text-gray-600">Your item is ready in the cart.</div>
+                  <div className="font-semibold">{t("toast.addedTitle")}</div>
+                  <div className="text-gray-600">{t("toast.addedDescription")}</div>
                 </div>
                 <button
                   type="button"
                   className="ml-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-100"
                   onClick={() => setShowToast(false)}
                 >
-                  Close
+                  {t("close")}
                 </button>
               </div>
             </motion.div>
@@ -927,7 +913,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
             >
               <div className="mx-auto flex max-w-[520px] items-center gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] text-gray-600">Total</div>
+                  <div className="text-[11px] text-gray-600">{t("total")}</div>
                   <div className="truncate text-sm font-semibold">{money(finalPrice)}</div>
                 </div>
 
@@ -946,7 +932,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   className="ml-auto rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
                   disabled={pending}
                 >
-                  Add
+                  {t("sticky.add")}
                 </button>
 
                 <button
@@ -964,7 +950,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
                   disabled={pending}
                 >
-                  Buy
+                  {t("sticky.buy")}
                 </button>
               </div>
             </motion.div>
@@ -975,64 +961,78 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   );
 }
 
-function InfoAccordions() {
+function InfoAccordions({ t }: { t: TFunction }) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-white/70">
-      <AccordionRow icon={<TruckIcon className="h-4 w-4" />} title="Shipping & delivery" defaultOpen>
+      <AccordionRow
+        icon={<TruckIcon className="h-4 w-4" />}
+        title={t("accordions.shipping.title")}
+        defaultOpen
+      >
         <ul className="space-y-2 text-xs text-gray-700 sm:text-sm">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              <b>Fast Portugal dispatch.</b> PT Stock items are shipped from Portugal.
+              <b>{t("accordions.shipping.point1Bold")}</b> {t("accordions.shipping.point1Rest")}
             </span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              A <b>tracking number</b> is provided via email when the item is shipped.
+              {t("accordions.shipping.point2Before")} <b>{t("accordions.shipping.point2Bold")}</b>{" "}
+              {t("accordions.shipping.point2After")}
             </span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Support replies quickly if you need help with your order.</span>
+            <span>{t("accordions.shipping.point3")}</span>
           </li>
         </ul>
       </AccordionRow>
 
       <Divider />
 
-      <AccordionRow icon={<RotateIcon className="h-4 w-4" />} title="Returns & support">
+      <AccordionRow
+        icon={<RotateIcon className="h-4 w-4" />}
+        title={t("accordions.returns.title")}
+      >
         <ul className="space-y-2 text-xs text-gray-700 sm:text-sm">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>If there is a problem with your order, contact support as soon as possible.</span>
+            <span>{t("accordions.returns.point1")}</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Keep the product <b>unused</b> and in good condition if you need assistance.</span>
+            <span>
+              {t("accordions.returns.point2Before")} <b>{t("accordions.returns.point2Bold")}</b>{" "}
+              {t("accordions.returns.point2After")}
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Availability may change quickly on PT Stock items.</span>
+            <span>{t("accordions.returns.point3")}</span>
           </li>
         </ul>
       </AccordionRow>
 
       <Divider />
 
-      <AccordionRow icon={<StarBadgeIcon className="h-4 w-4" />} title="Quality details">
+      <AccordionRow
+        icon={<StarBadgeIcon className="h-4 w-4" />}
+        title={t("accordions.quality.title")}
+      >
         <ul className="space-y-2 text-xs text-gray-700 sm:text-sm">
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Carefully selected football shirts and PT Stock products.</span>
+            <span>{t("accordions.quality.point1")}</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Comfortable fit and quality finish.</span>
+            <span>{t("accordions.quality.point2")}</span>
           </li>
           <li className="flex gap-2">
             <span className="mt-1">•</span>
-            <span>Choose an available size before adding to cart.</span>
+            <span>{t("accordions.quality.point3")}</span>
           </li>
         </ul>
       </AccordionRow>
@@ -1080,7 +1080,13 @@ function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
 
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} className={cx("h-5 w-5", props.className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      className={cx("h-5 w-5", props.className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M20 7L9 18l-5-5"
         stroke="currentColor"
@@ -1140,7 +1146,13 @@ function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
 
 function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("h-5 w-5", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M6 9l6 6 6-6"
         stroke="currentColor"
@@ -1154,7 +1166,13 @@ function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("text-gray-800", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M3 7h11v10H3V7zM14 10h4l3 3v4h-7v-7z"
         stroke="currentColor"
@@ -1171,7 +1189,13 @@ function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("text-gray-800", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M12 3l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V7l8-4z"
         stroke="currentColor"
@@ -1191,7 +1215,13 @@ function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function CartIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("h-5 w-5", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("h-5 w-5", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M6 7h15l-2 9H7L6 7z"
         stroke="currentColor"
@@ -1215,26 +1245,33 @@ function CartIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function ChatIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("text-gray-800", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M4 5h16v11H7l-3 3V5z"
         stroke="currentColor"
         strokeWidth={1.8}
         strokeLinejoin="round"
       />
-      <path
-        d="M8 9h8M8 12h6"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
+      <path d="M8 9h8M8 12h6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
     </svg>
   );
 }
 
 function RotateIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("text-gray-800", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M21 12a9 9 0 10-3 6.7"
         stroke="currentColor"
@@ -1254,7 +1291,13 @@ function RotateIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function StarBadgeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 24 24" className={cx("text-gray-800", props.className)} fill="none" aria-hidden="true">
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      className={cx("text-gray-800", props.className)}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M12 2l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.9 7.4 16.4l.9-5.2-3.8-3.7 5.2-.8L12 2z"
         stroke="currentColor"
