@@ -101,9 +101,9 @@ function Sidebar({
   const items = [
     { href: "/admin", label: "Dashboard", short: "Dash" },
     { href: "/admin/orders", label: "Orders", short: "Ord." },
-    { href: "/admin/pt-stock-orders", label: "PT Stock Orders", short: "PT Ord." },
+    { href: "/admin/pt-stock/orders", label: "PT Stock Orders", short: "PT Ord." },
     { href: "/admin/products", label: "Products", short: "Prod." },
-    { href: "/admin/pt-stock-products", label: "PT Stock Products", short: "PT Prod." },
+    { href: "/admin/pt-stock/products", label: "PT Stock Products", short: "PT Prod." },
     { href: "/admin/users", label: "Users", short: "Users" },
     { href: "/admin/newsletter", label: "Newsletter", short: "News" },
     { href: "/admin/analytics", label: "Analytics", short: "An." },
