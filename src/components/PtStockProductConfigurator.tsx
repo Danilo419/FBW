@@ -819,12 +819,12 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               <div className="grid gap-2">
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
                   <span>1 shirt</span>
-                  <span className="font-semibold text-gray-900">4.99€</span>
+                  <span className="font-semibold text-gray-900">6€</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
                   <span>2 shirts</span>
-                  <span className="font-semibold text-gray-900">6.99€</span>
+                  <span className="font-semibold text-gray-900">3€</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
