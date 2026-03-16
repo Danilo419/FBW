@@ -36,6 +36,13 @@ function stripLocaleFromPathname(pathname: string): string {
   return pathname;
 }
 
+function hasAuthSessionCookie(req: NextRequest): boolean {
+  return (
+    Boolean(req.cookies.get("__Secure-next-auth.session-token")?.value) ||
+    Boolean(req.cookies.get("next-auth.session-token")?.value)
+  );
+}
+
 export default function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -48,32 +55,36 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const locale = getLocaleFromPathname(pathname);
   const pathnameWithoutLocale = stripLocaleFromPathname(pathname);
 
-  if (pathnameWithoutLocale.startsWith("/admin")) {
-    const isPublicAdminRoute = PUBLIC_UNDER_ADMIN.some(
-      (p) =>
-        pathnameWithoutLocale === p ||
-        pathnameWithoutLocale.startsWith(`${p}/`)
-    );
+  // Deixa o next-intl tratar primeiro locale/rewrite/redirect
+  const intlResponse = intlMiddleware(req);
 
-    if (!isPublicAdminRoute) {
-      const hasSession =
-        Boolean(req.cookies.get("__Secure-next-auth.session-token")?.value) ||
-        Boolean(req.cookies.get("next-auth.session-token")?.value);
-
-      if (!hasSession) {
-        const url = req.nextUrl.clone();
-        url.pathname = `/${locale}/admin/login`;
-        url.search = "";
-        url.searchParams.set("next", pathname + search);
-        return NextResponse.redirect(url);
-      }
-    }
+  if (!pathnameWithoutLocale.startsWith("/admin")) {
+    return intlResponse;
   }
 
-  return intlMiddleware(req);
+  const isPublicAdminRoute = PUBLIC_UNDER_ADMIN.some(
+    (p) => pathnameWithoutLocale === p || pathnameWithoutLocale.startsWith(`${p}/`)
+  );
+
+  if (isPublicAdminRoute) {
+    return intlResponse;
+  }
+
+  if (hasAuthSessionCookie(req)) {
+    return intlResponse;
+  }
+
+  // ⚠️ usar sempre locale já resolvido pelo pathname ou fallback
+  const locale = getLocaleFromPathname(pathname);
+
+  const url = req.nextUrl.clone();
+  url.pathname = `/${locale}/admin/login`;
+  url.search = "";
+  url.searchParams.set("next", pathname + search);
+
+  return NextResponse.redirect(url);
 }
 
 export const config = {
