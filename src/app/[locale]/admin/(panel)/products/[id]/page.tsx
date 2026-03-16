@@ -12,7 +12,7 @@ import ImagesEditor from "@/app/[locale]/admin/(panel)/products/ImagesEditor";
 import type { OptionType } from "@prisma/client";
 import Script from "next/script";
 
-/** ===== Wrapper server action que retorna void ===== */
+/** ===== Wrapper server action that returns void ===== */
 async function saveBadgesAction(formData: FormData): Promise<void> {
   "use server";
   await setSelectedBadges(formData);
@@ -23,7 +23,7 @@ function centsToInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
-/* =============== Regras S→2XL (com “fantasmas”) =============== */
+/* =============== S→2XL rules (with “ghosts”) =============== */
 const ADULT_ALLOWED_ORDER = ["S", "M", "L", "XL", "2XL"] as const;
 type AllowedAdult = (typeof ADULT_ALLOWED_ORDER)[number];
 
@@ -32,9 +32,11 @@ function normalizeAdultSizeLabel(raw: string): string {
   if (t === "XXL") return "2XL";
   return t;
 }
+
 function isAllowedAdultSize(label: string): label is AllowedAdult {
   return ADULT_ALLOWED_ORDER.includes(label as AllowedAdult);
 }
+
 function isKidsLabel(s: string) {
   const t = s.trim().toUpperCase();
   if (/^\d+\s*Y$/.test(t)) return true;
@@ -45,15 +47,18 @@ function isKidsLabel(s: string) {
   if (/\b(JR|JUNIOR|KID|KIDS)$/.test(t)) return true;
   return false;
 }
+
 function indexInOrder(value: string, order: readonly string[]) {
   const i = order.indexOf(value.toUpperCase());
   return i === -1 ? Number.POSITIVE_INFINITY : i;
 }
+
 function sortByOrder<T extends { size: string }>(list: T[], order: readonly string[]): T[] {
   return [...list].sort(
     (a, b) => indexInOrder(a.size.toUpperCase(), order) - indexInOrder(b.size.toUpperCase(), order)
   );
 }
+
 function completeAdultsWithGhosts<T extends { id?: string; size: string; available?: boolean }>(rows: T[]) {
   const by = new Map(rows.map((r) => [r.size.toUpperCase(), r]));
   return ADULT_ALLOWED_ORDER.map((sz) => {
@@ -66,19 +71,20 @@ function completeAdultsWithGhosts<T extends { id?: string; size: string; availab
 }
 
 /** ===== Add missing adult size (ghost -> DB) =====
- * Sem prisma.productSize — usa nested write via relação product.sizes
+ * No prisma.productSize — uses nested write via product.sizes relation
  */
 async function addAdultSizeAction(formData: FormData): Promise<void> {
   "use server";
 
   const productId = String(formData.get("productId") || "").trim();
   const raw = String(formData.get("size") || "").trim();
+  const locale = String(formData.get("locale") || "en").trim();
+
   if (!productId || !raw) return;
 
   const size = normalizeAdultSizeLabel(raw);
   if (!isAllowedAdultSize(size)) return;
 
-  // verifica duplicados (case-insensitive) lendo as sizes do produto
   const p = await prisma.product.findUnique({
     where: { id: productId },
     select: { id: true, sizes: { select: { id: true, size: true } } },
@@ -86,6 +92,7 @@ async function addAdultSizeAction(formData: FormData): Promise<void> {
   if (!p) return;
 
   const exists = (p.sizes || []).some((s) => (s.size || "").trim().toUpperCase() === size.toUpperCase());
+
   if (!exists) {
     await prisma.product.update({
       where: { id: productId },
@@ -100,19 +107,22 @@ async function addAdultSizeAction(formData: FormData): Promise<void> {
     });
   }
 
-  revalidatePath(`/admin/products/${productId}`);
-  revalidatePath(`/admin`);
-  redirect(`/admin/products/${productId}`);
+  revalidatePath(`/${locale}/admin/products/${productId}`);
+  revalidatePath(`/${locale}/admin/products`);
+  revalidatePath(`/${locale}/admin`);
+  redirect(`/${locale}/admin/products/${productId}`);
 }
 
 /** ===== Remove size from product (delete row)
- * Sem prisma.productSize — usa nested delete via relação product.sizes
+ * No prisma.productSize — uses nested delete via product.sizes relation
  */
 async function removeSizeAction(formData: FormData): Promise<void> {
   "use server";
 
   const productId = String(formData.get("productId") || "").trim();
   const sizeId = String(formData.get("sizeId") || "").trim();
+  const locale = String(formData.get("locale") || "en").trim();
+
   if (!productId || !sizeId) return;
 
   try {
@@ -128,9 +138,10 @@ async function removeSizeAction(formData: FormData): Promise<void> {
     console.error(e);
   }
 
-  revalidatePath(`/admin/products/${productId}`);
-  revalidatePath(`/admin`);
-  redirect(`/admin/products/${productId}`);
+  revalidatePath(`/${locale}/admin/products/${productId}`);
+  revalidatePath(`/${locale}/admin/products`);
+  revalidatePath(`/${locale}/admin`);
+  redirect(`/${locale}/admin/products/${productId}`);
 }
 
 /* =============== Badge Catalog (EN) =============== */
@@ -273,8 +284,12 @@ const BADGE_GROUPS: { title: string; items: BadgeOption[] }[] = [
 
 type TeamTypeLocal = "CLUB" | "NATION";
 
-export default async function ProductEditPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function ProductEditPage({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}) {
+  const { locale, id } = await params;
 
   const product = await prisma.product.findUnique({
     where: { id },
@@ -330,11 +345,13 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6" data-product-id={product.id}>
       <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold">Edit product</h1>
-        <p className="text-sm text-gray-500">Update general information, images, badges and size availability.</p>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Edit product</h1>
+        <p className="text-sm text-gray-500">
+          Update general information, images, badges and size availability.
+        </p>
       </header>
 
-      <section className="rounded-2xl bg-white p-5 shadow border">
+      <section className="rounded-2xl border bg-white p-5 shadow">
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -353,6 +370,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
         <form action={updateProduct} className="grid gap-6" id="edit-product-form">
           <input type="hidden" name="id" defaultValue={product.id} />
+          <input type="hidden" name="locale" value={locale} />
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="col-span-2">
@@ -418,7 +436,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
               <textarea
                 name="description"
                 defaultValue={product.description ?? ""}
-                className="mt-1 w-full rounded-xl border px-3 py-2 min-h-[120px]"
+                className="mt-1 min-h-[120px] w-full rounded-xl border px-3 py-2"
                 placeholder="Product description..."
               />
             </div>
@@ -432,7 +450,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
                 <label
                   htmlFor="blob-images-input"
-                  className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 cursor-pointer"
+                  className="cursor-pointer rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
                   title="Add images from your computer"
                 >
                   Add from computer
@@ -450,7 +468,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
             <input type="hidden" name="disableCustomization" value="false" />
 
-            <div className="flex items-start gap-3 rounded-2xl border p-4 bg-white/70">
+            <div className="flex items-start gap-3 rounded-2xl border bg-white/70 p-4">
               <input
                 id="disableCustomization"
                 name="disableCustomization"
@@ -463,7 +481,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
                 <label htmlFor="disableCustomization" className="font-medium">
                   Remove “Customization” section on product page
                 </label>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="mt-1 text-xs text-gray-600">
                   Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
                   This will set <code>allowNameNumber=false</code> in the database (via the server action).
                 </p>
@@ -501,8 +519,9 @@ section .images-editor [placeholder*="Paste an image URL"] {
           }}
         />
 
-        <form action={saveBadgesAction} id="badges-form" className="space-y-3 mt-8">
+        <form action={saveBadgesAction} id="badges-form" className="mt-8 space-y-3">
           <input type="hidden" name="productId" value={product.id} />
+          <input type="hidden" name="locale" value={locale} />
 
           <label className="text-sm font-medium">Badges (optional)</label>
           <p className="text-xs text-gray-500">
@@ -524,10 +543,10 @@ section .images-editor [placeholder*="Paste an image URL"] {
 
           <div
             id="badge-results"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-auto border rounded-xl p-2 hidden"
+            className="hidden max-h-72 grid-cols-1 gap-2 overflow-auto rounded-xl border p-2 sm:grid sm:grid-cols-2"
           />
 
-          <div id="badge-selected-wrap" className="space-y-2 hidden">
+          <div id="badge-selected-wrap" className="hidden space-y-2">
             <div className="text-xs font-semibold uppercase text-gray-500">Selected badges</div>
             <div id="badge-selected" className="flex flex-wrap gap-2" />
           </div>
@@ -609,7 +628,7 @@ section .images-editor [placeholder*="Paste an image URL"] {
     span.textContent = opt.label;
 
     const tag = document.createElement('span');
-    tag.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600';
+    tag.className = 'ml-auto rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600';
     tag.textContent = opt.group.split(' – ')[0];
 
     label.appendChild(cb);
@@ -767,8 +786,8 @@ section .images-editor [placeholder*="Paste an image URL"] {
         />
       </section>
 
-      <section className="rounded-2xl bg-white p-5 shadow border">
-        <div className="flex items-center justify-between mb-3">
+      <section className="rounded-2xl border bg-white p-5 shadow">
+        <div className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold">Sizes & Availability</h3>
           <span className="text-xs text-gray-500">
             Showing {viewSizes.length} of {originCount} adult sizes (S–2XL)
@@ -792,13 +811,13 @@ section .images-editor [placeholder*="Paste an image URL"] {
                   title={isGhost ? "This size does not exist in the database yet" : undefined}
                 >
                   <div
-                    className={`font-semibold flex items-center gap-2 ${
+                    className={`flex items-center gap-2 font-semibold ${
                       isGhost ? "opacity-70" : unavailable ? "line-through opacity-50" : ""
                     }`}
                   >
                     <span>{s.size}</span>
                     {isGhost && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-700">
                         ghost
                       </span>
                     )}
@@ -807,11 +826,12 @@ section .images-editor [placeholder*="Paste an image URL"] {
                   <div className="flex items-center gap-2">
                     {isGhost ? (
                       <form action={addAdultSizeAction}>
+                        <input type="hidden" name="locale" value={locale} />
                         <input type="hidden" name="productId" value={product.id} />
                         <input type="hidden" name="size" value={s.size} />
                         <button
                           type="submit"
-                          className="text-xs rounded-lg border px-2 py-1 hover:bg-gray-50"
+                          className="rounded-lg border px-2 py-1 text-xs hover:bg-gray-50"
                           title="Create this size (starts as unavailable)"
                         >
                           Add
@@ -822,11 +842,12 @@ section .images-editor [placeholder*="Paste an image URL"] {
                         <SizeAvailabilityToggle sizeId={s.id} initialUnavailable={unavailable} />
 
                         <form action={removeSizeAction}>
+                          <input type="hidden" name="locale" value={locale} />
                           <input type="hidden" name="productId" value={product.id} />
                           <input type="hidden" name="sizeId" value={s.id} />
                           <button
                             type="submit"
-                            className="text-xs rounded-lg border px-2 py-1 hover:bg-gray-50"
+                            className="rounded-lg border px-2 py-1 text-xs hover:bg-gray-50"
                             title="Remove this size from the product"
                           >
                             Remove
@@ -841,10 +862,10 @@ section .images-editor [placeholder*="Paste an image URL"] {
           </div>
         )}
 
-        <p className="text-xs text-gray-500 mt-3">
-          Sizes shown are fixed to <strong>S–2XL</strong>. Entries marked as <strong>ghost</strong> don’t exist in the
+        <p className="mt-3 text-xs text-gray-500">
+          Sizes shown are fixed to <strong>S–2XL</strong>. Entries marked as <strong>ghost</strong> do not exist in the
           database yet — click <strong>Add</strong> to create them (they start as unavailable), then use the toggle to
-          enable/disable. Use <strong>Remove</strong> to delete a size from the product.
+          enable or disable them. Use <strong>Remove</strong> to delete a size from the product.
         </p>
       </section>
     </div>

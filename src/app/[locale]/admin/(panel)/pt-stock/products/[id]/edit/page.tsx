@@ -1,8 +1,9 @@
-// src/app/admin/(panel)/pt-stock/products/[id]/edit/page.tsx
+// src/app/[locale]/admin/(panel)/pt-stock/products/[id]/edit/page.tsx
 "use client";
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
@@ -384,7 +385,9 @@ export default function EditPTStockProductPage() {
 
         <section className="rounded-2xl border bg-white p-6 shadow">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">This PT Stock product does not exist or could not be loaded.</p>
+            <p className="text-sm text-gray-600">
+              This PT Stock product does not exist or could not be loaded.
+            </p>
             <button
               type="button"
               onClick={() => router.push("/admin/pt-stock/products")}

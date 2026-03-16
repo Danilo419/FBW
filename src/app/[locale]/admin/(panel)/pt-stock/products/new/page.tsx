@@ -1,7 +1,8 @@
-// src/app/admin/(panel)/pt-stock/products/new/page.tsx
+// src/app/[locale]/admin/(panel)/pt-stock/products/new/page.tsx
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
@@ -22,6 +23,8 @@ const MAX_BYTES = 8 * 1024 * 1024;
 const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
 
 export default function NewPTStockProductPage() {
+  const router = useRouter();
+
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
@@ -155,12 +158,8 @@ export default function NewPTStockProductPage() {
     }
 
     alert("PT Stock product created successfully!");
-    form.reset();
-    setSelectedAdult([...ADULT_SIZES]);
-    setSelectedKid([]);
-    setSizeGroup("adult");
-    setImageUrls([]);
-    setDragIndex(null);
+    router.push("/admin/pt-stock/products");
+    router.refresh();
   }
 
   function SizesManager({
@@ -411,7 +410,7 @@ export default function NewPTStockProductPage() {
               <option value="kid">Kid sizes</option>
             </select>
             <p className="text-xs text-gray-500">
-              Only selected sizes are shown below. Removing a size means it won’t exist in the product.
+              Only selected sizes are shown below. Removing a size means it will not exist in the product.
             </p>
 
             {sizeGroup === "adult" && (
@@ -440,12 +439,13 @@ export default function NewPTStockProductPage() {
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <a
-              href="/admin/pt-stock/products"
+            <button
+              type="button"
+              onClick={() => router.push("/admin/pt-stock/products")}
               className="inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm hover:bg-gray-50"
             >
               Cancel
-            </a>
+            </button>
             <button
               type="submit"
               disabled={uploading}

@@ -1,7 +1,8 @@
-// src/app/admin/(panel)/products/new/page.tsx
+// src/app/[locale]/admin/(panel)/products/new/page.tsx
 "use client";
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
@@ -174,19 +175,18 @@ const MAX_BYTES = 8 * 1024 * 1024;
 type TeamType = "CLUB" | "NATION";
 
 export default function NewProductPage() {
-  const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
+  const router = useRouter();
 
+  const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
   const [selectedKid, setSelectedKid] = useState<string[]>([]);
-
   const [teamType, setTeamType] = useState<TeamType>("CLUB");
   const [disableCustomization, setDisableCustomization] = useState(false);
-
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const [badgeQuery, setBadgeQuery] = useState("");
-
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   /* ===================== Sizes ===================== */
   function handleSizeGroupChange(e: ChangeEvent<HTMLSelectElement>) {
@@ -294,8 +294,6 @@ export default function NewProductPage() {
     }
   }
 
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-
   function move(from: number, to: number) {
     setImageUrls((prev) => {
       if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
@@ -320,8 +318,8 @@ export default function NewProductPage() {
     const formData = new FormData(form);
 
     formData.set("teamType", teamType);
-
     formData.append("sizeGroup", sizeGroup);
+
     const sizes = sizeGroup === "adult" ? selectedAdult : selectedKid;
     sizes.forEach((s) => formData.append("sizes", s));
 
@@ -344,16 +342,8 @@ export default function NewProductPage() {
     }
 
     alert("Product created successfully!");
-    form.reset();
-
-    setSelectedAdult([...ADULT_SIZES]);
-    setSelectedKid([]);
-    setSizeGroup("adult");
-    setSelectedBadges([]);
-    setImageUrls([]);
-    setBadgeQuery("");
-    setDisableCustomization(false);
-    setTeamType("CLUB");
+    router.push("/admin/products");
+    router.refresh();
   }
 
   function SizesManager({
@@ -505,8 +495,7 @@ export default function NewProductPage() {
                 <option value="NATION">Nation</option>
               </select>
               <p className="text-xs text-gray-500">
-                Clubs appear in <strong>/clubs</strong>. Nations appear in{" "}
-                <strong>/nations</strong>.
+                Clubs appear in <strong>/clubs</strong>. Nations appear in <strong>/nations</strong>.
               </p>
             </div>
 
@@ -562,8 +551,7 @@ export default function NewProductPage() {
               className="block w-full rounded-xl border px-3 py-2 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-900"
             />
             <p className="text-xs text-gray-500">
-              Files are uploaded to cloud storage. The first image is used as the main image. Drag
-              to reorder.
+              Files are uploaded to cloud storage. The first image is used as the main image. Drag to reorder.
             </p>
 
             {imageUrls.length > 0 && (
@@ -649,10 +637,10 @@ export default function NewProductPage() {
                   Remove “Customization” section on product page
                 </label>
                 <p className="mt-1 text-xs text-gray-600">
-                  Use for products without any personalization (no name/number, no “Name &amp;
-                  Number + Badge” option). This sets <code>disableCustomization=true</code> in the
-                  request; the API creates a <code>customization</code> option group with{" "}
-                  <strong>no values</strong>, and the product page will not render that block.
+                  Use for products without any personalization (no name/number, no “Name &amp; Number + Badge” option).
+                  This sets <code>disableCustomization=true</code> in the request; the API creates a{" "}
+                  <code>customization</code> option group with <strong>no values</strong>, and the product page will
+                  not render that block.
                 </p>
               </div>
             </div>
@@ -661,8 +649,8 @@ export default function NewProductPage() {
           <div className="space-y-3">
             <label className="text-sm font-medium">Badges (optional)</label>
             <p className="text-xs text-gray-500">
-              Type to search patches (league, champion, UEFA, cups, etc.). Selected badges are kept
-              even if they are hidden by the filter.
+              Type to search patches (league, champion, UEFA, cups, etc.). Selected badges are kept even if they are
+              hidden by the filter.
             </p>
 
             <input
@@ -738,8 +726,7 @@ export default function NewProductPage() {
               <option value="kid">Kid sizes</option>
             </select>
             <p className="text-xs text-gray-500">
-              Only selected sizes are shown below. Removing a size means it won’t exist in the
-              product.
+              Only selected sizes are shown below. Removing a size means it won’t exist in the product.
             </p>
 
             {sizeGroup === "adult" && (
@@ -768,12 +755,13 @@ export default function NewProductPage() {
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <a
-              href="/admin/products"
+            <button
+              type="button"
+              onClick={() => router.push("/admin/products")}
               className="inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm hover:bg-gray-50"
             >
               Cancel
-            </a>
+            </button>
             <button
               type="submit"
               disabled={uploading}
