@@ -8,6 +8,7 @@ import { useRouter } from "@/i18n/navigation";
 import { addToCartAction } from "@/app/[locale]/(store)/cart/actions";
 import { money } from "@/lib/money";
 import { AnimatePresence, motion } from "framer-motion";
+import ProductReviews from "@/components/ProductReviews";
 
 type ProductSizeUI = {
   id: string;
@@ -37,26 +38,6 @@ type ProductUI = {
 type Props = {
   locale: string;
   product: ProductUI;
-};
-
-type ReviewsMeta = {
-  average: number;
-  total: number;
-};
-
-type ReviewItem = {
-  id?: string;
-  rating?: number;
-  title?: string | null;
-  comment?: string | null;
-  userName?: string | null;
-  createdAt?: string | null;
-};
-
-type ReviewsResponse = {
-  average?: number;
-  total?: number;
-  reviews?: ReviewItem[];
 };
 
 type FlyRect = { left: number; top: number; width: number; height: number };
@@ -125,24 +106,6 @@ function getStockUrgencyMessage(stockQty: number) {
   };
 }
 
-async function fetchReviewsMeta(productId: string): Promise<ReviewsResponse> {
-  const res = await fetch(`/api/reviews?productId=${productId}`, {
-    cache: "no-store",
-  });
-  return (await res.json()) as ReviewsResponse;
-}
-
-function formatReviewDate(value?: string | null) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(d);
-}
-
 export default function PtStockProductConfigurator({ locale, product }: Props) {
   const router = useRouter();
 
@@ -201,10 +164,6 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   const flyKeyRef = useRef(0);
   const [mounted, setMounted] = useState(false);
 
-  const [reviewsMeta, setReviewsMeta] = useState<ReviewsMeta>({ average: 0, total: 0 });
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
-
   const activeSrc =
     safeImages[Math.min(activeIndex, Math.max(0, safeImages.length - 1))] || "/placeholder.png";
 
@@ -234,40 +193,6 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
       setActiveIndex(0);
     }
   }, [activeIndex, safeImages.length]);
-
-  useEffect(() => {
-    let alive = true;
-    setReviewsLoading(true);
-
-    fetchReviewsMeta(product.id)
-      .then((data) => {
-        if (!alive) return;
-
-        setReviewsMeta({
-          average: Number(data?.average ?? 0),
-          total: Number(data?.total ?? 0),
-        });
-
-        const safeReviews = Array.isArray(data?.reviews)
-          ? data.reviews.filter((review): review is ReviewItem => !!review && typeof review === "object")
-          : [];
-
-        setReviews(safeReviews);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setReviewsMeta({ average: 0, total: 0 });
-        setReviews([]);
-      })
-      .finally(() => {
-        if (!alive) return;
-        setReviewsLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [product.id]);
 
   useEffect(() => {
     const cont = thumbsRef.current;
@@ -707,24 +632,6 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 </div>
 
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
-                  {reviewsLoading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-3 w-24 animate-pulse rounded-full bg-gray-200" />
-                      <span className="h-3 w-14 animate-pulse rounded-full bg-gray-200" />
-                    </span>
-                  ) : reviewsMeta.total > 0 ? (
-                    <span className="inline-flex items-center gap-2">
-                      <ReadOnlyStars value={reviewsMeta.average} />
-                      <span className="font-semibold">{reviewsMeta.average.toFixed(1)}</span>
-                      <span className="text-gray-500">({reviewsMeta.total})</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-2 text-gray-500">
-                      <ReadOnlyStars value={0} />
-                      No reviews yet
-                    </span>
-                  )}
-
                   <span className="inline-flex items-center gap-2">
                     <TruckIcon className="h-3.5 w-3.5" />
                     PT Stock — fast shipping from Portugal
@@ -928,94 +835,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
           <InfoAccordions />
 
-          <div id="reviews" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-semibold text-gray-900 sm:text-base">
-                  Reviews
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-600 sm:text-sm">
-                  {reviewsLoading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-3 w-24 animate-pulse rounded-full bg-gray-200" />
-                      <span className="h-3 w-14 animate-pulse rounded-full bg-gray-200" />
-                    </span>
-                  ) : reviewsMeta.total > 0 ? (
-                    <>
-                      <ReadOnlyStars value={reviewsMeta.average} />
-                      <span className="font-semibold text-gray-900">
-                        {reviewsMeta.average.toFixed(1)}
-                      </span>
-                      <span className="text-gray-500">({reviewsMeta.total})</span>
-                    </>
-                  ) : (
-                    <>
-                      <ReadOnlyStars value={0} />
-                      <span>No reviews yet</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {reviewsMeta.total > 0 && (
-                <div className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
-                  Verified customer feedback
-                </div>
-              )}
-            </div>
-
-            {reviewsLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="rounded-2xl border bg-white p-4">
-                    <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
-                    <div className="mt-3 h-3 w-full animate-pulse rounded bg-gray-100" />
-                    <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-gray-100" />
-                  </div>
-                ))}
-              </div>
-            ) : reviews.length > 0 ? (
-              <div className="space-y-3">
-                {reviews.map((review, index) => (
-                  <div
-                    key={review.id || `${review.userName || "customer"}-${index}`}
-                    className="rounded-2xl border bg-white p-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-gray-900">
-                          {review.userName?.trim() || "Customer"}
-                        </div>
-                        <div className="mt-1">
-                          <ReadOnlyStars value={Number(review.rating ?? 0)} size={14} />
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-gray-500">
-                        {formatReviewDate(review.createdAt)}
-                      </div>
-                    </div>
-
-                    {review.title?.trim() && (
-                      <div className="mt-3 text-sm font-semibold text-gray-900">
-                        {review.title}
-                      </div>
-                    )}
-
-                    {review.comment?.trim() && (
-                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700">
-                        {review.comment}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed bg-white p-4 text-sm text-gray-600">
-                There are no reviews yet. The first customer review will appear here.
-              </div>
-            )}
-          </div>
+          <ProductReviews productId={product.id} />
 
           <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
             <div className="grid gap-2 text-[11px] text-gray-700 sm:grid-cols-3 sm:text-xs">
@@ -1259,32 +1079,6 @@ function AccordionRow({
   );
 }
 
-function ReadOnlyStars({ value, size = 14 }: { value: number; size?: number }) {
-  const v = clamp(value, 0, 5);
-  const full = Math.floor(v);
-  const partial = v - full;
-
-  return (
-    <div className="inline-flex gap-1 align-middle" aria-label={`${v.toFixed(1)} out of 5`}>
-      {Array.from({ length: 5 }).map((_, i) => {
-        const filled = i < full ? 1 : i === full ? partial : 0;
-        return (
-          <div className="relative" key={i} style={{ width: size, height: size }}>
-            <StarShape className="absolute inset-0 text-gray-300" size={size} fill="currentColor" />
-            <StarShape
-              className="absolute inset-0 text-amber-500"
-              size={size}
-              fill="currentColor"
-              style={{ clipPath: `inset(0 ${100 - filled * 100}% 0 0)` }}
-            />
-            <StarShape className="absolute inset-0 text-black/10" size={size} fill="none" />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function TrustPill({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center justify-center gap-2 rounded-xl border bg-gray-50 px-2.5 py-2 text-[11px] font-semibold text-gray-700 sm:text-xs">
@@ -1362,37 +1156,6 @@ function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
         stroke="currentColor"
         strokeWidth={2}
         strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StarShape({
-  size,
-  className,
-  fill,
-  style,
-}: {
-  size: number;
-  className?: string;
-  fill: "none" | "currentColor";
-  style?: React.CSSProperties;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      className={className}
-      fill={fill}
-      style={style}
-      aria-hidden="true"
-    >
-      <path
-        d="M12 2l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.9 5.82 21l1.18-6.87-5-4.87 6.91-1L12 2z"
-        stroke="currentColor"
-        strokeWidth={1.6}
         strokeLinejoin="round"
       />
     </svg>
