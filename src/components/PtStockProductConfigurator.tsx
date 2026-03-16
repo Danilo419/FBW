@@ -418,7 +418,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
   return (
     <div className="w-full overflow-x-hidden px-2">
-      <div className="relative mx-auto flex w-full max-w-[260px] flex-col gap-6 sm:max-w-[520px] lg:max-w-none lg:flex-row lg:items-start lg:gap-8">
+      <div className="relative mx-auto flex w-full max-w-[260px] flex-col gap-6 sm:max-w-[520px] lg:max-w-none">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {showToast ? "Item added to cart." : ""}
         </div>
@@ -471,428 +471,430 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
             document.body
           )}
 
-        <div className="w-full rounded-2xl border bg-white p-3 lg:w-[560px] lg:flex-none lg:self-start lg:p-6 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {safeImages.length > 1 ? (
-              <button
-                type="button"
-                onClick={goPrev}
-                aria-label="Previous image"
-                className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
-              >
-                <ChevronLeft />
-              </button>
-            ) : (
-              <div className="hidden h-10 w-10 shrink-0 lg:block" />
-            )}
-
-            <div
-              ref={imgWrapRef}
-              className="relative mx-auto aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-xl bg-white sm:max-w-[320px] lg:max-w-none"
-            >
-              <Image
-                src={activeSrc}
-                alt={safeName}
-                fill
-                className="object-contain"
-                sizes="(min-width: 1024px) 540px, 100vw"
-                priority
-                unoptimized={isExternalUrl(activeSrc)}
-              />
-
-              {safePricePresentation.hasDiscount && (
-                <div className="absolute left-3 top-3 flex items-center justify-center rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-md sm:left-4 sm:top-4 sm:text-sm">
-                  -{safePricePresentation.discountPercent}%
-                </div>
+        <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+          <div className="w-full rounded-2xl border bg-white p-3 lg:w-[560px] lg:flex-none lg:self-start lg:p-6 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {safeImages.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  aria-label="Previous image"
+                  className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
+                >
+                  <ChevronLeft />
+                </button>
+              ) : (
+                <div className="hidden h-10 w-10 shrink-0 lg:block" />
               )}
 
-              {safeImages.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={goPrev}
-                    aria-label="Previous image"
-                    className="absolute left-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
-                  >
-                    <ChevronLeft />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    aria-label="Next image"
-                    className="absolute right-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
-                  >
-                    <ChevronRight />
-                  </button>
-                </>
+              <div
+                ref={imgWrapRef}
+                className="relative mx-auto aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-xl bg-white sm:max-w-[320px] lg:max-w-none"
+              >
+                <Image
+                  src={activeSrc}
+                  alt={safeName}
+                  fill
+                  className="object-contain"
+                  sizes="(min-width: 1024px) 540px, 100vw"
+                  priority
+                  unoptimized={isExternalUrl(activeSrc)}
+                />
+
+                {safePricePresentation.hasDiscount && (
+                  <div className="absolute left-3 top-3 flex items-center justify-center rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-md sm:left-4 sm:top-4 sm:text-sm">
+                    -{safePricePresentation.discountPercent}%
+                  </div>
+                )}
+
+                {safeImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={goPrev}
+                      aria-label="Previous image"
+                      className="absolute left-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
+                    >
+                      <ChevronLeft />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      aria-label="Next image"
+                      className="absolute right-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/5 bg-white/90 shadow-md backdrop-blur transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
+                    >
+                      <ChevronRight />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {safeImages.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  aria-label="Next image"
+                  className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
+                >
+                  <ChevronRight />
+                </button>
+              ) : (
+                <div className="hidden h-10 w-10 shrink-0 lg:block" />
               )}
             </div>
 
-            {safeImages.length > 1 ? (
-              <button
-                type="button"
-                onClick={goNext}
-                aria-label="Next image"
-                className="group hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white/90 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 lg:inline-flex"
-              >
-                <ChevronRight />
-              </button>
-            ) : (
-              <div className="hidden h-10 w-10 shrink-0 lg:block" />
+            {safeImages.length > 1 && (
+              <div className="mt-3">
+                <div
+                  ref={thumbsRef}
+                  className="no-scrollbar mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 pr-6 [scrollbar-width:none] [-ms-overflow-style:none]"
+                >
+                  <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+                  <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
+                    {safeImages.map((src, i) => {
+                      const isActive = i === activeIndex;
+                      return (
+                        <button
+                          key={`${src}-${i}`}
+                          type="button"
+                          onClick={() => setActiveIndex(i)}
+                          aria-label={`Image ${i + 1}`}
+                          className={cx(
+                            "relative h-[52px] w-[42px] flex-none rounded-xl border transition focus:outline-none sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px]",
+                            isActive ? "border-transparent" : "hover:opacity-90"
+                          )}
+                        >
+                          {isActive && (
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
+                            />
+                          )}
+                          <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
+                            <Image
+                              src={src}
+                              alt={`thumb ${i + 1}`}
+                              fill
+                              className="object-contain"
+                              sizes="42px"
+                              unoptimized={isExternalUrl(src)}
+                            />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             )}
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <TrustPill icon={<ShieldIcon />} text="Secure checkout" />
+              <TrustPill icon={<TruckIcon />} text="Tracked shipping" />
+              <TrustPill icon={<ChatIcon />} text="Fast support" />
+            </div>
           </div>
 
-          {safeImages.length > 1 && (
-            <div className="mt-3">
+          <div className="card min-w-0 w-full flex-1 space-y-4 p-3 sm:p-4 lg:space-y-6 lg:p-6">
+            <header className="space-y-2">
+              <div className="h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+                <div className="h-2 bg-blue-600" style={{ width: `${progress}%` }} />
+              </div>
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  {product.team && product.team !== safeName && (
+                    <div className="mb-1 text-xs font-medium text-emerald-700 sm:text-sm">
+                      {product.team}
+                    </div>
+                  )}
+
+                  <h1 className="text-sm font-extrabold leading-snug tracking-tight sm:text-base lg:text-2xl">
+                    {safeName}
+                  </h1>
+
+                  <div className="mt-1 flex items-baseline gap-2">
+                    {safePricePresentation.hasDiscount &&
+                      safePricePresentation.originalUnitPriceForMoney != null && (
+                        <span className="text-[11px] text-gray-400 line-through sm:text-xs">
+                          {money(safePricePresentation.originalUnitPriceForMoney)}
+                        </span>
+                      )}
+
+                    <span className="text-sm font-semibold text-gray-900 sm:text-lg lg:text-xl">
+                      {money(safeBasePrice)}
+                    </span>
+
+                    {safePricePresentation.hasDiscount && (
+                      <span className="ml-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 sm:text-xs">
+                        Save {safePricePresentation.discountPercent}%
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
+                    <span className="inline-flex items-center gap-2">
+                      <TruckIcon className="h-3.5 w-3.5" />
+                      PT Stock — fast shipping from Portugal
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {product.season && (
+                <div className="text-xs text-gray-600 sm:text-sm">
+                  Season: <span className="font-medium text-gray-900">{product.season}</span>
+                </div>
+              )}
+
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900 sm:text-sm"
+                    role="status"
+                  >
+                    <span className="font-semibold">Heads up:</span> {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </header>
+
+            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
+                Stock status
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={cx(
+                    "inline-flex rounded-full px-3 py-1 text-xs font-semibold sm:text-sm",
+                    safeInStock
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-red-100 text-red-700"
+                  )}
+                >
+                  {safeInStock ? "In stock" : "Out of stock"}
+                </span>
+
+                {safeInStock && (
+                  <span className="text-[11px] text-gray-600 sm:text-sm">
+                    {safeStockQty} units available
+                  </span>
+                )}
+              </div>
+
               <div
-                ref={thumbsRef}
-                className="no-scrollbar mx-auto overflow-x-auto overflow-y-hidden whitespace-nowrap py-2 pr-6 [scrollbar-width:none] [-ms-overflow-style:none]"
+                className={cx(
+                  "mt-3 rounded-xl border px-3 py-2 text-[11px] font-semibold sm:text-sm",
+                  stockMessage.classes
+                )}
               >
-                <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-                <div className="inline-flex gap-2" style={{ scrollBehavior: "smooth" }}>
-                  {safeImages.map((src, i) => {
-                    const isActive = i === activeIndex;
+                {stockMessage.text}
+              </div>
+            </div>
+
+            <div data-section="size" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+              <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
+                Size <span className="text-red-500">*</span>
+              </div>
+
+              {safeSizes.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {safeSizes.map((s, index) => {
+                    const unavailable = !s.available;
+                    const isActive = selectedSize === s.size && !unavailable;
+
                     return (
                       <button
-                        key={`${src}-${i}`}
+                        key={s.id || `size-${index}`}
                         type="button"
-                        onClick={() => setActiveIndex(i)}
-                        aria-label={`Image ${i + 1}`}
+                        onClick={() => {
+                          if (unavailable) return;
+                          setSelectedSize(s.size);
+                          setError(null);
+                        }}
+                        disabled={unavailable}
+                        aria-disabled={unavailable}
                         className={cx(
-                          "relative h-[52px] w-[42px] flex-none rounded-xl border transition focus:outline-none sm:h-[60px] sm:w-[50px] lg:h-[82px] lg:w-[68px]",
-                          isActive ? "border-transparent" : "hover:opacity-90"
+                          "rounded-xl border px-2.5 py-1.5 text-[11px] transition sm:text-xs lg:text-sm",
+                          unavailable && "cursor-not-allowed opacity-50 line-through",
+                          !unavailable && !isActive && "hover:bg-gray-50",
+                          isActive &&
+                            !unavailable &&
+                            "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
                         )}
+                        aria-pressed={isActive}
                       >
-                        {isActive && (
-                          <span
-                            aria-hidden
-                            className="pointer-events-none absolute inset-0 rounded-xl border-2 border-blue-600"
-                          />
-                        )}
-                        <span className="absolute inset-[3px] overflow-hidden rounded-[10px]">
-                          <Image
-                            src={src}
-                            alt={`thumb ${i + 1}`}
-                            fill
-                            className="object-contain"
-                            sizes="42px"
-                            unoptimized={isExternalUrl(src)}
-                          />
-                        </span>
+                        {s.size}
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <TrustPill icon={<ShieldIcon />} text="Secure checkout" />
-            <TrustPill icon={<TruckIcon />} text="Tracked shipping" />
-            <TrustPill icon={<ChatIcon />} text="Fast support" />
-          </div>
-        </div>
-
-        <div className="card min-w-0 w-full flex-1 space-y-4 p-3 sm:p-4 lg:space-y-6 lg:p-6">
-          <header className="space-y-2">
-            <div className="h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
-              <div className="h-2 bg-blue-600" style={{ width: `${progress}%` }} />
-            </div>
-
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                {product.team && product.team !== safeName && (
-                  <div className="mb-1 text-xs font-medium text-emerald-700 sm:text-sm">
-                    {product.team}
-                  </div>
-                )}
-
-                <h1 className="text-sm font-extrabold leading-snug tracking-tight sm:text-base lg:text-2xl">
-                  {safeName}
-                </h1>
-
-                <div className="mt-1 flex items-baseline gap-2">
-                  {safePricePresentation.hasDiscount &&
-                    safePricePresentation.originalUnitPriceForMoney != null && (
-                      <span className="text-[11px] text-gray-400 line-through sm:text-xs">
-                        {money(safePricePresentation.originalUnitPriceForMoney)}
-                      </span>
-                    )}
-
-                  <span className="text-sm font-semibold text-gray-900 sm:text-lg lg:text-xl">
-                    {money(safeBasePrice)}
-                  </span>
-
-                  {safePricePresentation.hasDiscount && (
-                    <span className="ml-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 sm:text-xs">
-                      Save {safePricePresentation.discountPercent}%
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
-                  <span className="inline-flex items-center gap-2">
-                    <TruckIcon className="h-3.5 w-3.5" />
-                    PT Stock — fast shipping from Portugal
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {product.season && (
-              <div className="text-xs text-gray-600 sm:text-sm">
-                Season: <span className="font-medium text-gray-900">{product.season}</span>
-              </div>
-            )}
-
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900 sm:text-sm"
-                  role="status"
-                >
-                  <span className="font-semibold">Heads up:</span> {error}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </header>
-
-          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-              Stock status
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={cx(
-                  "inline-flex rounded-full px-3 py-1 text-xs font-semibold sm:text-sm",
-                  safeInStock
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-red-100 text-red-700"
-                )}
-              >
-                {safeInStock ? "In stock" : "Out of stock"}
-              </span>
-
-              {safeInStock && (
-                <span className="text-[11px] text-gray-600 sm:text-sm">
-                  {safeStockQty} units available
-                </span>
-              )}
-            </div>
-
-            <div
-              className={cx(
-                "mt-3 rounded-xl border px-3 py-2 text-[11px] font-semibold sm:text-sm",
-                stockMessage.classes
-              )}
-            >
-              {stockMessage.text}
-            </div>
-          </div>
-
-          <div data-section="size" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="mb-2 text-[11px] text-gray-700 sm:text-sm">
-              Size <span className="text-red-500">*</span>
-            </div>
-
-            {safeSizes.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {safeSizes.map((s, index) => {
-                  const unavailable = !s.available;
-                  const isActive = selectedSize === s.size && !unavailable;
-
-                  return (
-                    <button
-                      key={s.id || `size-${index}`}
-                      type="button"
-                      onClick={() => {
-                        if (unavailable) return;
-                        setSelectedSize(s.size);
-                        setError(null);
-                      }}
-                      disabled={unavailable}
-                      aria-disabled={unavailable}
-                      className={cx(
-                        "rounded-xl border px-2.5 py-1.5 text-[11px] transition sm:text-xs lg:text-sm",
-                        unavailable && "cursor-not-allowed opacity-50 line-through",
-                        !unavailable && !isActive && "hover:bg-gray-50",
-                        isActive &&
-                          !unavailable &&
-                          "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-                      )}
-                      aria-pressed={isActive}
-                    >
-                      {s.size}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-sm text-gray-500">No sizes available</div>
-            )}
-
-            <p className="mt-2 text-[11px] text-gray-500 sm:text-xs">
-              Only the available PT Stock sizes can be purchased.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  aria-label="Decrease quantity"
-                  disabled={pending}
-                >
-                  −
-                </button>
-                <span className="min-w-[2ch] text-center text-sm">{qty}</span>
-                <button
-                  type="button"
-                  className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                  onClick={() => setQty((q) => q + 1)}
-                  aria-label="Increase quantity"
-                  disabled={pending}
-                >
-                  +
-                </button>
-              </div>
-
-              <div className="text-right sm:text-left">
-                <div className="text-xs text-gray-600 sm:text-sm">Total</div>
-                <div className="text-base font-semibold sm:text-lg">{money(finalPrice)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <motion.button
-              ref={addBtnRef}
-              onClick={addToCart}
-              className={cx(
-                "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:text-base",
-                justAdded && "bg-green-600 hover:bg-green-600",
-                "disabled:opacity-60"
-              )}
-              disabled={pending || !canAddToCart}
-              animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
-              transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
-            >
-              {justAdded ? (
-                <>
-                  <CheckIcon />
-                  Added
-                </>
-              ) : pending && !buyNow ? (
-                "Adding..."
               ) : (
-                <>
-                  <CartIcon />
-                  Add to cart
-                </>
+                <div className="text-sm text-gray-500">No sizes available</div>
               )}
-            </motion.button>
 
-            <button
-              type="button"
-              onClick={onBuyNow}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-900 bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60 sm:text-base"
-              disabled={pending || !canAddToCart}
-            >
-              {pending && buyNow ? "Processing..." : "Buy now"}
-            </button>
-          </div>
-
-          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="mb-2 text-[11px] font-semibold text-gray-700 sm:text-sm">
-              Shipping information
-            </div>
-
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                <span>1 shirt</span>
-                <span className="font-semibold text-gray-900">4.99€</span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                <span>2 shirts</span>
-                <span className="font-semibold text-gray-900">6.99€</span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-                <span>3 or more</span>
-                <span className="font-semibold text-emerald-700">Free</span>
-              </div>
-            </div>
-          </div>
-
-          <InfoAccordions />
-
-          <ProductReviews productId={product.id} />
-
-          <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
-            <div className="grid gap-2 text-[11px] text-gray-700 sm:grid-cols-3 sm:text-xs">
-              <div className="flex items-start gap-2">
-                <ShieldIcon className="mt-0.5 h-4 w-4" />
-                <div>
-                  <div className="font-semibold">Secure payment</div>
-                  <div className="text-gray-500">Encrypted checkout</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <TruckIcon className="mt-0.5 h-4 w-4" />
-                <div>
-                  <div className="font-semibold">Tracked shipping</div>
-                  <div className="text-gray-500">Fast shipping from Portugal</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <ChatIcon className="mt-0.5 h-4 w-4" />
-                <div>
-                  <div className="font-semibold">Fast support</div>
-                  <div className="text-gray-500">We reply quickly</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {product.description && (
-            <div className="rounded-2xl border bg-white/70 p-4">
-              <div className="mb-2 text-sm font-semibold text-gray-900">
-                Description
-              </div>
-
-              <p className="whitespace-pre-line text-sm leading-6 text-gray-700">
-                {product.description}
+              <p className="mt-2 text-[11px] text-gray-500 sm:text-xs">
+                Only the available PT Stock sizes can be purchased.
               </p>
             </div>
-          )}
 
-          <div className="flex flex-wrap gap-3 pt-1">
-            <Link
-              href={`/${locale}/pt-stock`}
-              className="inline-flex items-center rounded-xl border px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
-            >
-              Back to PT Stock
-            </Link>
+            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    aria-label="Decrease quantity"
+                    disabled={pending}
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[2ch] text-center text-sm">{qty}</span>
+                  <button
+                    type="button"
+                    className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() => setQty((q) => q + 1)}
+                    aria-label="Increase quantity"
+                    disabled={pending}
+                  >
+                    +
+                  </button>
+                </div>
 
-            <Link
-              href={`/${locale}/clubs`}
-              className="inline-flex items-center rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-900"
-            >
-              Browse more
-            </Link>
+                <div className="text-right sm:text-left">
+                  <div className="text-xs text-gray-600 sm:text-sm">Total</div>
+                  <div className="text-base font-semibold sm:text-lg">{money(finalPrice)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <motion.button
+                ref={addBtnRef}
+                onClick={addToCart}
+                className={cx(
+                  "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:text-base",
+                  justAdded && "bg-green-600 hover:bg-green-600",
+                  "disabled:opacity-60"
+                )}
+                disabled={pending || !canAddToCart}
+                animate={justAdded ? { scale: [1, 1.05, 1] } : {}}
+                transition={{ type: "spring", stiffness: 600, damping: 20, duration: 0.4 }}
+              >
+                {justAdded ? (
+                  <>
+                    <CheckIcon />
+                    Added
+                  </>
+                ) : pending && !buyNow ? (
+                  "Adding..."
+                ) : (
+                  <>
+                    <CartIcon />
+                    Add to cart
+                  </>
+                )}
+              </motion.button>
+
+              <button
+                type="button"
+                onClick={onBuyNow}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-900 bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60 sm:text-base"
+                disabled={pending || !canAddToCart}
+              >
+                {pending && buyNow ? "Processing..." : "Buy now"}
+              </button>
+            </div>
+
+            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+              <div className="mb-2 text-[11px] font-semibold text-gray-700 sm:text-sm">
+                Shipping information
+              </div>
+
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                  <span>1 shirt</span>
+                  <span className="font-semibold text-gray-900">4.99€</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                  <span>2 shirts</span>
+                  <span className="font-semibold text-gray-900">6.99€</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                  <span>3 or more</span>
+                  <span className="font-semibold text-emerald-700">Free</span>
+                </div>
+              </div>
+            </div>
+
+            <InfoAccordions />
+
+            <div className="rounded-2xl border bg-white/70 p-3 sm:p-4">
+              <div className="grid gap-2 text-[11px] text-gray-700 sm:grid-cols-3 sm:text-xs">
+                <div className="flex items-start gap-2">
+                  <ShieldIcon className="mt-0.5 h-4 w-4" />
+                  <div>
+                    <div className="font-semibold">Secure payment</div>
+                    <div className="text-gray-500">Encrypted checkout</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <TruckIcon className="mt-0.5 h-4 w-4" />
+                  <div>
+                    <div className="font-semibold">Tracked shipping</div>
+                    <div className="text-gray-500">Fast shipping from Portugal</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <ChatIcon className="mt-0.5 h-4 w-4" />
+                  <div>
+                    <div className="font-semibold">Fast support</div>
+                    <div className="text-gray-500">We reply quickly</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {product.description && (
+              <div className="rounded-2xl border bg-white/70 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-900">
+                  Description
+                </div>
+
+                <p className="whitespace-pre-line text-sm leading-6 text-gray-700">
+                  {product.description}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Link
+                href={`/${locale}/pt-stock`}
+                className="inline-flex items-center rounded-xl border px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
+              >
+                Back to PT Stock
+              </Link>
+
+              <Link
+                href={`/${locale}/clubs`}
+                className="inline-flex items-center rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-900"
+              >
+                Browse more
+              </Link>
+            </div>
           </div>
         </div>
+
+        <ProductReviews productId={product.id} />
 
         <AnimatePresence>
           {showToast && (
