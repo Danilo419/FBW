@@ -635,7 +635,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:text-xs">
                     <span className="inline-flex items-center gap-2">
                       <TruckIcon className="h-3.5 w-3.5" />
-                      PT Stock — fast shipping from Portugal
+                      PT Stock, fast shipping from Portugal
                     </span>
                   </div>
                 </div>
@@ -864,18 +864,6 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               </div>
             </div>
 
-            {product.description && (
-              <div className="rounded-2xl border bg-white/70 p-4">
-                <div className="mb-2 text-sm font-semibold text-gray-900">
-                  Description
-                </div>
-
-                <p className="whitespace-pre-line text-sm leading-6 text-gray-700">
-                  {product.description}
-                </p>
-              </div>
-            )}
-
             <div className="flex flex-wrap gap-3 pt-1">
               <Link
                 href={`/${locale}/pt-stock`}
@@ -1001,7 +989,7 @@ function InfoAccordions() {
           <li className="flex gap-2">
             <span className="mt-1">•</span>
             <span>
-              A <b>tracking number</b> is provided when available.
+              A <b>tracking number</b> is provided via email when the item is shipped.
             </span>
           </li>
           <li className="flex gap-2">
