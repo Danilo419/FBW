@@ -1,4 +1,4 @@
-// src/app/admin/(panel)/page.tsx
+// src/app/[locale]/admin/(panel)/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -12,6 +12,7 @@ import {
 import { formatMoney, moneyFromOrder } from "@/lib/money";
 import { Eye } from "lucide-react";
 import ResolveCheckbox from "@/components/admin/ResolveCheckbox";
+import { Link } from "@/i18n/navigation";
 
 /* ---------- helpers ---------- */
 function fmtInt(n: number) {
@@ -201,7 +202,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-extrabold">Dashboard</h1>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Dashboard</h1>
         <p className="text-sm text-gray-500">Overview of key metrics.</p>
       </header>
 
@@ -221,38 +222,38 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl bg-white p-5 shadow border">
-          <h3 className="font-semibold mb-2">Total revenue (paid)</h3>
+        <div className="rounded-2xl border bg-white p-5 shadow">
+          <h3 className="mb-2 font-semibold">Total revenue (paid)</h3>
           <p className="text-3xl font-extrabold">{formatMoney(revenueCents, "EUR")}</p>
-          <p className="text-xs text-gray-500 mt-1">Sum of paid/settled orders.</p>
+          <p className="mt-1 text-xs text-gray-500">Sum of paid/settled orders.</p>
         </div>
 
-        <div className="rounded-2xl bg-white p-5 shadow border">
-          <h3 className="font-semibold mb-1">Visitors</h3>
+        <div className="rounded-2xl border bg-white p-5 shadow">
+          <h3 className="mb-1 font-semibold">Visitors</h3>
           <div className="text-3xl font-extrabold">{fmtInt(traffic.uniqToday)}</div>
-          <p className="text-xs text-gray-500 mt-1">Uniques today</p>
+          <p className="mt-1 text-xs text-gray-500">Uniques today</p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-slate-50 border p-3">
+            <div className="rounded-xl border bg-slate-50 p-3">
               <div className="text-xs text-gray-500">Last 7 days</div>
               <div className="text-xl font-bold">{fmtInt(traffic.uniq7d)}</div>
             </div>
-            <div className="rounded-xl bg-slate-50 border p-3">
+            <div className="rounded-xl border bg-slate-50 p-3">
               <div className="text-xs text-gray-500">Live (5 min)</div>
               <div className="text-xl font-bold">{fmtInt(traffic.uniqNow)}</div>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-3">
+          <p className="mt-3 text-xs text-gray-400">
             Pageviews today: {fmtInt(traffic.viewsToday)}
           </p>
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-5 shadow border">
-        <h3 className="font-semibold mb-3">Recent orders</h3>
+      <section className="rounded-2xl border bg-white p-5 shadow">
+        <h3 className="mb-3 font-semibold">Recent orders</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
+              <tr className="border-b text-left text-gray-500">
                 <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">Full name</th>
                 <th className="py-2 pr-3">Email</th>
@@ -270,6 +271,7 @@ export default async function AdminDashboardPage() {
                   </td>
                 </tr>
               )}
+
               {orders.map((o) => {
                 const ship = fromOrder(o);
                 const money = moneyFromOrder(o, o?.currency || "EUR");
@@ -286,8 +288,8 @@ export default async function AdminDashboardPage() {
                     : "";
 
                 return (
-                  <tr key={o.id} className={`border-b last:border-0 align-top ${rowBg}`}>
-                    <td className="py-2 pr-3 font-mono whitespace-nowrap">{o.id}</td>
+                  <tr key={o.id} className={`align-top border-b last:border-0 ${rowBg}`}>
+                    <td className="whitespace-nowrap py-2 pr-3 font-mono">{o.id}</td>
                     <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
                     <td className="py-2 pr-3">{ship.email ?? "—"}</td>
                     <td className="py-2 pr-3 capitalize">{o?.status ?? "—"}</td>
@@ -300,13 +302,13 @@ export default async function AdminDashboardPage() {
                       />
                     </td>
                     <td className="py-2 pr-3 text-right">
-                      <a
+                      <Link
                         href={`/admin/orders/${o.id}`}
                         className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                       >
                         <Eye className="h-4 w-4" />
                         View
-                      </a>
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -314,7 +316,6 @@ export default async function AdminDashboardPage() {
             </tbody>
           </table>
         </div>
-        {/* legenda removida */}
       </section>
     </div>
   );
@@ -323,12 +324,10 @@ export default async function AdminDashboardPage() {
 /* ---------- KPI Card ---------- */
 function KpiCard(props: { title: string; value: string | number; subtitle?: string }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow border">
+    <div className="rounded-2xl border bg-white p-5 shadow">
       <div className="text-sm text-gray-500">{props.title}</div>
-      <div className="text-3xl font-extrabold mt-1">{props.value}</div>
-      {props.subtitle && (
-        <div className="text-xs text-gray-400 mt-1">{props.subtitle}</div>
-      )}
+      <div className="mt-1 text-3xl font-extrabold">{props.value}</div>
+      {props.subtitle && <div className="mt-1 text-xs text-gray-400">{props.subtitle}</div>}
     </div>
   );
 }

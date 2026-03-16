@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { Link, usePathname } from "@/i18n/navigation";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 160;
@@ -22,7 +21,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parseInt(saved, 10)));
-        setWidth(parsed);
+        if (!Number.isNaN(parsed)) setWidth(parsed);
       }
     } catch {}
   }, []);
@@ -36,6 +35,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }, [width, collapsed]);
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (collapsed) return;
     isDraggingRef.current = true;
     startXRef.current = e.clientX;
     startWidthRef.current = width;
@@ -50,6 +50,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidthRef.current + delta));
       setWidth(next);
     };
+
     const onUp = () => {
       if (isDraggingRef.current) {
         isDraggingRef.current = false;
@@ -57,8 +58,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         document.body.style.cursor = "";
       }
     };
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
@@ -69,9 +72,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const gridTemplate = collapsed ? `${COLLAPSED_WIDTH}px 1fr` : `${width}px 1fr`;
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ display: "grid", gridTemplateColumns: gridTemplate }}>
-      <Sidebar collapsed={collapsed} toggleCollapsed={toggleCollapsed} onMouseDown={onMouseDown} />
-      <main className="p-4 md:p-8 overflow-x-auto">{children}</main>
+    <div
+      className="min-h-screen bg-gray-50"
+      style={{ display: "grid", gridTemplateColumns: gridTemplate }}
+    >
+      <Sidebar
+        collapsed={collapsed}
+        toggleCollapsed={toggleCollapsed}
+        onMouseDown={onMouseDown}
+      />
+      <main className="overflow-x-auto p-4 md:p-8">{children}</main>
     </div>
   );
 }
@@ -91,7 +101,11 @@ function Sidebar({
   const items = [
     { href: "/admin", label: "Dashboard", short: "Dash" },
     { href: "/admin/orders", label: "Orders", short: "Ord." },
-    { href: "/admin/products", label: "Products", short: "Prod." }, // ✅ ENABLED
+    { href: "/admin/pt-stock-orders", label: "PT Stock Orders", short: "PT Ord." },
+    { href: "/admin/products", label: "Products", short: "Prod." },
+    { href: "/admin/pt-stock-products", label: "PT Stock Products", short: "PT Prod." },
+    { href: "/admin/users", label: "Users", short: "Users" },
+    { href: "/admin/newsletter", label: "Newsletter", short: "News" },
     { href: "/admin/analytics", label: "Analytics", short: "An." },
   ];
 
@@ -99,11 +113,18 @@ function Sidebar({
     pathname === href || (href !== "/admin" && pathname?.startsWith(href));
 
   return (
-    <aside className="relative bg-white border-r p-3 md:p-4">
+    <aside className="relative border-r bg-white p-3 md:p-4">
       <div className="mb-4 flex items-center justify-between">
-        <Link href="/" className="block text-lg md:text-xl font-extrabold truncate">
-          {collapsed ? "FW" : <>FootBallWorld<span className="text-gray-400"> • Admin</span></>}
+        <Link href="/" className="block truncate text-lg font-extrabold md:text-xl">
+          {collapsed ? (
+            "FW"
+          ) : (
+            <>
+              FootBallWorld<span className="text-gray-400"> • Admin</span>
+            </>
+          )}
         </Link>
+
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -122,7 +143,7 @@ function Sidebar({
             title={it.label}
             aria-current={isActive(it.href) ? "page" : undefined}
             className={[
-              "block rounded-lg px-3 py-2 truncate transition",
+              "block truncate rounded-lg px-3 py-2 transition",
               isActive(it.href) ? "bg-gray-100 font-semibold" : "hover:bg-gray-100",
             ].join(" ")}
           >
@@ -134,19 +155,24 @@ function Sidebar({
       <form action="/admin/logout" method="POST" className="mt-4">
         <button
           type="submit"
-          className="w-full rounded-lg border px-3 py-2 hover:bg-gray-50 truncate"
+          className="w-full truncate rounded-lg border px-3 py-2 hover:bg-gray-50"
           title="Sign out"
         >
           {collapsed ? "Logout" : "Sign out"}
         </button>
       </form>
 
-      <div
-        onMouseDown={onMouseDown}
-        className="absolute top-0 right-[-3px] h-full w-1.5 cursor-col-resize select-none"
-        style={{ background: "linear-gradient(to right, transparent 0, rgba(0,0,0,0.08) 50%, transparent 100%)" }}
-        title="Drag to resize"
-      />
+      {!collapsed && (
+        <div
+          onMouseDown={onMouseDown}
+          className="absolute top-0 right-[-3px] h-full w-1.5 cursor-col-resize select-none"
+          style={{
+            background:
+              "linear-gradient(to right, transparent 0, rgba(0,0,0,0.08) 50%, transparent 100%)",
+          }}
+          title="Drag to resize"
+        />
+      )}
     </aside>
   );
 }
