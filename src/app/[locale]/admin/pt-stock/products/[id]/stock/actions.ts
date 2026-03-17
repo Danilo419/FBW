@@ -5,20 +5,55 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function updatePtStockQuantity(formData: FormData) {
-  const productId = String(formData.get("productId") || "");
-  const ptStockQtyRaw = String(formData.get("ptStockQty") || "0");
+  const productId = String(formData.get("productId") || "").trim();
 
   if (!productId) {
     throw new Error("Invalid product.");
   }
 
-  const ptStockQty = Math.max(0, Number.parseInt(ptStockQtyRaw, 10) || 0);
+  const sizeIds = formData
+    .getAll("sizeIds")
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
 
-  await prisma.product.update({
-    where: { id: productId },
-    data: {
-      ptStockQty,
-    },
+  const updates: Array<{
+    id: string;
+    ptStockQty: number;
+    available: boolean;
+  }> = [];
+
+  for (const sizeId of sizeIds) {
+    const qtyRaw = String(formData.get(`sizeStock_${sizeId}`) || "0");
+    const qty = Math.max(0, Number.parseInt(qtyRaw, 10) || 0);
+
+    const available = formData.get(`available_${sizeId}`) === "on";
+
+    updates.push({
+      id: sizeId,
+      ptStockQty: qty,
+      available,
+    });
+  }
+
+  const totalFromSizes = updates.reduce((sum, item) => sum + item.ptStockQty, 0);
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of updates) {
+      await tx.sizeStock.update({
+        where: { id: item.id },
+        data: {
+          ptStockQty: item.ptStockQty,
+          available: item.available,
+        },
+      });
+    }
+
+    await tx.product.update({
+      where: { id: productId },
+      data: {
+        ptStockQty: totalFromSizes,
+      },
+    });
   });
 
   revalidatePath("/admin/pt-stock/products");
