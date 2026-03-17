@@ -1,5 +1,5 @@
 // src/app/api/cart/subtotal/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
@@ -15,11 +15,13 @@ function normalizeMoney(value: number): number {
   return value;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
     const cartId = jar.get("cartId")?.value ?? null;
+
+    const excludeChannel = req.nextUrl.searchParams.get("excludeChannel");
 
     let where:
       | { cart: { sessionId: string } }
@@ -47,6 +49,11 @@ export async function GET() {
         qty: true,
         unitPrice: true,
         totalPrice: true,
+        product: {
+          select: {
+            channel: true, // 🔥 IMPORTANTE
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -62,7 +69,12 @@ export async function GET() {
       );
     }
 
-    const subtotal = items.reduce((sum, item) => {
+    // 🔥 FILTRAR ITENS (remover PT_STOCK se pedido)
+    const filteredItems = excludeChannel
+      ? items.filter((item) => item.product?.channel !== excludeChannel)
+      : items;
+
+    const subtotal = filteredItems.reduce((sum, item) => {
       const qty = Number(item.qty ?? 0);
       const unitPrice = normalizeMoney(Number(item.unitPrice ?? 0));
       const totalPrice = normalizeMoney(Number(item.totalPrice ?? 0));
@@ -71,7 +83,10 @@ export async function GET() {
       return sum + unitPrice * qty;
     }, 0);
 
-    const count = items.reduce((sum, item) => sum + Number(item.qty ?? 0), 0);
+    const count = filteredItems.reduce(
+      (sum, item) => sum + Number(item.qty ?? 0),
+      0
+    );
 
     return NextResponse.json(
       { subtotal, count },

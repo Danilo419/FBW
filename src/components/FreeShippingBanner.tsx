@@ -32,10 +32,21 @@ export default function FreeShippingBanner({
   const locale = useLocale();
   const t = useTranslations("FreeShippingBanner");
 
+  const normalizedPathname = pathname?.toLowerCase() ?? "";
+
   const isAdminPage =
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/") ||
-    pathname.includes("/admin");
+    normalizedPathname === "/admin" ||
+    normalizedPathname.startsWith("/admin/") ||
+    normalizedPathname.includes("/admin");
+
+  const isPtStockPage =
+    normalizedPathname === "/pt-stock" ||
+    normalizedPathname.startsWith("/pt-stock/") ||
+    normalizedPathname.includes("/pt-stock") ||
+    normalizedPathname === "/pt/pt-stock" ||
+    normalizedPathname.startsWith("/pt/pt-stock/") ||
+    normalizedPathname === "/en/pt-stock" ||
+    normalizedPathname.startsWith("/en/pt-stock/");
 
   const [liveSubtotal, setLiveSubtotal] = useState<number>(
     Math.max(0, Number(subtotal) || 0)
@@ -49,13 +60,18 @@ export default function FreeShippingBanner({
 
   async function refreshSubtotal() {
     if (isFetchingRef.current) return;
+    if (isPtStockPage) return;
+
     isFetchingRef.current = true;
 
     try {
-      const res = await fetch(`/api/cart/subtotal?ts=${Date.now()}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/cart/subtotal?ts=${Date.now()}&excludeChannel=PT_STOCK_CTT`,
+        {
+          method: "GET",
+          cache: "no-store",
+        }
+      );
 
       if (!res.ok) return;
 
@@ -69,6 +85,11 @@ export default function FreeShippingBanner({
   }
 
   useEffect(() => {
+    if (isPtStockPage) {
+      setLiveSubtotal(Math.max(0, Number(subtotal) || 0));
+      return;
+    }
+
     refreshSubtotal();
 
     const onCartUpdated = () => {
@@ -93,7 +114,7 @@ export default function FreeShippingBanner({
       window.removeEventListener("focus", refreshSubtotal);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [isPtStockPage, subtotal]);
 
   const remaining = Math.max(0, threshold - liveSubtotal);
   const targetProgress = clamp((liveSubtotal / threshold) * 100, 0, 100);
