@@ -430,16 +430,6 @@ section .images-editor [placeholder*="Paste an image URL"] {
                 required
               />
             </div>
-
-            <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-600">Description</label>
-              <textarea
-                name="description"
-                defaultValue={product.description ?? ""}
-                className="mt-1 min-h-[120px] w-full rounded-xl border px-3 py-2"
-                placeholder="Product description..."
-              />
-            </div>
           </div>
 
           <div className="space-y-2 images-editor">

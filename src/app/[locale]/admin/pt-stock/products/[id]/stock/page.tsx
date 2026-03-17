@@ -1,12 +1,13 @@
-import Link from "next/link";
 import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { updatePtStockQuantity } from "./actions";
 import { formatMoney } from "@/lib/money";
+import { Link } from "@/i18n/navigation";
 
 type PageProps = {
   params: Promise<{
+    locale: string;
     id: string;
   }>;
 };
@@ -58,7 +59,7 @@ function sortSizes(a: string, b: string) {
 }
 
 export default async function AdminPtStockProductStockPage({ params }: PageProps) {
-  const { id } = await params;
+  const { locale, id } = await params;
 
   const product = await prisma.product.findUnique({
     where: { id },
@@ -102,6 +103,7 @@ export default async function AdminPtStockProductStockPage({ params }: PageProps
 
         <Link
           href={"/admin/pt-stock/products" as Route}
+          locale={locale}
           className="inline-flex h-11 items-center rounded-xl border border-neutral-300 px-4 text-sm font-semibold transition hover:bg-neutral-50"
         >
           ← Back
@@ -114,13 +116,9 @@ export default async function AdminPtStockProductStockPage({ params }: PageProps
 
           <p className="mt-1 text-sm text-neutral-500">ID: {product.id}</p>
 
-          <p className="mt-1 text-sm text-neutral-500">
-            Slug: {product.slug}
-          </p>
+          <p className="mt-1 text-sm text-neutral-500">Slug: {product.slug}</p>
 
-          <p className="mt-1 text-sm text-neutral-500">
-            Team: {product.team || "—"}
-          </p>
+          <p className="mt-1 text-sm text-neutral-500">Team: {product.team || "—"}</p>
 
           <p className="mt-1 text-sm text-neutral-500">
             Channel: <span className="font-semibold text-black">{product.channel}</span>
@@ -153,6 +151,7 @@ export default async function AdminPtStockProductStockPage({ params }: PageProps
 
         <form action={updatePtStockQuantity} className="space-y-8">
           <input type="hidden" name="productId" value={product.id} />
+          <input type="hidden" name="locale" value={locale} />
 
           <div className="space-y-4">
             <div>
@@ -254,6 +253,7 @@ export default async function AdminPtStockProductStockPage({ params }: PageProps
 
             <Link
               href={"/admin/pt-stock/products" as Route}
+              locale={locale}
               className="inline-flex h-12 items-center rounded-2xl border border-neutral-300 px-5 text-sm font-semibold transition hover:bg-neutral-50"
             >
               Cancel

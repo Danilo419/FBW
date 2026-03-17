@@ -48,6 +48,37 @@ type TFunction = (key: string, values?: Record<string, string | number>) => stri
 const THUMB_W = 68;
 const GAP = 8;
 
+const SIZE_ORDER = [
+  "2-3Y",
+  "3-4Y",
+  "4-5Y",
+  "5-6Y",
+  "6-7Y",
+  "7-8Y",
+  "8-9Y",
+  "9-10Y",
+  "10-11Y",
+  "11-12Y",
+  "12-13Y",
+  "13-14Y",
+  "XXS",
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "2XL",
+  "XXXL",
+  "3XL",
+  "4XL",
+  "5XL",
+] as const;
+
+const SIZE_ORDER_MAP = new Map<string, number>(
+  SIZE_ORDER.map((size, index) => [size, index])
+);
+
 function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(" ");
 }
@@ -58,6 +89,79 @@ function clamp(n: number, min: number, max: number) {
 
 function isExternalUrl(u: string) {
   return /^https?:\/\//i.test(u) || u.startsWith("//");
+}
+
+function normalizeSizeLabel(size: string) {
+  return size
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .replace(/YEARS?/g, "Y")
+    .replace(/ANO(S)?/g, "Y");
+}
+
+function getNumericSizeValue(normalized: string) {
+  const rangeMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)(?:Y)?$/);
+  if (rangeMatch) {
+    return Number(rangeMatch[1]);
+  }
+
+  const singleMatch = normalized.match(/^(\d+(?:\.\d+)?)(?:Y)?$/);
+  if (singleMatch) {
+    return Number(singleMatch[1]);
+  }
+
+  return null;
+}
+
+function getLetterSizeValue(normalized: string) {
+  const direct = SIZE_ORDER_MAP.get(normalized);
+  if (direct != null) return direct;
+
+  if (/^\d+XL$/.test(normalized)) {
+    const n = Number(normalized.replace("XL", ""));
+    return SIZE_ORDER_MAP.get("XL")! + n - 1;
+  }
+
+  if (/^X+L$/.test(normalized)) {
+    const xCount = (normalized.match(/X/g) || []).length;
+    if (xCount === 1) return SIZE_ORDER_MAP.get("XL")!;
+    if (xCount === 2) return SIZE_ORDER_MAP.get("2XL")!;
+    if (xCount === 3) return SIZE_ORDER_MAP.get("3XL")!;
+    if (xCount === 4) return SIZE_ORDER_MAP.get("4XL")!;
+    if (xCount === 5) return SIZE_ORDER_MAP.get("5XL")!;
+  }
+
+  return null;
+}
+
+function compareSizes(a: string, b: string) {
+  const aNorm = normalizeSizeLabel(a);
+  const bNorm = normalizeSizeLabel(b);
+
+  const aNumeric = getNumericSizeValue(aNorm);
+  const bNumeric = getNumericSizeValue(bNorm);
+
+  if (aNumeric != null && bNumeric != null) {
+    if (aNumeric !== bNumeric) return aNumeric - bNumeric;
+    return aNorm.localeCompare(bNorm, undefined, { numeric: true, sensitivity: "base" });
+  }
+
+  if (aNumeric != null && bNumeric == null) return -1;
+  if (aNumeric == null && bNumeric != null) return 1;
+
+  const aLetter = getLetterSizeValue(aNorm);
+  const bLetter = getLetterSizeValue(bNorm);
+
+  if (aLetter != null && bLetter != null) {
+    if (aLetter !== bLetter) return aLetter - bLetter;
+    return aNorm.localeCompare(bNorm, undefined, { numeric: true, sensitivity: "base" });
+  }
+
+  if (aLetter != null && bLetter == null) return -1;
+  if (aLetter == null && bLetter != null) return 1;
+
+  return aNorm.localeCompare(bNorm, undefined, { numeric: true, sensitivity: "base" });
 }
 
 function useIsMobile(breakpointPx = 1024) {
@@ -133,7 +237,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
         size: String(s.size ?? "").trim(),
         available: !!s.available,
       }))
-      .filter((s) => s.size.length > 0);
+      .filter((s) => s.size.length > 0)
+      .sort((a, b) => compareSizes(a.size, b.size));
   }, [product?.sizes]);
 
   const safePricePresentation = useMemo(
@@ -190,6 +295,12 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
       setSelectedSize(availableSizes[0].size);
     }
   }, [availableSizes, selectedSize]);
+
+  useEffect(() => {
+    if (selectedSize && !safeSizes.some((s) => s.size === selectedSize && s.available)) {
+      setSelectedSize(availableSizes[0]?.size ?? null);
+    }
+  }, [safeSizes, availableSizes, selectedSize]);
 
   useEffect(() => {
     if (activeIndex > safeImages.length - 1) {

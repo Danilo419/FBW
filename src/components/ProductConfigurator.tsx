@@ -1064,12 +1064,6 @@ export default function ProductConfigurator({ product }: Props) {
               </div>
             </div>
 
-            {product.description && (
-              <p className="mt-1.5 whitespace-pre-line text-xs text-gray-700 sm:text-sm">
-                {product.description}
-              </p>
-            )}
-
             <AnimatePresence>
               {error && (
                 <motion.div

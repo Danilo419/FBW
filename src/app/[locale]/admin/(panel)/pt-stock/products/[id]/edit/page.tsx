@@ -32,7 +32,6 @@ const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
 type ProductPayload = {
   id: string;
   name: string;
-  description: string | null;
   basePrice: number;
   imageUrls: string[];
   sizes: string[];
@@ -50,7 +49,6 @@ export default function EditPTStockProductPage() {
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
 
   const [sizeGroup, setSizeGroup] = useState<"adult" | "kid">("adult");
   const [selectedAdult, setSelectedAdult] = useState<string[]>([...ADULT_SIZES]);
@@ -89,7 +87,6 @@ export default function EditPTStockProductPage() {
         if (!cancelled) {
           setName(product.name || "");
           setPrice(((product.basePrice ?? 0) / 100).toFixed(2));
-          setDescription(product.description || "");
           setImageUrls(Array.isArray(product.imageUrls) ? product.imageUrls : []);
 
           const sizes = Array.isArray(product.sizes) ? product.sizes : [];
@@ -231,7 +228,6 @@ export default function EditPTStockProductPage() {
     const formData = new FormData();
     formData.set("name", name.trim());
     formData.set("price", price.trim());
-    formData.set("description", description.trim());
     formData.set("channel", PT_STOCK_CHANNEL);
     formData.set("ptStockOnly", "true");
     formData.set("isPtStock", "true");
@@ -445,21 +441,6 @@ export default function EditPTStockProductPage() {
                 placeholder="e.g., 29.99"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description (optional)
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-              placeholder="Short description..."
-            />
           </div>
 
           <div className="space-y-3">

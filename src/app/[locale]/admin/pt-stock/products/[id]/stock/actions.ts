@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 export async function updatePtStockQuantity(formData: FormData) {
   const productId = String(formData.get("productId") || "").trim();
+  const locale = String(formData.get("locale") || "pt").trim() || "pt";
 
   if (!productId) {
     throw new Error("Invalid product.");
@@ -25,7 +26,6 @@ export async function updatePtStockQuantity(formData: FormData) {
   for (const sizeId of sizeIds) {
     const qtyRaw = String(formData.get(`sizeStock_${sizeId}`) || "0");
     const qty = Math.max(0, Number.parseInt(qtyRaw, 10) || 0);
-
     const available = formData.get(`available_${sizeId}`) === "on";
 
     updates.push({
@@ -56,10 +56,10 @@ export async function updatePtStockQuantity(formData: FormData) {
     });
   });
 
-  revalidatePath("/admin/pt-stock/products");
-  revalidatePath(`/admin/pt-stock/products/${productId}/stock`);
-  revalidatePath("/pt-stock");
-  revalidatePath(`/pt-stock/${productId}`);
+  revalidatePath(`/${locale}/admin/pt-stock/products`);
+  revalidatePath(`/${locale}/admin/pt-stock/products/${productId}/stock`);
+  revalidatePath(`/${locale}/pt-stock`);
+  revalidatePath(`/${locale}/pt-stock/${productId}`);
 
-  redirect("/admin/pt-stock/products");
+  redirect(`/${locale}/admin/pt-stock/products`);
 }
