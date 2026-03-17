@@ -14,6 +14,7 @@ type ProductSizeUI = {
   id: string;
   size: string;
   available: boolean;
+  stockQty?: number | null;
 };
 
 type ProductUI = {
@@ -212,6 +213,20 @@ function getStockUrgencyMessage(stockQty: number, t: TFunction) {
   };
 }
 
+function extractSizeStockQty(size: unknown): number | null {
+  if (!size || typeof size !== "object") return null;
+
+  const rec = size as Record<string, unknown>;
+  const possibleValues = [rec.stockQty, rec.qty, rec.ptStockQty, rec.stock, rec.quantity];
+
+  for (const value of possibleValues) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return Math.max(0, Math.trunc(n));
+  }
+
+  return null;
+}
+
 export default function PtStockProductConfigurator({ locale, product }: Props) {
   const router = useRouter();
   const t = useTranslations("PtStockProductConfigurator");
@@ -232,11 +247,18 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
 
     return product.sizes
       .filter((s): s is ProductSizeUI => !!s && typeof s === "object")
-      .map((s, index) => ({
-        id: String(s.id ?? `size-${index}`),
-        size: String(s.size ?? "").trim(),
-        available: !!s.available,
-      }))
+      .map((s, index) => {
+        const stockQty = extractSizeStockQty(s);
+        const availableFromQty = stockQty != null ? stockQty > 0 : false;
+        const available = typeof s.available === "boolean" ? s.available : availableFromQty;
+
+        return {
+          id: String(s.id ?? `size-${index}`),
+          size: String(s.size ?? "").trim(),
+          available: available || availableFromQty,
+          stockQty,
+        };
+      })
       .filter((s) => s.size.length > 0)
       .sort((a, b) => compareSizes(a.size, b.size));
   }, [product?.sizes]);
@@ -254,7 +276,6 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   );
 
   const safeStockQty = Number(product?.ptStockQty ?? 0);
-  const safeInStock = !!product?.inStock && safeStockQty > 0;
   const safeBasePrice = Number(product?.basePrice ?? 0);
   const safeName = product?.name || t("fallbackProductName");
 
@@ -282,9 +303,23 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   const isMobile = useIsMobile(1024);
 
   const availableSizes = useMemo(
-    () => safeSizes.filter((s) => s.available && s.size),
+    () => safeSizes.filter((s) => s.available && s.size && (s.stockQty == null || s.stockQty > 0)),
     [safeSizes]
   );
+
+  const selectedSizeEntry = useMemo(
+    () => safeSizes.find((s) => s.size === selectedSize) ?? null,
+    [safeSizes, selectedSize]
+  );
+
+  const selectedSizeStockQty = useMemo(() => {
+    if (!selectedSizeEntry) return 0;
+    if (selectedSizeEntry.stockQty != null) return Math.max(0, selectedSizeEntry.stockQty);
+    return selectedSizeEntry.available ? safeStockQty : 0;
+  }, [selectedSizeEntry, safeStockQty]);
+
+  const selectedSizeInStock = !!selectedSizeEntry && selectedSizeStockQty > 0;
+  const safeInStock = availableSizes.length > 0;
 
   useEffect(() => {
     setMounted(true);
@@ -297,7 +332,7 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
   }, [availableSizes, selectedSize]);
 
   useEffect(() => {
-    if (selectedSize && !safeSizes.some((s) => s.size === selectedSize && s.available)) {
+    if (selectedSize && !safeSizes.some((s) => s.size === selectedSize && s.available && (s.stockQty == null || s.stockQty > 0))) {
       setSelectedSize(availableSizes[0]?.size ?? null);
     }
   }, [safeSizes, availableSizes, selectedSize]);
@@ -345,31 +380,42 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isMobile]);
 
+  useEffect(() => {
+    if (selectedSizeStockQty <= 0) {
+      setQty(1);
+      return;
+    }
+
+    setQty((current) => Math.min(current, selectedSizeStockQty));
+  }, [selectedSizeStockQty]);
+
   const stockMessage = useMemo(
-    () => getStockUrgencyMessage(safeStockQty, t),
-    [safeStockQty, t]
+    () => getStockUrgencyMessage(selectedSize ? selectedSizeStockQty : 0, t),
+    [selectedSize, selectedSizeStockQty, t]
   );
 
   const canAddToCart = useMemo(() => {
-    if (!safeInStock) return false;
-    if (!selectedSize) return false;
+    if (!selectedSizeEntry) return false;
+    if (!selectedSizeInStock) return false;
     if (qty < 1) return false;
+    if (qty > selectedSizeStockQty) return false;
     return true;
-  }, [safeInStock, selectedSize, qty]);
+  }, [selectedSizeEntry, selectedSizeInStock, qty, selectedSizeStockQty]);
 
   const finalPrice = useMemo(() => safeBasePrice * qty, [safeBasePrice, qty]);
 
   const progress = useMemo(() => {
     const step1 = !!selectedSize ? 1 : 0;
-    const step2 = safeInStock ? 1 : 0;
+    const step2 = selectedSizeInStock ? 1 : 0;
     const step3 = canAddToCart ? 1 : 0;
     return clamp(Math.round(((step1 + step2 + step3) / 3) * 100), 0, 100);
-  }, [selectedSize, safeInStock, canAddToCart]);
+  }, [selectedSize, selectedSizeInStock, canAddToCart]);
 
   function validateBeforeAdd(): string | null {
-    if (!safeInStock) return t("errors.outOfStock");
     if (!selectedSize) return t("errors.chooseSize");
+    if (!selectedSizeInStock) return t("errors.outOfStock");
     if (qty < 1) return t("errors.invalidQuantity");
+    if (qty > selectedSizeStockQty) return t("errors.invalidQuantity");
     return null;
   }
 
@@ -784,29 +830,31 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                 <span
                   className={cx(
                     "inline-flex rounded-full px-3 py-1 text-xs font-semibold sm:text-sm",
-                    safeInStock
+                    selectedSizeInStock
                       ? "bg-emerald-100 text-emerald-800"
                       : "bg-red-100 text-red-700"
                   )}
                 >
-                  {safeInStock ? t("inStock") : t("outOfStock")}
+                  {selectedSizeInStock ? t("inStock") : t("outOfStock")}
                 </span>
 
-                {safeInStock && (
+                {selectedSize && selectedSizeInStock && (
                   <span className="text-[11px] text-gray-600 sm:text-sm">
-                    {t("unitsAvailable", { count: safeStockQty })}
+                    {t("unitsAvailable", { count: selectedSizeStockQty })}
                   </span>
                 )}
               </div>
 
-              <div
-                className={cx(
-                  "mt-3 rounded-xl border px-3 py-2 text-[11px] font-semibold sm:text-sm",
-                  stockMessage.classes
-                )}
-              >
-                {stockMessage.text}
-              </div>
+              {selectedSize && (
+                <div
+                  className={cx(
+                    "mt-3 rounded-xl border px-3 py-2 text-[11px] font-semibold sm:text-sm",
+                    stockMessage.classes
+                  )}
+                >
+                  {stockMessage.text}
+                </div>
+              )}
             </div>
 
             <div data-section="size" className="rounded-2xl border bg-white/70 p-3 sm:p-4">
@@ -817,7 +865,8 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
               {safeSizes.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {safeSizes.map((s, index) => {
-                    const unavailable = !s.available;
+                    const sizeStockQty = s.stockQty != null ? Math.max(0, s.stockQty) : 0;
+                    const unavailable = !s.available || sizeStockQty <= 0;
                     const isActive = selectedSize === s.size && !unavailable;
 
                     return (
@@ -867,13 +916,15 @@ export default function PtStockProductConfigurator({ locale, product }: Props) {
                   >
                     −
                   </button>
+
                   <span className="min-w-[2ch] text-center text-sm">{qty}</span>
+
                   <button
                     type="button"
                     className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
-                    onClick={() => setQty((q) => q + 1)}
+                    onClick={() => setQty((q) => Math.min(selectedSizeStockQty || 1, q + 1))}
                     aria-label={t("aria.increaseQuantity")}
-                    disabled={pending}
+                    disabled={pending || !selectedSizeInStock || qty >= selectedSizeStockQty}
                   >
                     +
                   </button>
