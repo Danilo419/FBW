@@ -136,6 +136,7 @@ export default async function PtStockProductPage({ params }: PageProps) {
           id: true,
           size: true,
           available: true,
+          ptStockQty: true,
         },
       },
     },
@@ -215,6 +216,7 @@ export default async function PtStockProductPage({ params }: PageProps) {
           id: String(s.id ?? `size-${index}`),
           size: String(s.size ?? "").trim(),
           available: !!s.available,
+          ptStockQty: Math.max(0, Number(s.ptStockQty ?? 0)),
         }))
         .filter((s) => s.size.length > 0)
     : [];
