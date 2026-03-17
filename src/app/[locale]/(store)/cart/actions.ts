@@ -6,6 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getShippingForCart } from "@/lib/shipping";
+import {
+  DISCOUNT_COOKIE,
+  calculateDiscountSummary,
+  getValidDiscountCode,
+  normalizeDiscountCode,
+} from "@/lib/discount-codes";
 
 /* ========= validação ========= */
 const AddToCartSchema = z.object({
@@ -177,6 +183,10 @@ function emptySummary() {
     discount: 0,
     shipping: 0,
     total: 0,
+    discountCode: null as null | {
+      code: string;
+      percentOff: number;
+    },
     promotion: {
       promoName: "NONE" as const,
       freeUnitsCount: 0,
@@ -187,9 +197,70 @@ function emptySummary() {
 
 async function revalidateCartUi() {
   revalidatePath("/cart");
+  revalidatePath("/pt/cart");
+  revalidatePath("/en/cart");
   revalidatePath("/", "layout");
   revalidatePath("/pt", "layout");
   revalidatePath("/en", "layout");
+}
+
+async function getAppliedDiscountCodeFromCookie() {
+  const jar = await cookies();
+  const rawCode = jar.get(DISCOUNT_COOKIE)?.value ?? "";
+  return normalizeDiscountCode(rawCode);
+}
+
+async function setDiscountCookie(code: string) {
+  const jar = await cookies();
+  const secure = shouldUseSecureCookies();
+
+  jar.set(DISCOUNT_COOKIE, normalizeDiscountCode(code), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    expires: getCookieExpiryDate(),
+  });
+}
+
+async function clearDiscountCookie() {
+  const jar = await cookies();
+  jar.delete(DISCOUNT_COOKIE);
+}
+
+async function resolveShippingCents(
+  rawItems: Array<{
+    qty: number;
+    product: {
+      channel: string | null;
+    } | null;
+  }>,
+  subtotal: number
+) {
+  const channels = new Set<string>();
+  for (const it of rawItems) {
+    channels.add(String(it.product?.channel ?? "GLOBAL"));
+  }
+
+  const cartChannel =
+    channels.size > 1
+      ? "MIXED"
+      : ((Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL");
+
+  if (cartChannel === "PT_STOCK_CTT") {
+    const ship = getShippingForCart(
+      rawItems.map((it) => ({
+        qty: Math.max(0, Number(it.qty ?? 0)),
+        channel: "PT_STOCK_CTT" as const,
+      }))
+    );
+
+    return typeof (ship as any)?.shippingCents === "number"
+      ? Number((ship as any).shippingCents)
+      : 0;
+  }
+
+  return subtotal >= 70 ? 0 : 5;
 }
 
 /* ========= actions ========= */
@@ -297,6 +368,63 @@ export async function addToCartAction(raw: AddToCartInput) {
   }
 }
 
+export async function applyDiscountCodeAction(formData: FormData) {
+  try {
+    const rawCode = String(formData.get("code") || "");
+    const code = normalizeDiscountCode(rawCode);
+
+    if (!code) {
+      return {
+        ok: false as const,
+        error: "INVALID_DISCOUNT_CODE",
+        message: "Enter a valid discount code.",
+      };
+    }
+
+    const discount = await getValidDiscountCode(code);
+
+    if (!discount) {
+      await clearDiscountCookie();
+      await revalidateCartUi();
+
+      return {
+        ok: false as const,
+        error: "INVALID_DISCOUNT_CODE",
+        message: "Invalid, expired, inactive, or already used discount code.",
+      };
+    }
+
+    await setDiscountCookie(discount.code);
+    await revalidateCartUi();
+
+    return {
+      ok: true as const,
+      code: discount.code,
+      percentOff: Number(discount.percentOff),
+      message: `${discount.percentOff}% discount applied to products only.`,
+    };
+  } catch (err) {
+    console.error("[applyDiscountCodeAction] failed:", err);
+    return {
+      ok: false as const,
+      error: "APPLY_DISCOUNT_CODE_FAILED",
+      message: "Could not apply discount code.",
+    };
+  }
+}
+
+export async function removeDiscountCodeAction() {
+  try {
+    await clearDiscountCookie();
+    await revalidateCartUi();
+
+    return { ok: true as const };
+  } catch (err) {
+    console.error("[removeDiscountCodeAction] failed:", err);
+    return { ok: false as const, error: "REMOVE_DISCOUNT_CODE_FAILED" };
+  }
+}
+
 export async function getCartSummary() {
   const jar = await cookies();
   const sid = jar.get("sid")?.value ?? null;
@@ -309,7 +437,10 @@ export async function getCartSummary() {
 
   if (sid) cartWhere = { cart: { sessionId: sid } };
   else if (cartId) cartWhere = { cartId };
-  else return emptySummary();
+  else {
+    await clearDiscountCookie();
+    return emptySummary();
+  }
 
   const rawItems = await prisma.cartItem.findMany({
     where: cartWhere,
@@ -328,59 +459,51 @@ export async function getCartSummary() {
     orderBy: { createdAt: "asc" },
   });
 
-  if (!rawItems.length) return emptySummary();
+  if (!rawItems.length) {
+    await clearDiscountCookie();
+    return emptySummary();
+  }
 
   const subtotal = rawItems.reduce(
     (acc, it) => acc + Number(it.unitPrice) * Number(it.qty),
     0
   );
 
-  const channels = new Set<string>();
-  for (const it of rawItems) {
-    channels.add(String(it.product?.channel ?? "GLOBAL"));
-  }
-
-  const cartChannel =
-    channels.size > 1
-      ? "MIXED"
-      : ((Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL");
-
-  if (cartChannel === "PT_STOCK_CTT") {
-    const ship = getShippingForCart(
-      rawItems.map((it) => ({
-        qty: Math.max(0, Number(it.qty ?? 0)),
-        channel: "PT_STOCK_CTT" as const,
-      }))
-    );
-
-    const shipping =
-      typeof (ship as any)?.shippingCents === "number"
-        ? Number((ship as any).shippingCents)
-        : 0;
-
-    return {
-      count: rawItems.reduce((acc, it) => acc + Number(it.qty), 0),
-      subtotal,
-      discount: 0,
-      shipping,
-      total: subtotal + shipping,
-      promotion: {
-        promoName: "NONE" as const,
-        freeUnitsCount: 0,
-        hasPromotion: false,
+  const shipping = await resolveShippingCents(
+    rawItems.map((it) => ({
+      qty: Number(it.qty),
+      product: {
+        channel: it.product?.channel ?? "GLOBAL",
       },
-    };
+    })),
+    subtotal
+  );
+
+  const appliedCode = await getAppliedDiscountCodeFromCookie();
+  const validDiscount = appliedCode ? await getValidDiscountCode(appliedCode) : null;
+
+  if (appliedCode && !validDiscount) {
+    await clearDiscountCookie();
   }
 
-  const shipping = subtotal >= 70 ? 0 : 5;
-  const total = subtotal + shipping;
+  const summary = calculateDiscountSummary({
+    productSubtotalCents: subtotal,
+    shippingCents: shipping,
+    percentOff: validDiscount?.percentOff ?? 0,
+  });
 
   return {
     count: rawItems.reduce((acc, it) => acc + Number(it.qty), 0),
-    subtotal,
-    discount: 0,
-    shipping,
-    total,
+    subtotal: summary.productSubtotalCents,
+    discount: summary.discountAmountCents,
+    shipping: summary.shippingCents,
+    total: summary.totalCents,
+    discountCode: validDiscount
+      ? {
+          code: validDiscount.code,
+          percentOff: Number(validDiscount.percentOff),
+        }
+      : null,
     promotion: {
       promoName: "NONE" as const,
       freeUnitsCount: 0,
@@ -408,6 +531,11 @@ export async function removeItem(formData: FormData) {
 
     await prisma.cartItem.delete({ where: { id } });
   } catch {}
+
+  const summary = await getCartSummary();
+  if (summary.count === 0) {
+    await clearDiscountCookie();
+  }
 
   await revalidateCartUi();
 }
@@ -449,4 +577,20 @@ export async function updateQty(formData: FormData) {
   } catch {}
 
   await revalidateCartUi();
+}
+
+export async function getAppliedDiscountCodeForCart() {
+  const code = await getAppliedDiscountCodeFromCookie();
+  if (!code) return null;
+
+  const discount = await getValidDiscountCode(code);
+  if (!discount) {
+    await clearDiscountCookie();
+    return null;
+  }
+
+  return {
+    code: discount.code,
+    percentOff: Number(discount.percentOff),
+  };
 }

@@ -6,6 +6,13 @@ import { getStripe } from "@/lib/stripe";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { applyPromotions } from "@/lib/cartPromotions";
+import { getShippingForCart } from "@/lib/shipping";
+import {
+  DISCOUNT_COOKIE,
+  calcDiscountOnProductsOnly,
+  getValidDiscountCode,
+  normalizeDiscountCode,
+} from "@/lib/discount-codes";
 
 export const runtime = "nodejs";
 
@@ -39,10 +46,18 @@ type CartItemRow = {
   productId: string;
   qty: number;
   unitPrice: number; // cents
-  product: { name: string; imageUrls: string[] | null };
+  product: {
+    id?: string;
+    name: string;
+    imageUrls: string[] | null;
+    channel?: string | null;
+  };
   optionsJson?: any;
+  personalization?: any;
   totalPrice?: number | null;
 };
+
+type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
 
 /* ============================== HELPERS ============================== */
 
@@ -83,6 +98,7 @@ function toAbsoluteImage(
   const t = String(url).trim();
   if (!t) return null;
   if (/^https?:\/\//i.test(t)) return t;
+  if (t.startsWith("//")) return `https:${t}`;
   if (t.startsWith("/")) return `${APP}${t}`;
   return null;
 }
@@ -115,14 +131,12 @@ function safeObj(v: any): Record<string, any> {
 function parseShipCookie(raw: string): Shipping | null {
   if (!raw) return null;
 
-  // 1) tenta base64(JSON)
   try {
     const txt = Buffer.from(raw, "base64").toString("utf8");
     const j = JSON.parse(txt);
     if (j && typeof j === "object") return j as Shipping;
   } catch {}
 
-  // 2) tenta JSON direto
   try {
     const j = JSON.parse(raw);
     if (j && typeof j === "object") return j as Shipping;
@@ -169,12 +183,10 @@ function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
 
   const addr = safeObj(s.address);
   return {
-    // root fields
     name: safeStr(s.name),
     phone: safeStr(s.phone),
     email: safeStr(s.email),
 
-    // flattened address (root)
     line1: safeStr(addr.line1),
     line2: safeStr(addr.line2),
     city: safeStr(addr.city),
@@ -182,7 +194,6 @@ function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
     postal_code: safeStr(addr.postal_code),
     country: safeStr(addr.country),
 
-    // keep original too (optional, helps debugging / future-proof)
     address: {
       line1: safeStr(addr.line1),
       line2: safeStr(addr.line2),
@@ -196,7 +207,6 @@ function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
 
 /**
  * ✅ Fallback: tenta ler shipping do BODY (caso passes do form no fetch)
- * Isto evita depender 100% da cookie.
  */
 function parseShippingFromBody(body: any): Shipping | null {
   const b = body && typeof body === "object" ? body : {};
@@ -220,11 +230,20 @@ function parseShippingFromBody(body: any): Shipping | null {
   return out;
 }
 
-/**
- * ✅ Evita depender de export externo que pode não existir no cartPromotions.ts
- * Ajusta este valor se a tua promoção tiver outro limite.
- */
 const MAX_FREE_ITEMS_PER_ORDER = 2;
+
+function detectCartChannel(items: CartItemRow[]): CartChannel {
+  const channels = new Set<string>();
+
+  for (const it of items) {
+    channels.add(String(it.product?.channel ?? "GLOBAL"));
+  }
+
+  if (channels.size > 1) return "MIXED";
+
+  const only = Array.from(channels)[0];
+  return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+}
 
 /* ============================== ROUTE ============================== */
 
@@ -232,7 +251,6 @@ export async function POST(req: NextRequest) {
   try {
     const stripe = getStripe();
 
-    // ✅ Guest checkout allowed
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id as string | undefined;
 
@@ -240,7 +258,6 @@ export async function POST(req: NextRequest) {
     const method = (body?.method ?? "automatic") as Method;
     void method;
 
-    // ✅ IMPORTANT: base URL canónico para redirecionamento do Stripe
     const APP = await getCheckoutBaseUrl();
 
     const jar = await cookies();
@@ -253,12 +270,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const rawDiscountCode = jar.get(DISCOUNT_COOKIE)?.value ?? "";
+    const normalizedDiscountCode = normalizeDiscountCode(rawDiscountCode);
+    const validDiscount = normalizedDiscountCode
+      ? await getValidDiscountCode(normalizedDiscountCode)
+      : null;
+
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid },
       include: {
         items: {
           include: {
-            product: { select: { name: true, imageUrls: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                imageUrls: true,
+                channel: true,
+              },
+            },
           },
         },
       },
@@ -270,7 +300,6 @@ export async function POST(req: NextRequest) {
 
     const currency = "eur";
 
-    // Normaliza items do cart (cents)
     const cartItems: CartItemRow[] = cart.items.map((it: any) => ({
       productId: it.productId,
       qty: Math.max(0, Number(it.qty ?? 0)),
@@ -283,57 +312,106 @@ export async function POST(req: NextRequest) {
         it.optionsJSON ??
         (it as any).optionsJson ??
         {},
+      personalization: it.personalization ?? null,
       totalPrice: (it as any).totalPrice ?? null,
     }));
+
+    const cartChannel = detectCartChannel(cartItems);
+    const isPtStockCart = cartChannel === "PT_STOCK_CTT";
 
     const originalSubtotal = cartItems.reduce(
       (acc, it) => acc + it.qty * it.unitPrice,
       0
     );
 
-    // ✅ SINGLE SOURCE OF TRUTH: same as cart page
-    const promo = applyPromotions(
-      cartItems.map((it, idx) => ({
-        id: String(idx),
-        name: String(it.product?.name ?? "Item"),
-        unitAmountCents: it.unitPrice,
-        qty: it.qty,
-        image: it.product?.imageUrls?.[0] ?? null,
-      }))
-    );
+    const promo =
+      cartChannel === "GLOBAL"
+        ? applyPromotions(
+            cartItems.map((it, idx) => ({
+              id: String(idx),
+              name: String(it.product?.name ?? "Item"),
+              unitAmountCents: it.unitPrice,
+              qty: it.qty,
+              image: it.product?.imageUrls?.[0] ?? null,
+            }))
+          )
+        : {
+            promoName: "NONE" as const,
+            freeItemsApplied: 0,
+            shippingCents: 0,
+            lines: cartItems.map((it, idx) => ({
+              id: String(idx),
+              name: String(it.product?.name ?? "Item"),
+              unitAmountCents: it.unitPrice,
+              qty: it.qty,
+              payQty: it.qty,
+              freeQty: 0,
+              image: it.product?.imageUrls?.[0] ?? null,
+            })),
+          };
 
-    const paidSubtotal = promo.lines.reduce((acc, line) => {
+    const payableProductsSubtotalCents = promo.lines.reduce((acc, line) => {
       const idx = Number(line.id);
       const it = cartItems[idx];
       if (!it) return acc;
       return acc + line.payQty * it.unitPrice;
     }, 0);
 
-    const discountCents = Math.max(0, originalSubtotal - paidSubtotal);
-    const shippingCents = promo.shippingCents;
-    const totalCents = paidSubtotal + shippingCents;
+    const promoDiscountCents = Math.max(
+      0,
+      originalSubtotal - payableProductsSubtotalCents
+    );
+
+    const ptShipping =
+      isPtStockCart
+        ? getShippingForCart(
+            cartItems.map((it) => ({
+              qty: Math.max(0, Number(it.qty ?? 0)),
+              channel: "PT_STOCK_CTT" as const,
+            }))
+          )
+        : null;
+
+    const shippingCents = isPtStockCart
+      ? typeof (ptShipping as any)?.shippingCents === "number"
+        ? Math.max(0, Number((ptShipping as any).shippingCents))
+        : 0
+      : Math.max(0, Number((promo as any).shippingCents ?? 0));
+
+    const reviewDiscountCents = validDiscount
+      ? calcDiscountOnProductsOnly(
+          payableProductsSubtotalCents,
+          Number(validDiscount.percentOff ?? 0)
+        )
+      : 0;
+
+    const totalDiscountCents = promoDiscountCents + reviewDiscountCents;
+    const finalProductsSubtotalCents = Math.max(
+      0,
+      payableProductsSubtotalCents - reviewDiscountCents
+    );
+    const totalCents = finalProductsSubtotalCents + shippingCents;
 
     /* -------- Shipping (cookie -> body fallback) -------- */
     const rawShip = jar.get("ship")?.value ?? "";
     let shippingFromCookie = rawShip ? parseShipCookie(rawShip) : null;
 
-    // fallback: se cookie não veio, tenta body.shipping (se o teu frontend enviar)
     if (!shippingFromCookie) {
       const fromBody = parseShippingFromBody(body);
       if (fromBody) shippingFromCookie = fromBody;
     }
 
-    // ✅ Flatten para o admin ler sempre
     const shippingJsonFlat = shippingToFlatJson(shippingFromCookie);
 
-    // ✅ Log útil (Vercel) para diagnosticar rapidamente
     console.log(
       "[checkout/stripe] sid:",
       sid,
       "shipCookie:",
       Boolean(rawShip),
       "hasShipping:",
-      Boolean(shippingFromCookie)
+      Boolean(shippingFromCookie),
+      "discountCode:",
+      validDiscount?.code ?? null
     );
 
     /* -------- Create local order (PENDING) -------- */
@@ -353,7 +431,10 @@ export async function POST(req: NextRequest) {
           qty: line.payQty,
           unitPrice: it.unitPrice,
           totalPrice: line.payQty * it.unitPrice,
-          snapshotJson: baseSnapshot,
+          snapshotJson: {
+            ...baseSnapshot,
+            personalization: it.personalization ?? null,
+          },
         });
       }
 
@@ -367,6 +448,7 @@ export async function POST(req: NextRequest) {
           totalPrice: 0,
           snapshotJson: {
             ...baseSnapshot,
+            personalization: it.personalization ?? null,
             __isFree: true,
             __originalUnitPrice: it.unitPrice,
           },
@@ -381,14 +463,25 @@ export async function POST(req: NextRequest) {
         userId: userId ?? null,
         sessionId: cart.sessionId ?? sid,
         status: "pending",
-        currency,
+        currency: currency.toUpperCase(),
+        channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
 
-        subtotal: originalSubtotal,
+        subtotal: payableProductsSubtotalCents,
+        productSubtotalCents: payableProductsSubtotalCents,
+
         shipping: shippingCents,
-        tax: 0,
-        total: totalCents,
+        shippingCents,
 
-        // ✅ GUARANTE: admin consegue ler (root line1/city/postal_code/country)
+        tax: 0,
+
+        discountCodeId: validDiscount?.id ?? null,
+        discountCodeText: validDiscount?.code ?? null,
+        discountPercent: validDiscount?.percentOff ?? null,
+        discountAmountCents: reviewDiscountCents,
+
+        total: totalCents / 100,
+        totalCents,
+
         shippingJson: shippingJsonFlat as any,
 
         items: { create: orderItemsCreate },
@@ -419,11 +512,15 @@ export async function POST(req: NextRequest) {
       promoName: String(promo.promoName ?? "NONE"),
       freeItemsApplied: String(promo.freeItemsApplied ?? 0),
       shippingCents: String(shippingCents),
-      discountCents: String(discountCents),
+      discountCents: String(totalDiscountCents),
       maxFreeItemsCap: String(MAX_FREE_ITEMS_PER_ORDER),
       ...(userId ? { userId } : {}),
 
-      // ✅ keep shipping in metadata too (helps webhook fallback)
+      discountCode: String(validDiscount?.code ?? ""),
+      discountPercent: String(validDiscount?.percentOff ?? 0),
+      discountAmountCents: String(reviewDiscountCents),
+      productSubtotalCents: String(payableProductsSubtotalCents),
+
       ...shippingToMetadata(shippingFromCookie),
     };
 

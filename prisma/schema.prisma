@@ -182,7 +182,7 @@ model OptionGroup {
   type      OptionType
   required  Boolean    @default(false)
 
-  product Product @relation("ProductOptions", fields: [productId], references: [id])
+  product Product       @relation("ProductOptions", fields: [productId], references: [id])
   values  OptionValue[]
 
   @@index([productId])
@@ -277,6 +277,32 @@ model CartItem {
 
 /**
  * =========================================================
+ * =============== Discount Codes ==========================
+ * =========================================================
+ */
+
+model DiscountCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  percentOff Int       @default(10)
+  active     Boolean   @default(true)
+  maxUses    Int       @default(1)
+  usesCount  Int       @default(0)
+  usedAt     DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  orders Order[] @relation("AppliedDiscountCode")
+
+  @@index([active])
+  @@index([code, active])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+/**
+ * =========================================================
  * =============== Orders ==================================
  * =========================================================
  */
@@ -313,17 +339,40 @@ model Order {
    */
   channel ProductChannel @default(GLOBAL)
 
+  /**
+   * 🔹 subtotal dos produtos antes do desconto
+   */
   subtotal Int @default(0)
+
+  /**
+   * 🔹 subtotal dos produtos antes do desconto
+   * campo adicional explícito para o resumo final
+   */
+  productSubtotalCents Int @default(0)
 
   /**
    * 🔹 shipping (em cents) — SINGLE SOURCE OF TRUTH
    */
   shipping Int @default(0)
 
+  /**
+   * 🔹 shipping explícito em cents para checkout/resumo
+   */
+  shippingCents Int @default(0)
+
   tax Int @default(0)
 
   total      Float?
   totalCents Int?
+
+  /**
+   * 🔹 desconto aplicado APENAS aos produtos
+   */
+  discountCodeId      String?
+  discountCode        DiscountCode? @relation("AppliedDiscountCode", fields: [discountCodeId], references: [id], onDelete: SetNull)
+  discountCodeText    String?
+  discountPercent     Int?
+  discountAmountCents Int           @default(0)
 
   stripeSessionId       String?
   stripePaymentIntentId String?
@@ -365,15 +414,14 @@ model Order {
   @@index([createdAt])
   @@index([shippingCountry])
   @@index([paidAt])
-
   @@index([shippingStatus])
   @@index([shippedAt])
   @@index([deliveredAt])
   @@index([trackingCode])
-
   @@index([confirmationEmailSentAt])
-
   @@index([channel])
+  @@index([discountCodeId])
+  @@index([discountCodeText])
 }
 
 model OrderItem {
@@ -404,7 +452,7 @@ model Review {
   id String @id @default(cuid())
 
   userId String?
-  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -448,25 +496,25 @@ model Visit {
 }
 
 model NewsletterSubscriber {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  createdAt      DateTime @default(now())
-  unsubToken     String   @unique @default(cuid())
+  id             String    @id @default(cuid())
+  email          String    @unique
+  createdAt      DateTime  @default(now())
+  unsubToken     String    @unique @default(cuid())
   unsubscribedAt DateTime?
 }
 
 model NewsletterCampaign {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   subject         String
   style           String
   contentJson     String
   html            String
   text            String
-  status          String   @default("DRAFT")
-  totalRecipients Int      @default(0)
-  sentCount       Int      @default(0)
-  failedCount     Int      @default(0)
-  createdAt       DateTime @default(now())
+  status          String    @default("DRAFT")
+  totalRecipients Int       @default(0)
+  sentCount       Int       @default(0)
+  failedCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
   sentAt          DateTime?
 
   logs NewsletterSendLog[]

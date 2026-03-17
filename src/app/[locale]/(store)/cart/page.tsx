@@ -10,6 +10,16 @@ import { formatMoney } from "@/lib/money";
 import type { Prisma, CartItem } from "@prisma/client";
 import { getShippingForCart } from "@/lib/shipping";
 import RemoveCartItemButton from "@/components/cart/RemoveCartItemButton";
+import {
+  applyDiscountCodeAction,
+  removeDiscountCodeAction,
+} from "./actions";
+import {
+  calculateDiscountSummary,
+  getValidDiscountCode,
+  normalizeDiscountCode,
+  DISCOUNT_COOKIE,
+} from "@/lib/discount-codes";
 
 export const dynamic = "force-dynamic";
 
@@ -146,12 +156,12 @@ function asDisplayValue(v: unknown) {
 
 function parseMaybeJsonObject(x: unknown): Record<string, any> | null {
   if (!x) return null;
-  if (typeof x === "object") return x as any;
+  if (typeof x === "object") return x as Record<string, any>;
 
   if (typeof x === "string") {
     try {
       const p = JSON.parse(x);
-      if (p && typeof p === "object") return p as any;
+      if (p && typeof p === "object") return p as Record<string, any>;
     } catch {
       return null;
     }
@@ -297,6 +307,17 @@ function cartChannelFromShipping(info: any): CartChannel {
   return "GLOBAL";
 }
 
+/* ------------------------------- server action wrappers ------------------------------- */
+async function applyDiscountCodeFormAction(formData: FormData): Promise<void> {
+  "use server";
+  await applyDiscountCodeAction(formData);
+}
+
+async function removeDiscountCodeFormAction(): Promise<void> {
+  "use server";
+  await removeDiscountCodeAction();
+}
+
 /* ------------------------------- types ------------------------------- */
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -324,17 +345,19 @@ export default async function CartPage() {
 
   const cookieStore = await cookies();
   const sid = cookieStore.get("sid")?.value ?? null;
+  const rawDiscountCode = cookieStore.get(DISCOUNT_COOKIE)?.value ?? null;
+  const normalizedDiscountCode = normalizeDiscountCode(rawDiscountCode ?? "");
 
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id ?? null;
 
+  const orWhere = [
+    userId ? { userId } : null,
+    sid ? { sessionId: sid } : null,
+  ].filter(Boolean) as Array<{ userId?: string | null; sessionId?: string | null }>;
+
   const cart = (await prisma.cart.findFirst({
-    where: {
-      OR: [
-        userId ? { userId } : undefined,
-        sid ? { sessionId: sid } : undefined,
-      ].filter(Boolean) as any,
-    },
+    where: orWhere.length ? { OR: orWhere } : undefined,
     include: {
       items: {
         include: {
@@ -391,18 +414,18 @@ export default async function CartPage() {
     return { ...it, displayUnit, displayTotal, opts, pers, name, number };
   });
 
-  const subtotalCents: number = displayItems.reduce(
-    (acc: number, it: any) => acc + it.displayTotal,
+  const subtotalCents = displayItems.reduce(
+    (acc, it) => acc + it.displayTotal,
     0
   );
 
   const totalQty = displayItems.reduce(
-    (acc: number, it: any) => acc + (it.qty ?? 0),
+    (acc, it) => acc + (it.qty ?? 0),
     0
   );
 
   const shippingInfo = getShippingForCart(
-    displayItems.map((it: any) => ({
+    displayItems.map((it) => ({
       qty: Math.max(0, Number(it.qty ?? 0)),
       channel: (it.product?.channel ?? "GLOBAL") as any,
     }))
@@ -430,8 +453,19 @@ export default async function CartPage() {
       : 0;
 
   const shippingCents = isPtStockCart ? shippingCentsPt : globalShippingCents;
-  const discountCents = 0;
-  const totalPayableCents = subtotalCents + shippingCents;
+
+  const validDiscount = normalizedDiscountCode
+    ? await getValidDiscountCode(normalizedDiscountCode)
+    : null;
+
+  const discountSummary = calculateDiscountSummary({
+    productSubtotalCents: subtotalCents,
+    shippingCents,
+    percentOff: validDiscount?.percentOff ?? 0,
+  });
+
+  const discountCents = discountSummary.discountAmountCents;
+  const totalPayableCents = discountSummary.totalCents;
 
   const shippingBannerTitle = isPtStockCart
     ? t("cartPage.ptStock.title")
@@ -791,85 +825,151 @@ export default async function CartPage() {
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 sm:items-start">
-        <div className="rounded-2xl border bg-white p-5">
-          <div className="text-sm font-semibold text-gray-900">
-            {t("cartPage.orderSummary")}
-          </div>
-
-          <div className="mt-3 space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">
-                {t("cartPage.labels.subtotal")}
-              </span>
-              <span className="font-semibold">
-                {formatMoneyRight(subtotalCents)}
-              </span>
+        <div className="space-y-4">
+          <div className="rounded-2xl border bg-white p-5">
+            <div className="text-sm font-semibold text-gray-900">
+              Discount code
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">
-                {t("cartPage.labels.discount")}
-              </span>
-              <span className="font-semibold">-{formatMoneyRight(discountCents)}</span>
-            </div>
+            {validDiscount ? (
+              <div className="mt-3 space-y-3">
+                <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                  <div className="font-semibold">
+                    Code {validDiscount.code} applied
+                  </div>
+                  <div className="mt-1">
+                    {validDiscount.percentOff}% off on products only. Shipping is
+                    not discounted.
+                  </div>
+                </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">
-                {t("cartPage.labels.shipping")}
-              </span>
-              {shippingCents === 0 ? (
-                <span className="font-semibold text-green-700">
-                  {t("cartPage.free")}
-                </span>
-              ) : (
-                <span className="font-semibold">
-                  {formatMoneyRight(shippingCents)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-3">
-              <span className="text-base font-extrabold">
-                {t("cartPage.labels.total")}
-              </span>
-              <span className="text-base font-extrabold">
-                {formatMoneyRight(totalPayableCents)}
-              </span>
-            </div>
-
-            {isPtStockCart ? (
-              <div className="pt-3 text-xs text-gray-500">
-                {t.rich("cartPage.summary.cttRules", {
-                  one: () => (
-                    <span className="font-semibold text-gray-800">
-                      1 item = 6€
-                    </span>
-                  ),
-                  two: () => (
-                    <span className="font-semibold text-gray-800">
-                      2 items = 3€
-                    </span>
-                  ),
-                  three: () => (
-                    <span className="font-semibold text-gray-800">
-                      3+ = FREE
-                    </span>
-                  ),
-                })}
-              </div>
-            ) : amountUntilFreeShippingCents > 0 ? (
-              <div className="pt-3 text-xs text-gray-500">
-                Add{" "}
-                <span className="font-semibold text-gray-800">
-                  {formatMoneyRight(amountUntilFreeShippingCents)}
-                </span>{" "}
-                more to unlock free shipping.
+                <form action={removeDiscountCodeFormAction}>
+                  <button
+                    type="submit"
+                    className="inline-flex rounded-xl border px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                  >
+                    Remove code
+                  </button>
+                </form>
               </div>
             ) : (
-              <div className="pt-3 text-xs text-green-700">
-                Free shipping unlocked.
+              <div className="mt-3">
+                <form
+                  action={applyDiscountCodeFormAction}
+                  className="flex flex-col gap-3 sm:flex-row"
+                >
+                  <input
+                    type="text"
+                    name="code"
+                    placeholder="Enter your code"
+                    defaultValue={normalizedDiscountCode || ""}
+                    className="w-full rounded-xl border px-3 py-2 uppercase outline-none transition focus:border-black"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex shrink-0 items-center justify-center rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-900"
+                  >
+                    Apply
+                  </button>
+                </form>
+
+                <div className="mt-2 text-xs text-gray-500">
+                  Discount applies only to product subtotal, never to shipping.
+                </div>
               </div>
             )}
+          </div>
+
+          <div className="rounded-2xl border bg-white p-5">
+            <div className="text-sm font-semibold text-gray-900">
+              {t("cartPage.orderSummary")}
+            </div>
+
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">
+                  {t("cartPage.labels.subtotal")}
+                </span>
+                <span className="font-semibold">
+                  {formatMoneyRight(subtotalCents)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">
+                  {validDiscount
+                    ? `Discount (${validDiscount.code})`
+                    : t("cartPage.labels.discount")}
+                </span>
+                <span className="font-semibold">
+                  -{formatMoneyRight(discountCents)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">
+                  {t("cartPage.labels.shipping")}
+                </span>
+                {shippingCents === 0 ? (
+                  <span className="font-semibold text-green-700">
+                    {t("cartPage.free")}
+                  </span>
+                ) : (
+                  <span className="font-semibold">
+                    {formatMoneyRight(shippingCents)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="text-base font-extrabold">
+                  {t("cartPage.labels.total")}
+                </span>
+                <span className="text-base font-extrabold">
+                  {formatMoneyRight(totalPayableCents)}
+                </span>
+              </div>
+
+              {isPtStockCart ? (
+                <div className="pt-3 text-xs text-gray-500">
+                  {t.rich("cartPage.summary.cttRules", {
+                    one: () => (
+                      <span className="font-semibold text-gray-800">
+                        1 item = 6€
+                      </span>
+                    ),
+                    two: () => (
+                      <span className="font-semibold text-gray-800">
+                        2 items = 3€
+                      </span>
+                    ),
+                    three: () => (
+                      <span className="font-semibold text-gray-800">
+                        3+ = FREE
+                      </span>
+                    ),
+                  })}
+                </div>
+              ) : amountUntilFreeShippingCents > 0 ? (
+                <div className="pt-3 text-xs text-gray-500">
+                  Add{" "}
+                  <span className="font-semibold text-gray-800">
+                    {formatMoneyRight(amountUntilFreeShippingCents)}
+                  </span>{" "}
+                  more to unlock free shipping.
+                </div>
+              ) : (
+                <div className="pt-3 text-xs text-green-700">
+                  Free shipping unlocked.
+                </div>
+              )}
+
+              {validDiscount && (
+                <div className="pt-2 text-xs text-gray-500">
+                  The discount was calculated only on the products subtotal.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

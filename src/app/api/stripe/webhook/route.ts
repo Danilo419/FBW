@@ -6,6 +6,7 @@ import { getStripe } from "@/lib/stripe";
 import { finalizePaidOrder } from "@/lib/checkout";
 import { pusherServer } from "@/lib/pusher";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,8 +29,6 @@ type ShippingJson =
             country?: string | null;
           }
         | null;
-
-      // ✅ suporta também fields "flatten" no ROOT (para o teu admin extractor)
       line1?: string | null;
       line2?: string | null;
       city?: string | null;
@@ -39,9 +38,22 @@ type ShippingJson =
     }
   | null;
 
+type DiscountMeta = {
+  code: string | null;
+  percentOff: number | null;
+  discountAmountCents: number | null;
+  productSubtotalCents: number | null;
+};
+
 const nz = (v: unknown) => {
   const s = (v ?? "").toString().trim();
   return s.length ? s : null;
+};
+
+const intOrNull = (v: unknown) => {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
 };
 
 type AnyObj = Record<string, any>;
@@ -107,8 +119,6 @@ function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
     phone: nz(meta.ship_phone),
     email: nz(meta.ship_email),
     address,
-
-    // ✅ também no root (helps admin + evita perder fields)
     line1: nz(meta.ship_line1),
     line2: nz(meta.ship_line2),
     city: nz(meta.ship_city),
@@ -149,8 +159,6 @@ function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
     phone: nz(cd.phone),
     email: nz(cd.email) ?? nz((session as any).customer_email),
     address,
-
-    // ✅ root flatten também
     line1: nz(addr?.line1),
     line2: nz(addr?.line2),
     city: nz(addr?.city),
@@ -187,8 +195,6 @@ function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
     phone: nz(s?.phone),
     email: nz(pi.receipt_email),
     address,
-
-    // ✅ root flatten também
     line1: nz(s?.address?.line1),
     line2: nz(s?.address?.line2),
     city: nz(s?.address?.city),
@@ -200,17 +206,35 @@ function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
   return isEmptyShipping(out) ? null : out;
 }
 
+function discountFromMetadata(meta?: Record<string, any> | null): DiscountMeta {
+  if (!meta) {
+    return {
+      code: null,
+      percentOff: null,
+      discountAmountCents: null,
+      productSubtotalCents: null,
+    };
+  }
+
+  const code = normalizeDiscountCode(nz(meta.discountCode) ?? "");
+  const percentOff = intOrNull(meta.discountPercent);
+  const discountAmountCents = intOrNull(meta.discountAmountCents);
+  const productSubtotalCents = intOrNull(meta.productSubtotalCents);
+
+  return {
+    code: code || null,
+    percentOff,
+    discountAmountCents,
+    productSubtotalCents,
+  };
+}
+
 function pickNonEmpty<T>(a: T, b: T) {
   if (a == null) return b;
   if (typeof a === "string" && a.trim() === "") return b;
   return a;
 }
 
-/**
- * ✅ NORMALIZA shipping para sempre ter root + address e manter ambos sincronizados
- * - Se vier "flatten" no root, aproveita
- * - Se vier só address, "sobe" para o root também
- */
 function normalizeShipping(s: any): AnyObj {
   const S = safeObj(s);
   const addr = safeObj(S.address);
@@ -226,16 +250,12 @@ function normalizeShipping(s: any): AnyObj {
     name: nz(S.name),
     phone: nz(S.phone),
     email: nz(S.email),
-
-    // root flattened
     line1,
     line2,
     city,
     state,
     postal_code,
     country,
-
-    // nested
     address: {
       line1,
       line2,
@@ -247,12 +267,6 @@ function normalizeShipping(s: any): AnyObj {
   };
 }
 
-/**
- * ✅ Merge "sem destruir dados":
- * - base (DB) ganha
- * - add só completa os campos em falta
- * - preserva root + address (admin extractor não perde)
- */
 function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
   if (!base && !add) return null;
   if (!base) {
@@ -295,7 +309,6 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
     name: pickNonEmpty(B.name, A.name),
     phone: pickNonEmpty(B.phone, A.phone),
     email: pickNonEmpty(B.email, A.email),
-
     line1: pickNonEmpty(B.line1, A.line1),
     line2: pickNonEmpty(B.line2, A.line2),
     city: pickNonEmpty(B.city, A.city),
@@ -318,8 +331,6 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
     phone: merged.phone ?? null,
     email: merged.email ?? null,
     address: merged.address,
-
-    // ✅ mantém root também
     line1: merged.line1 ?? null,
     line2: merged.line2 ?? null,
     city: merged.city ?? null,
@@ -354,7 +365,6 @@ function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
 function shippingAddressToString(s?: ShippingJson | null): string | null {
   if (!s) return null;
 
-  // ✅ tenta root primeiro (porque o teu admin e alguns fluxos guardam flatten)
   const partsRoot = [
     (s as any).line1,
     (s as any).line2,
@@ -387,8 +397,12 @@ function totalFromOrder(order: any, optsTotalCents?: number | null): number {
   const subtotal = typeof order?.subtotal === "number" ? order.subtotal : 0;
   const shipping = typeof order?.shipping === "number" ? order.shipping : 0;
   const tax = typeof order?.tax === "number" ? order.tax : 0;
+  const discountAmountCents =
+    typeof order?.discountAmountCents === "number"
+      ? order.discountAmountCents
+      : 0;
 
-  const sum = subtotal + shipping + tax;
+  const sum = subtotal - discountAmountCents + shipping + tax;
   if (sum > 0) return sum / 100;
 
   if (typeof optsTotalCents === "number") return optsTotalCents / 100;
@@ -397,6 +411,7 @@ function totalFromOrder(order: any, optsTotalCents?: number | null): number {
 }
 
 function shippingPriceFromOrder(order: any): number {
+  if (typeof order?.shippingCents === "number") return order.shippingCents / 100;
   return typeof order?.shipping === "number" ? order.shipping / 100 : 0;
 }
 
@@ -448,6 +463,7 @@ async function markPaid(
     totalCents?: number | null;
     shipping?: ShippingJson;
     userId?: string | null;
+    discount?: DiscountMeta | null;
   }
 ): Promise<{ transitioned: boolean }> {
   const existing = await prisma.order.findUnique({
@@ -457,6 +473,11 @@ async function markPaid(
       shippingJson: true,
       shippingCountry: true,
       userId: true,
+      discountCodeId: true,
+      discountCodeText: true,
+      discountPercent: true,
+      discountAmountCents: true,
+      productSubtotalCents: true,
     },
   });
 
@@ -465,7 +486,6 @@ async function markPaid(
     existing?.status === "shipped" ||
     existing?.status === "delivered";
 
-  // ✅ IMPORTANTE: existing (DB) ganha, Stripe só completa
   const mergedShipping = mergeShipping(
     existing?.shippingJson as ShippingJson,
     opts.shipping ?? null
@@ -477,20 +497,54 @@ async function markPaid(
       existing?.shippingCountry ||
       null)?.toString() || null;
 
+  const normalizedCode = normalizeDiscountCode(opts.discount?.code ?? "");
+  const hasDiscountMeta = !!normalizedCode;
+
+  const discountRecord = normalizedCode
+    ? await prisma.discountCode.findUnique({
+        where: { code: normalizedCode },
+        select: {
+          id: true,
+          code: true,
+        },
+      })
+    : null;
+
   const updateData: any = {
     ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
-
     status: "paid",
     paymentStatus: "paid",
     paidAt: new Date(),
     stripePaymentIntentId: opts.paymentIntentId ?? null,
     stripeSessionId: opts.sessionId ?? undefined,
     currency: upper(opts.currency) ?? undefined,
-    totalCents: typeof opts.totalCents === "number" ? opts.totalCents : undefined,
-
+    totalCents:
+      typeof opts.totalCents === "number" ? opts.totalCents : undefined,
     ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
     ...(country ? { shippingCountry: country } : {}),
   };
+
+  if (hasDiscountMeta) {
+    updateData.discountCodeText = normalizedCode;
+    updateData.discountPercent =
+      opts.discount?.percentOff ?? existing?.discountPercent ?? undefined;
+    updateData.discountAmountCents =
+      opts.discount?.discountAmountCents ??
+      existing?.discountAmountCents ??
+      undefined;
+    updateData.productSubtotalCents =
+      opts.discount?.productSubtotalCents ??
+      existing?.productSubtotalCents ??
+      undefined;
+    updateData.subtotal =
+      opts.discount?.productSubtotalCents ??
+      existing?.productSubtotalCents ??
+      undefined;
+
+    if (discountRecord?.id) {
+      updateData.discountCodeId = discountRecord.id;
+    }
+  }
 
   let transitioned = false;
 
@@ -516,6 +570,24 @@ async function markPaid(
       where: { id: orderId },
       data: updateData,
     });
+  }
+
+  if (transitioned && discountRecord?.id) {
+    try {
+      await prisma.discountCode.updateMany({
+        where: {
+          id: discountRecord.id,
+          active: true,
+          usesCount: { lt: prisma.discountCode.fields.maxUses as any },
+        } as any,
+        data: {
+          usesCount: { increment: 1 },
+          usedAt: new Date(),
+        },
+      });
+    } catch (err) {
+      console.error("Discount code usage update failed:", err);
+    }
   }
 
   if (transitioned) {
@@ -625,8 +697,8 @@ export const POST = async (req: NextRequest) => {
   }
 
   let event: Stripe.Event;
-
   let raw: string;
+
   try {
     raw = await req.text();
     event = stripe.webhooks.constructEvent(raw, sig, secret);
@@ -638,7 +710,6 @@ export const POST = async (req: NextRequest) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-
         const userId = userIdFromCheckoutSession(session);
 
         let orderId =
@@ -661,6 +732,7 @@ export const POST = async (req: NextRequest) => {
           });
           orderId = bySession?.id;
         }
+
         if (!orderId && piId) {
           const byPI = await prisma.order.findFirst({
             where: { stripePaymentIntentId: piId },
@@ -671,7 +743,6 @@ export const POST = async (req: NextRequest) => {
 
         if (!orderId) break;
 
-        // ✅ metadata + session, mas sem destruir o que já existe (isso é garantido dentro do markPaid/markPending)
         const shipping = mergeShipping(
           shippingFromMetadata(session.metadata ?? null),
           shippingFromSession(session)
@@ -681,7 +752,9 @@ export const POST = async (req: NextRequest) => {
           typeof session.amount_total === "number"
             ? session.amount_total
             : undefined;
+
         const currency = session.currency ?? undefined;
+        const discount = discountFromMetadata(session.metadata ?? null);
 
         if (session.payment_status === "paid") {
           const { transitioned } = await markPaid(orderId, {
@@ -691,6 +764,7 @@ export const POST = async (req: NextRequest) => {
             totalCents,
             shipping,
             userId,
+            discount,
           });
 
           if (transitioned) {
@@ -718,7 +792,6 @@ export const POST = async (req: NextRequest) => {
 
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
-
         const userId = userIdFromCheckoutSession(session);
 
         const piId =
@@ -747,6 +820,8 @@ export const POST = async (req: NextRequest) => {
           shippingFromSession(session)
         );
 
+        const discount = discountFromMetadata(session.metadata ?? null);
+
         const { transitioned } = await markPaid(orderId, {
           paymentIntentId: piId,
           sessionId: session.id,
@@ -757,6 +832,7 @@ export const POST = async (req: NextRequest) => {
               : undefined,
           shipping,
           userId,
+          discount,
         });
 
         if (transitioned) {
@@ -776,7 +852,6 @@ export const POST = async (req: NextRequest) => {
 
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
-
         const userId = userIdFromPaymentIntent(pi);
 
         let orderId = pi.metadata?.orderId as string | undefined;
@@ -788,6 +863,7 @@ export const POST = async (req: NextRequest) => {
           });
           orderId = byPI?.id;
         }
+
         if (!orderId) break;
 
         const { transitioned } = await markPaid(orderId, {
@@ -800,6 +876,7 @@ export const POST = async (req: NextRequest) => {
               : undefined,
           shipping: shippingFromPaymentIntent(pi),
           userId,
+          discount: discountFromMetadata(pi.metadata ?? null),
         });
 
         if (transitioned) {
@@ -819,7 +896,6 @@ export const POST = async (req: NextRequest) => {
 
       case "payment_intent.processing": {
         const pi = event.data.object as Stripe.PaymentIntent;
-
         const userId = userIdFromPaymentIntent(pi);
 
         const orderId =
@@ -852,6 +928,7 @@ export const POST = async (req: NextRequest) => {
               select: { id: true },
             })
             .then((r) => r?.id));
+
         if (orderId) await markFailed(orderId);
         break;
       }
@@ -866,6 +943,7 @@ export const POST = async (req: NextRequest) => {
               select: { id: true },
             })
             .then((r) => r?.id));
+
         if (orderId) await markCanceled(orderId);
         break;
       }
@@ -887,11 +965,11 @@ export const POST = async (req: NextRequest) => {
               select: { id: true },
             })
             .then((r) => r?.id));
+
         if (orderId) await markCanceled(orderId);
         break;
       }
 
-      // Fallback legacy
       case "charge.succeeded": {
         const charge = event.data.object as Stripe.Charge;
 
@@ -921,8 +999,8 @@ export const POST = async (req: NextRequest) => {
             typeof charge.amount_captured === "number"
               ? charge.amount_captured
               : typeof charge.amount === "number"
-              ? charge.amount
-              : undefined;
+                ? charge.amount
+                : undefined;
 
           const { transitioned } = await markPaid(orderId, {
             paymentIntentId: piId,
@@ -931,6 +1009,7 @@ export const POST = async (req: NextRequest) => {
             totalCents: cents,
             shipping: null,
             userId: null,
+            discount: discountFromMetadata(charge.metadata ?? null),
           });
 
           if (transitioned) {
