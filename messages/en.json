@@ -38,7 +38,12 @@
     "searchProductsPlaceholder": "Search products...",
     "searchProducts": "Search products",
     "submitSearch": "Submit search",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "signedInAs": "Signed in as",
+    "accountPage": "Account page",
+    "adminPanel": "Admin panel",
+    "helpFaq": "Help / FAQ",
+    "signOut": "Sign out"
   },
   "Footer": {
     "about": "About us",
@@ -1932,18 +1937,27 @@
             "q": "How do I place an order?",
             "a1": "Pick your product, choose the options (size / version), and add to cart. Then go to <cart>Cart</cart> and complete checkout.",
             "a2": "Tip: Use the search bar in the header to find a kit fast.",
-            "tags": ["order", "checkout"]
+            "tags": [
+              "order",
+              "checkout"
+            ]
           },
           "confirmation": {
             "q": "Will I receive an order confirmation?",
             "a": "Yes — after payment you’ll see a confirmation screen and you will receive an email confirmation. If you don’t see it, check Spam/Promotions.",
-            "tags": ["email", "confirmation"]
+            "tags": [
+              "email",
+              "confirmation"
+            ]
           },
           "changeCancel": {
             "q": "Can I change or cancel my order?",
             "a1": "Contact us immediately after placing your order. If the order is already processed or shipped, changes/cancellation may no longer be possible.",
             "a2": "Please include your order number and what you want to change.",
-            "tags": ["cancel", "change"]
+            "tags": [
+              "cancel",
+              "change"
+            ]
           }
         }
       },
@@ -1980,23 +1994,33 @@
                 "value": "7–15"
               }
             },
-            "tags": ["delivery", "times"]
+            "tags": [
+              "delivery",
+              "times"
+            ]
           },
           "tracking": {
             "q": "Do you provide tracking?",
             "a": "Yes. After your order ships, tracking is provided and can be used to follow the shipment until delivery.",
-            "tags": ["tracking"]
+            "tags": [
+              "tracking"
+            ]
           },
           "customs": {
             "q": "Do I have to pay customs or duties?",
             "a": "Customs/VAT/import fees can apply depending on your country and are paid by the recipient.",
-            "tags": ["customs", "duties"]
+            "tags": [
+              "customs",
+              "duties"
+            ]
           },
           "address": {
             "q": "What if my address is wrong or incomplete?",
             "a1": "Contact support immediately with your order number and the correct address. If the parcel is returned or fails delivery due to an incorrect address, reshipping may require an additional fee.",
             "a2": "Always double-check postal code, city, and apartment number before paying.",
-            "tags": ["address"]
+            "tags": [
+              "address"
+            ]
           }
         }
       },
@@ -2007,18 +2031,28 @@
             "q": "Are the products original?",
             "a1": "Yes. FootballWorld sells original football products.",
             "a2": "To keep your item in top condition, wash inside-out on a gentle cycle and avoid high heat.",
-            "tags": ["original", "quality"]
+            "tags": [
+              "original",
+              "quality"
+            ]
           },
           "size": {
             "q": "How do I choose the right size?",
             "a1": "Choose your usual size for a regular fit. For a looser fit, size up. “Player Version” is a slimmer fit — sizing up is recommended.",
             "a2": "If you are between two sizes, choose the larger one.",
-            "tags": ["size", "fit"]
+            "tags": [
+              "size",
+              "fit"
+            ]
           },
           "personalization": {
             "q": "Can I add name & number personalization?",
             "a": "Yes — when the product supports customization, you can enter name and number in the configurator before adding to cart.",
-            "tags": ["custom", "name", "number"]
+            "tags": [
+              "custom",
+              "name",
+              "number"
+            ]
           }
         }
       },
@@ -2041,12 +2075,20 @@
               "Satispay",
               "Link"
             ],
-            "tags": ["payment", "stripe", "visa", "paypal", "multibanco"]
+            "tags": [
+              "payment",
+              "stripe",
+              "visa",
+              "paypal",
+              "multibanco"
+            ]
           },
           "secure": {
             "q": "Is checkout secure?",
             "a": "Yes — payments are processed through secure providers and your card details are not stored on FootballWorld servers.",
-            "tags": ["secure"]
+            "tags": [
+              "secure"
+            ]
           }
         }
       },
@@ -2056,12 +2098,18 @@
           "policy": {
             "q": "What is your return policy?",
             "a": "Returns are accepted for unused items in original packaging. Personalized items (name/number/badges) are not eligible for return, except in case of defect or an error in the customization.",
-            "tags": ["returns"]
+            "tags": [
+              "returns"
+            ]
           },
           "damaged": {
             "q": "My item arrived damaged or wrong — what now?",
             "a": "Contact support with your order number and clear photos of the issue (item + packaging). We will review and provide a replacement or solution.",
-            "tags": ["issue", "damaged", "wrong item"]
+            "tags": [
+              "issue",
+              "damaged",
+              "wrong item"
+            ]
           }
         }
       },
@@ -2076,7 +2124,10 @@
               "orders": "My orders",
               "shipping": "Shipping policy"
             },
-            "tags": ["support", "contact"]
+            "tags": [
+              "support",
+              "contact"
+            ]
           }
         }
       }
@@ -2202,6 +2253,87 @@
       "name": "Name",
       "email": "Email",
       "order": "Order"
+    }
+  },
+  "AccountPage": {
+    "title": "My account",
+    "subtitle": "Manage your profile, security, and personal info.",
+    "profileLoadError": "We couldn't load your profile record. This can happen if you signed in with a username and your email isn't attached to the session.",
+    "profileLoadHelp": "Try logging out and logging in again using your <b>email</b>. If the problem persists, contact support.",
+    "credentialsProvider": "Credentials"
+  },
+  "Account": {
+    "tabs": {
+      "overview": "Overview",
+      "profile": "Profile",
+      "security": "Security",
+      "orders": "Orders"
+    },
+    "common": {
+      "somethingWentWrong": "Something went wrong"
+    },
+    "overview": {
+      "unnamedUser": "Unnamed user",
+      "joined": "Joined",
+      "accountStatus": "Account status",
+      "active": "Active",
+      "provider": "Provider",
+      "userId": "User ID"
+    },
+    "orders": {
+      "onlyPaidShown": "Only paid orders are shown here.",
+      "loading": "Loading orders…",
+      "emptyTitle": "No paid orders yet",
+      "emptyDescriptionPrefix": "When an order is marked as",
+      "paidLabel": "paid",
+      "emptyDescriptionSuffix": "it will show up here.",
+      "orderNumber": "Order #{id}",
+      "placed": "Placed",
+      "items": "Items",
+      "total": "Total",
+      "viewDetails": "View details",
+      "errors": {
+        "failedToLoad": "Failed to load orders"
+      }
+    },
+    "profile": {
+      "editProfile": "Edit profile",
+      "name": "Name",
+      "imageUrl": "Image URL",
+      "saveChanges": "Save changes",
+      "uploadFromDevice": "Upload from device",
+      "imageHelp": "JPG/PNG/WebP up to 8MB.",
+      "placeholders": {
+        "name": "Your name",
+        "imageUrl": "https://… (or will be filled after upload)"
+      },
+      "success": {
+        "updated": "Profile updated successfully"
+      },
+      "errors": {
+        "invalidImage": "Choose a JPG/PNG/WebP image up to 8 MB.",
+        "failedToUpdate": "Failed to update profile"
+      }
+    },
+    "security": {
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmNewPassword": "Confirm new password",
+      "changePassword": "Change password",
+      "passwordPlaceholder": "••••••••",
+      "success": {
+        "changed": "Password changed successfully"
+      },
+      "errors": {
+        "passwordMin": "New password must be at least 8 characters",
+        "passwordsDoNotMatch": "Passwords do not match",
+        "failedToChange": "Failed to change password"
+      }
+    },
+    "avatar": {
+      "user": "User",
+      "alt": "Avatar",
+      "ariaLabel": "avatar"
     }
   }
 }

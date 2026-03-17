@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   CalendarDays,
   Mail,
@@ -86,7 +87,7 @@ async function uploadAvatarToCloudinary(file: File) {
 
 function isValidImage(file: File) {
   const okType = /^image\/(jpe?g|png|webp|gif)$/i.test(file.type)
-  const okSize = file.size <= 8 * 1024 * 1024 // 8MB
+  const okSize = file.size <= 8 * 1024 * 1024
   return okType && okSize
 }
 
@@ -102,32 +103,27 @@ function formatMoneyFromCents(cents: number, currency = 'eur') {
 /* ========================= Main Component ========================= */
 
 export default function AccountClient(props: Props) {
+  const t = useTranslations('Account')
   const searchParams = useSearchParams()
   const [tab, setTab] = useState<'overview' | 'profile' | 'security' | 'orders'>('overview')
 
-  // When coming from FAQ: /account?tab=orders -> open orders automatically
   useEffect(() => {
     const qTab = (searchParams.get('tab') || '').toLowerCase()
     const allowed = new Set(['overview', 'profile', 'security', 'orders'])
     if (!allowed.has(qTab)) return
-    setTab(qTab as any)
+    setTab(qTab as 'overview' | 'profile' | 'security' | 'orders')
   }, [searchParams])
 
   return (
     <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-      {/* ✅ Mobile: horizontal tabs; Desktop: sidebar */}
       <aside className="card p-3 sm:p-4 h-fit">
-        {/* FIX (mobile):
-            - Os botões estavam a encolher (shrink) dentro do overflow-x, e o texto "Orders" ficava cortado.
-            - Agora cada tab tem shrink-0 e o nav tem min-w-max para garantir largura real + scroll horizontal suave.
-        */}
         <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-3 px-3 lg:mx-0 lg:px-0">
           {(
             [
-              ['overview', 'Overview'],
-              ['profile', 'Profile'],
-              ['security', 'Security'],
-              ['orders', 'Orders'],
+              ['overview', t('tabs.overview')],
+              ['profile', t('tabs.profile')],
+              ['security', t('tabs.security')],
+              ['orders', t('tabs.orders')],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -156,18 +152,18 @@ export default function AccountClient(props: Props) {
 /* ========================= OVERVIEW ========================= */
 
 function Overview({ userId, email, defaultName, defaultImage, createdAt, provider }: Props) {
+  const t = useTranslations('Account')
   const joined = useMemo(() => formatDate(createdAt), [createdAt])
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-4 sm:p-6">
-      {/* ✅ Mobile: stack; Desktop: row */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="shrink-0">
           <Avatar src={defaultImage ?? undefined} name={defaultName || email} size={80} />
         </div>
 
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold truncate">{defaultName || 'Unnamed user'}</h2>
+          <h2 className="text-xl font-semibold truncate">{defaultName || t('overview.unnamedUser')}</h2>
 
           <div className="text-gray-600 text-sm flex items-center gap-2 mt-1 min-w-0">
             <Mail className="h-4 w-4 shrink-0" />
@@ -175,23 +171,23 @@ function Overview({ userId, email, defaultName, defaultImage, createdAt, provide
           </div>
 
           <div className="text-gray-600 text-sm flex items-center gap-2 mt-1">
-            <CalendarDays className="h-4 w-4 shrink-0" /> Joined {joined}
+            <CalendarDays className="h-4 w-4 shrink-0" /> {t('overview.joined')} {joined}
           </div>
         </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mt-6">
-        <InfoCard label="Account status">
+        <InfoCard label={t('overview.accountStatus')}>
           <div className="mt-1 font-semibold flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-green-600" /> Active
+            <ShieldCheck className="h-4 w-4 text-green-600" /> {t('overview.active')}
           </div>
         </InfoCard>
 
-        <InfoCard label="Provider">
+        <InfoCard label={t('overview.provider')}>
           <div className="mt-1 font-semibold">{provider}</div>
         </InfoCard>
 
-        <InfoCard label="User ID">
+        <InfoCard label={t('overview.userId')}>
           <div className="mt-1 font-mono text-sm truncate">{userId ?? '—'}</div>
         </InfoCard>
       </div>
@@ -225,6 +221,7 @@ function isPaidStatus(status: string) {
 }
 
 function MyOrders() {
+  const t = useTranslations('Account')
   const { status } = useSession()
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
@@ -239,7 +236,7 @@ function MyOrders() {
       try {
         const r = await fetch('/api/account/orders', { method: 'GET' })
         const j = await r.json()
-        if (!r.ok) throw new Error(j?.error || 'Failed to load orders')
+        if (!r.ok) throw new Error(j?.error || t('orders.errors.failedToLoad'))
 
         const raw: OrderListItem[] = Array.isArray(j?.orders) ? j.orders : []
         const paidOnly = raw.filter((o) => isPaidStatus(o.status))
@@ -248,7 +245,7 @@ function MyOrders() {
         setOrders(paidOnly)
       } catch (e: any) {
         if (!alive) return
-        setErr(e?.message ?? 'Something went wrong')
+        setErr(e?.message ?? t('common.somethingWentWrong'))
       } finally {
         if (!alive) return
         setLoading(false)
@@ -259,23 +256,23 @@ function MyOrders() {
     return () => {
       alive = false
     }
-  }, [status])
+  }, [status, t])
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-4 sm:p-6">
       <div className="flex items-start sm:items-center justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <ReceiptText className="h-5 w-5 shrink-0" /> Orders
+            <ReceiptText className="h-5 w-5 shrink-0" /> {t('tabs.orders')}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">Only paid orders are shown here.</p>
+          <p className="text-sm text-gray-600 mt-1">{t('orders.onlyPaidShown')}</p>
         </div>
       </div>
 
       <div className="mt-5">
         {loading && (
           <div className="flex items-center gap-2 text-gray-600">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading orders…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t('orders.loading')}
           </div>
         )}
 
@@ -284,9 +281,10 @@ function MyOrders() {
         {!loading && !err && orders.length === 0 && (
           <div className="rounded-2xl border p-6 bg-white/70 text-center">
             <Package className="h-6 w-6 mx-auto text-gray-400" />
-            <div className="mt-2 font-semibold">No paid orders yet</div>
+            <div className="mt-2 font-semibold">{t('orders.emptyTitle')}</div>
             <div className="mt-1 text-sm text-gray-600">
-              When an order is marked as <span className="font-medium">paid</span>, it will show up here.
+              {t('orders.emptyDescriptionPrefix')} <span className="font-medium">{t('orders.paidLabel')}</span>,{' '}
+              {t('orders.emptyDescriptionSuffix')}
             </div>
           </div>
         )}
@@ -300,15 +298,22 @@ function MyOrders() {
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-semibold truncate">{`Order #${o.id.slice(0, 8).toUpperCase()}`}</span>
+                    <span className="font-semibold truncate">
+                      {t('orders.orderNumber', { id: o.id.slice(0, 8).toUpperCase() })}
+                    </span>
                     <span className="text-xs px-2 py-1 rounded-full border bg-white shrink-0">{o.status}</span>
                   </div>
 
-                  {/* ✅ Mobile: stacked lines; Desktop: inline */}
                   <div className="text-sm text-gray-600 mt-1 grid gap-1 sm:flex sm:flex-wrap sm:gap-x-4 sm:gap-y-1">
-                    <span>Placed: {formatDate(o.createdAt)}</span>
-                    <span>Items: {o.itemsCount}</span>
-                    <span>Total: {formatMoneyFromCents(o.totalCents, o.currency)}</span>
+                    <span>
+                      {t('orders.placed')}: {formatDate(o.createdAt)}
+                    </span>
+                    <span>
+                      {t('orders.items')}: {o.itemsCount}
+                    </span>
+                    <span>
+                      {t('orders.total')}: {formatMoneyFromCents(o.totalCents, o.currency)}
+                    </span>
                   </div>
                 </div>
 
@@ -316,7 +321,7 @@ function MyOrders() {
                   href={`/account/orders/${encodeURIComponent(o.id)}`}
                   className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border px-4 py-2 hover:bg-gray-50"
                 >
-                  View details <ChevronRight className="h-4 w-4" />
+                  {t('orders.viewDetails')} <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
             ))}
@@ -330,6 +335,7 @@ function MyOrders() {
 /* ========================= PROFILE (Direct Cloudinary Upload) ========================= */
 
 function ProfileForm({ email, defaultName, defaultImage }: Props) {
+  const t = useTranslations('Account')
   const { update } = useSession()
   const [name, setName] = useState(defaultName || '')
   const [image, setImage] = useState<string>(defaultImage || '')
@@ -340,7 +346,7 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
 
   async function uploadIfNeeded(): Promise<string | null> {
     if (!file) return null
-    if (!isValidImage(file)) throw new Error('Choose a JPG/PNG/WebP image up to 8 MB.')
+    if (!isValidImage(file)) throw new Error(t('profile.errors.invalidImage'))
     return await uploadAvatarToCloudinary(file)
   }
 
@@ -362,11 +368,11 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Failed to update profile')
+      if (!res.ok) throw new Error(data?.error || t('profile.errors.failedToUpdate'))
 
       setImage(data?.user?.image ?? finalImage ?? '')
       setFile(null)
-      setOk('Profile updated successfully')
+      setOk(t('profile.success.updated'))
 
       try {
         localStorage.setItem('profile:updated', String(Date.now()))
@@ -377,7 +383,7 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
         await update?.()
       } catch {}
     } catch (e: any) {
-      setErr(e?.message ?? 'Something went wrong')
+      setErr(e?.message ?? t('common.somethingWentWrong'))
     } finally {
       setLoading(false)
     }
@@ -389,7 +395,7 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
       return
     }
     if (!isValidImage(f)) {
-      setErr('Choose a JPG/PNG/WebP image up to 8 MB.')
+      setErr(t('profile.errors.invalidImage'))
       setTimeout(() => setErr(null), 2500)
       return
     }
@@ -399,49 +405,47 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-4 sm:p-6">
-      <h2 className="text-xl font-semibold mb-4">Edit profile</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('profile.editProfile')}</h2>
 
-      {/* ✅ Mobile: single column; Desktop: two columns */}
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         <div className="flex flex-col items-center gap-3">
           <Avatar src={image || undefined} name={name || email} size={96} />
           <UploadFromDevice onPick={onFileChange} />
-          <div className="text-xs text-gray-500 text-center">JPG/PNG/WebP up to 8MB.</div>
+          <div className="text-xs text-gray-500 text-center">{t('profile.imageHelp')}</div>
         </div>
 
         <div className="grid gap-4">
           <label className="block">
-            <span className="text-sm text-gray-700">Name</span>
+            <span className="text-sm text-gray-700">{t('profile.name')}</span>
             <div className="mt-1 flex items-center gap-2 rounded-2xl border px-3">
               <User className="h-4 w-4 text-gray-400 shrink-0" />
               <input
                 className="w-full py-2 outline-none bg-transparent"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder={t('profile.placeholders.name')}
               />
             </div>
           </label>
 
           <label className="block">
-            <span className="text-sm text-gray-700">Image URL</span>
+            <span className="text-sm text-gray-700">{t('profile.imageUrl')}</span>
             <div className="mt-1 flex items-center gap-2 rounded-2xl border px-3">
               <ImageIcon className="h-4 w-4 text-gray-400 shrink-0" />
               <input
                 className="w-full py-2 outline-none bg-transparent"
                 value={image}
                 onChange={(e) => setImage(e.target.value)}
-                placeholder="https://… (or will be filled after upload)"
+                placeholder={t('profile.placeholders.imageUrl')}
               />
             </div>
           </label>
         </div>
       </div>
 
-      {/* ✅ Mobile: button full width */}
       <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
         <button onClick={onSave} disabled={loading} className="btn-primary disabled:opacity-60 w-full sm:w-auto">
-          <Save className="h-4 w-4" /> Save changes
+          <Save className="h-4 w-4" /> {t('profile.saveChanges')}
         </button>
 
         {ok && <BadgeOk>{ok}</BadgeOk>}
@@ -452,11 +456,13 @@ function ProfileForm({ email, defaultName, defaultImage }: Props) {
 }
 
 function UploadFromDevice({ onPick }: { onPick: (f: File | null) => void }) {
+  const t = useTranslations('Account')
+
   return (
     <label className="inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 cursor-pointer hover:bg-gray-50 w-full sm:w-auto">
       <input type="file" accept="image/*" className="hidden" onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
       <UploadCloud className="h-4 w-4" />
-      <span>Upload from device</span>
+      <span>{t('profile.uploadFromDevice')}</span>
     </label>
   )
 }
@@ -464,6 +470,7 @@ function UploadFromDevice({ onPick }: { onPick: (f: File | null) => void }) {
 /* ========================= SECURITY ========================= */
 
 function SecurityForm() {
+  const t = useTranslations('Account')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -476,8 +483,8 @@ function SecurityForm() {
     setOk(null)
     setErr(null)
     try {
-      if (newPassword.length < 8) throw new Error('New password must be at least 8 characters')
-      if (newPassword !== confirm) throw new Error('Passwords do not match')
+      if (newPassword.length < 8) throw new Error(t('security.errors.passwordMin'))
+      if (newPassword !== confirm) throw new Error(t('security.errors.passwordsDoNotMatch'))
 
       const res = await fetch('/api/account/password', {
         method: 'PATCH',
@@ -485,14 +492,14 @@ function SecurityForm() {
         body: JSON.stringify({ currentPassword, newPassword }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Failed to change password')
+      if (!res.ok) throw new Error(data?.error || t('security.errors.failedToChange'))
 
-      setOk('Password changed successfully')
+      setOk(t('security.success.changed'))
       setCurrentPassword('')
       setNewPassword('')
       setConfirm('')
     } catch (e: any) {
-      setErr(e?.message ?? 'Something went wrong')
+      setErr(e?.message ?? t('common.somethingWentWrong'))
     } finally {
       setLoading(false)
     }
@@ -500,12 +507,12 @@ function SecurityForm() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-4 sm:p-6">
-      <h2 className="text-xl font-semibold mb-4">Security</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('tabs.security')}</h2>
 
       <div className="grid gap-4">
-        <PasswordInput label="Current password" value={currentPassword} onChange={setCurrentPassword} />
-        <PasswordInput label="New password" value={newPassword} onChange={setNewPassword} />
-        <PasswordInput label="Confirm new password" value={confirm} onChange={setConfirm} />
+        <PasswordInput label={t('security.currentPassword')} value={currentPassword} onChange={setCurrentPassword} />
+        <PasswordInput label={t('security.newPassword')} value={newPassword} onChange={setNewPassword} />
+        <PasswordInput label={t('security.confirmNewPassword')} value={confirm} onChange={setConfirm} />
       </div>
 
       <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -514,7 +521,7 @@ function SecurityForm() {
           disabled={loading}
           className="btn-primary disabled:opacity-60 w-full sm:w-auto"
         >
-          <KeyRound className="h-4 w-4" /> Change password
+          <KeyRound className="h-4 w-4" /> {t('security.changePassword')}
         </button>
 
         {ok && <BadgeOk>{ok}</BadgeOk>}
@@ -533,6 +540,8 @@ function PasswordInput({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useTranslations('Account')
+
   return (
     <label className="block">
       <span className="text-sm text-gray-700">{label}</span>
@@ -541,7 +550,7 @@ function PasswordInput({
         <input
           type="password"
           className="w-full py-2 outline-none bg-transparent"
-          placeholder="••••••••"
+          placeholder={t('security.passwordPlaceholder')}
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -571,7 +580,9 @@ function BadgeErr({ children }: { children: React.ReactNode }) {
 /* ========================= Avatar ========================= */
 
 function Avatar({ src, name, size = 64 }: { src?: string | null; name?: string; size?: number }) {
-  const initials = (name || 'User')
+  const t = useTranslations('Account')
+
+  const initials = (name || t('avatar.user'))
     .split(' ')
     .map((p) => p[0])
     .join('')
@@ -579,10 +590,9 @@ function Avatar({ src, name, size = 64 }: { src?: string | null; name?: string; 
     .toUpperCase()
 
   return src ? (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt={name || 'Avatar'}
+      alt={name || t('avatar.alt')}
       className="rounded-full object-cover border"
       style={{ width: size, height: size }}
     />
@@ -590,7 +600,7 @@ function Avatar({ src, name, size = 64 }: { src?: string | null; name?: string; 
     <div
       className="rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 text-white border flex items-center justify-center"
       style={{ width: size, height: size }}
-      aria-label="avatar"
+      aria-label={t('avatar.ariaLabel')}
       title={name}
     >
       <span className="font-semibold" style={{ fontSize: Math.max(12, size / 3.2) }}>

@@ -38,7 +38,12 @@
     "searchProductsPlaceholder": "Pesquisar produtos...",
     "searchProducts": "Pesquisar produtos",
     "submitSearch": "Submeter pesquisa",
-    "closeMenu": "Fechar menu"
+    "closeMenu": "Fechar menu",
+    "signedInAs": "Sessão iniciada como",
+    "accountPage": "Página da conta",
+    "adminPanel": "Painel de administração",
+    "helpFaq": "Ajuda / FAQ",
+    "signOut": "Terminar sessão"
   },
   "Footer": {
     "about": "Sobre nós",
@@ -2251,5 +2256,86 @@
       "email": "Email",
       "order": "Encomenda"
     }
+  },
+  "Account": {
+    "tabs": {
+      "overview": "Visão geral",
+      "profile": "Perfil",
+      "security": "Segurança",
+      "orders": "Encomendas"
+    },
+    "common": {
+      "somethingWentWrong": "Algo correu mal"
+    },
+    "overview": {
+      "unnamedUser": "Utilizador sem nome",
+      "joined": "Entrou em",
+      "accountStatus": "Estado da conta",
+      "active": "Ativa",
+      "provider": "Fornecedor",
+      "userId": "ID do utilizador"
+    },
+    "orders": {
+      "onlyPaidShown": "Apenas as encomendas pagas são mostradas aqui.",
+      "loading": "A carregar encomendas…",
+      "emptyTitle": "Ainda não existem encomendas pagas",
+      "emptyDescriptionPrefix": "Quando uma encomenda for marcada como",
+      "paidLabel": "paga",
+      "emptyDescriptionSuffix": "ela aparecerá aqui.",
+      "orderNumber": "Encomenda #{id}",
+      "placed": "Feita em",
+      "items": "Itens",
+      "total": "Total",
+      "viewDetails": "Ver detalhes",
+      "errors": {
+        "failedToLoad": "Falha ao carregar encomendas"
+      }
+    },
+    "profile": {
+      "editProfile": "Editar perfil",
+      "name": "Nome",
+      "imageUrl": "URL da imagem",
+      "saveChanges": "Guardar alterações",
+      "uploadFromDevice": "Carregar do dispositivo",
+      "imageHelp": "JPG/PNG/WebP até 8MB.",
+      "placeholders": {
+        "name": "O seu nome",
+        "imageUrl": "https://… (ou será preenchido após o upload)"
+      },
+      "success": {
+        "updated": "Perfil atualizado com sucesso"
+      },
+      "errors": {
+        "invalidImage": "Escolha uma imagem JPG/PNG/WebP até 8 MB.",
+        "failedToUpdate": "Falha ao atualizar o perfil"
+      }
+    },
+    "security": {
+      "currentPassword": "Palavra-passe atual",
+      "newPassword": "Nova palavra-passe",
+      "confirmNewPassword": "Confirmar nova palavra-passe",
+      "changePassword": "Alterar palavra-passe",
+      "passwordPlaceholder": "••••••••",
+      "success": {
+        "changed": "Palavra-passe alterada com sucesso"
+      },
+      "errors": {
+        "passwordMin": "A nova palavra-passe deve ter pelo menos 8 caracteres",
+        "passwordsDoNotMatch": "As palavras-passe não coincidem",
+        "failedToChange": "Falha ao alterar a palavra-passe"
+      }
+    },
+    "avatar": {
+      "user": "Utilizador",
+      "alt": "Avatar",
+      "ariaLabel": "avatar"
+    }
+  },
+  "AccountPage": {
+    "title": "A minha conta",
+    "subtitle": "Gira o teu perfil, segurança e informações pessoais.",
+    "profileLoadError": "Não foi possível carregar o registo do teu perfil. Isto pode acontecer se tiveres iniciado sessão com um nome de utilizador e o teu email não estiver associado à sessão.",
+    "profileLoadHelp": "Tenta terminar sessão e iniciar novamente usando o teu <b>email</b>. Se o problema persistir, contacta o suporte.",
+    "credentialsProvider": "Credenciais"
   }
 }
