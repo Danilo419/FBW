@@ -13,7 +13,6 @@ import {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/* ---------------- usar SEMPRE as helpers da lib ---------------- */
 function findClubAsset(teamName: string): string | null {
   const slug = slugFromTeamName(teamName);
 
@@ -88,11 +87,16 @@ export default async function ClubsPage() {
       teamType: "CLUB",
       isVisible: true,
       NOT: {
-        channel: "PT_STOCK_CTT",
-      },
+        channel: "PT_STOCK_CTT"
+      }
     },
-    select: { team: true, imageUrls: true },
-    orderBy: { team: "asc" },
+    select: {
+      team: true,
+      imageUrls: true
+    },
+    orderBy: {
+      team: "asc"
+    }
   });
 
   const map = new Map<string, { image: string | null; slug: string }>();
@@ -107,7 +111,7 @@ export default async function ClubsPage() {
 
     map.set(team, {
       image: assetImg ?? firstDbImg,
-      slug,
+      slug
     });
   }
 
@@ -115,7 +119,7 @@ export default async function ClubsPage() {
     .map(([name, { image, slug }]) => ({
       name,
       image: image ?? undefined,
-      slug,
+      slug
     }))
     .sort((a, b) => a.name.localeCompare(b.name, locale));
 
@@ -134,7 +138,7 @@ export default async function ClubsPage() {
                   <span className="font-semibold text-emerald-600">
                     {chunks}
                   </span>
-                ),
+                )
               })}
             </p>
           </div>
@@ -169,9 +173,7 @@ export default async function ClubsPage() {
                       unoptimized={isExternalUrl(club.image)}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 px-4 text-center text-xs font-medium text-slate-500 sm:text-sm">
-                      {t("noImage")}
-                    </div>
+                    <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
                   )}
 
                   <div className="pointer-events-none absolute inset-0 ring-0 transition group-hover:ring-2 group-hover:ring-emerald-500/40" />
@@ -179,7 +181,7 @@ export default async function ClubsPage() {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
                     <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
-                      <span>{t("viewJerseys")}</span>
+                      {t("viewJerseys")}
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>
