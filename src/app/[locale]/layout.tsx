@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import {
   clubImg,
@@ -85,7 +85,11 @@ export default async function ClubsPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "clubsPage" });
+
+  // Força o locale correto desta página
+  setRequestLocale(locale);
+
+  const t = await getTranslations("clubsPage");
 
   const rows = await prisma.product.findMany({
     where: {
