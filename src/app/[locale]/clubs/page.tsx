@@ -125,7 +125,7 @@ export default async function ClubsPage() {
         <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
-              PORTUGUES-TESTE-123
+              {t("title")}
             </h1>
 
             <p className="mt-1 max-w-xl text-xs text-slate-600 sm:text-sm">
@@ -179,7 +179,7 @@ export default async function ClubsPage() {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
                     <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
-                      <span>VER-CAMISOLAS-TESTE-123</span>
+                      <span>{t("viewJerseys")}</span>
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>
