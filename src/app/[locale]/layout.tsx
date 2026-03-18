@@ -35,27 +35,25 @@ export default async function LocaleLayout({
 
   setRequestLocale(locale);
 
-  const messages = await getMessages();
+  const messages = await getMessages({ locale });
 
   return (
-    <html lang={locale}>
-      <body>
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <SessionProviderClient>
-            <Suspense fallback={null}>
-              <Tracker />
-            </Suspense>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <SessionProviderClient>
+        <Suspense fallback={null}>
+          <Tracker />
+        </Suspense>
 
-            <Suspense fallback={null}>
-              <FreeShippingBannerServer />
-            </Suspense>
+        {/* Free Shipping Banner (global, above header) */}
+        <Suspense fallback={null}>
+          <FreeShippingBannerServer />
+        </Suspense>
 
-            <Suspense fallback={null}>
-              <SiteChrome>{children}</SiteChrome>
-            </Suspense>
-          </SessionProviderClient>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+        {/* Main site layout */}
+        <Suspense fallback={null}>
+          <SiteChrome>{children}</SiteChrome>
+        </Suspense>
+      </SessionProviderClient>
+    </NextIntlClientProvider>
   );
 }
