@@ -1506,11 +1506,14 @@
   },
   "nationsPage": {
     "title": "Nations",
-    "subtitle": "Browse all nations with <brand>FootballWorld</brand> products available.",
-    "totalNations": "Total nations",
+    "subtitle": "Explore national team jerseys available at <brand>FootballWorld</brand>.",
+    "totalNationsLabel": "Total nations",
+    "totalNationsValue": "{count}",
+    "nationImageAlt": "{nation} jersey",
+    "nationLinkAria": "View {nation} jerseys",
     "viewJerseys": "View jerseys",
-    "nationImageAlt": "{nation} jersey collection",
-    "empty": "No nations available yet."
+    "noImage": "No image",
+    "empty": "There are no nations available yet."
   },
   "leaguesPage": {
     "title": "Leagues",

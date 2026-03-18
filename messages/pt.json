@@ -1506,9 +1506,12 @@
   "nationsPage": {
     "title": "Seleções",
     "subtitle": "Explore todas as seleções com produtos <brand>FootballWorld</brand> disponíveis.",
-    "totalNations": "Total de seleções",
+    "totalNationsLabel": "Total de seleções",
+    "totalNationsValue": "{count}",
     "viewJerseys": "Ver camisolas",
     "nationImageAlt": "Coleção de camisolas de {nation}",
+    "nationLinkAria": "Ver camisolas de {nation}",
+    "noImage": "Sem imagem",
     "empty": "Ainda não há seleções disponíveis."
   },
   "leaguesPage": {

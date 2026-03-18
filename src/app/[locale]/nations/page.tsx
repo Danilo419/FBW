@@ -136,10 +136,10 @@ export default async function NationsPage() {
 
           <div className="inline-flex items-center justify-end gap-1 text-[11px] text-slate-500 sm:text-xs">
             <span className="uppercase tracking-[0.18em]">
-              {t("totalNations")}
+              {t("totalNationsLabel")}
             </span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
-              {nations.length}
+              {t("totalNationsValue", { count: nations.length })}
             </span>
           </div>
         </div>
@@ -151,6 +151,7 @@ export default async function NationsPage() {
                 key={nation.slug}
                 href={`/nations/${nation.slug}`}
                 className="group block touch-manipulation"
+                aria-label={t("nationLinkAria", { nation: nation.name })}
               >
                 <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200 hover:-translate-y-1">
                   {nation.image ? (
@@ -164,7 +165,9 @@ export default async function NationsPage() {
                       unoptimized={isExternalUrl(nation.image)}
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 px-3 text-center text-xs font-semibold text-slate-500 sm:text-sm">
+                      {t("noImage")}
+                    </div>
                   )}
 
                   <div className="pointer-events-none absolute inset-0 ring-0 transition group-hover:ring-2 group-hover:ring-emerald-500/40" />
@@ -172,7 +175,7 @@ export default async function NationsPage() {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
                     <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
-                      {t("viewJerseys")}
+                      <span>{t("viewJerseys")}</span>
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>
