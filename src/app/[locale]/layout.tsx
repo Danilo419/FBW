@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import {
   clubImg,
@@ -79,17 +79,9 @@ type ClubCard = {
   slug: string;
 };
 
-export default async function ClubsPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
-
-  // Força o locale correto desta página
-  setRequestLocale(locale);
-
+export default async function ClubsPage() {
   const t = await getTranslations("clubsPage");
+  const locale = await getLocale();
 
   const rows = await prisma.product.findMany({
     where: {
