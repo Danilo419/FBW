@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import {
   clubImg,
@@ -81,6 +81,7 @@ type ClubCard = {
 
 export default async function ClubsPage() {
   const t = await getTranslations("clubsPage");
+  const locale = await getLocale();
 
   const rows = await prisma.product.findMany({
     where: {
@@ -116,7 +117,7 @@ export default async function ClubsPage() {
       image: image ?? undefined,
       slug,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name, locale));
 
   return (
     <main className="min-h-screen bg-white py-6 md:py-10">
@@ -168,7 +169,9 @@ export default async function ClubsPage() {
                       unoptimized={isExternalUrl(club.image)}
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 px-4 text-center text-xs font-medium text-slate-500 sm:text-sm">
+                      {t("noImage")}
+                    </div>
                   )}
 
                   <div className="pointer-events-none absolute inset-0 ring-0 transition group-hover:ring-2 group-hover:ring-emerald-500/40" />
@@ -176,7 +179,7 @@ export default async function ClubsPage() {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
                     <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
-                      {t("viewJerseys")}
+                      <span>{t("viewJerseys")}</span>
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>

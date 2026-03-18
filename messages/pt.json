@@ -1528,6 +1528,7 @@
     "totalClubs": "Total de clubes",
     "viewJerseys": "Ver camisolas",
     "clubImageAlt": "Coleção de camisolas de {club}",
+    "noImage": "Sem imagem",
     "empty": "Ainda não há clubes disponíveis."
   },
   "shippingPage": {

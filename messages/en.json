@@ -1529,6 +1529,7 @@
     "totalClubs": "Total clubs",
     "viewJerseys": "View jerseys",
     "clubImageAlt": "{club} jersey collection",
+    "noImage": "No image",
     "empty": "No clubs available yet."
   },
   "shippingPage": {
