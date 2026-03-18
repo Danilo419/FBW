@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
-import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import {
   clubImg,
@@ -12,6 +11,16 @@ import {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+type ClubsPageMessages = {
+  title: string;
+  subtitle: string;
+  totalClubs: string;
+  viewJerseys: string;
+  clubImageAlt: string;
+  noImage: string;
+  empty: string;
+};
 
 /* ---------------- usar SEMPRE as helpers da lib ---------------- */
 function findClubAsset(teamName: string): string | null {
@@ -73,15 +82,54 @@ function getFirstImage(imageUrls: unknown): string | null {
   }
 }
 
+function renderRichSubtitle(template: string) {
+  const parts = template.split(/<brand>|<\/brand>/g);
+
+  return parts.map((part, index) =>
+    index % 2 === 1 ? (
+      <span key={index} className="font-semibold text-emerald-600">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
+function formatMessage(template: string, values: Record<string, string>) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? "");
+}
+
 type ClubCard = {
   name: string;
   image?: string | null;
   slug: string;
 };
 
-export default async function ClubsPage() {
-  const t = await getTranslations("clubsPage");
-  const locale = await getLocale();
+export default async function ClubsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const safeLocale = locale === "pt" ? "pt" : "en";
+
+  const messagesModule = await import(
+    `../../../../messages/${safeLocale}.json`
+  );
+  const messages = messagesModule.default as {
+    clubsPage?: ClubsPageMessages;
+  };
+
+  const t: ClubsPageMessages = messages.clubsPage ?? {
+    title: "Clubs",
+    subtitle: "Browse all clubs with <brand>FootballWorld</brand> products available.",
+    totalClubs: "Total clubs",
+    viewJerseys: "View Jerseys",
+    clubImageAlt: "Collection of {club} jerseys",
+    noImage: "No image",
+    empty: "There are no clubs available yet.",
+  };
 
   const rows = await prisma.product.findMany({
     where: {
@@ -117,7 +165,7 @@ export default async function ClubsPage() {
       image: image ?? undefined,
       slug,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, locale));
+    .sort((a, b) => a.name.localeCompare(b.name, safeLocale));
 
   return (
     <main className="min-h-screen bg-white py-6 md:py-10">
@@ -125,24 +173,16 @@ export default async function ClubsPage() {
         <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
-              {t("title")}
+              {t.title}
             </h1>
 
             <p className="mt-1 max-w-xl text-xs text-slate-600 sm:text-sm">
-              {t.rich("subtitle", {
-                brand: (chunks) => (
-                  <span className="font-semibold text-emerald-600">
-                    {chunks}
-                  </span>
-                ),
-              })}
+              {renderRichSubtitle(t.subtitle)}
             </p>
           </div>
 
           <div className="inline-flex items-center justify-end gap-1 text-[11px] text-slate-500 sm:text-xs">
-            <span className="uppercase tracking-[0.18em]">
-              {t("totalClubs")}
-            </span>
+            <span className="uppercase tracking-[0.18em]">{t.totalClubs}</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
               {clubs.length}
             </span>
@@ -161,7 +201,7 @@ export default async function ClubsPage() {
                   {club.image ? (
                     <Image
                       src={club.image}
-                      alt={t("clubImageAlt", { club: club.name })}
+                      alt={formatMessage(t.clubImageAlt, { club: club.name })}
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -170,7 +210,7 @@ export default async function ClubsPage() {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 px-4 text-center text-xs font-medium text-slate-500 sm:text-sm">
-                      {t("noImage")}
+                      {t.noImage}
                     </div>
                   )}
 
@@ -179,7 +219,7 @@ export default async function ClubsPage() {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
                     <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
-                      <span>{t("viewJerseys")}</span>
+                      <span>{t.viewJerseys}</span>
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>
@@ -195,7 +235,7 @@ export default async function ClubsPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-12 text-center">
-            <p className="text-sm text-slate-600">{t("empty")}</p>
+            <p className="text-sm text-slate-600">{t.empty}</p>
           </div>
         )}
       </div>
