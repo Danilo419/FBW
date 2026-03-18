@@ -128,14 +128,6 @@ export default async function PtStockPage() {
                 three: (chunks) => <b>{chunks}</b>,
               })}
             </p>
-
-            <p className="mb-1 mt-4 font-semibold text-gray-900">
-              {t("intro.whyTitle")}
-            </p>
-
-            <p className="mt-1">{t("intro.whyLine1")}</p>
-
-            <p className="mt-2">{t("intro.whyLine2")}</p>
           </div>
         </div>
       </div>

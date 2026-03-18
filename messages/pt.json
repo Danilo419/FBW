@@ -1148,12 +1148,9 @@
       "three": "3+ camisolas: envio GRÁTIS"
     },
     "intro": {
-      "line1": "Nesta página só é possível comprar produtos que a <brand>FootBallWorld já tem em stock em Portugal</brand>, com entrega pelos CTT em <delivery>2–3 dias úteis</delivery>.",
-      "line2": "As promoções usadas noutras páginas <noApply>não se aplicam</noApply> aos produtos desta página. Em vez disso, esta página usa uma promoção especial de envio para stock em Portugal:",
-      "line3": "<one>1 camisola:</one> 6€ de envio • <two>2 camisolas:</two> 3€ de envio • <three>3 ou mais camisolas:</three> envio GRATUITO",
-      "whyTitle": "Porque é que os produtos em stock em Portugal são mais baratos?",
-      "whyLine1": "Porque estes produtos já se encontram armazenados em Portugal, evitamos custos de envio internacional, taxas de importação e margens adicionais de fornecedores.",
-      "whyLine2": "Assim conseguimos oferecer preços melhores e entregas mais rápidas em Portugal, mantendo exatamente a mesma qualidade do produto."
+      "line1": "Nesta página só é possível comprar produtos que a <brand>FootballWorld já tem em stock em Portugal</brand>, com entrega pelos CTT em <delivery>2–3 dias úteis</delivery>.",
+      "line2": "As promoções usadas noutras páginas <noApply>não se aplicam</noApply> aos produtos desta página. Em vez disso, esta página utiliza uma promoção especial de envio para stock em Portugal:",
+      "line3": "<one>1 camisola:</one> 6€ de envio • <two>2 camisolas:</two> 3€ de envio • <three>3 ou mais camisolas:</three> envio GRATUITO"
     },
     "empty": "Ainda não existem produtos em stock em Portugal.",
     "badge": "CTT 2–3 dias",
