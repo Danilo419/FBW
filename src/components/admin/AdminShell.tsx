@@ -107,6 +107,7 @@ function Sidebar({
     { href: `/${locale}/admin/pt-stock/orders`, label: "PT Stock Orders", short: "PT Ord." },
     { href: `/${locale}/admin/products`, label: "Products", short: "Prod." },
     { href: `/${locale}/admin/pt-stock/products`, label: "PT Stock Products", short: "PT Prod." },
+    { href: `/${locale}/admin/discount-codes`, label: "Discount Codes", short: "Codes" },
     { href: `/${locale}/admin/users`, label: "Users", short: "Users" },
     { href: `/${locale}/admin/newsletter`, label: "Newsletter", short: "News" },
     { href: `/${locale}/admin/analytics`, label: "Analytics", short: "An." },

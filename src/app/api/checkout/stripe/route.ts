@@ -175,7 +175,7 @@ function shippingToMetadata(s?: Shipping | null): Record<string, string> {
 
 /**
  * ✅ IMPORTANTE:
- * O teu admin extractor procura line1/city/postal_code no ROOT do JSON.
+ * O admin extractor procura line1/city/postal_code no ROOT do JSON.
  * Então aqui nós "flatten" o shipping para evitar ficar tudo dentro de address:{...}
  */
 function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
@@ -243,6 +243,70 @@ function detectCartChannel(items: CartItemRow[]): CartChannel {
 
   const only = Array.from(channels)[0];
   return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+}
+
+function extractSelectedSize(optionsJson: any): string | null {
+  const root = safeObj(optionsJson);
+
+  const direct = safeStr(root.size);
+  if (direct) return direct;
+
+  const selectedSize = safeStr(root.selectedSize);
+  if (selectedSize) return selectedSize;
+
+  const options = safeObj(root.options);
+  const optionsSize = safeStr(options.size);
+  if (optionsSize) return optionsSize;
+
+  const selectedOptions = safeObj(root.selectedOptions);
+  const selectedOptionsSize = safeStr(selectedOptions.size);
+  if (selectedOptionsSize) return selectedOptionsSize;
+
+  return null;
+}
+
+function buildSnapshotJson(
+  optionsJson: any,
+  personalization: any,
+  extras?: Record<string, any>
+) {
+  const baseSnapshot = safeObj(optionsJson);
+  const selectedSize = extractSelectedSize(baseSnapshot);
+
+  const snapshot: Record<string, any> = {
+    ...baseSnapshot,
+    personalization: personalization ?? null,
+  };
+
+  if (selectedSize) {
+    snapshot.size = selectedSize;
+
+    if (!safeStr(snapshot.selectedSize)) {
+      snapshot.selectedSize = selectedSize;
+    }
+
+    const options = safeObj(snapshot.options);
+    if (!safeStr(options.size)) {
+      snapshot.options = {
+        ...options,
+        size: selectedSize,
+      };
+    }
+
+    const selectedOptions = safeObj(snapshot.selectedOptions);
+    if (!safeStr(selectedOptions.size)) {
+      snapshot.selectedOptions = {
+        ...selectedOptions,
+        size: selectedSize,
+      };
+    }
+  }
+
+  if (extras && typeof extras === "object") {
+    Object.assign(snapshot, extras);
+  }
+
+  return snapshot;
 }
 
 /* ============================== ROUTE ============================== */
@@ -362,15 +426,14 @@ export async function POST(req: NextRequest) {
       originalSubtotal - payableProductsSubtotalCents
     );
 
-    const ptShipping =
-      isPtStockCart
-        ? getShippingForCart(
-            cartItems.map((it) => ({
-              qty: Math.max(0, Number(it.qty ?? 0)),
-              channel: "PT_STOCK_CTT" as const,
-            }))
-          )
-        : null;
+    const ptShipping = isPtStockCart
+      ? getShippingForCart(
+          cartItems.map((it) => ({
+            qty: Math.max(0, Number(it.qty ?? 0)),
+            channel: "PT_STOCK_CTT" as const,
+          }))
+        )
+      : null;
 
     const shippingCents = isPtStockCart
       ? typeof (ptShipping as any)?.shippingCents === "number"
@@ -419,7 +482,6 @@ export async function POST(req: NextRequest) {
       const idx = Number(line.id);
       const it = cartItems[idx]!;
       const img = it.product.imageUrls?.[0] ?? null;
-      const baseSnapshot = it.optionsJson ?? {};
 
       const out: any[] = [];
 
@@ -431,10 +493,7 @@ export async function POST(req: NextRequest) {
           qty: line.payQty,
           unitPrice: it.unitPrice,
           totalPrice: line.payQty * it.unitPrice,
-          snapshotJson: {
-            ...baseSnapshot,
-            personalization: it.personalization ?? null,
-          },
+          snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization),
         });
       }
 
@@ -446,12 +505,10 @@ export async function POST(req: NextRequest) {
           qty: line.freeQty,
           unitPrice: 0,
           totalPrice: 0,
-          snapshotJson: {
-            ...baseSnapshot,
-            personalization: it.personalization ?? null,
+          snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
             __isFree: true,
             __originalUnitPrice: it.unitPrice,
-          },
+          }),
         });
       }
 

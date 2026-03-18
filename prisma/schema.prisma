@@ -383,6 +383,12 @@ model Order {
   paymentStatus String?
   paidAt        DateTime?
 
+  /**
+   * 🔹 usado para impedir descontar stock duas vezes
+   * quando o webhook/payment handler repetir
+   */
+  stockDeductedAt DateTime?
+
   shippingJson Json?
 
   shippingFullName   String?
@@ -414,6 +420,7 @@ model Order {
   @@index([createdAt])
   @@index([shippingCountry])
   @@index([paidAt])
+  @@index([stockDeductedAt])
   @@index([shippingStatus])
   @@index([shippedAt])
   @@index([deliveredAt])

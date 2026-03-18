@@ -7,6 +7,7 @@ import { finalizePaidOrder } from "@/lib/checkout";
 import { pusherServer } from "@/lib/pusher";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -506,6 +507,9 @@ async function markPaid(
         select: {
           id: true,
           code: true,
+          maxUses: true,
+          usesCount: true,
+          active: true,
         },
       })
     : null;
@@ -572,14 +576,15 @@ async function markPaid(
     });
   }
 
-  if (transitioned && discountRecord?.id) {
+  if (
+    transitioned &&
+    discountRecord?.id &&
+    discountRecord.active &&
+    discountRecord.usesCount < discountRecord.maxUses
+  ) {
     try {
-      await prisma.discountCode.updateMany({
-        where: {
-          id: discountRecord.id,
-          active: true,
-          usesCount: { lt: prisma.discountCode.fields.maxUses as any },
-        } as any,
+      await prisma.discountCode.update({
+        where: { id: discountRecord.id },
         data: {
           usesCount: { increment: 1 },
           usedAt: new Date(),
@@ -592,6 +597,7 @@ async function markPaid(
 
   if (transitioned) {
     await finalizePaidOrder(orderId);
+    await deductPtStockForPaidOrder(orderId);
 
     try {
       const order = await prisma.order.findUnique({
