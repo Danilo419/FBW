@@ -1,13 +1,20 @@
-// src/app/leagues/page.tsx
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { ArrowRight } from "lucide-react";
 import { LEAGUES_CONFIG, TEAM_TO_LEAGUE } from "@/lib/leaguesConfig";
-import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+type LeaguesPageMessages = {
+  title: string;
+  subtitle: string;
+  totalLeagues: string;
+  viewClubs: string;
+  leagueImageAlt: string;
+  empty: string;
+};
 
 async function getActiveLeagues() {
   const teams = await prisma.product.findMany({
@@ -28,16 +35,55 @@ async function getActiveLeagues() {
   );
 }
 
-type LeagueCard = {
-  slug: string;
-  name: string;
-  image: string;
-};
+/* ---------- helpers ---------- */
 
-export default async function LeaguesPage() {
-  const t = await getTranslations("leaguesPage");
+function renderRichSubtitle(template: string) {
+  const parts = template.split(/<brand>|<\/brand>/g);
 
-  const leaguesToShow = (await getActiveLeagues()) as LeagueCard[];
+  return parts.map((part, index) =>
+    index % 2 === 1 ? (
+      <span key={index} className="font-semibold text-emerald-600">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
+function formatMessage(template: string, values: Record<string, string>) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? "");
+}
+
+/* ---------- page ---------- */
+
+export default async function LeaguesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const safeLocale = locale === "pt" ? "pt" : "en";
+
+  const messagesModule = await import(
+    `../../../../messages/${safeLocale}.json`
+  );
+
+  const messages = messagesModule.default as {
+    leaguesPage?: LeaguesPageMessages;
+  };
+
+  const t: LeaguesPageMessages = messages.leaguesPage ?? {
+    title: "Leagues",
+    subtitle:
+      "Browse all leagues with <brand>FootballWorld</brand> products available.",
+    totalLeagues: "Total leagues",
+    viewClubs: "View Clubs",
+    leagueImageAlt: "{league} league",
+    empty: "There are no leagues available yet.",
+  };
+
+  const leaguesToShow = await getActiveLeagues();
 
   return (
     <main className="min-h-screen bg-white py-6 md:py-10">
@@ -46,23 +92,17 @@ export default async function LeaguesPage() {
         <div className="mb-6 md:mb-8 flex flex-col gap-4 sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900">
-              {t("title")}
+              {t.title}
             </h1>
 
             <p className="mt-1 text-xs sm:text-sm text-slate-600 max-w-xl">
-              {t.rich("subtitle", {
-                brand: (chunks) => (
-                  <span className="font-semibold text-emerald-600">
-                    {chunks}
-                  </span>
-                ),
-              })}
+              {renderRichSubtitle(t.subtitle)}
             </p>
           </div>
 
           <div className="inline-flex items-center justify-end text-[11px] sm:text-xs text-slate-500 gap-1">
             <span className="uppercase tracking-[0.18em]">
-              {t("totalLeagues")}
+              {t.totalLeagues}
             </span>
 
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-800 font-medium">
@@ -84,11 +124,12 @@ export default async function LeaguesPage() {
                   {league.image ? (
                     <Image
                       src={league.image}
-                      alt={t("leagueImageAlt", { league: league.name })}
+                      alt={formatMessage(t.leagueImageAlt, {
+                        league: league.name,
+                      })}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
-                      priority={false}
                     />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-slate-200 to-slate-100" />
@@ -100,7 +141,7 @@ export default async function LeaguesPage() {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition">
                     <div className="flex items-center justify-between text-white text-[11px] sm:text-xs md:text-sm">
-                      {t("viewClubs")}
+                      {t.viewClubs}
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>
@@ -116,7 +157,7 @@ export default async function LeaguesPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-12 text-center">
-            <p className="text-sm text-slate-600">{t("empty")}</p>
+            <p className="text-sm text-slate-600">{t.empty}</p>
           </div>
         )}
       </div>
