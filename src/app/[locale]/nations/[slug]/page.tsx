@@ -1,4 +1,4 @@
-// src/app/nations/[slug]/page.tsx
+// src/app/[locale]/nations/[slug]/page.tsx
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import type { ReactNode } from "react";
@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 export const revalidate = 60;
 
 type PageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
   searchParams?: Promise<{ page?: string }>;
 };
 
@@ -66,16 +66,22 @@ function firstImageFrom(value: unknown): string | null {
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
-      if (v && typeof (v as any).url === "string" && (v as any).url.trim())
+      if (v && typeof (v as any).url === "string" && (v as any).url.trim()) {
         return (v as any).url.trim();
-      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
+      }
+      if (v && typeof (v as any).src === "string" && (v as any).src.trim()) {
         return (v as any).src.trim();
+      }
     }
   }
 
-  const any: any = value;
-  if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
-  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
+  const anyValue: any = value;
+  if (typeof anyValue?.url === "string" && anyValue.url.trim()) {
+    return anyValue.url.trim();
+  }
+  if (typeof anyValue?.src === "string" && anyValue.src.trim()) {
+    return anyValue.src.trim();
+  }
   return null;
 }
 
@@ -118,11 +124,10 @@ export default async function NationProductsPage({
   params,
   searchParams,
 }: PageProps) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const sp = (await searchParams) ?? {};
   const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  // descobrir o nome real da seleção a partir da BD (teamType NATION)
   const teams = await prisma.product.findMany({
     where: { teamType: "NATION" },
     select: { team: true },
@@ -165,6 +170,7 @@ export default async function NationProductsPage({
 
   return (
     <List
+      locale={locale}
       team={teamName}
       items={products}
       totalPages={totalPages}
@@ -176,12 +182,14 @@ export default async function NationProductsPage({
 
 /* ============================ UI ============================ */
 function List({
+  locale,
   team,
   items,
   totalPages,
   currentPage,
   nationSlug,
 }: {
+  locale: string;
   team: string;
   items: {
     slug: string;
@@ -204,10 +212,10 @@ function List({
       </div>
 
       <div className="container-fw py-8 sm:py-10">
-        {/* Back (igual estilo “pill”) */}
+        {/* Back */}
         <div className="mb-6">
           <Link
-            href="/nations"
+            href={`/${locale}/nations`}
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700"
           >
             <span aria-hidden="true">←</span>
@@ -215,7 +223,7 @@ function List({
           </Link>
         </div>
 
-        {/* Grid de produtos (2 por linha no mobile) */}
+        {/* Grid de produtos */}
         <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
@@ -231,9 +239,9 @@ function List({
             const chipText = preferredLabel.toUpperCase();
 
             return (
-              <a
+              <Link
                 key={p.slug}
-                href={`/products/${p.slug}`}
+                href={`/${locale}/products/${p.slug}`}
                 className="group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200"
               >
                 {compare && (
@@ -258,26 +266,25 @@ function List({
                       {chipText}
                     </div>
 
-                    <div className="mt-1 line-clamp-2 text-[13px] sm:text-base font-semibold leading-tight text-slate-900">
+                    <div className="mt-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-900 sm:text-base">
                       {p.name}
                     </div>
 
-                    {/* Preço */}
-                    <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
+                    <div className="mt-3 flex items-baseline gap-2 sm:mt-4">
                       {compare && (
-                        <div className="text-[12px] sm:text-[13px] text-slate-500 line-through">
+                        <div className="text-[12px] text-slate-500 line-through sm:text-[13px]">
                           {moneyAfterEUR(compare.compareAt)}
                         </div>
                       )}
 
                       <div className="flex items-end text-[#1c40b7]">
-                        <span className="text-[20px] sm:text-2xl font-semibold tracking-tight leading-none">
+                        <span className="text-[20px] font-semibold leading-none tracking-tight sm:text-2xl">
                           {euros}
                         </span>
-                        <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
+                        <span className="translate-y-[1px] text-[12px] font-medium sm:text-[13px]">
                           ,{dec}
                         </span>
-                        <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
+                        <span className="ml-1 translate-y-[1px] text-[13px] font-medium sm:text-[15px]">
                           €
                         </span>
                       </div>
@@ -285,7 +292,7 @@ function List({
 
                     <div className="mt-auto">
                       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                      <div className="h-11 sm:h-12 flex items-center gap-2 text-[13px] sm:text-sm font-medium text-slate-700">
+                      <div className="flex h-11 items-center gap-2 text-[13px] font-medium text-slate-700 sm:h-12 sm:text-sm">
                         <span className="transition group-hover:translate-x-0.5">
                           View product
                         </span>
@@ -301,7 +308,7 @@ function List({
                     </div>
                   </div>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -317,7 +324,9 @@ function List({
               <li>
                 <PaginationPill
                   href={
-                    currentPage > 1 ? `/nations/${nationSlug}?page=1` : undefined
+                    currentPage > 1
+                      ? `/${locale}/nations/${nationSlug}?page=1`
+                      : undefined
                   }
                   label="Primeira página"
                 >
@@ -331,7 +340,7 @@ function List({
                     href={
                       n === currentPage
                         ? undefined
-                        : `/nations/${nationSlug}?page=${n}`
+                        : `/${locale}/nations/${nationSlug}?page=${n}`
                     }
                     active={n === currentPage}
                     label={`Página ${n}`}
@@ -345,7 +354,7 @@ function List({
                 <PaginationPill
                   href={
                     currentPage < totalPages
-                      ? `/nations/${nationSlug}?page=${totalPages}`
+                      ? `/${locale}/nations/${nationSlug}?page=${totalPages}`
                       : undefined
                   }
                   label="Última página"
@@ -378,7 +387,8 @@ function PaginationPill({
   const activeCls = "border-sky-600 bg-sky-600 text-white shadow-md";
   const idleCls =
     "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700";
-  const disabledCls = "border-slate-200 bg-white text-slate-300 pointer-events-none";
+  const disabledCls =
+    "border-slate-200 bg-white text-slate-300 pointer-events-none";
 
   if (!href) {
     return (
@@ -394,15 +404,19 @@ function PaginationPill({
 
   if (active) {
     return (
-      <span aria-current="page" aria-label={label} className={`${base} ${activeCls}`}>
+      <span
+        aria-current="page"
+        aria-label={label}
+        className={`${base} ${activeCls}`}
+      >
         {children}
       </span>
     );
   }
 
   return (
-    <a href={href} aria-label={label} className={`${base} ${idleCls}`}>
+    <Link href={href} aria-label={label} className={`${base} ${idleCls}`}>
       {children}
-    </a>
+    </Link>
   );
 }
