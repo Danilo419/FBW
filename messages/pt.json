@@ -2338,5 +2338,27 @@
     "profileLoadError": "Não foi possível carregar o registo do teu perfil. Isto pode acontecer se tiveres iniciado sessão com um nome de utilizador e o teu email não estiver associado à sessão.",
     "profileLoadHelp": "Tenta terminar sessão e iniciar novamente usando o teu <b>email</b>. Se o problema persistir, contacta o suporte.",
     "credentialsProvider": "Credenciais"
+  },
+  "LongSleeveJerseysPage": {
+    "category": "Categoria de produto",
+    "title": "Camisolas de manga comprida",
+    "description": "Camisolas de manga comprida (excluindo Player Version e Retro).",
+    "backToHome": "← Voltar à Página Inicial",
+    "loading": "A carregar camisolas…",
+    "found": "{count} camisolas encontradas",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "empty": "Não foram encontradas camisolas de manga comprida.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Página seguinte",
+    "fetchFailed": "Falha ao carregar",
+    "fetchError": "Erro ao carregar"
   }
 }

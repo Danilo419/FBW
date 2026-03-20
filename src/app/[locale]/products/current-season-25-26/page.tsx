@@ -1,8 +1,8 @@
-// src/app/products/current-season-25-26/page.tsx
+// src/app/[locale]/products/current-season-25-26/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Search } from "lucide-react";
 
 /* ============================ Tipagem (igual ao search) ============================ */
@@ -64,17 +64,9 @@ function pricePartsFromCents(cents: number) {
 
 /* ========= Extração do NOME DO CLUBE (FIX: não confundir Madrid com Real Madrid) ========= */
 
-/**
- * O teu bug acontece porque a regex do Real Madrid estava assim:
- *   (real madrid | madrid)
- * então "Atlético de Madrid ..." batia em "madrid" e virava Real Madrid.
- *
- * ✅ FIX: remover o "madrid" sozinho. Real Madrid só quando tiver "Real Madrid" / "RealMadrid" / "R. Madrid".
- */
-
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   // Espanha
-  [/\breal\s*madrid\b/i, "Real Madrid"], // ✅ sem "madrid" sozinho
+  [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
   [/\breal\s*betis\b/i, "Real Betis"],
@@ -107,7 +99,6 @@ function stripColorDescriptors(input: string): string {
   let s = normalizeStr(input);
   if (!s) return "";
 
-  // "Arsenal Red & Black" -> "Arsenal Red"
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
@@ -219,7 +210,6 @@ function inferClubFromName(name?: string | null): string | null {
   const s = normalizeStr(name);
   if (!s) return null;
 
-  // corta quando aparecer keyword típica
   const cut = s.split(
     /\s+(Home|Away|Third|Fourth|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Retro|Concept)\b/i
   )[0];
@@ -230,10 +220,7 @@ function inferClubFromName(name?: string | null): string | null {
 
   if (!cleaned) return null;
 
-  // 1) remove cores
   const noColors = stripColorDescriptors(cleaned);
-
-  // 2) remove “palavras extra” no fim (Cup, Edition, etc.)
   const onlyName = stripSuffixNoise(noColors);
 
   return onlyName || noColors || cleaned;
@@ -243,15 +230,12 @@ function inferClubFromName(name?: string | null): string | null {
 function getClubLabel(p: UIProduct): string {
   const teamClean = cleanTeamValue(p.team ?? null);
 
-  // 1) tenta pelo campo team (se for válido)
   const byTeam = clubFromString(teamClean);
   if (byTeam) return byTeam;
 
-  // 2) tenta pelo nome com patterns (Real Madrid etc.)
   const byNamePattern = clubFromString(p.name);
   if (byNamePattern) return byNamePattern;
 
-  // 3) fallback: inferir pela primeira parte do nome (limpa cores + “Cup” etc.)
   const inferred = inferClubFromName(p.name);
   return inferred ?? "";
 }
@@ -300,15 +284,15 @@ function ProductCard({ p }: { p: UIProduct }) {
     <Link
       href={href}
       prefetch={false}
-      className="group block rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-lg hover:ring-sky-200 transition duration-300 overflow-hidden relative"
+      className="group relative block overflow-hidden rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-lg hover:ring-sky-200"
     >
       {sale && (
-        <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] sm:text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md ring-1 ring-red-700/40 sm:text-xs">
           -{sale.pct}%
         </div>
       )}
 
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -323,39 +307,38 @@ function ProductCard({ p }: { p: UIProduct }) {
               img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-3 sm:p-6 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-6"
           />
         </div>
 
-        <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só renderiza se existir label */}
+        <div className="flex grow flex-col p-4 sm:p-5">
           {teamLabel && (
-            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+            <div className="text-[10px] font-semibold/relaxed uppercase tracking-wide text-sky-600 sm:text-[11px]">
               {teamLabel}
             </div>
           )}
 
-          <div className="mt-1 text-sm sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+          <div className="mt-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900 sm:text-base">
             {p.name}
           </div>
 
           <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
-                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
+                <div className="text-[11px] text-slate-500 line-through sm:text-[13px]">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl font-semibold leading-none tracking-tight sm:text-2xl">
                     {parts.int}
                   </span>
-                  <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
+                  <span className="translate-y-[1px] text-[12px] font-medium sm:text-[13px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
+                  <span className="ml-1 translate-y-[1px] text-[13px] font-medium sm:text-[15px]">
                     {parts.sym}
                   </span>
                 </div>
@@ -364,13 +347,13 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 sm:h-12 flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
+            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
+            <div className="flex h-10 items-center gap-2 text-xs font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -534,21 +517,21 @@ export default function CurrentSeasonPage() {
         <div className="container-fw py-6 sm:py-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
                 Product category
               </p>
-              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
                 Current season 25/26
               </h1>
-              <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
+              <p className="mt-2 max-w-xl text-sm text-gray-600 sm:text-base">
                 Latest club & national-team drops (non-player version)
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mt-2 sm:mt-0">
+            <div className="mt-2 flex flex-col justify-start gap-2 sm:mt-0 sm:flex-row sm:justify-end">
               <Link
                 href="/"
-                className="btn-outline text-xs sm:text-sm w-full sm:w-auto text-center"
+                className="btn-outline w-full text-center text-xs sm:w-auto sm:text-sm"
               >
                 ← Back to Home Page
               </Link>
@@ -558,8 +541,8 @@ export default function CurrentSeasonPage() {
       </section>
 
       <section className="container-fw section-gap pb-10">
-        <div className="mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+        <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading products…</span>
@@ -568,7 +551,7 @@ export default function CurrentSeasonPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
             <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
@@ -583,15 +566,17 @@ export default function CurrentSeasonPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-2 text-xs sm:text-sm">
+            <div className="flex items-center justify-between gap-2 text-xs sm:justify-end sm:text-sm">
               <span className="text-gray-500">Sort by:</span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(
+                    e.target.value as "team" | "price-asc" | "price-desc" | "random"
+                  );
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40 sm:w-auto"
+                className="w-40 rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:text-sm"
               >
                 <option value="team">Team & name</option>
                 <option value="price-asc">Price (low → high)</option>
@@ -603,18 +588,18 @@ export default function CurrentSeasonPage() {
         </div>
 
         {loading && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+                className="animate-pulse overflow-hidden rounded-2xl bg-white/90 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
                 <div className="p-4 sm:p-5">
-                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
-                  <div className="h-3 w-20 bg-slate-200 rounded" />
-                  <div className="mt-4 sm:mt-6 h-px bg-slate-200/70" />
+                  <div className="mb-2 h-3 w-24 rounded bg-slate-200" />
+                  <div className="mb-4 h-4 w-3/4 rounded bg-slate-200" />
+                  <div className="h-3 w-20 rounded bg-slate-200" />
+                  <div className="mt-4 h-px bg-slate-200/70 sm:mt-6" />
                   <div className="h-8 sm:h-12" />
                 </div>
               </div>
@@ -623,14 +608,14 @@ export default function CurrentSeasonPage() {
         )}
 
         {!loading && error && (
-          <p className="text-red-600 text-sm sm:text-base mt-2">{error}</p>
+          <p className="mt-2 text-sm text-red-600 sm:text-base">{error}</p>
         )}
 
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 text-sm col-span-full">
+                <p className="col-span-full text-sm text-gray-500">
                   No current-season 25/26 products were found.
                 </p>
               )}
@@ -641,12 +626,12 @@ export default function CurrentSeasonPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
+              <nav className="mt-8 flex select-none items-center justify-center gap-1.5 text-sm sm:mt-10 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
+                  className="min-w-[40px] rounded-xl bg-white/80 px-3 py-2 ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40"
                   aria-label="Previous page"
                 >
                   «
@@ -657,7 +642,7 @@ export default function CurrentSeasonPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-slate-500"
+                        className="px-2 py-2 text-xs text-slate-500 sm:px-3 sm:text-sm"
                       >
                         ...
                       </span>
@@ -673,10 +658,10 @@ export default function CurrentSeasonPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[36px] sm:min-w-[40px] px-3 py-2 rounded-xl ring-1 transition",
+                        "min-w-[36px] rounded-xl px-3 py-2 ring-1 transition sm:min-w-[40px]",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                          : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                          : "bg-white/80 text-slate-800 ring-slate-200 hover:shadow-sm hover:ring-sky-200",
                       ].join(" ")}
                       aria-current={active ? "page" : undefined}
                     >
@@ -689,7 +674,7 @@ export default function CurrentSeasonPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
+                  className="min-w-[40px] rounded-xl bg-white/80 px-3 py-2 ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40"
                   aria-label="Next page"
                 >
                   »

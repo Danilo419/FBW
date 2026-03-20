@@ -1,8 +1,9 @@
-// src/app/products/fifa-world-cup-2026-jerseys/page.tsx
+// src/app/[locale]/products/fifa-world-cup-2026-jerseys/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -66,10 +67,7 @@ function pricePartsFromCents(cents: number) {
    CLUB LABEL (FIX: nunca "Team", nunca "Chelsea Shadow", etc.)
 ============================================================ */
 
-// ⚠️ BUG ORIGINAL: "(real madrid|madrid)" fazia Atlético de Madrid virar Real Madrid
-// ✅ FIX: Real Madrid só com "real madrid"
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
-  // Espanha
   [/\breal\s*madrid\b/i, "Real Madrid"],
   [/\b(fc\s*)?barcelona|barça\b/i, "FC Barcelona"],
   [/\batl[eé]tico\s*(de\s*)?madrid\b/i, "Atlético de Madrid"],
@@ -78,7 +76,6 @@ const CLUB_PATTERNS: Array<[RegExp, string]> = [
   [/\breal\s*sociedad\b/i, "Real Sociedad"],
   [/\bvillarreal\b/i, "Villarreal"],
 
-  // Portugal
   [/\bsl?\s*benfica|benfica\b/i, "SL Benfica"],
   [/\bfc\s*porto|porto\b/i, "FC Porto"],
   [/\bsporting(?!.*gij[oó]n)\b|\bsporting\s*cp\b/i, "Sporting CP"],
@@ -165,7 +162,6 @@ const VARIANT_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
-// palavras “apelido”/coleção que nunca devem aparecer no label (Shadow, Samurai, etc.)
 const DESCRIPTOR_WORDS = new Set(
   [
     "TRICOLOR",
@@ -197,7 +193,6 @@ const DESCRIPTOR_WORDS = new Set(
   ].map((x) => x.toUpperCase())
 );
 
-// começos que são nomes multi-palavra válidos (para não cortar “Real Madrid”, etc.)
 const MULTIWORD_STARTERS = new Set(
   [
     "REAL",
@@ -252,11 +247,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -288,7 +281,6 @@ function cleanTeamValue(v?: string | null): string {
   return normalizeStr(joined);
 }
 
-/** ✅ garantia final: se não for nome multi-palavra válido => fica só a 1ª palavra */
 function hardClampClubName(label: string): string {
   const s = normalizeStr(label);
   if (!s) return "";
@@ -341,21 +333,18 @@ function getClubLabel(p: UIProduct): string {
   const inferred = inferClubFromName(p.name);
   if (inferred) return inferred;
 
-  // ✅ nunca "Team"
   return "";
 }
 
 /* ============================================================
    Filtro: FIFA World Cup 2026 Jerseys
-   - Tem de ter "World Cup" e "2026" no nome
 ============================================================ */
 
 function normName(p: UIProduct) {
-  const raw = (p.name ?? "")
+  return (p.name ?? "")
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  return raw;
 }
 
 function hasAllTerms(p: UIProduct, terms: string[]): boolean {
@@ -374,7 +363,6 @@ function isWorldCup2026(p: UIProduct): boolean {
   if (n.includes("SCARF")) return false;
   if (n.includes("BALL")) return false;
   if (n.includes("POSTER")) return false;
-
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
 
@@ -382,30 +370,24 @@ function isWorldCup2026(p: UIProduct): boolean {
 }
 
 /* ============================================================
-   Card de produto (igual look & feel do search)
+   Card de produto
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : undefined;
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
-
   const teamLabel = getClubLabel(p);
 
-  return (
-    <a
-      key={String(p.id)}
-      href={href}
-      className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
-    >
+  const cardInner = (
+    <>
       {sale && (
-        <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 px-2.5 py-1 text-xs font-extrabold text-white shadow-md ring-1 ring-red-700/40">
           -{sale.pct}%
         </div>
       )}
 
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -413,44 +395,45 @@ function ProductCard({ p }: { p: UIProduct }) {
             src={p.img || FALLBACK_IMG}
             loading="lazy"
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if ((img as any)._fallbackApplied) return;
-              (img as any)._fallbackApplied = true;
+              const img = e.currentTarget as HTMLImageElement & {
+                _fallbackApplied?: boolean;
+              };
+              if (img._fallbackApplied) return;
+              img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-3 sm:p-6 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-6"
           />
         </div>
 
-        <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir */}
+        <div className="flex grow flex-col p-4 sm:p-5">
           {teamLabel && (
-            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+            <div className="text-[10px] font-semibold/relaxed uppercase tracking-wide text-sky-600 sm:text-[11px]">
               {teamLabel}
             </div>
           )}
 
-          <div className="mt-1 text-xs sm:text-sm font-semibold text-slate-900 leading-tight line-clamp-2">
+          <div className="mt-1 line-clamp-2 text-xs font-semibold leading-tight text-slate-900 sm:text-sm">
             {p.name}
           </div>
 
           <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-2">
               {sale && (
-                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
+                <div className="text-[11px] text-slate-500 line-through sm:text-[13px]">
                   {moneyAfter(sale.compareAtCents)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl font-semibold leading-none tracking-tight sm:text-2xl">
                     {parts.int}
                   </span>
-                  <span className="text-[11px] sm:text-[13px] font-medium translate-y-[1px]">
+                  <span className="translate-y-[1px] text-[11px] font-medium sm:text-[13px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
+                  <span className="ml-1 translate-y-[1px] text-[13px] font-medium sm:text-[15px]">
                     {parts.sym}
                   </span>
                 </div>
@@ -459,24 +442,37 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 sm:h-12 flex items-center gap-2 text-[11px] sm:text-sm font-medium text-slate-700">
+            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
+            <div className="flex h-10 items-center gap-2 text-[11px] font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
                 View product
               </span>
               <svg
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
               >
-                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 01-1.414 0z" />
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
               </svg>
             </div>
           </div>
         </div>
       </div>
-    </a>
+    </>
+  );
+
+  const baseClass =
+    "group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200";
+
+  if (!p.slug) {
+    return <div className={baseClass}>{cardInner}</div>;
+  }
+
+  return (
+    <Link href={`/products/${p.slug}`} className={baseClass}>
+      {cardInner}
+    </Link>
   );
 }
 
@@ -548,7 +544,9 @@ export default function FifaWorldCup2026JerseysPage() {
           setError(e?.message || "Search error");
         }
       })
-      .finally(() => !cancelled && setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -621,35 +619,33 @@ export default function FifaWorldCup2026JerseysPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-8 sm:py-10">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
                 FIFA World Cup 2026 Jerseys
               </p>
-              <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                 FIFA World Cup 2026 Jerseys
               </h1>
-              <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
+              <p className="mt-2 max-w-xl text-xs text-gray-600 sm:text-sm md:text-base">
                 Exclusive selection of World Cup 2026 jerseys.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/" className="btn-outline text-xs sm:text-sm">
+            <div className="mt-2 flex flex-wrap justify-start gap-2 sm:mt-0 sm:justify-end sm:gap-3">
+              <Link href="/" className="btn-outline text-xs sm:text-sm">
                 ← Back to Home Page
-              </a>
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CONTEÚDO */}
       <section className="container-fw section-gap">
-        <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>Loading World Cup 2026 jerseys…</span>
@@ -669,7 +665,7 @@ export default function FifaWorldCup2026JerseysPage() {
                   setPage(1);
                 }}
                 placeholder="Search by team or jersey name"
-                className="w-full rounded-2xl border px-9 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border px-9 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
@@ -678,10 +674,16 @@ export default function FifaWorldCup2026JerseysPage() {
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(
+                    e.target.value as
+                      | "team"
+                      | "price-asc"
+                      | "price-desc"
+                      | "random"
+                  );
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-[11px] sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-2xl border bg-white px-3 py-2 text-[11px] outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
               >
                 <option value="team">Team & name</option>
                 <option value="price-asc">Price (low → high)</option>
@@ -693,18 +695,18 @@ export default function FifaWorldCup2026JerseysPage() {
         </div>
 
         {loading && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+                className="animate-pulse overflow-hidden rounded-3xl bg-white/90 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
                 <div className="p-4 sm:p-5">
-                  <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
-                  <div className="h-3 w-20 bg-slate-200 rounded" />
-                  <div className="mt-4 sm:mt-6 h-px bg-slate-200/70" />
+                  <div className="mb-2 h-3 w-24 rounded bg-slate-200" />
+                  <div className="mb-4 h-4 w-3/4 rounded bg-slate-200" />
+                  <div className="h-3 w-20 rounded bg-slate-200" />
+                  <div className="mt-4 h-px bg-slate-200/70 sm:mt-6" />
                   <div className="h-10 sm:h-12" />
                 </div>
               </div>
@@ -716,9 +718,9 @@ export default function FifaWorldCup2026JerseysPage() {
 
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 col-span-full text-sm">
+                <p className="col-span-full text-sm text-gray-500">
                   Nenhum produto “World Cup 2026” encontrado.
                 </p>
               )}
@@ -729,12 +731,12 @@ export default function FifaWorldCup2026JerseysPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none">
+              <nav className="mt-8 flex select-none items-center justify-center gap-1.5 sm:mt-10 sm:gap-2">
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
-                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
+                  className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
                   aria-label="Página anterior"
                 >
                   «
@@ -745,14 +747,14 @@ export default function FifaWorldCup2026JerseysPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-500"
+                        className="px-2.5 py-1.5 text-xs text-slate-500 sm:px-3 sm:py-2 sm:text-sm"
                       >
                         ...
                       </span>
                     );
                   }
 
-                  const n = item as number;
+                  const n = item;
                   const active = n === page;
 
                   return (
@@ -761,10 +763,10 @@ export default function FifaWorldCup2026JerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[32px] sm:min-w-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 transition text-xs sm:text-sm",
+                        "min-w-[32px] rounded-xl px-2.5 py-1.5 text-xs ring-1 transition sm:min-w-[40px] sm:px-3 sm:py-2 sm:text-sm",
                         active
-                          ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                          : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                          ? "bg-sky-600 text-white shadow-sm ring-sky-600"
+                          : "bg-white/80 text-slate-800 ring-slate-200 hover:shadow-sm hover:ring-sky-200",
                       ].join(" ")}
                       aria-current={active ? "page" : undefined}
                     >
@@ -775,9 +777,9 @@ export default function FifaWorldCup2026JerseysPage() {
 
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={page === totalPages}
-                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
+                  className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
                   aria-label="Próxima página"
                 >
                   »

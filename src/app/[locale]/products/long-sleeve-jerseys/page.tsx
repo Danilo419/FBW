@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================ Tipagem (igual ao search) ============================ */
 
@@ -44,9 +45,9 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-/** "150,00 €" */
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+/** "150,00 €" / "150.00 €" conforme locale */
+function moneyAfter(cents: number, locale: string) {
+  const n = (cents / 100).toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -375,7 +376,15 @@ function isLongSleeveNonPlayer(p: UIProduct): boolean {
 
 /* ============================ Card de produto (igual ao da Jerseys) ============================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
+function ProductCard({
+  p,
+  locale,
+  viewProductLabel,
+}: {
+  p: UIProduct;
+  locale: string;
+  viewProductLabel: string;
+}) {
   const href = p.slug ? `/products/${p.slug}` : "#";
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
@@ -412,7 +421,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-3 sm:p-5 flex flex-col grow">
-          {/* ✅ Só mostra se existir (evita "Club") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -427,7 +435,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
                 <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
@@ -437,7 +445,7 @@ function ProductCard({ p }: { p: UIProduct }) {
                     {parts.int}
                   </span>
                   <span className="text-[11px] sm:text-[13px] font-medium translate-y-[1px]">
-                    ,{parts.dec}
+                    {locale.startsWith("pt") ? `,${parts.dec}` : `.${parts.dec}`}
                   </span>
                   <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
                     {parts.sym}
@@ -451,7 +459,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 sm:h-12 flex items-center gap-2 text-[11px] sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {viewProductLabel}
               </span>
               <svg
                 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -501,6 +509,9 @@ function buildPaginationRange(
 const PAGE_SIZE = 12;
 
 export default function LongSleeveJerseysPage() {
+  const t = useTranslations("LongSleeveJerseysPage");
+  const locale = useLocale();
+
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -518,7 +529,7 @@ export default function LongSleeveJerseysPage() {
 
     fetch(`/api/long-sleeve-jerseys`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
+        if (!r.ok) throw new Error(`${t("fetchFailed")} (${r.status})`);
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -534,7 +545,7 @@ export default function LongSleeveJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || t("fetchError"));
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -542,7 +553,7 @@ export default function LongSleeveJerseysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filteredSorted = useMemo(() => {
     let base = results;
@@ -581,11 +592,11 @@ export default function LongSleeveJerseysPage() {
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
-      return ta.localeCompare(tb);
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "", locale);
+      return ta.localeCompare(tb, locale);
     });
     return copy;
-  }, [results, searchTerm, sort]);
+  }, [results, searchTerm, sort, locale]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE)),
@@ -615,19 +626,19 @@ export default function LongSleeveJerseysPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-0">
             <div>
               <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Product category
+                {t("category")}
               </p>
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
-                Long sleeve jerseys
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-base text-gray-600">
-                Long-sleeve jerseys (excluding Player Version and Retro).
+                {t("description")}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
               <a href="/" className="btn-outline text-xs sm:text-sm px-3 py-1.5">
-                ← Back to Home Page
+                {t("backToHome")}
               </a>
             </div>
           </div>
@@ -639,9 +650,9 @@ export default function LongSleeveJerseysPage() {
           <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading jerseys…</span>
+              <span>{t("loading")}</span>
             ) : (
-              <span>{filteredSorted.length} jerseys found</span>
+              <span>{t("found", { count: filteredSorted.length })}</span>
             )}
           </div>
 
@@ -655,13 +666,14 @@ export default function LongSleeveJerseysPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or jersey name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label={t("searchPlaceholder")}
               />
             </div>
 
             <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
@@ -669,11 +681,12 @@ export default function LongSleeveJerseysPage() {
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label={t("sortBy")}
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -708,12 +721,17 @@ export default function LongSleeveJerseysPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm sm:text-base col-span-full text-center py-6">
-                  No long-sleeve jerseys were found.
+                  {t("empty")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard
+                  key={String(p.id)}
+                  p={p}
+                  locale={locale}
+                  viewProductLabel={t("viewProduct")}
+                />
               ))}
             </div>
 
@@ -724,7 +742,7 @@ export default function LongSleeveJerseysPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-                  aria-label="Previous page"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -767,7 +785,7 @@ export default function LongSleeveJerseysPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-                  aria-label="Next page"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

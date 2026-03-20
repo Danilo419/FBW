@@ -1,4 +1,4 @@
-// src/app/clubs/[club]/page.tsx
+// src/app/[locale]/clubs/[club]/page.tsx
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
@@ -35,16 +35,22 @@ function firstImageFrom(value: unknown): string | null {
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
-      if (v && typeof (v as any).url === "string" && (v as any).url.trim())
+      if (v && typeof (v as any).url === "string" && (v as any).url.trim()) {
         return (v as any).url.trim();
-      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
+      }
+      if (v && typeof (v as any).src === "string" && (v as any).src.trim()) {
         return (v as any).src.trim();
+      }
     }
   }
 
-  const any: any = value;
-  if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
-  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
+  const anyValue: any = value;
+  if (typeof anyValue?.url === "string" && anyValue.url.trim()) {
+    return anyValue.url.trim();
+  }
+  if (typeof anyValue?.src === "string" && anyValue.src.trim()) {
+    return anyValue.src.trim();
+  }
   return null;
 }
 
@@ -81,13 +87,13 @@ function coverUrl(raw?: string | null): string {
 export default async function ClubProductsPage({
   params,
 }: {
-  params: Promise<{ club: string }>;
+  params: Promise<{ locale: string; club: string }>;
 }) {
-  const { club } = await params;
+  const { locale, club } = await params;
 
   // Mapear slug -> nome real do clube (APENAS teamType CLUB)
   const teams = await prisma.product.findMany({
-    where: { teamType: "CLUB" }, // ✅
+    where: { teamType: "CLUB" },
     select: { team: true },
     distinct: ["team"],
   });
@@ -98,7 +104,7 @@ export default async function ClubProductsPage({
   // Produtos do clube (APENAS teamType CLUB)
   const products = await prisma.product.findMany({
     where: {
-      teamType: "CLUB", // ✅
+      teamType: "CLUB",
       team: teamName,
     },
     orderBy: { name: "asc" },
@@ -130,34 +136,34 @@ export default async function ClubProductsPage({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white/60 to-sky-50" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12">
+      <div className="mx-auto max-w-7xl px-6 py-12 sm:px-10">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-700 via-indigo-700 to-sky-700 text-transparent bg-clip-text">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="bg-gradient-to-r from-sky-700 via-indigo-700 to-sky-700 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">
             {teamName} — Products
           </h1>
 
           <Link
-            href="/clubs"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-300/80 bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-slate-50 hover:border-sky-300 transition font-medium text-sm"
+            href={`/${locale}/clubs`}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white/70 px-5 py-2.5 text-sm font-medium text-slate-700 backdrop-blur-sm transition hover:border-sky-300 hover:bg-slate-50"
           >
             <span>←</span> Back to all clubs
           </Link>
         </div>
 
         {/* Grid de produtos */}
-        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {products.map((p) => {
             const src = coverUrl(firstImageFrom(p.imageUrls));
 
             return (
               <Link
                 key={p.id}
-                href={`/products/${p.slug}`}
+                href={`/${locale}/products/${p.slug}`}
                 aria-label={p.name}
-                className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] hover:from-sky-300/70 hover:via-indigo-300/60 transition"
+                className="group block rounded-3xl bg-gradient-to-br from-sky-200/50 via-indigo-200/40 to-transparent p-[1px] transition hover:from-sky-300/70 hover:via-indigo-300/60"
               >
-                <div className="rounded-3xl bg-white/80 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-2xl hover:ring-sky-200 transition duration-300 overflow-hidden">
+                <div className="overflow-hidden rounded-3xl bg-white/80 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm transition duration-300 hover:shadow-2xl hover:ring-sky-200">
                   {/* imagem */}
                   <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
                     <Image
@@ -166,27 +172,27 @@ export default async function ClubProductsPage({
                       fill
                       unoptimized
                       sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 20vw"
-                      className="object-contain p-6 sm:p-7 md:p-6 lg:p-6 transition-transform duration-300 group-hover:scale-110"
+                      className="object-contain p-6 transition-transform duration-300 group-hover:scale-110 sm:p-7 md:p-6 lg:p-6"
                     />
 
                     {/* brilho muito suave no hover (sem badges) */}
-                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20" />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-sky-100/20 opacity-0 transition duration-500 group-hover:opacity-100" />
                   </div>
 
                   {/* info */}
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+                        <div className="text-[11px] font-semibold/relaxed uppercase tracking-wide text-sky-600">
                           {p.team ?? teamName}
                         </div>
-                        <div className="mt-1 text-base font-bold text-slate-900 leading-tight line-clamp-2">
+                        <div className="mt-1 line-clamp-2 text-base font-bold leading-tight text-slate-900">
                           {p.name}
                         </div>
                       </div>
 
                       {/* price chip (não é badge de produto, é o preço) */}
-                      <div className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-slate-900 text-white/95 ring-1 ring-black/5 shadow-sm group-hover:bg-slate-800 transition">
+                      <div className="shrink-0 rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white/95 shadow-sm ring-1 ring-black/5 transition group-hover:bg-slate-800">
                         {money(p.basePrice)}
                       </div>
                     </div>
@@ -200,7 +206,7 @@ export default async function ClubProductsPage({
                         View product
                       </span>
                       <svg
-                        className="h-4 w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                        className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                         aria-hidden="true"

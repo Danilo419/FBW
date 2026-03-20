@@ -308,6 +308,28 @@
       }
     }
   },
+  "LongSleeveJerseysPage": {
+    "category": "Product category",
+    "title": "Long sleeve jerseys",
+    "description": "Long-sleeve jerseys (excluding Player Version and Retro).",
+    "backToHome": "← Back to Home Page",
+    "loading": "Loading jerseys…",
+    "found": "{count} jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "empty": "No long-sleeve jerseys were found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "fetchFailed": "Fetch failed",
+    "fetchError": "Fetch error"
+  },
   "termsPage": {
     "metadata": {
       "title": "Terms of Service — FootballWorld",
