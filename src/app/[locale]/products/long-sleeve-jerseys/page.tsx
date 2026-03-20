@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 /* ============================ Tipagem (igual ao search) ============================ */
 
@@ -63,8 +64,6 @@ function pricePartsFromCents(cents: number) {
 
 /* ========= Extração do NOME DO CLUBE (FIX: sem "Chelsea Shadow", sem "Japan Samurai") ========= */
 
-// ⚠️ BUG original: "(real madrid|madrid)" fazia "Atlético de Madrid" virar "Real Madrid"
-// ✅ FIX: Real Madrid só casa com "real madrid"
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
   // Espanha
   [/\breal\s*madrid\b/i, "Real Madrid"],
@@ -246,11 +245,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -324,7 +321,6 @@ function inferClubFromName(name?: string | null): string {
   return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ Nunca devolve "Chelsea Shadow" / "Japan Samurai" / "Club". Só nome do clube/seleção (ou vazio). */
 function getClubLabel(p: UIProduct): string {
   const teamClean = cleanTeamValue(p.team);
   if (teamClean) return hardClampClubName(teamClean);
@@ -360,11 +356,6 @@ function isLongSleeve(p: UIProduct) {
   return hasTerm(p, "LONG SLEEVE");
 }
 
-/** Long Sleeve Jerseys:
- *  - LONG SLEEVE
- *  - não player version
- *  - não retro
- */
 function isLongSleeveNonPlayer(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
@@ -374,7 +365,7 @@ function isLongSleeveNonPlayer(p: UIProduct): boolean {
   return true;
 }
 
-/* ============================ Card de produto (igual ao da Jerseys) ============================ */
+/* ============================ Card de produto ============================ */
 
 function ProductCard({
   p,
@@ -385,25 +376,20 @@ function ProductCard({
   locale: string;
   viewProductLabel: string;
 }) {
-  const href = p.slug ? `/products/${p.slug}` : "#";
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
   const teamLabel = getClubLabel(p);
 
-  return (
-    <a
-      key={String(p.id)}
-      href={href}
-      className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
-    >
+  const content = (
+    <>
       {sale && (
-        <div className="absolute left-2 top-2 sm:left-3 sm:top-3 z-10 rounded-full bg-red-600 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2 top-2 z-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md ring-1 ring-red-700/40 sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs">
           -{sale.pct}%
         </div>
       )}
 
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -411,43 +397,45 @@ function ProductCard({
             src={p.img || FALLBACK_IMG}
             loading="lazy"
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if ((img as any)._fallbackApplied) return;
-              (img as any)._fallbackApplied = true;
+              const img = e.currentTarget as HTMLImageElement & {
+                _fallbackApplied?: boolean;
+              };
+              if (img._fallbackApplied) return;
+              img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-3 sm:p-6 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-6"
           />
         </div>
 
-        <div className="p-3 sm:p-5 flex flex-col grow">
+        <div className="flex grow flex-col p-3 sm:p-5">
           {teamLabel && (
-            <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
+            <div className="text-[10px] font-semibold/relaxed uppercase tracking-wide text-sky-600 sm:text-[11px]">
               {teamLabel}
             </div>
           )}
 
-          <div className="mt-1 text-xs sm:text-base font-semibold text-slate-900 leading-tight line-clamp-2">
+          <div className="mt-1 line-clamp-2 text-xs font-semibold leading-tight text-slate-900 sm:text-base">
             {p.name}
           </div>
 
           <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
-                <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
+                <div className="text-[11px] text-slate-500 line-through sm:text-[13px]">
                   {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl font-semibold leading-none tracking-tight sm:text-2xl">
                     {parts.int}
                   </span>
-                  <span className="text-[11px] sm:text-[13px] font-medium translate-y-[1px]">
+                  <span className="translate-y-[1px] text-[11px] font-medium sm:text-[13px]">
                     {locale.startsWith("pt") ? `,${parts.dec}` : `.${parts.dec}`}
                   </span>
-                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
+                  <span className="ml-1 translate-y-[1px] text-[13px] font-medium sm:text-[15px]">
                     {parts.sym}
                   </span>
                 </div>
@@ -456,13 +444,13 @@ function ProductCard({
           </div>
 
           <div className="mt-auto">
-            <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 sm:h-12 flex items-center gap-2 text-[11px] sm:text-sm font-medium text-slate-700">
+            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
+            <div className="flex h-10 items-center gap-2 text-[11px] font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
                 {viewProductLabel}
               </span>
               <svg
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -473,7 +461,24 @@ function ProductCard({
           </div>
         </div>
       </div>
-    </a>
+    </>
+  );
+
+  if (!p.slug) {
+    return (
+      <div className="group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/products/${p.slug}`}
+      className="group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200"
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -623,31 +628,31 @@ export default function LongSleeveJerseysPage() {
     <div className="min-h-screen bg-white">
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 sm:py-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-0">
+          <div className="flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-0">
             <div>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
                 {t("category")}
               </p>
-              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
                 {t("title")}
               </h1>
-              <p className="mt-2 max-w-xl text-xs sm:text-base text-gray-600">
+              <p className="mt-2 max-w-xl text-xs text-gray-600 sm:text-base">
                 {t("description")}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/" className="btn-outline text-xs sm:text-sm px-3 py-1.5">
+            <div className="mt-2 flex flex-wrap justify-start gap-2 sm:mt-0 sm:justify-end sm:gap-3">
+              <Link href="/" className="btn-outline px-3 py-1.5 text-xs sm:text-sm">
                 {t("backToHome")}
-              </a>
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
       <section className="container-fw section-gap px-3 sm:px-0">
-        <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>{t("loading")}</span>
@@ -677,10 +682,12 @@ export default function LongSleeveJerseysPage() {
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(
+                    e.target.value as "team" | "price-asc" | "price-desc" | "random"
+                  );
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                 aria-label={t("sortBy")}
               >
                 <option value="team">{t("sortOptions.team")}</option>
@@ -693,18 +700,18 @@ export default function LongSleeveJerseysPage() {
         </div>
 
         {loading && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+                className="overflow-hidden rounded-3xl bg-white/90 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm animate-pulse"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
                 <div className="p-3 sm:p-5">
-                  <div className="h-3 w-20 sm:w-24 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-2/3 sm:w-3/4 bg-slate-200 rounded mb-3 sm:mb-4" />
-                  <div className="h-3 w-16 sm:w-20 bg-slate-200 rounded" />
-                  <div className="mt-4 sm:mt-6 h-px bg-slate-200/70" />
+                  <div className="mb-2 h-3 w-20 rounded bg-slate-200 sm:w-24" />
+                  <div className="mb-3 h-4 w-2/3 rounded bg-slate-200 sm:mb-4 sm:w-3/4" />
+                  <div className="h-3 w-16 rounded bg-slate-200 sm:w-20" />
+                  <div className="mt-4 h-px bg-slate-200/70 sm:mt-6" />
                   <div className="h-9 sm:h-12" />
                 </div>
               </div>
@@ -713,14 +720,14 @@ export default function LongSleeveJerseysPage() {
         )}
 
         {!loading && error && (
-          <p className="mt-2 text-red-600 text-sm sm:text-base">{error}</p>
+          <p className="mt-2 text-sm text-red-600 sm:text-base">{error}</p>
         )}
 
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 text-sm sm:text-base col-span-full text-center py-6">
+                <p className="col-span-full py-6 text-center text-sm text-gray-500 sm:text-base">
                   {t("empty")}
                 </p>
               )}
@@ -736,12 +743,12 @@ export default function LongSleeveJerseysPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 sm:mt-10 flex items-center justify-center gap-1.5 sm:gap-2 select-none text-sm">
+              <nav className="mt-8 flex select-none items-center justify-center gap-1.5 text-sm sm:mt-10 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  className="rounded-xl bg-white/80 px-2.5 py-1.5 ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2"
                   aria-label={t("previousPage")}
                 >
                   «
@@ -752,7 +759,7 @@ export default function LongSleeveJerseysPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-500"
+                        className="px-2.5 py-1.5 text-xs text-slate-500 sm:px-3 sm:py-2 sm:text-sm"
                       >
                         ...
                       </span>
@@ -768,10 +775,10 @@ export default function LongSleeveJerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[34px] sm:min-w-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 transition text-xs sm:text-sm",
+                        "min-w-[34px] rounded-xl px-2.5 py-1.5 text-xs ring-1 transition sm:min-w-[40px] sm:px-3 sm:py-2 sm:text-sm",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                          : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                          : "bg-white/80 text-slate-800 ring-slate-200 hover:shadow-sm hover:ring-sky-200",
                       ].join(" ")}
                       aria-current={active ? "page" : undefined}
                     >
@@ -784,7 +791,7 @@ export default function LongSleeveJerseysPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
+                  className="rounded-xl bg-white/80 px-2.5 py-1.5 ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2"
                   aria-label={t("nextPage")}
                 >
                   »
