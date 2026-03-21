@@ -1178,9 +1178,11 @@
       "intercontinentalCupChampions": "FIFA Intercontinental Cup – Badge de Campeão"
     }
   },
-  "checkoutAddressPage": {
+  "CheckoutAddressPage": {
     "title": "Morada de envio",
-    "loading": "A carregar formulário de morada…",
+    "loading": "A carregar formulário de morada…"
+  },
+  "checkoutAddressPage": {
     "fields": {
       "fullName": "Nome completo",
       "phone": "Telefone (opcional)",
