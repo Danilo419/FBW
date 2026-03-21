@@ -315,7 +315,8 @@ type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
 
 function cartChannelFromShipping(info: any): CartChannel {
   if (!info) return "GLOBAL";
-  if (typeof info.cartChannel === "string") return info.cartChannel as CartChannel;
+  if (typeof info.cartChannel === "string")
+    return info.cartChannel as CartChannel;
   if (typeof info.channel === "string") return info.channel as CartChannel;
   if (typeof info.shippingChannel === "string") {
     return info.shippingChannel as CartChannel;
@@ -357,8 +358,13 @@ type CartWithItems = Prisma.CartGetPayload<{
   };
 }>;
 
-export default async function CartPage() {
-  const t = await getTranslations();
+export default async function CartPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale });
 
   const cookieStore = await cookies();
   const sid = cookieStore.get("sid")?.value ?? null;
@@ -436,10 +442,7 @@ export default async function CartPage() {
     0
   );
 
-  const totalQty = displayItems.reduce(
-    (acc, it) => acc + (it.qty ?? 0),
-    0
-  );
+  const totalQty = displayItems.reduce((acc, it) => acc + (it.qty ?? 0), 0);
 
   const shippingInfo = getShippingForCart(
     displayItems.map((it) => ({
