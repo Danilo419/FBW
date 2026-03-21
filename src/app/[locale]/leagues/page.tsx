@@ -46,7 +46,7 @@ function renderRichSubtitle(template: string) {
         {part}
       </span>
     ) : (
-      part
+      <span key={index}>{part}</span>
     )
   );
 }
@@ -95,7 +95,7 @@ export default async function LeaguesPage({
               {t.title}
             </h1>
 
-            <p className="mt-1 text-xs sm:text-sm text-slate-600 max-w-xl">
+            <p className="mt-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap max-w-none overflow-x-auto overflow-y-hidden">
               {renderRichSubtitle(t.subtitle)}
             </p>
           </div>

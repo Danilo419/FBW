@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { LEAGUES_CONFIG } from "@/lib/leaguesConfig";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -52,6 +53,11 @@ export default async function LeagueDetailPage({ params }: any) {
 
   if (!locale || !slug) return notFound();
 
+  const t = await getTranslations({
+    locale,
+    namespace: "LeagueDetailPage",
+  });
+
   const league = LEAGUES_CONFIG.find((l) => l.slug === slug) ?? null;
   if (!league) return notFound();
 
@@ -63,7 +69,10 @@ export default async function LeagueDetailPage({ params }: any) {
     distinct: ["team"],
   });
 
-  const activeTeamNames = new Set(teamsWithProducts.map((t) => t.team));
+  const activeTeamNames = new Set(
+    teamsWithProducts.map((t) => t.team).filter(Boolean)
+  );
+
   const clubsToShow = league.clubs.filter((c) => activeTeamNames.has(c.name));
 
   if (clubsToShow.length === 0) return notFound();
@@ -78,7 +87,7 @@ export default async function LeagueDetailPage({ params }: any) {
             className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 transition hover:text-slate-900 md:text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to leagues
+            {t("backToLeagues")}
           </Link>
         </div>
 
@@ -100,19 +109,27 @@ export default async function LeagueDetailPage({ params }: any) {
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
                 {league.country}
               </p>
+
               <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
                 {league.name}
               </h1>
+
               <p className="mt-1 max-w-xl text-xs text-slate-600 sm:text-sm">
-                Select a club below to explore all{" "}
-                <span className="font-semibold text-emerald-600">FootballWorld</span>{" "}
-                products available for that team.
+                {t.rich("subtitle", {
+                  brand: () => (
+                    <span className="font-semibold text-emerald-600">
+                      FootballWorld
+                    </span>
+                  ),
+                })}
               </p>
             </div>
           </div>
 
           <div className="inline-flex items-center justify-end gap-2 text-[11px] text-slate-500 sm:text-xs">
-            <span className="uppercase tracking-[0.18em]">Active clubs</span>
+            <span className="uppercase tracking-[0.18em]">
+              {t("activeClubs")}
+            </span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
               {clubsToShow.length}
             </span>
@@ -145,7 +162,7 @@ export default async function LeagueDetailPage({ params }: any) {
 
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 transition group-hover:opacity-100">
                     <div className="flex items-center justify-between text-[11px] text-white sm:text-xs md:text-sm">
-                      View jerseys
+                      {t("viewJerseys")}
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   </div>

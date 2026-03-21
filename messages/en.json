@@ -1498,7 +1498,11 @@
     "ptStock": {
       "title": "Portugal Delivery (CTT Stock PT)",
       "shippingTitle": "CTT Shipping",
-      "info": "CTT rules: <one></one>, <two></two>, <three></three>. Delivery: <delivery></delivery>."
+      "info": "CTT rules: <one></one>, <two></two>, <three></three>. Delivery: <delivery></delivery>.",
+      "ruleOne": "1 item = 6€",
+      "ruleTwo": "2 items = 3€",
+      "ruleThree": "3+ = FREE",
+      "deliveryTime": "2–3 business days"
     },
     "labels": {
       "items": "Items",
@@ -1514,13 +1518,76 @@
       "payFor": "Pay for",
       "subtotal": "Subtotal",
       "discount": "Discount",
-      "total": "Total"
+      "discountWithCode": "Discount ({code})",
+      "total": "Total",
+      "missing": "Missing"
     },
     "summary": {
       "freeItemsApplied": "Free items applied: <count></count> (always the cheapest ones).",
-      "cttRules": "CTT shipping rules: <one></one>, <two></two>, <three></three>.",
-      "unlockPromo": "Add more items to unlock: <promo></promo>"
+      "cttRules": "{one} • {two} • {three}",
+      "unlockPromo": "Add more items to unlock: <promo></promo>",
+      "addMoreForFreeShipping": "Add {amount} more to unlock free shipping.",
+      "freeShippingUnlocked": "Free shipping unlocked.",
+      "discountProductsOnly": "The discount was calculated only on the products subtotal."
+    },
+    "freeShipping": {
+      "title": "Free shipping from {amount}",
+      "remaining": "{amount} until free shipping"
+    },
+    "discountCode": {
+      "title": "Discount code",
+      "applied": "Code {code} applied",
+      "productsOnly": "{percent}% off on products only. Shipping is not discounted.",
+      "remove": "Remove code",
+      "placeholder": "Enter your code",
+      "apply": "Apply",
+      "help": "Discount applies only to product subtotal, never to shipping."
+    },
+    "optionLabels": {
+      "size": "Size",
+      "badges": "Badges",
+      "customization": "Customization",
+      "custName": "Custom Name",
+      "custNumber": "Custom Number"
+    },
+    "badgeLabels": {
+      "premierLeagueRegular": "Premier League – League Badge",
+      "premierLeagueChampions": "Premier League – Champions (Gold)",
+      "laLigaRegular": "La Liga – League Badge",
+      "laLigaChampions": "La Liga – Champion",
+      "serieARegular": "Serie A – League Badge",
+      "serieAScudetto": "Italy – Scudetto (Serie A Champion)",
+      "bundesligaRegular": "Bundesliga – League Badge",
+      "bundesligaChampions": "Bundesliga – Champion (Meister Badge)",
+      "ligue1Regular": "Ligue 1 – League Badge",
+      "ligue1Champions": "Ligue 1 – Champion",
+      "primeiraLigaRegular": "Primeira Liga – League Badge",
+      "primeiraLigaChampions": "Primeira Liga – Champion",
+      "eredivisieRegular": "Eredivisie – League Badge",
+      "eredivisieChampions": "Eredivisie – Champion",
+      "scottishPremiershipRegular": "Scottish Premiership – League Badge",
+      "scottishPremiershipChampions": "Scottish Premiership – Champion",
+      "mlsRegular": "MLS – League Badge",
+      "mlsChampions": "MLS – Champions (MLS Cup Holders)",
+      "brasileiraoRegular": "Brasileirão – League Badge",
+      "brasileiraoChampions": "Brasileirão – Champion",
+      "superLigRegular": "Süper Lig – League Badge",
+      "superLigChampions": "Süper Lig – Champion",
+      "splSaudiRegular": "Saudi Pro League – League Badge",
+      "splSaudiChampions": "Saudi Pro League – Champion",
+      "uclRegular": "UEFA Champions League – Starball Badge",
+      "uclWinners": "UEFA Champions League – Winners Badge",
+      "uelRegular": "UEFA Europa League – Badge",
+      "uelWinners": "UEFA Europa League – Winners Badge",
+      "ueclRegular": "UEFA Europa Conference League – Badge",
+      "ueclWinners": "UEFA Europa Conference League – Winners Badge",
+      "clubWorldCupChampions": "FIFA Club World Cup – Champions Badge",
+      "intercontinentalCupChampions": "FIFA Intercontinental Cup – Champions Badge"
     }
+  },
+  "CheckoutAddressPage": {
+    "title": "Shipping address",
+    "loading": "Loading address form…"
   },
   "checkoutAddressPage": {
     "fields": {
@@ -1929,6 +1996,12 @@
     "viewClubs": "View clubs",
     "leagueImageAlt": "{league} league collection",
     "empty": "No leagues available yet."
+  },
+  "LeagueDetailPage": {
+    "backToLeagues": "Back to leagues",
+    "subtitle": "Select a club below to explore all <brand></brand> products available for that team.",
+    "activeClubs": "Active clubs",
+    "viewJerseys": "View jerseys"
   },
   "clubsPage": {
     "title": "Clubs",

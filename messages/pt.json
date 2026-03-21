@@ -1091,7 +1091,31 @@
     "ptStock": {
       "title": "Entrega em Portugal (CTT Stock PT)",
       "shippingTitle": "Envio CTT",
-      "info": "Regras CTT: <one></one>, <two></two>, <three></three>. Entrega: <delivery></delivery>."
+      "info": "Regras CTT: <one></one>, <two></two>, <three></three>. Entrega: <delivery></delivery>.",
+      "ruleOne": "1 item = 6€",
+      "ruleTwo": "2 items = 3€",
+      "ruleThree": "3+ = GRÁTIS",
+      "deliveryTime": "2–3 dias úteis"
+    },
+    "freeShipping": {
+      "title": "Portes grátis a partir de {amount}",
+      "remaining": "Faltam {amount} para portes grátis"
+    },
+    "discountCode": {
+      "title": "Código de desconto",
+      "applied": "Código {code} aplicado",
+      "productsOnly": "{percent}% de desconto apenas nos produtos. O envio não tem desconto.",
+      "remove": "Remover código",
+      "placeholder": "Introduza o seu código",
+      "apply": "Aplicar",
+      "help": "O desconto aplica-se apenas ao subtotal dos produtos, nunca ao envio."
+    },
+    "optionLabels": {
+      "size": "Tamanho",
+      "badges": "Badges",
+      "customization": "Personalização",
+      "custName": "Nome Personalizado",
+      "custNumber": "Número Personalizado"
     },
     "labels": {
       "items": "Artigos",
@@ -1107,15 +1131,56 @@
       "payFor": "Paga por",
       "subtotal": "Subtotal",
       "discount": "Desconto",
-      "total": "Total"
+      "discountWithCode": "Desconto ({code})",
+      "total": "Total",
+      "missing": "Falta"
     },
     "summary": {
       "freeItemsApplied": "Artigos grátis aplicados: <count></count> (sempre os mais baratos).",
       "cttRules": "Regras de envio CTT: <one></one>, <two></two>, <three></three>.",
-      "unlockPromo": "Adicione mais artigos para desbloquear: <promo></promo>"
+      "unlockPromo": "Adicione mais artigos para desbloquear: <promo></promo>",
+      "addMoreForFreeShipping": "Adicione mais {amount} para desbloquear os portes grátis.",
+      "freeShippingUnlocked": "Portes grátis desbloqueados.",
+      "discountProductsOnly": "O desconto foi calculado apenas sobre o subtotal dos produtos."
+    },
+    "badgeLabels": {
+      "premierLeagueRegular": "Premier League – Badge da Liga",
+      "premierLeagueChampions": "Premier League – Campeão (Dourado)",
+      "laLigaRegular": "La Liga – Badge da Liga",
+      "laLigaChampions": "La Liga – Campeão",
+      "serieARegular": "Serie A – Badge da Liga",
+      "serieAScudetto": "Itália – Scudetto (Campeão da Serie A)",
+      "bundesligaRegular": "Bundesliga – Badge da Liga",
+      "bundesligaChampions": "Bundesliga – Campeão (Meister Badge)",
+      "ligue1Regular": "Ligue 1 – Badge da Liga",
+      "ligue1Champions": "Ligue 1 – Campeão",
+      "primeiraLigaRegular": "Primeira Liga – Badge da Liga",
+      "primeiraLigaChampions": "Primeira Liga – Campeão",
+      "eredivisieRegular": "Eredivisie – Badge da Liga",
+      "eredivisieChampions": "Eredivisie – Campeão",
+      "scottishPremiershipRegular": "Scottish Premiership – Badge da Liga",
+      "scottishPremiershipChampions": "Scottish Premiership – Campeão",
+      "mlsRegular": "MLS – Badge da Liga",
+      "mlsChampions": "MLS – Campeões (Detentores da MLS Cup)",
+      "brasileiraoRegular": "Brasileirão – Badge da Liga",
+      "brasileiraoChampions": "Brasileirão – Campeão",
+      "superLigRegular": "Süper Lig – Badge da Liga",
+      "superLigChampions": "Süper Lig – Campeão",
+      "splSaudiRegular": "Saudi Pro League – Badge da Liga",
+      "splSaudiChampions": "Saudi Pro League – Campeão",
+      "uclRegular": "UEFA Champions League – Badge Starball",
+      "uclWinners": "UEFA Champions League – Badge de Vencedor",
+      "uelRegular": "UEFA Europa League – Badge",
+      "uelWinners": "UEFA Europa League – Badge de Vencedor",
+      "ueclRegular": "UEFA Europa Conference League – Badge",
+      "ueclWinners": "UEFA Europa Conference League – Badge de Vencedor",
+      "clubWorldCupChampions": "FIFA Club World Cup – Badge de Campeão",
+      "intercontinentalCupChampions": "FIFA Intercontinental Cup – Badge de Campeão"
     }
   },
   "checkoutAddressPage": {
+    "title": "Morada de envio",
+    "loading": "A carregar formulário de morada…",
     "fields": {
       "fullName": "Nome completo",
       "phone": "Telefone (opcional)",
@@ -1521,6 +1586,12 @@
     "viewClubs": "Ver clubes",
     "leagueImageAlt": "Coleção da liga {league}",
     "empty": "Ainda não há ligas disponíveis."
+  },
+  "LeagueDetailPage": {
+    "backToLeagues": "Voltar às ligas",
+    "subtitle": "Selecione um clube abaixo para explorar todos os produtos da <brand></brand> disponíveis para essa equipa.",
+    "activeClubs": "Clubes ativos",
+    "viewJerseys": "Ver camisolas"
   },
   "clubsPage": {
     "title": "Clubes",

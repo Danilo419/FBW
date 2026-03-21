@@ -26,47 +26,61 @@ export const dynamic = "force-dynamic";
 const FREE_SHIPPING_THRESHOLD = 70;
 const DEFAULT_SHIPPING_COST = 5;
 
-/* ========================= BADGE LABELS (same as ProductConfigurator) ========================= */
-const BADGE_LABELS: Record<string, string> = {
-  "premier-league-regular": "Premier League – League Badge",
-  "premier-league-champions": "Premier League – Champions (Gold)",
-  "la-liga-regular": "La Liga – League Badge",
-  "la-liga-champions": "La Liga – Champion",
-  "serie-a-regular": "Serie A – League Badge",
-  "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
-  "bundesliga-regular": "Bundesliga – League Badge",
-  "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
-  "ligue1-regular": "Ligue 1 – League Badge",
-  "ligue1-champions": "Ligue 1 – Champion",
-  "primeira-liga-regular": "Primeira Liga – League Badge",
-  "primeira-liga-champions": "Primeira Liga – Champion",
-  "eredivisie-regular": "Eredivisie – League Badge",
-  "eredivisie-champions": "Eredivisie – Champion",
-  "scottish-premiership-regular": "Scottish Premiership – League Badge",
-  "scottish-premiership-champions": "Scottish Premiership – Champion",
-  "mls-regular": "MLS – League Badge",
-  "mls-champions": "MLS – Champions (MLS Cup Holders)",
-  "brasileirao-regular": "Brasileirão – League Badge",
-  "brasileirao-champions": "Brasileirão – Champion",
-  "super-lig-regular": "Süper Lig – League Badge",
-  "super-lig-champions": "Süper Lig – Champion",
-  "spl-saudi-regular": "Saudi Pro League – League Badge",
-  "spl-saudi-champions": "Saudi Pro League – Champion",
-  "ucl-regular": "UEFA Champions League – Starball Badge",
-  "ucl-winners": "UEFA Champions League – Winners Badge",
-  "uel-regular": "UEFA Europa League – Badge",
-  "uel-winners": "UEFA Europa League – Winners Badge",
-  "uecl-regular": "UEFA Europa Conference League – Badge",
-  "uecl-winners": "UEFA Europa Conference League – Winners Badge",
-  "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
-  "intercontinental-cup-champions":
-    "FIFA Intercontinental Cup – Champions Badge",
-};
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
-function humanizeBadge(value: string) {
+function getBadgeLabels(t: Translator): Record<string, string> {
+  return {
+    "premier-league-regular": t("cartPage.badgeLabels.premierLeagueRegular"),
+    "premier-league-champions": t(
+      "cartPage.badgeLabels.premierLeagueChampions"
+    ),
+    "la-liga-regular": t("cartPage.badgeLabels.laLigaRegular"),
+    "la-liga-champions": t("cartPage.badgeLabels.laLigaChampions"),
+    "serie-a-regular": t("cartPage.badgeLabels.serieARegular"),
+    "serie-a-scudetto": t("cartPage.badgeLabels.serieAScudetto"),
+    "bundesliga-regular": t("cartPage.badgeLabels.bundesligaRegular"),
+    "bundesliga-champions": t("cartPage.badgeLabels.bundesligaChampions"),
+    "ligue1-regular": t("cartPage.badgeLabels.ligue1Regular"),
+    "ligue1-champions": t("cartPage.badgeLabels.ligue1Champions"),
+    "primeira-liga-regular": t("cartPage.badgeLabels.primeiraLigaRegular"),
+    "primeira-liga-champions": t("cartPage.badgeLabels.primeiraLigaChampions"),
+    "eredivisie-regular": t("cartPage.badgeLabels.eredivisieRegular"),
+    "eredivisie-champions": t("cartPage.badgeLabels.eredivisieChampions"),
+    "scottish-premiership-regular": t(
+      "cartPage.badgeLabels.scottishPremiershipRegular"
+    ),
+    "scottish-premiership-champions": t(
+      "cartPage.badgeLabels.scottishPremiershipChampions"
+    ),
+    "mls-regular": t("cartPage.badgeLabels.mlsRegular"),
+    "mls-champions": t("cartPage.badgeLabels.mlsChampions"),
+    "brasileirao-regular": t("cartPage.badgeLabels.brasileiraoRegular"),
+    "brasileirao-champions": t("cartPage.badgeLabels.brasileiraoChampions"),
+    "super-lig-regular": t("cartPage.badgeLabels.superLigRegular"),
+    "super-lig-champions": t("cartPage.badgeLabels.superLigChampions"),
+    "spl-saudi-regular": t("cartPage.badgeLabels.splSaudiRegular"),
+    "spl-saudi-champions": t("cartPage.badgeLabels.splSaudiChampions"),
+    "ucl-regular": t("cartPage.badgeLabels.uclRegular"),
+    "ucl-winners": t("cartPage.badgeLabels.uclWinners"),
+    "uel-regular": t("cartPage.badgeLabels.uelRegular"),
+    "uel-winners": t("cartPage.badgeLabels.uelWinners"),
+    "uecl-regular": t("cartPage.badgeLabels.ueclRegular"),
+    "uecl-winners": t("cartPage.badgeLabels.ueclWinners"),
+    "club-world-cup-champions": t(
+      "cartPage.badgeLabels.clubWorldCupChampions"
+    ),
+    "intercontinental-cup-champions": t(
+      "cartPage.badgeLabels.intercontinentalCupChampions"
+    ),
+  };
+}
+
+function humanizeBadge(value: string, t: Translator) {
   const key = String(value ?? "").trim();
   if (!key) return "";
-  if (BADGE_LABELS[key]) return BADGE_LABELS[key];
+
+  const badgeLabels = getBadgeLabels(t);
+  if (badgeLabels[key]) return badgeLabels[key];
 
   return key
     .replace(/[-_]/g, " ")
@@ -128,13 +142,13 @@ function getCoverUrl(imageUrls: unknown) {
   }
 }
 
-function prettifyKey(k: string) {
+function prettifyKey(k: string, t: Translator) {
   const map: Record<string, string> = {
-    size: "Size",
-    badges: "Badges",
-    customization: "Customization",
-    custname: "CustName",
-    custnumber: "CustNumber",
+    size: t("cartPage.optionLabels.size"),
+    badges: t("cartPage.optionLabels.badges"),
+    customization: t("cartPage.optionLabels.customization"),
+    custname: t("cartPage.optionLabels.custName"),
+    custnumber: t("cartPage.optionLabels.custNumber"),
   };
 
   const lower = String(k).toLowerCase();
@@ -235,7 +249,10 @@ function parseBadgesRaw(v: unknown): string[] {
   return [];
 }
 
-function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
+function getBadgePillsFromOpts(
+  opts: Record<string, any> | null,
+  t: Translator
+): string[] {
   if (!opts) return [];
 
   const raw =
@@ -248,7 +265,7 @@ function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
 
   const keysOrLabels = parseBadgesRaw(raw);
   const pills = keysOrLabels
-    .map((x) => humanizeBadge(x))
+    .map((x) => humanizeBadge(x, t))
     .map((x) => String(x).trim())
     .filter(Boolean);
 
@@ -264,7 +281,7 @@ function getBadgePillsFromOpts(opts: Record<string, any> | null): string[] {
   return uniq;
 }
 
-function optionsToRows(opts: Record<string, any> | null) {
+function optionsToRows(opts: Record<string, any> | null, t: Translator) {
   if (!opts) return [];
 
   const blockKeys = new Set<string>([
@@ -289,7 +306,7 @@ function optionsToRows(opts: Record<string, any> | null) {
       if (blockKeys.has(key)) return false;
       return v != null && String(v).trim() !== "";
     })
-    .map(([k, v]) => [prettifyKey(k), asDisplayValue(v)] as const)
+    .map(([k, v]) => [prettifyKey(k, t), asDisplayValue(v)] as const)
     .filter(([, v]) => String(v).trim() !== "");
 }
 
@@ -474,21 +491,31 @@ export default async function CartPage() {
   const shippingBannerMessage = isPtStockCart
     ? t.rich("cartPage.ptStock.info", {
         one: () => (
-          <span className="font-semibold text-gray-900">1 item = 6€</span>
+          <span className="font-semibold text-gray-900">
+            {t("cartPage.ptStock.ruleOne")}
+          </span>
         ),
         two: () => (
-          <span className="font-semibold text-gray-900">2 items = 3€</span>
+          <span className="font-semibold text-gray-900">
+            {t("cartPage.ptStock.ruleTwo")}
+          </span>
         ),
         three: () => (
-          <span className="font-semibold text-gray-900">3+ = FREE</span>
+          <span className="font-semibold text-gray-900">
+            {t("cartPage.ptStock.ruleThree")}
+          </span>
         ),
         delivery: () => (
-          <span className="font-semibold text-gray-900">2–3 business days</span>
+          <span className="font-semibold text-gray-900">
+            {t("cartPage.ptStock.deliveryTime")}
+          </span>
         ),
       })
     : subtotalCents >= FREE_SHIPPING_THRESHOLD * 100
       ? t("cartPage.free")
-      : `${formatMoneyRight(amountUntilFreeShippingCents)} until free shipping`;
+      : t("cartPage.freeShipping.remaining", {
+          amount: formatMoneyRight(amountUntilFreeShippingCents),
+        });
 
   return (
     <div className="container-fw py-12">
@@ -571,7 +598,9 @@ export default async function CartPage() {
               <div className="rounded-2xl border bg-gray-50 px-4 py-3 sm:rounded-full sm:py-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <span className="text-sm font-semibold leading-tight text-gray-900">
-                    Free shipping from 70€
+                    {t("cartPage.freeShipping.title", {
+                      amount: `${FREE_SHIPPING_THRESHOLD}€`,
+                    })}
                   </span>
 
                   <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-3">
@@ -605,7 +634,9 @@ export default async function CartPage() {
                       <>
                         <div className="hidden text-gray-300 sm:block">•</div>
                         <div className="inline-flex items-center justify-between gap-2">
-                          <span className="text-gray-500">Missing</span>
+                          <span className="text-gray-500">
+                            {t("cartPage.labels.missing")}
+                          </span>
                           <span className="font-semibold text-gray-900">
                             {formatMoneyRight(amountUntilFreeShippingCents)}
                           </span>
@@ -625,8 +656,8 @@ export default async function CartPage() {
           const cover = getCoverUrl(it.product.imageUrls);
           const external = isExternalUrl(cover);
 
-          const badgePills = getBadgePillsFromOpts(it.opts);
-          const optionRows = optionsToRows(it.opts);
+          const badgePills = getBadgePillsFromOpts(it.opts, t);
+          const optionRows = optionsToRows(it.opts, t);
 
           const custNameRaw =
             it.opts?.custName ??
@@ -828,18 +859,21 @@ export default async function CartPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border bg-white p-5">
             <div className="text-sm font-semibold text-gray-900">
-              Discount code
+              {t("cartPage.discountCode.title")}
             </div>
 
             {validDiscount ? (
               <div className="mt-3 space-y-3">
                 <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
                   <div className="font-semibold">
-                    Code {validDiscount.code} applied
+                    {t("cartPage.discountCode.applied", {
+                      code: validDiscount.code,
+                    })}
                   </div>
                   <div className="mt-1">
-                    {validDiscount.percentOff}% off on products only. Shipping is
-                    not discounted.
+                    {t("cartPage.discountCode.productsOnly", {
+                      percent: validDiscount.percentOff,
+                    })}
                   </div>
                 </div>
 
@@ -848,7 +882,7 @@ export default async function CartPage() {
                     type="submit"
                     className="inline-flex rounded-xl border px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
                   >
-                    Remove code
+                    {t("cartPage.discountCode.remove")}
                   </button>
                 </form>
               </div>
@@ -861,7 +895,7 @@ export default async function CartPage() {
                   <input
                     type="text"
                     name="code"
-                    placeholder="Enter your code"
+                    placeholder={t("cartPage.discountCode.placeholder")}
                     defaultValue={normalizedDiscountCode || ""}
                     className="w-full rounded-xl border px-3 py-2 uppercase outline-none transition focus:border-black"
                   />
@@ -869,12 +903,12 @@ export default async function CartPage() {
                     type="submit"
                     className="inline-flex shrink-0 items-center justify-center rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-900"
                   >
-                    Apply
+                    {t("cartPage.discountCode.apply")}
                   </button>
                 </form>
 
                 <div className="mt-2 text-xs text-gray-500">
-                  Discount applies only to product subtotal, never to shipping.
+                  {t("cartPage.discountCode.help")}
                 </div>
               </div>
             )}
@@ -898,7 +932,9 @@ export default async function CartPage() {
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">
                   {validDiscount
-                    ? `Discount (${validDiscount.code})`
+                    ? t("cartPage.labels.discountWithCode", {
+                        code: validDiscount.code,
+                      })
                     : t("cartPage.labels.discount")}
                 </span>
                 <span className="font-semibold">
@@ -935,38 +971,36 @@ export default async function CartPage() {
                   {t.rich("cartPage.summary.cttRules", {
                     one: () => (
                       <span className="font-semibold text-gray-800">
-                        1 item = 6€
+                        {t("cartPage.ptStock.ruleOne")}
                       </span>
                     ),
                     two: () => (
                       <span className="font-semibold text-gray-800">
-                        2 items = 3€
+                        {t("cartPage.ptStock.ruleTwo")}
                       </span>
                     ),
                     three: () => (
                       <span className="font-semibold text-gray-800">
-                        3+ = FREE
+                        {t("cartPage.ptStock.ruleThree")}
                       </span>
                     ),
                   })}
                 </div>
               ) : amountUntilFreeShippingCents > 0 ? (
                 <div className="pt-3 text-xs text-gray-500">
-                  Add{" "}
-                  <span className="font-semibold text-gray-800">
-                    {formatMoneyRight(amountUntilFreeShippingCents)}
-                  </span>{" "}
-                  more to unlock free shipping.
+                  {t("cartPage.summary.addMoreForFreeShipping", {
+                    amount: formatMoneyRight(amountUntilFreeShippingCents),
+                  })}
                 </div>
               ) : (
                 <div className="pt-3 text-xs text-green-700">
-                  Free shipping unlocked.
+                  {t("cartPage.summary.freeShippingUnlocked")}
                 </div>
               )}
 
               {validDiscount && (
                 <div className="pt-2 text-xs text-gray-500">
-                  The discount was calculated only on the products subtotal.
+                  {t("cartPage.summary.discountProductsOnly")}
                 </div>
               )}
             </div>
