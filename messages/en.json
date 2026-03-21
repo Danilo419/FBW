@@ -308,6 +308,27 @@
       }
     }
   },
+  "JerseysPage": {
+    "eyebrow": "Jerseys",
+    "title": "Standard short-sleeve jerseys",
+    "description": "Standard short-sleeve jerseys (excluding Player Version, Long Sleeve and Retro).",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading jerseys…",
+    "jerseysFound": "{count} jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "viewProduct": "View product",
+    "empty": "No jerseys found.",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "fetchError": "Fetch error"
+  },
   "LongSleeveJerseysPage": {
     "category": "Product category",
     "title": "Long sleeve jerseys",
@@ -329,6 +350,370 @@
     "nextPage": "Next page",
     "fetchFailed": "Fetch failed",
     "fetchError": "Fetch error"
+  },
+  "playerVersionJerseysPage": {
+    "eyebrow": "Player Version",
+    "title": "Player version jerseys (on-pitch fit, short-sleeve)",
+    "description": "Authentic on-pitch fit jerseys (player version), short-sleeve only.",
+    "backToHome": "← Back to Home Page",
+    "loading": "Loading player version jerseys…",
+    "foundCount": "{count} player version jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "searchAriaLabel": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "sortAriaLabel": "Sort player version jerseys",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "empty": "No player version jerseys found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "pageNumber": "Page {page}",
+    "searchError": "Search error",
+    "searchFailedWithStatus": "Search failed ({status})"
+  },
+  "playerVersionLongSleevePage": {
+    "eyebrow": "Player Version",
+    "title": "Player version jerseys (long sleeve)",
+    "description": "Authentic on-pitch fit jerseys (player version), long sleeve only.",
+    "backToHome": "← Back to Home Page",
+    "searchPlaceholder": "Search by team or jersey name",
+    "viewProduct": "View product",
+    "empty": "No player version long-sleeve jerseys found.",
+    "errors": {
+      "fetch": "Fetch error"
+    },
+    "status": {
+      "loading": "Loading player version long-sleeve jerseys…",
+      "found": "{count} player version long-sleeve jerseys found"
+    },
+    "sort": {
+      "label": "Sort by:",
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {page}"
+    }
+  },
+  "preMatchJerseysPage": {
+    "eyebrow": "Pre-Match Jerseys",
+    "title": "Pre-match jerseys",
+    "subtitle": "Warm-up and pre-game tops — what players wear before kick-off.",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading pre-match jerseys…",
+    "found": "{count} pre-match jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "viewProduct": "View product",
+    "empty": "No pre-match jerseys found.",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page"
+    },
+    "errors": {
+      "fetch": "Error loading products."
+    }
+  },
+  "TracksuitsPage": {
+    "eyebrow": "Tracksuits",
+    "title": "Tracksuits",
+    "description": "Tracksuits collection (excluding training tracksuits). Perfect for travel, casual wear and matchday style.",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading tracksuits…",
+    "foundCount": "{count} tracksuits found",
+    "searchPlaceholder": "Search by team or tracksuit name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "empty": "No tracksuits found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "searchError": "Search error"
+  },
+  "TrainingTracksuitsPage": {
+    "eyebrow": "Training Tracksuits",
+    "title": "Training tracksuits",
+    "description": "Full training sets (top & pants) for warm-ups, travel and everyday training sessions.",
+    "backToHome": "Back to Home Page",
+    "searchPlaceholder": "Search by team or product name",
+    "sortBy": "Sort by:",
+    "viewProduct": "View product",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "messages": {
+      "loading": "Loading training tracksuits…",
+      "found": "{count} training tracksuits found",
+      "noProducts": "No products with “Training Tracksuit” in the name were found.",
+      "errorLoadingProducts": "Error loading products"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {page}"
+    }
+  },
+  "TrainingSleevelessSetsPage": {
+    "eyebrow": "Training Sets",
+    "title": "Training sleeveless sets",
+    "description": "Tank + shorts training sets for high-intensity sessions and hot weather workouts.",
+    "backToHome": "← Back to Home Page",
+    "loadingStatus": "Loading training sleeveless sets…",
+    "resultsFound": "{count} training sleeveless sets found",
+    "searchPlaceholder": "Search by team or set name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "noResults": "No training sleeveless sets found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "errorLoadingProducts": "Error loading products"
+  },
+  "CurrentSeason2526Page": {
+    "eyebrow": "Product category",
+    "title": "Current season 25/26",
+    "subtitle": "Latest club & national-team drops (non-player version)",
+    "backToHome": "Back to Home Page",
+    "loadingProducts": "Loading products…",
+    "productsFound": "{count} products found",
+    "searchPlaceholder": "Search by team or product name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "empty": "No current-season 25/26 products were found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "fetchFailed": "Fetch failed ({status})",
+    "fetchError": "Fetch error"
+  },
+  "AdultPage": {
+    "productCategory": "Product category",
+    "title": "Adult",
+    "backToHome": "Back to Home Page",
+    "loadingProducts": "Loading products…",
+    "productsFound": "{count} products found",
+    "searchPlaceholder": "Search by team or product name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "viewProduct": "View product",
+    "empty": "No adult products were found (they might all be Kids or Crop Top items).",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "errorLoadingProducts": "Error loading products"
+  },
+  "kidsPage": {
+    "categoryLabel": "Product category",
+    "title": "Kids",
+    "backToHome": "Back to Home Page",
+    "loadingProducts": "Loading products…",
+    "productsFound": "{count} products found",
+    "searchPlaceholder": "Search by team or product name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "empty": "No kids products were found (check if the name contains \"Kids\").",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "errorLoadingProducts": "Error loading products"
+  },
+  "kidsKitsPage": {
+    "eyebrow": "Kids Kits",
+    "title": "Kids kits",
+    "description": "Full sets for kids — jersey, shorts and more for your little fans.",
+    "backToHome": "← Back to Home Page",
+    "loading": "Loading kids kits…",
+    "found": "{count} kids kits found",
+    "searchPlaceholder": "Search by team or kit name",
+    "sortBy": "Sort by:",
+    "viewProduct": "View product",
+    "empty": "No kids kits found.",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "pagination": {
+      "previousAria": "Previous page",
+      "nextAria": "Next page"
+    },
+    "errors": {
+      "searchFailed": "Search failed ({status})",
+      "generic": "Search error"
+    }
+  },
+  "CropTopsPage": {
+    "eyebrow": "Crop Tops",
+    "title": "Crop tops",
+    "subtitle": "Stylish cropped tops inspired by your favourite clubs and colours.",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading crop tops…",
+    "foundCount": "{count} crop tops found",
+    "searchPlaceholder": "Search by team or top name",
+    "sortBy": "Sort by:",
+    "viewProduct": "View product",
+    "empty": "No crop tops found.",
+    "fetchError": "Fetch error",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page"
+    }
+  },
+  "conceptKitsPage": {
+    "eyebrow": "Concept Kits",
+    "title": "Concept kits",
+    "description": "Original concept designs — bold fantasy kits created by designers and concept artists.",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading concept kits…",
+    "found": "{count} concept kits found",
+    "searchPlaceholder": "Search by team or kit name",
+    "sortByLabel": "Sort by:",
+    "viewProduct": "View product",
+    "empty": "No concept kits found.",
+    "errors": {
+      "fetchError": "Error loading concept kits."
+    },
+    "sort": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page"
+    }
+  },
+  "retroPage": {
+    "productCategory": "Product category",
+    "title": "Retro",
+    "backToHomePage": "Back to Home Page",
+    "loadingProducts": "Loading products…",
+    "productsFound": "{count} products found",
+    "searchPlaceholder": "Search by team or product name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "empty": "No retro products were found (check if the product name contains \"Retro\").",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "errorLoadingProducts": "Error loading products"
+  },
+  "RetroJerseysPage": {
+    "eyebrow": "Retro Jerseys",
+    "title": "Retro jerseys",
+    "description": "Throwback legends from classic seasons — iconic retro jerseys from your favourite clubs.",
+    "backHome": "← Back to Home Page",
+    "loading": "Loading retro jerseys…",
+    "found": "{count} retro jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "sortTeam": "Team & name",
+    "sortPriceAsc": "Price (low → high)",
+    "sortPriceDesc": "Price (high → low)",
+    "sortRandom": "Random",
+    "noResults": "No retro jerseys found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "fetchError": "Error loading products"
+  },
+  "RetroLongSleeveJerseysPage": {
+    "badge": "Retro Jerseys",
+    "title": "Retro long-sleeve jerseys",
+    "description": "Retro designs with long sleeves — classic looks for colder match days.",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading retro long-sleeve jerseys…",
+    "resultsFound": "{count} retro long-sleeve jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "noResults": "No retro long-sleeve jerseys found.",
+    "viewProduct": "View product",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "fetchError": "Error loading products"
+  },
+  "fifaWorldCup2026Page": {
+    "eyebrow": "FIFA World Cup 2026 Jerseys",
+    "title": "FIFA World Cup 2026 Jerseys",
+    "subtitle": "Exclusive selection of World Cup 2026 jerseys.",
+    "backToHome": "Back to Home Page",
+    "loading": "Loading World Cup 2026 jerseys…",
+    "foundCount": "{count} World Cup 2026 jerseys found",
+    "searchPlaceholder": "Search by team or jersey name",
+    "sortBy": "Sort by:",
+    "sortOptions": {
+      "team": "Team & name",
+      "priceAsc": "Price (low → high)",
+      "priceDesc": "Price (high → low)",
+      "random": "Random"
+    },
+    "viewProduct": "View product",
+    "empty": "No “World Cup 2026” products found.",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "searchError": "Search error",
+    "searchFailedWithStatus": "Search failed ({status})"
   },
   "termsPage": {
     "metadata": {
@@ -441,7 +826,7 @@
       },
       "product": {
         "label": "Product Info & Sizing",
-        "title": "Product Information & Sizing",
+        "title": "Product Info & Sizing",
         "body": "Colors may vary slightly due to display settings. For measurements and fit, see the <sizeGuide>Size Guide</sizeGuide>."
       },
       "payments": {
@@ -1553,6 +1938,15 @@
     "clubImageAlt": "{club} jersey collection",
     "noImage": "No image",
     "empty": "No clubs available yet."
+  },
+  "TeamProductsPage": {
+    "backToClubs": "Back to Clubs",
+    "viewProduct": "View product",
+    "pagination": "Product pagination",
+    "firstPage": "First page",
+    "lastPage": "Last page",
+    "page": "Page",
+    "noImage": "No image"
   },
   "shippingPage": {
     "metadata": {

@@ -1531,6 +1531,15 @@
     "noImage": "Sem imagem",
     "empty": "Ainda não há clubes disponíveis."
   },
+  "TeamProductsPage": {
+    "backToClubs": "Voltar aos Clubes",
+    "viewProduct": "Ver produto",
+    "pagination": "Paginação de produtos",
+    "firstPage": "Primeira página",
+    "lastPage": "Última página",
+    "page": "Página",
+    "noImage": "Sem imagem"
+  },
   "shippingPage": {
     "metadata": {
       "title": "Envio e Tracking – FootballWorld",
@@ -2360,5 +2369,390 @@
     "nextPage": "Página seguinte",
     "fetchFailed": "Falha ao carregar",
     "fetchError": "Erro ao carregar"
+  },
+  "CurrentSeason2526Page": {
+    "eyebrow": "Categoria de produto",
+    "title": "Época atual 25/26",
+    "subtitle": "Últimos lançamentos de clubes e seleções (sem player version)",
+    "backToHome": "Voltar à Página Inicial",
+    "loadingProducts": "A carregar produtos…",
+    "productsFound": "{count} produtos encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do produto",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (mais baixo → mais alto)",
+      "priceDesc": "Preço (mais alto → mais baixo)",
+      "random": "Aleatório"
+    },
+    "empty": "Não foram encontrados produtos da época atual 25/26.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Página seguinte",
+    "fetchFailed": "Falha ao carregar ({status})",
+    "fetchError": "Erro ao carregar"
+  },
+  "fifaWorldCup2026Page": {
+    "eyebrow": "Camisolas FIFA World Cup 2026",
+    "title": "Camisolas FIFA World Cup 2026",
+    "subtitle": "Seleção exclusiva de camisolas do Mundial 2026.",
+    "backToHome": "Voltar à Página Inicial",
+    "loading": "A carregar camisolas do Mundial 2026…",
+    "foundCount": "{count} camisolas do Mundial 2026 encontradas",
+    "searchPlaceholder": "Pesquisar por seleção ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Seleção e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "viewProduct": "Ver produto",
+    "empty": "Nenhum produto “World Cup 2026” encontrado.",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "searchError": "Erro na pesquisa",
+    "searchFailedWithStatus": "A pesquisa falhou ({status})"
+  },
+  "JerseysPage": {
+    "eyebrow": "Camisolas",
+    "title": "Camisolas standard de manga curta",
+    "description": "Camisolas standard de manga curta (excluindo Player Version, manga comprida e Retro).",
+    "backToHome": "Voltar à Página Inicial",
+    "loading": "A carregar camisolas…",
+    "jerseysFound": "{count} camisolas encontradas",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "viewProduct": "Ver produto",
+    "empty": "Nenhuma camisola encontrada.",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "fetchError": "Erro ao carregar"
+  },
+  "AdultPage": {
+    "productCategory": "Categoria de produto",
+    "title": "Adulto",
+    "backToHome": "Voltar à Página Inicial",
+    "loadingProducts": "A carregar produtos…",
+    "productsFound": "{count} produtos encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do produto",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → maior)",
+      "random": "Aleatório"
+    },
+    "viewProduct": "Ver produto",
+    "empty": "Não foram encontrados produtos de adulto (podem ser todos artigos Kids ou Crop Top).",
+    "previousPage": "Página anterior",
+    "nextPage": "Página seguinte",
+    "errorLoadingProducts": "Erro ao carregar produtos"
+  },
+  "kidsPage": {
+    "categoryLabel": "Categoria de produto",
+    "title": "Kids",
+    "backToHome": "Voltar à Página Inicial",
+    "loadingProducts": "A carregar produtos…",
+    "productsFound": "{count} produtos encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do produto",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "empty": "Nenhum produto kids foi encontrado (verifique se o nome contém \"Kids\").",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Página seguinte",
+    "errorLoadingProducts": "Erro ao carregar produtos"
+  },
+  "kidsKitsPage": {
+    "eyebrow": "Kits Infantis",
+    "title": "Kits infantis",
+    "description": "Conjuntos completos para crianças — camisola, calções e mais para os seus pequenos fãs.",
+    "backToHome": "← Voltar à Página Inicial",
+    "loading": "A carregar kits infantis…",
+    "found": "{count} kits infantis encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do kit",
+    "sortBy": "Ordenar por:",
+    "viewProduct": "Ver produto",
+    "empty": "Nenhum kit infantil encontrado.",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (baixo → alto)",
+      "priceDesc": "Preço (alto → baixo)",
+      "random": "Aleatório"
+    },
+    "pagination": {
+      "previousAria": "Página anterior",
+      "nextAria": "Próxima página"
+    },
+    "errors": {
+      "searchFailed": "A pesquisa falhou ({status})",
+      "generic": "Erro na pesquisa"
+    }
+  },
+  "conceptKitsPage": {
+    "eyebrow": "Concept Kits",
+    "title": "Concept kits",
+    "description": "Designs concept originais — kits de fantasia ousados criados por designers e concept artists.",
+    "backToHome": "Voltar à página inicial",
+    "loading": "A carregar concept kits…",
+    "found": "{count} concept kits encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do kit",
+    "sortByLabel": "Ordenar por:",
+    "viewProduct": "Ver produto",
+    "empty": "Nenhum concept kit encontrado.",
+    "errors": {
+      "fetchError": "Erro ao carregar os concept kits."
+    },
+    "sort": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "pagination": {
+      "previous": "Página anterior",
+      "next": "Próxima página"
+    }
+  },
+  "CropTopsPage": {
+    "eyebrow": "Categoria de produto",
+    "title": "Crop tops",
+    "subtitle": "Tops curtos estilosos inspirados nos seus clubes e cores favoritos.",
+    "backToHome": "Voltar à Página Inicial",
+    "loading": "A carregar crop tops…",
+    "foundCount": "{count} crop tops encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do top",
+    "sortBy": "Ordenar por:",
+    "viewProduct": "Ver produto",
+    "empty": "Nenhum crop top encontrado.",
+    "fetchError": "Erro ao buscar produtos",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "pagination": {
+      "previous": "Página anterior",
+      "next": "Próxima página"
+    }
+  },
+  "playerVersionJerseysPage": {
+    "eyebrow": "Player Version",
+    "title": "Camisolas player version (ajuste de jogo, manga curta)",
+    "description": "Camisolas autênticas com ajuste de jogo (player version), apenas manga curta.",
+    "backToHome": "← Voltar à Página Inicial",
+    "loading": "A carregar camisolas player version…",
+    "foundCount": "{count} camisolas player version encontradas",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "searchAriaLabel": "Pesquisar por equipa ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "sortAriaLabel": "Ordenar camisolas player version",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "empty": "Nenhuma camisola player version encontrada.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "pageNumber": "Página {page}",
+    "searchError": "Erro na pesquisa",
+    "searchFailedWithStatus": "A pesquisa falhou ({status})"
+  },
+  "playerVersionLongSleevePage": {
+    "eyebrow": "Player Version",
+    "title": "Camisolas player version (manga comprida)",
+    "description": "Camisolas autênticas com ajuste de jogo (player version), apenas manga comprida.",
+    "backToHome": "← Voltar à Página Inicial",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "viewProduct": "Ver produto",
+    "empty": "Nenhuma camisola player version de manga comprida encontrada.",
+    "errors": {
+      "fetch": "Erro ao carregar"
+    },
+    "status": {
+      "loading": "A carregar camisolas player version de manga comprida…",
+      "found": "{count} camisolas player version de manga comprida encontradas"
+    },
+    "sort": {
+      "label": "Ordenar por:",
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "pagination": {
+      "previous": "Página anterior",
+      "next": "Próxima página",
+      "page": "Página {page}"
+    }
+  },
+  "preMatchJerseysPage": {
+    "eyebrow": "Pre-Match Jerseys",
+    "title": "Pre-match jerseys",
+    "subtitle": "Warm-up and pre-game tops — what players wear before kick-off.",
+    "backToHome": "Voltar à Página Inicial",
+    "loading": "A carregar pre-match jerseys…",
+    "found": "{count} pre-match jerseys encontradas",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "viewProduct": "Ver produto",
+    "empty": "Nenhuma pre-match jersey encontrada.",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "pagination": {
+      "previous": "Página anterior",
+      "next": "Próxima página"
+    },
+    "errors": {
+      "fetch": "Erro ao carregar os produtos."
+    }
+  },
+  "retroPage": {
+    "productCategory": "Categoria de produto",
+    "title": "Retro",
+    "backToHomePage": "Voltar à Página Inicial",
+    "loadingProducts": "A carregar produtos…",
+    "productsFound": "{count} produtos encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do produto",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "empty": "Nenhum produto retro foi encontrado (verifique se o nome do produto contém \"Retro\").",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Página seguinte",
+    "errorLoadingProducts": "Erro ao carregar produtos"
+  },
+  "RetroJerseysPage": {
+    "eyebrow": "Retro Jerseys",
+    "title": "Camisolas retro",
+    "description": "Lendas de épocas clássicas — camisolas retro icónicas dos teus clubes favoritos.",
+    "backHome": "← Voltar à página inicial",
+    "loading": "A carregar camisolas retro…",
+    "found": "{count} camisolas retro encontradas",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "sortTeam": "Equipa e nome",
+    "sortPriceAsc": "Preço (mais baixo → mais alto)",
+    "sortPriceDesc": "Preço (mais alto → mais baixo)",
+    "sortRandom": "Aleatório",
+    "noResults": "Nenhuma camisola retro encontrada.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "fetchError": "Erro ao carregar os produtos"
+  },
+  "RetroLongSleeveJerseysPage": {
+    "badge": "Camisolas Retro",
+    "title": "Camisolas retro de manga comprida",
+    "description": "Designs retro com mangas compridas — visuais clássicos para dias de jogo mais frios.",
+    "backToHome": "Voltar à Página Inicial",
+    "loading": "A carregar camisolas retro de manga comprida…",
+    "resultsFound": "{count} camisolas retro de manga comprida encontradas",
+    "searchPlaceholder": "Pesquisar por equipa ou nome da camisola",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "noResults": "Nenhuma camisola retro de manga comprida encontrada.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "fetchError": "Erro ao carregar os produtos"
+  },
+  "TracksuitsPage": {
+    "eyebrow": "Fatos de treino",
+    "title": "Fatos de treino",
+    "description": "Coleção de fatos de treino (excluindo fatos de treino de treino). Perfeitos para viagem, uso casual e estilo de dia de jogo.",
+    "backToHome": "Voltar à página inicial",
+    "loading": "A carregar fatos de treino…",
+    "foundCount": "{count} fatos de treino encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do fato de treino",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "empty": "Nenhum fato de treino encontrado.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "searchError": "Erro na pesquisa"
+  },
+  "TrainingSleevelessSetsPage": {
+    "eyebrow": "Conjuntos de Treino",
+    "title": "Conjuntos de treino sem mangas",
+    "description": "Conjuntos de treino com camisola sem mangas + calções para sessões intensas e treinos em tempo quente.",
+    "backToHome": "← Voltar à Página Inicial",
+    "loadingStatus": "A carregar conjuntos de treino sem mangas…",
+    "resultsFound": "{count} conjuntos de treino sem mangas encontrados",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do conjunto",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "noResults": "Nenhum conjunto de treino sem mangas encontrado.",
+    "viewProduct": "Ver produto",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "errorLoadingProducts": "Erro ao carregar produtos"
+  },
+  "TrainingTracksuitsPage": {
+    "eyebrow": "Fatos de treino",
+    "title": "Fatos de treino",
+    "description": "Conjuntos completos de treino (casaco e calças) para aquecimento, viagem e sessões de treino do dia a dia.",
+    "backToHome": "Voltar à página inicial",
+    "searchPlaceholder": "Pesquisar por equipa ou nome do produto",
+    "sortBy": "Ordenar por:",
+    "viewProduct": "Ver produto",
+    "sortOptions": {
+      "team": "Equipa e nome",
+      "priceAsc": "Preço (menor → maior)",
+      "priceDesc": "Preço (maior → menor)",
+      "random": "Aleatório"
+    },
+    "messages": {
+      "loading": "A carregar fatos de treino…",
+      "found": "{count} fatos de treino encontrados",
+      "noProducts": "Nenhum produto com “Training Tracksuit” no nome foi encontrado.",
+      "errorLoadingProducts": "Erro ao carregar produtos"
+    },
+    "pagination": {
+      "previous": "Página anterior",
+      "next": "Próxima página",
+      "page": "Página {page}"
+    }
   }
 }

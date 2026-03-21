@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -47,8 +49,8 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+function moneyAfter(cents: number, locale: string) {
+  const n = (cents / 100).toLocaleString(locale === "pt" ? "pt-PT" : "en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -246,11 +248,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -350,10 +350,8 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // tem de ser RETRO
   if (!n.includes("RETRO")) return false;
 
-  // tem de ser manga comprida (aceita variações)
   const isLongSleeve =
     n.includes("LONG SLEEVE") ||
     n.includes("LONG-SLEEVE") ||
@@ -361,7 +359,6 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
     /\bLS\b/.test(n);
   if (!isLongSleeve) return false;
 
-  // excluir kits / conjuntos / outros itens
   if (n.includes("SET")) return false;
   if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
@@ -369,7 +366,7 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-  if (n.includes(" KIT")) return false; // kit completo
+  if (n.includes(" KIT")) return false;
 
   return true;
 }
@@ -378,15 +375,16 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
    Card de produto (mobile-first)
 ============================================================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : undefined;
+function ProductCard({ p, locale }: { p: UIProduct; locale: string }) {
+  const t = useTranslations("RetroLongSleeveJerseysPage");
+  const href = p.slug ? `/${locale}/products/${p.slug}` : "#";
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
   const teamLabel = getClubLabel(p);
 
   return (
-    <a
+    <Link
       key={String(p.id)}
       href={href}
       className="group block h-full rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-md hover:ring-sky-200 transition duration-200 overflow-hidden relative"
@@ -415,7 +413,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 flex flex-col grow">
-          {/* ✅ Só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
               {teamLabel}
@@ -432,7 +429,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-2">
               {sale && (
                 <div className="text-[12px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
@@ -456,7 +453,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 flex items-center gap-2 text-[12px] font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -470,7 +467,7 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -509,6 +506,9 @@ function buildPaginationRange(
 ============================================================ */
 
 export default function RetroLongSleeveJerseysPage() {
+  const t = useTranslations("RetroLongSleeveJerseysPage");
+  const locale = useLocale();
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -540,7 +540,7 @@ export default function RetroLongSleeveJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || t("fetchError"));
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -548,7 +548,7 @@ export default function RetroLongSleeveJerseysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isRetroLongSleeveJersey);
@@ -616,42 +616,39 @@ export default function RetroLongSleeveJerseysPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-6 px-4 sm:px-6">
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Retro Jerseys
+                {t("badge")}
               </p>
               <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
-                Retro long-sleeve jerseys
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-sm text-gray-600">
-                Retro designs with long sleeves — classic looks for colder match
-                days.
+                {t("description")}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3 justify-start mt-1">
-              <a href="/" className="btn-outline text-sm">
-                ← Back to Home Page
-              </a>
+              <Link href={`/${locale}`} className="btn-outline text-sm">
+                ← {t("backToHome")}
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CONTEÚDO */}
       <section className="container-fw section-gap px-4 sm:px-6">
         <div className="mb-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading retro long-sleeve jerseys…</span>
+              <span>{t("loading")}</span>
             ) : (
               <span>
-                {jerseysFiltered.length} retro long-sleeve jerseys found
+                {t("resultsFound", { count: jerseysFiltered.length })}
               </span>
             )}
           </div>
@@ -666,25 +663,25 @@ export default function RetroLongSleeveJerseysPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or jersey name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -717,12 +714,12 @@ export default function RetroLongSleeveJerseysPage() {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
-                  Nenhum retro long-sleeve jersey encontrado.
+                  {t("noResults")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard key={String(p.id)} p={p} locale={locale} />
               ))}
             </div>
 
@@ -733,7 +730,7 @@ export default function RetroLongSleeveJerseysPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -776,7 +773,7 @@ export default function RetroLongSleeveJerseysPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
-                  aria-label="Próxima página"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

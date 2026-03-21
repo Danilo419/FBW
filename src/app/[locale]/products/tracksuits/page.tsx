@@ -1,8 +1,10 @@
-// src/app/products/tracksuits/page.tsx
+// src/app/[locale]/products/tracksuits/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -48,8 +50,8 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+function moneyAfter(cents: number, locale: string) {
+  const n = (cents / 100).toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -402,15 +404,23 @@ function isTracksuitNonTraining(p: UIProduct): boolean {
    Card de produto (igual look & feel do search)
 ============================================================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : undefined;
+function ProductCard({
+  p,
+  locale,
+  t,
+}: {
+  p: UIProduct;
+  locale: string;
+  t: ReturnType<typeof useTranslations<"TracksuitsPage">>;
+}) {
+  const href = p.slug ? `/${locale}/products/${p.slug}` : `/${locale}`;
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
   const teamLabel = getClubLabel(p);
 
   return (
-    <a
+    <Link
       key={String(p.id)}
       href={href}
       className="group block rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-xl hover:ring-sky-200 transition duration-300 overflow-hidden relative"
@@ -429,9 +439,11 @@ function ProductCard({ p }: { p: UIProduct }) {
             src={p.img || FALLBACK_IMG}
             loading="lazy"
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if ((img as any)._fallbackApplied) return;
-              (img as any)._fallbackApplied = true;
+              const img = e.currentTarget as HTMLImageElement & {
+                _fallbackApplied?: boolean;
+              };
+              if (img._fallbackApplied) return;
+              img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
             className="absolute inset-0 h-full w-full object-contain p-3 sm:p-6 transition-transform duration-300 group-hover:scale-105"
@@ -439,7 +451,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -454,7 +465,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-2">
               {sale && (
                 <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
@@ -478,7 +489,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 sm:h-12 flex items-center gap-2 text-[11px] sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -492,7 +503,7 @@ function ProductCard({ p }: { p: UIProduct }) {
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -532,6 +543,9 @@ function buildPaginationRange(
 ============================================================ */
 
 export default function TracksuitsPage() {
+  const locale = useLocale();
+  const t = useTranslations("TracksuitsPage");
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -561,15 +575,17 @@ export default function TracksuitsPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || t("searchError"));
         }
       })
-      .finally(() => !cancelled && setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const tracksuitsFiltered = useMemo(() => {
     let base = results.filter(isTracksuitNonTraining);
@@ -606,11 +622,11 @@ export default function TracksuitsPage() {
     copy.sort((a, b) => {
       const ta = getClubLabel(a).toUpperCase();
       const tb = getClubLabel(b).toUpperCase();
-      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "");
-      return ta.localeCompare(tb);
+      if (ta === tb) return (a.name ?? "").localeCompare(b.name ?? "", locale);
+      return ta.localeCompare(tb, locale);
     });
     return copy;
-  }, [results, searchTerm, sort]);
+  }, [results, searchTerm, sort, locale]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(tracksuitsFiltered.length / PAGE_SIZE)),
@@ -641,21 +657,20 @@ export default function TracksuitsPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Tracksuits
+                {t("eyebrow")}
               </p>
               <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-                Tracksuits
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-base text-gray-600">
-                Tracksuits collection (excluding training tracksuits). Perfect for travel,
-                casual wear and matchday style.
+                {t("description")}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/" className="btn-outline text-xs sm:text-sm">
-                ← Back to Home Page
-              </a>
+              <Link href={`/${locale}`} className="btn-outline text-xs sm:text-sm">
+                ← {t("backToHome")}
+              </Link>
             </div>
           </div>
         </div>
@@ -667,9 +682,9 @@ export default function TracksuitsPage() {
           <div className="flex items-center gap-2 text-[11px] sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading tracksuits…</span>
+              <span>{t("loading")}</span>
             ) : (
-              <span>{tracksuitsFiltered.length} tracksuits found</span>
+              <span>{t("foundCount", {count: tracksuitsFiltered.length})}</span>
             )}
           </div>
 
@@ -683,25 +698,25 @@ export default function TracksuitsPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or tracksuit name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center gap-2 text-[11px] sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-[11px] sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -734,12 +749,12 @@ export default function TracksuitsPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
-                  Nenhum tracksuit encontrado.
+                  {t("empty")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard key={String(p.id)} p={p} locale={locale} t={t} />
               ))}
             </div>
 
@@ -750,7 +765,7 @@ export default function TracksuitsPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -793,7 +808,7 @@ export default function TracksuitsPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
-                  aria-label="Próxima página"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 /* ============================================================
@@ -49,18 +50,23 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+function moneyAfter(cents: number, locale: string) {
+  const n = (cents / 100).toLocaleString(locale === "pt" ? "pt-PT" : "en-GB", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
   return `${n} €`;
 }
 
-function pricePartsFromCents(cents: number) {
-  const euros = Math.floor(cents / 100).toString();
-  const dec = (cents % 100).toString().padStart(2, "0");
-  return { int: euros, dec, sym: "€" };
+function pricePartsFromCents(cents: number, locale: string) {
+  const value = cents / 100;
+  const formatted = value.toLocaleString(locale === "pt" ? "pt-PT" : "en-GB", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const [int, dec = "00"] = formatted.split(/[.,]/);
+  return { int, dec, sym: "€" };
 }
 
 /* ============================================================
@@ -373,10 +379,18 @@ function isWorldCup2026(p: UIProduct): boolean {
    Card de produto
 ============================================================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
+function ProductCard({
+  p,
+  locale,
+  t,
+}: {
+  p: UIProduct;
+  locale: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
-  const parts = cents != null ? pricePartsFromCents(cents) : null;
+  const parts = cents != null ? pricePartsFromCents(cents, locale) : null;
   const teamLabel = getClubLabel(p);
 
   const cardInner = (
@@ -421,7 +435,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-2">
               {sale && (
                 <div className="text-[11px] text-slate-500 line-through sm:text-[13px]">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
@@ -445,7 +459,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
             <div className="flex h-10 items-center gap-2 text-[11px] font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
@@ -510,6 +524,9 @@ function buildPaginationRange(
 ============================================================ */
 
 export default function FifaWorldCup2026JerseysPage() {
+  const locale = useLocale();
+  const t = useTranslations("fifaWorldCup2026Page");
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -528,7 +545,7 @@ export default function FifaWorldCup2026JerseysPage() {
 
     fetch(`/api/search?q=world%20cup%202026`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Search failed (${r.status})`);
+        if (!r.ok) throw new Error(t("searchFailedWithStatus", { status: r.status }));
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -541,7 +558,7 @@ export default function FifaWorldCup2026JerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Search error");
+          setError(e?.message || t("searchError"));
         }
       })
       .finally(() => {
@@ -551,7 +568,7 @@ export default function FifaWorldCup2026JerseysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const wc2026Filtered = useMemo(() => {
     let base = results.filter(isWorldCup2026);
@@ -624,19 +641,19 @@ export default function FifaWorldCup2026JerseysPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
-                FIFA World Cup 2026 Jerseys
+                {t("eyebrow")}
               </p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-                FIFA World Cup 2026 Jerseys
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-xs text-gray-600 sm:text-sm md:text-base">
-                Exclusive selection of World Cup 2026 jerseys.
+                {t("subtitle")}
               </p>
             </div>
 
             <div className="mt-2 flex flex-wrap justify-start gap-2 sm:mt-0 sm:justify-end sm:gap-3">
               <Link href="/" className="btn-outline text-xs sm:text-sm">
-                ← Back to Home Page
+                ← {t("backToHome")}
               </Link>
             </div>
           </div>
@@ -648,9 +665,9 @@ export default function FifaWorldCup2026JerseysPage() {
           <div className="flex items-center gap-2 text-[11px] text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading World Cup 2026 jerseys…</span>
+              <span>{t("loading")}</span>
             ) : (
-              <span>{wc2026Filtered.length} World Cup 2026 jerseys found</span>
+              <span>{t("foundCount", { count: wc2026Filtered.length })}</span>
             )}
           </div>
 
@@ -664,13 +681,13 @@ export default function FifaWorldCup2026JerseysPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or jersey name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
             <div className="flex items-center gap-2 text-[11px] sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
@@ -685,10 +702,10 @@ export default function FifaWorldCup2026JerseysPage() {
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-[11px] outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -721,12 +738,12 @@ export default function FifaWorldCup2026JerseysPage() {
             <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="col-span-full text-sm text-gray-500">
-                  Nenhum produto “World Cup 2026” encontrado.
+                  {t("empty")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard key={String(p.id)} p={p} locale={locale} t={t} />
               ))}
             </div>
 
@@ -737,7 +754,7 @@ export default function FifaWorldCup2026JerseysPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                   className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -780,7 +797,7 @@ export default function FifaWorldCup2026JerseysPage() {
                   onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={page === totalPages}
                   className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
-                  aria-label="Próxima página"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

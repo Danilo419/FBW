@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 /* ============================================================
@@ -368,6 +369,8 @@ function isStandardShortSleeveJersey(p: UIProduct): boolean {
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
+  const t = useTranslations("JerseysPage");
+
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
@@ -440,7 +443,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
             <div className="flex h-10 items-center gap-2 text-xs font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
@@ -511,6 +514,8 @@ function buildPaginationRange(
 ============================================================ */
 
 export default function JerseysPage() {
+  const t = useTranslations("JerseysPage");
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -542,7 +547,7 @@ export default function JerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || t("fetchError"));
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -550,7 +555,7 @@ export default function JerseysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isStandardShortSleeveJersey);
@@ -624,14 +629,13 @@ export default function JerseysPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
-                Jerseys
+                {t("eyebrow")}
               </p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
-                Standard short-sleeve jerseys
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-xs text-gray-600 sm:text-base">
-                Standard short-sleeve jerseys (excluding Player Version, Long
-                Sleeve and Retro).
+                {t("description")}
               </p>
             </div>
 
@@ -640,7 +644,7 @@ export default function JerseysPage() {
                 href="/"
                 className="btn-outline rounded-full px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm"
               >
-                ← Back to Home Page
+                ← {t("backToHome")}
               </Link>
             </div>
           </div>
@@ -653,9 +657,9 @@ export default function JerseysPage() {
           <div className="flex items-center gap-2 text-xs text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading jerseys…</span>
+              <span>{t("loading")}</span>
             ) : (
-              <span>{jerseysFiltered.length} jerseys found</span>
+              <span>{t("jerseysFound", { count: jerseysFiltered.length })}</span>
             )}
           </div>
 
@@ -669,13 +673,15 @@ export default function JerseysPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or jersey name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-full border px-9 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center justify-between gap-2 text-xs sm:justify-end sm:text-sm">
-              <span className="whitespace-nowrap text-gray-500">Sort by:</span>
+              <span className="whitespace-nowrap text-gray-500">
+                {t("sortBy")}
+              </span>
               <select
                 value={sort}
                 onChange={(e) => {
@@ -686,10 +692,10 @@ export default function JerseysPage() {
                 }}
                 className="min-w-[140px] rounded-full border bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:text-sm"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -722,7 +728,7 @@ export default function JerseysPage() {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="col-span-full text-sm text-gray-500">
-                  Nenhum jersey encontrado.
+                  {t("empty")}
                 </p>
               )}
 
@@ -738,7 +744,7 @@ export default function JerseysPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -781,7 +787,7 @@ export default function JerseysPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
-                  aria-label="Próxima página"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

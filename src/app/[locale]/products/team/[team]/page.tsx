@@ -1,9 +1,10 @@
-// src/app/products/team/[team]/page.tsx
+// src/app/[locale]/products/team/[team]/page.tsx
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import {
   slugFromTeamName,
   teamNamesForQuery,
@@ -14,7 +15,7 @@ import {
 export const revalidate = 60;
 
 type PageProps = {
-  params: Promise<{ team: string }>;
+  params: Promise<{ locale: string; team: string }>;
   searchParams?: Promise<{ page?: string }>;
 };
 
@@ -46,8 +47,10 @@ function fallbackTitle(slug: string) {
     .join(" ");
 }
 
-function moneyAfterEUR(cents: number) {
-  return (cents / 100).toLocaleString("pt-PT", {
+function moneyAfterEUR(cents: number, locale: string) {
+  const safeLocale = locale === "pt" ? "pt-PT" : "en-GB";
+
+  return (cents / 100).toLocaleString(safeLocale, {
     style: "currency",
     currency: "EUR",
     currencyDisplay: "symbol",
@@ -61,30 +64,39 @@ function firstImageFrom(value: unknown): string | null {
   if (Array.isArray(value)) {
     for (const v of value) {
       if (typeof v === "string" && v.trim()) return v.trim();
-      if (v && typeof (v as any).url === "string" && (v as any).url.trim())
+      if (v && typeof (v as any).url === "string" && (v as any).url.trim()) {
         return (v as any).url.trim();
-      if (v && typeof (v as any).src === "string" && (v as any).src.trim())
+      }
+      if (v && typeof (v as any).src === "string" && (v as any).src.trim()) {
         return (v as any).src.trim();
+      }
     }
   }
 
-  const any: any = value;
-  if (typeof any?.url === "string" && any.url.trim()) return any.url.trim();
-  if (typeof any?.src === "string" && any.src.trim()) return any.src.trim();
+  const anyValue: any = value;
+  if (typeof anyValue?.url === "string" && anyValue.url.trim()) {
+    return anyValue.url.trim();
+  }
+  if (typeof anyValue?.src === "string" && anyValue.src.trim()) {
+    return anyValue.src.trim();
+  }
+
   return null;
 }
 
-function coverUrl(raw?: string | null): string {
+function coverUrl(raw: string | null | undefined, noImageText: string): string {
   const fallback =
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='666' viewBox='0 0 500 666'>
         <rect width='100%' height='100%' fill='#f3f4f6'/>
         <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#9ca3af'>No image</text>
+          font-family='system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial' font-size='22' fill='#9ca3af'>${noImageText}</text>
       </svg>`
     );
+
   if (!raw) return fallback;
+
   const p = raw.trim();
   if (p.startsWith("http")) return p;
   return p.startsWith("/") ? p : `/${p}`;
@@ -112,13 +124,9 @@ function labelFromName(name?: string | null): string | null {
   if (!name) return null;
   let s = name.trim();
 
-  // remove season do fim
   s = s.replace(YEAR_TAIL_RE, "").trim();
-
-  // corta variantes "Third Jersey", etc.
   s = s.replace(VARIANT_KIT_TAIL_RE, "").trim();
 
-  // se depois de cortar sobrar vazio, volta ao original sem ano
   if (!s) s = name.replace(YEAR_TAIL_RE, "").trim();
 
   return cleanSpaces(s) || null;
@@ -137,17 +145,12 @@ function normKey(s: string) {
  * ✅ OVERRIDES (match exato com o que está na BD)
  * Aqui definimos exatamente quais valores do campo `team`
  * são permitidos para um dado slug.
- *
- * Tu disseste que na BD tens:
- * Ajax, Braga, Lyon, Porto, PSG, PSV, Roma, Sporting
  */
 const TEAM_QUERY_OVERRIDES: Record<string, string[]> = {
-  // Milan / Inter
   "milan": ["Milan"],
   "ac-milan": ["Milan"],
   "inter-milan": ["Inter Milan"],
 
-  // ✅ os que estavam a falhar (iguais na BD)
   "ajax": ["Ajax"],
   "braga": ["Braga"],
   "lyon": ["Lyon"],
@@ -157,7 +160,6 @@ const TEAM_QUERY_OVERRIDES: Record<string, string[]> = {
   "roma": ["Roma"],
   "sporting": ["Sporting"],
 
-  // (opcional, mas ajuda se por acaso os teus slugs forem diferentes)
   "as-roma": ["Roma"],
   "psv-eindhoven": ["PSV"],
   "paris-saint-germain": ["PSG"],
@@ -201,13 +203,8 @@ const CONTAINS_BLOCKLIST = new Set(
 function shouldUseContains(term: string) {
   const t = normKey(term);
   if (!t) return false;
-
-  // muito curto => arriscado
   if (t.length < 6) return false;
-
-  // palavra única "genérica" => arriscado
   if (!t.includes(" ") && CONTAINS_BLOCKLIST.has(t)) return false;
-
   return true;
 }
 
@@ -216,7 +213,11 @@ export default async function TeamProductsPage({
   params,
   searchParams,
 }: PageProps) {
-  const { team } = await params;
+  const { locale, team } = await params;
+  const t = await getTranslations({
+    locale,
+    namespace: "TeamProductsPage",
+  });
 
   const rawParam = decodeURIComponent(team || "").trim();
 
@@ -227,15 +228,12 @@ export default async function TeamProductsPage({
   const canonicalName =
     teamNameFromSlug(slug) || TEAM_MAP_FALLBACK[slug] || fallbackTitle(slug);
 
-  // ✅ título para UI
   const teamTitle = canonicalName;
 
   const sp = (await searchParams) ?? {};
   const requestedPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
   /* ----------------------- WHERE seguro ----------------------- */
-
-  // ✅ Se existe override, usamos só match exato (IN) e pronto.
   const override = TEAM_QUERY_OVERRIDES[slug];
 
   let where: Prisma.ProductWhereInput;
@@ -243,7 +241,6 @@ export default async function TeamProductsPage({
   if (override && override.length) {
     where = { team: { in: override } };
   } else {
-    // fallback robusto para outros clubes
     const namesForQuery = Array.from(
       new Set(
         [
@@ -263,7 +260,6 @@ export default async function TeamProductsPage({
         namesForQuery
           .map((s) => s.trim())
           .filter(Boolean)
-          // remove lixo demasiado curto/genérico do exact
           .filter(
             (s) => normKey(s).length >= 3 && !CONTAINS_BLOCKLIST.has(normKey(s))
           )
@@ -278,7 +274,6 @@ export default async function TeamProductsPage({
       or.push({ team: { equals: canonicalName } });
     }
 
-    // contains só quando seguro
     for (const nm of namesForQuery) {
       const clean = (nm || "").trim();
       if (!clean) continue;
@@ -313,11 +308,21 @@ export default async function TeamProductsPage({
 
   return (
     <List
+      locale={locale}
       team={teamTitle}
       items={products}
       totalPages={totalPages}
       currentPage={currentPage}
       teamSlug={slug}
+      labels={{
+        backToClubs: t("backToClubs"),
+        viewProduct: t("viewProduct"),
+        pagination: t("pagination"),
+        firstPage: t("firstPage"),
+        lastPage: t("lastPage"),
+        page: t("page"),
+        noImage: t("noImage"),
+      }}
     />
   );
 }
@@ -343,14 +348,10 @@ const TEAM_MAP_FALLBACK: Record<string, string> = {
 
   "vitoria-sc": "Vitória de Guimarães",
 
-  // UI
   "inter-milan": "Inter Milan",
-
-  // ✅ UI (mas na BD está "Milan")
   "milan": "AC Milan",
   "ac-milan": "AC Milan",
 
-  // ✅ UI para os que estavam a falhar
   "ajax": "Ajax",
   "lyon": "Lyon",
   "psg": "PSG",
@@ -360,12 +361,15 @@ const TEAM_MAP_FALLBACK: Record<string, string> = {
 
 /* ============================ UI ============================ */
 function List({
+  locale,
   team,
   items,
   totalPages,
   currentPage,
   teamSlug,
+  labels,
 }: {
+  locale: string;
   team: string;
   items: {
     slug: string;
@@ -377,6 +381,15 @@ function List({
   totalPages: number;
   currentPage: number;
   teamSlug: string;
+  labels: {
+    backToClubs: string;
+    viewProduct: string;
+    pagination: string;
+    firstPage: string;
+    lastPage: string;
+    page: string;
+    noImage: string;
+  };
 }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -388,21 +401,21 @@ function List({
       </div>
 
       <div className="container-fw py-8 sm:py-10">
-        {/* ✅ Back (igual ao “pill”) */}
+        {/* Back */}
         <div className="mb-6">
           <Link
-            href="/clubs"
+            href={`/${locale}/clubs`}
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700"
           >
             <span aria-hidden="true">←</span>
-            Back to Clubs
+            {labels.backToClubs}
           </Link>
         </div>
 
-        {/* Grid de produtos (2 por linha no mobile) */}
+        {/* Grid de produtos */}
         <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
-            const src = coverUrl(firstImageFrom(p.imageUrls));
+            const src = coverUrl(firstImageFrom(p.imageUrls), labels.noImage);
             const euros = Math.floor(p.basePrice / 100).toString();
             const dec = (p.basePrice % 100).toString().padStart(2, "0");
             const compare = getCompareAt(p.basePrice);
@@ -411,12 +424,13 @@ function List({
               (typeof p.team === "string" && p.team.trim()) ||
               labelFromName(p.name) ||
               team;
+
             const chipText = preferredLabel.toUpperCase();
 
             return (
-              <a
+              <Link
                 key={p.slug}
-                href={`/products/${p.slug}`}
+                href={`/${locale}/products/${p.slug}`}
                 className="group relative block overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200"
               >
                 {compare && (
@@ -441,26 +455,26 @@ function List({
                       {chipText}
                     </div>
 
-                    <div className="mt-1 line-clamp-2 text-[13px] sm:text-base font-semibold leading-tight text-slate-900">
+                    <div className="mt-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-900 sm:text-base">
                       {p.name}
                     </div>
 
                     {/* Preço */}
-                    <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
+                    <div className="mt-3 flex items-baseline gap-2 sm:mt-4">
                       {compare && (
-                        <div className="text-[12px] sm:text-[13px] text-slate-500 line-through">
-                          {moneyAfterEUR(compare.compareAt)}
+                        <div className="text-[12px] text-slate-500 line-through sm:text-[13px]">
+                          {moneyAfterEUR(compare.compareAt, locale)}
                         </div>
                       )}
 
                       <div className="flex items-end text-[#1c40b7]">
-                        <span className="text-[20px] sm:text-2xl font-semibold tracking-tight leading-none">
+                        <span className="text-[20px] font-semibold leading-none tracking-tight sm:text-2xl">
                           {euros}
                         </span>
-                        <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
+                        <span className="translate-y-[1px] text-[12px] font-medium sm:text-[13px]">
                           ,{dec}
                         </span>
-                        <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
+                        <span className="ml-1 translate-y-[1px] text-[13px] font-medium sm:text-[15px]">
                           €
                         </span>
                       </div>
@@ -468,9 +482,9 @@ function List({
 
                     <div className="mt-auto">
                       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                      <div className="h-11 sm:h-12 flex items-center gap-2 text-[13px] sm:text-sm font-medium text-slate-700">
+                      <div className="flex h-11 items-center gap-2 text-[13px] font-medium text-slate-700 sm:h-12 sm:text-sm">
                         <span className="transition group-hover:translate-x-0.5">
-                          View product
+                          {labels.viewProduct}
                         </span>
                         <svg
                           className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100"
@@ -484,7 +498,7 @@ function List({
                     </div>
                   </div>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -494,17 +508,17 @@ function List({
           <nav
             className="mt-14 flex justify-center"
             role="navigation"
-            aria-label="Paginação de produtos"
+            aria-label={labels.pagination}
           >
             <ul className="flex items-center gap-3">
               <li>
                 <PaginationPill
                   href={
                     currentPage > 1
-                      ? `/products/team/${teamSlug}?page=1`
+                      ? `/${locale}/products/team/${teamSlug}?page=1`
                       : undefined
                   }
-                  label="Primeira página"
+                  label={labels.firstPage}
                 >
                   &laquo;
                 </PaginationPill>
@@ -516,10 +530,10 @@ function List({
                     href={
                       n === currentPage
                         ? undefined
-                        : `/products/team/${teamSlug}?page=${n}`
+                        : `/${locale}/products/team/${teamSlug}?page=${n}`
                     }
                     active={n === currentPage}
-                    label={`Página ${n}`}
+                    label={`${labels.page} ${n}`}
                   >
                     {n}
                   </PaginationPill>
@@ -530,10 +544,10 @@ function List({
                 <PaginationPill
                   href={
                     currentPage < totalPages
-                      ? `/products/team/${teamSlug}?page=${totalPages}`
+                      ? `/${locale}/products/team/${teamSlug}?page=${totalPages}`
                       : undefined
                   }
-                  label="Última página"
+                  label={labels.lastPage}
                 >
                   &raquo;
                 </PaginationPill>
@@ -591,8 +605,8 @@ function PaginationPill({
   }
 
   return (
-    <a href={href} aria-label={label} className={`${base} ${idleCls}`}>
+    <Link href={href} aria-label={label} className={`${base} ${idleCls}`}>
       {children}
-    </a>
+    </Link>
   );
 }

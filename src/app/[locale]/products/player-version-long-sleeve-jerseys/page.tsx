@@ -1,8 +1,9 @@
-// src/app/products/player-version-long-sleeve-jerseys/page.tsx
+// src/app/[locale]/products/player-version-long-sleeve-jerseys/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -48,18 +49,24 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+function moneyAfter(cents: number, locale: string) {
+  const n = (cents / 100).toLocaleString(locale === "pt" ? "pt-PT" : "en-GB", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `${n} €`;
+
+  return locale === "pt" ? `${n} €` : `€${n}`;
 }
 
-function pricePartsFromCents(cents: number) {
+function pricePartsFromCents(cents: number, locale: string) {
   const euros = Math.floor(cents / 100).toString();
   const dec = (cents % 100).toString().padStart(2, "0");
-  return { int: euros, dec, sym: "€" };
+  return {
+    int: euros,
+    dec,
+    sym: "€",
+    decimalSeparator: locale === "pt" ? "," : ".",
+  };
 }
 
 /* ============================================================
@@ -247,11 +254,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -382,11 +387,19 @@ function isPlayerVersionLongSleeveJersey(p: UIProduct): boolean {
    Card de produto (mobile-first)
 ============================================================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : undefined;
+function ProductCard({
+  p,
+  locale,
+  viewProductLabel,
+}: {
+  p: UIProduct;
+  locale: string;
+  viewProductLabel: string;
+}) {
+  const href = p.slug ? `/${locale}/products/${p.slug}` : undefined;
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
-  const parts = cents != null ? pricePartsFromCents(cents) : null;
+  const parts = cents != null ? pricePartsFromCents(cents, locale) : null;
   const teamLabel = getClubLabel(p);
 
   return (
@@ -409,9 +422,11 @@ function ProductCard({ p }: { p: UIProduct }) {
             src={p.img || FALLBACK_IMG}
             loading="lazy"
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if ((img as any)._fallbackApplied) return;
-              (img as any)._fallbackApplied = true;
+              const img = e.currentTarget as HTMLImageElement & {
+                _fallbackApplied?: boolean;
+              };
+              if (img._fallbackApplied) return;
+              img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
             className="absolute inset-0 h-full w-full object-contain p-5 transition-transform duration-300 group-hover:scale-105"
@@ -419,7 +434,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 flex flex-col grow">
-          {/* ✅ só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
               {teamLabel}
@@ -434,21 +448,31 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-2">
               {sale && (
                 <div className="text-[12px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
+                  {locale === "en" && (
+                    <span className="text-[13px] font-medium translate-y-[1px] mr-1">
+                      {parts.sym}
+                    </span>
+                  )}
+
                   <span className="text-xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
                   <span className="text-[12px] font-medium translate-y-[1px]">
-                    ,{parts.dec}
+                    {parts.decimalSeparator}
+                    {parts.dec}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px] ml-1">
-                    {parts.sym}
-                  </span>
+
+                  {locale === "pt" && (
+                    <span className="text-[13px] font-medium translate-y-[1px] ml-1">
+                      {parts.sym}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -458,7 +482,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 flex items-center gap-2 text-[12px] font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {viewProductLabel}
               </span>
               <svg
                 className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -522,6 +546,9 @@ async function fetchProductsOnce(url: string): Promise<UIProduct[]> {
 ============================================================ */
 
 export default function PlayerVersionLongSleeveJerseysPage() {
+  const locale = useLocale();
+  const t = useTranslations("playerVersionLongSleevePage");
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -542,7 +569,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
 
       try {
         const arr = await fetchProductsOnce(
-          `/api/player-version-long-sleeve-jerseys`
+          "/api/player-version-long-sleeve-jerseys"
         );
 
         if (!cancelled) {
@@ -552,7 +579,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
       } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || t("errors.fetch"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -562,7 +589,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isPlayerVersionLongSleeveJersey);
@@ -636,20 +663,21 @@ export default function PlayerVersionLongSleeveJerseysPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Player Version
+                {t("eyebrow")}
               </p>
+
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
-                Player version jerseys (long sleeve)
+                {t("title")}
               </h1>
+
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Authentic on-pitch fit jerseys (player version), long sleeve
-                only.
+                {t("description")}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/" className="btn-outline text-sm">
-                ← Back to Home Page
+              <a href={`/${locale}`} className="btn-outline text-sm">
+                {t("backToHome")}
               </a>
             </div>
           </div>
@@ -662,11 +690,9 @@ export default function PlayerVersionLongSleeveJerseysPage() {
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading player version long-sleeve jerseys…</span>
+              <span>{t("status.loading")}</span>
             ) : (
-              <span>
-                {jerseysFiltered.length} player version long-sleeve jerseys found
-              </span>
+              <span>{t("status.found", { count: jerseysFiltered.length })}</span>
             )}
           </div>
 
@@ -680,25 +706,31 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or jersey name"
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <span className="text-gray-500 whitespace-nowrap">Sort by:</span>
+              <span className="text-gray-500 whitespace-nowrap">
+                {t("sort.label")}
+              </span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(
+                    e.target.value as "team" | "price-asc" | "price-desc" | "random"
+                  );
                   setPage(1);
                 }}
+                aria-label={t("sort.label")}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sort.team")}</option>
+                <option value="price-asc">{t("sort.priceAsc")}</option>
+                <option value="price-desc">{t("sort.priceDesc")}</option>
+                <option value="random">{t("sort.random")}</option>
               </select>
             </div>
           </div>
@@ -731,12 +763,17 @@ export default function PlayerVersionLongSleeveJerseysPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
-                  Nenhum player version long-sleeve jersey encontrado.
+                  {t("empty")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard
+                  key={String(p.id)}
+                  p={p}
+                  locale={locale}
+                  viewProductLabel={t("viewProduct")}
+                />
               ))}
             </div>
 
@@ -747,7 +784,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("pagination.previous")}
                 >
                   «
                 </button>
@@ -779,6 +816,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                           : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
                       ].join(" ")}
                       aria-current={active ? "page" : undefined}
+                      aria-label={t("pagination.page", { page: n })}
                     >
                       {n}
                     </button>
@@ -790,7 +828,7 @@ export default function PlayerVersionLongSleeveJerseysPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
-                  aria-label="Próxima página"
+                  aria-label={t("pagination.next")}
                 >
                   »
                 </button>

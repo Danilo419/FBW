@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================ Tipagem ============================ */
 
@@ -46,13 +47,14 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-/** "150,00 €" */
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+/** "150,00 €" / "€150.00" depending on locale */
+function moneyAfter(cents: number, locale: string) {
+  return new Intl.NumberFormat(locale === "pt" ? "pt-PT" : "en-US", {
+    style: "currency",
+    currency: "EUR",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
-  return `${n} €`;
+  }).format(cents / 100);
 }
 
 /** Euros / cêntimos / símbolo */
@@ -78,7 +80,7 @@ function toTitleCaseSmart(input: string) {
       const raw = w.replace(/\s+/g, "");
       if (!raw) return raw;
 
-      const onlyLetters = raw.replace(/[^A-Za-z]/g, "");
+      const onlyLetters = raw.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "");
       if (
         onlyLetters.length > 0 &&
         onlyLetters.length <= 4 &&
@@ -268,7 +270,7 @@ function cleanTeamValue(v?: string | null): string {
 
   while (out.length > 1) {
     const lastRaw = out[out.length - 1];
-    const last = lastRaw.toUpperCase().replace(/[^A-Z-]/g, "");
+    const last = lastRaw.toUpperCase().replace(/[^A-ZÀ-ÖØ-Ý-]/g, "");
     const last2 = last.replace(/-/g, "");
 
     if (VARIANT_WORDS.has(last) || VARIANT_WORDS.has(last2)) {
@@ -465,6 +467,9 @@ function mapApiToUIProduct(raw: any): UIProduct {
 /* ============================ Card de produto ============================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
+  const t = useTranslations("AdultPage");
+  const locale = useLocale();
+
   const href = p.slug ? `/products/${p.slug}` : "#";
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
@@ -517,7 +522,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
                 <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
@@ -541,7 +546,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 sm:h-12 flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -596,6 +601,8 @@ const PAGE_SIZE = 12;
 const SEARCH_QUERIES = ["a", "e", "i", "o", "u", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 export default function AdultPage() {
+  const t = useTranslations("AdultPage");
+
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -651,7 +658,7 @@ export default function AdultPage() {
       } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Error loading products");
+          setError(e?.message || t("errorLoadingProducts"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -663,7 +670,7 @@ export default function AdultPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filteredSorted = useMemo(() => {
     let base = results;
@@ -734,10 +741,10 @@ export default function AdultPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Product category
+                {t("productCategory")}
               </p>
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
-                Adult
+                {t("title")}
               </h1>
             </div>
 
@@ -746,7 +753,7 @@ export default function AdultPage() {
                 href="/"
                 className="btn-outline text-xs sm:text-sm w-full sm:w-auto text-center"
               >
-                ← Back to Home Page
+                ← {t("backToHome")}
               </Link>
             </div>
           </div>
@@ -758,9 +765,9 @@ export default function AdultPage() {
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading products…</span>
+              <span>{t("loadingProducts")}</span>
             ) : (
-              <span>{filteredSorted.length} products found</span>
+              <span>{t("productsFound", { count: filteredSorted.length })}</span>
             )}
           </div>
 
@@ -774,13 +781,13 @@ export default function AdultPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or product name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2 text-xs sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
@@ -789,10 +796,10 @@ export default function AdultPage() {
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40 sm:w-auto"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -827,7 +834,7 @@ export default function AdultPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm col-span-full">
-                  No adult products were found (they might all be Kids or Crop Top items).
+                  {t("empty")}
                 </p>
               )}
 
@@ -843,7 +850,7 @@ export default function AdultPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
-                  aria-label="Previous page"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -886,7 +893,7 @@ export default function AdultPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
-                  aria-label="Next page"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

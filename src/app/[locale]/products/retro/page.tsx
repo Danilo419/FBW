@@ -1,9 +1,10 @@
-// src/app/products/retro/page.tsx
+// src/app/[locale]/products/retro/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================ Tipagem ============================ */
 
@@ -46,16 +47,16 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-/** "150,00 €" */
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+function moneyAfter(cents: number, locale: string) {
+  const normalizedLocale = locale === "pt" ? "pt-PT" : "en-US";
+  const n = (cents / 100).toLocaleString(normalizedLocale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `${n} €`;
+
+  return locale === "pt" ? `${n} €` : `€${n}`;
 }
 
-/** Euros / cêntimos / símbolo */
 function pricePartsFromCents(cents: number) {
   const euros = Math.floor(cents / 100).toString();
   const dec = (cents % 100).toString().padStart(2, "0");
@@ -250,11 +251,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -314,7 +313,6 @@ function inferClubFromName(name?: string | null): string {
   const s = normalizeStr(name);
   if (!s) return "";
 
-  // corta antes de "Retro", "Jersey", "Kit", etc.
   const cut = s.split(
     /\s+(Retro|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman)\b/i
   )[0];
@@ -329,7 +327,6 @@ function inferClubFromName(name?: string | null): string {
   return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ devolve label limpo (ou vazio). Nunca "Club". */
 function getClubLabel(p: UIProduct): string {
   const teamClean = cleanTeamValue(p.team);
   if (teamClean) return hardClampClubName(teamClean);
@@ -349,9 +346,6 @@ function normName(p: UIProduct) {
   return (p.name ?? "").toUpperCase();
 }
 
-/** Retro:
- *  - SÓ produtos cujo nome contenha "RETRO"
- */
 function isRetroProduct(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
@@ -441,8 +435,16 @@ function mapApiToUIProduct(raw: any): UIProduct {
 
 /* ============================ Card de produto ============================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : "#";
+function ProductCard({
+  p,
+  locale,
+  t,
+}: {
+  p: UIProduct;
+  locale: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const href = p.slug ? `/${locale}/products/${p.slug}` : "#";
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
@@ -480,7 +482,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -495,21 +496,31 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
                 <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
+                  {locale === "en" && (
+                    <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] mr-1">
+                      {parts.sym}
+                    </span>
+                  )}
+
                   <span className="text-xl sm:text-2xl font-semibold tracking-tight leading-none">
                     {parts.int}
                   </span>
+
                   <span className="text-[12px] sm:text-[13px] font-medium translate-y-[1px]">
-                    ,{parts.dec}
+                    {locale === "pt" ? `,${parts.dec}` : `.${parts.dec}`}
                   </span>
-                  <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
-                    {parts.sym}
-                  </span>
+
+                  {locale === "pt" && (
+                    <span className="text-[13px] sm:text-[15px] font-medium translate-y-[1px] ml-1">
+                      {parts.sym}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -519,7 +530,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 sm:h-12 flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -568,7 +579,6 @@ function buildPaginationRange(
 
 const PAGE_SIZE = 12;
 
-// mesmas queries largas para puxar o catálogo quase todo
 const SEARCH_QUERIES = [
   "a",
   "e",
@@ -588,6 +598,9 @@ const SEARCH_QUERIES = [
 ];
 
 export default function RetroPage() {
+  const locale = useLocale();
+  const t = useTranslations("retroPage");
+
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -642,7 +655,7 @@ export default function RetroPage() {
       } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Error loading products");
+          setError(e?.message || t("errorLoadingProducts"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -653,7 +666,7 @@ export default function RetroPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filteredSorted = useMemo(() => {
     let base = results;
@@ -727,19 +740,19 @@ export default function RetroPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Product category
+                {t("productCategory")}
               </p>
               <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight">
-                Retro
+                {t("title")}
               </h1>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mt-2 sm:mt-0">
               <Link
-                href="/"
+                href={`/${locale}`}
                 className="btn-outline text-xs sm:text-sm w-full sm:w-auto text-center"
               >
-                ← Back to Home Page
+                ← {t("backToHomePage")}
               </Link>
             </div>
           </div>
@@ -752,9 +765,9 @@ export default function RetroPage() {
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading products…</span>
+              <span>{t("loadingProducts")}</span>
             ) : (
-              <span>{filteredSorted.length} products found</span>
+              <span>{t("productsFound", { count: filteredSorted.length })}</span>
             )}
           </div>
 
@@ -768,25 +781,25 @@ export default function RetroPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or product name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2 text-xs sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40 sm:w-auto"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -821,12 +834,12 @@ export default function RetroPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 text-sm col-span-full">
-                  No retro products were found (check if the product name contains "Retro").
+                  {t("empty")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard key={String(p.id)} p={p} locale={locale} t={t} />
               ))}
             </div>
 
@@ -837,7 +850,7 @@ export default function RetroPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
-                  aria-label="Previous page"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -880,7 +893,7 @@ export default function RetroPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition min-w-[40px]"
-                  aria-label="Next page"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

@@ -1,8 +1,8 @@
-// src/app/products/training-sleeveless-sets/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -355,7 +355,6 @@ function isTrainingSleevelessSet(p: UIProduct): boolean {
   if (!hasSleeveless) return false;
 
   // tem de ser conjunto (camisola + calções)
-  // (evita "SLEEVELESS JERSEY" que não é set)
   const hasSetParts =
     n.includes("SHORTS") ||
     n.includes(" SLEEVELESS SET") ||
@@ -375,7 +374,7 @@ function isTrainingSleevelessSet(p: UIProduct): boolean {
   if (n.includes("POSTER")) return false;
 
   // excluir kids/baby
-  if (n.includes("KIDS")) return false; // aqui queres só adulto
+  if (n.includes("KIDS")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
 
@@ -383,12 +382,23 @@ function isTrainingSleevelessSet(p: UIProduct): boolean {
 }
 
 /* ============================================================
-   Card de produto (mobile-first)
-   - 2 colunas em mobile (ver grid abaixo)
+   Card de produto
 ============================================================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : undefined;
+type ProductCardTexts = {
+  viewProduct: string;
+};
+
+function ProductCard({
+  p,
+  locale,
+  texts,
+}: {
+  p: UIProduct;
+  locale: string;
+  texts: ProductCardTexts;
+}) {
+  const href = p.slug ? `/${locale}/products/${p.slug}` : undefined;
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
@@ -414,9 +424,11 @@ function ProductCard({ p }: { p: UIProduct }) {
             src={p.img || FALLBACK_IMG}
             loading="lazy"
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if ((img as any)._fallbackApplied) return;
-              (img as any)._fallbackApplied = true;
+              const img = e.currentTarget as HTMLImageElement & {
+                _fallbackApplied?: boolean;
+              };
+              if (img._fallbackApplied) return;
+              img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
             className="absolute inset-0 h-full w-full object-contain p-4 sm:p-5 transition-transform duration-300 group-hover:scale-105"
@@ -424,7 +436,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-3 sm:p-4 flex flex-col grow">
-          {/* ✅ só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
               {teamLabel}
@@ -463,7 +474,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-9 sm:h-10 flex items-center gap-2 text-[11px] sm:text-[12px] font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {texts.viewProduct}
               </span>
               <svg
                 className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -515,6 +526,9 @@ function buildPaginationRange(
 ============================================================ */
 
 export default function TrainingSleevelessSetsPage() {
+  const locale = useLocale();
+  const t = useTranslations("TrainingSleevelessSetsPage");
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -526,7 +540,6 @@ export default function TrainingSleevelessSetsPage() {
     "team" | "price-asc" | "price-desc" | "random"
   >("team");
 
-  // ✅ puxar o catálogo completo (igual à página Adult)
   const SEARCH_QUERIES = useMemo(
     () => ["a", "e", "i", "o", "u", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
     []
@@ -552,13 +565,12 @@ export default function TrainingSleevelessSetsPage() {
           const arr: UIProduct[] = Array.isArray(json?.products)
             ? json.products
             : Array.isArray(json)
-            ? json
-            : [];
+              ? json
+              : [];
 
           all.push(...arr);
         }
 
-        // ✅ dedupe (id/slug/name)
         const seen = new Set<string>();
         const unique: UIProduct[] = [];
         for (const p of all) {
@@ -576,7 +588,7 @@ export default function TrainingSleevelessSetsPage() {
       } catch (e: any) {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Error loading products");
+          setError(e?.message || t("errorLoadingProducts"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -587,7 +599,7 @@ export default function TrainingSleevelessSetsPage() {
     return () => {
       cancelled = true;
     };
-  }, [SEARCH_QUERIES]);
+  }, [SEARCH_QUERIES, t]);
 
   const setsFiltered = useMemo(() => {
     let base = results.filter(isTrainingSleevelessSet);
@@ -661,22 +673,22 @@ export default function TrainingSleevelessSetsPage() {
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Training Sets
+                {t("eyebrow")}
               </p>
               <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
-                Training sleeveless sets
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-xs sm:text-sm text-gray-600">
-                Tank + shorts training sets for high-intensity sessions and hot weather workouts.
+                {t("description")}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2 sm:gap-3 justify-start mt-1">
               <a
-                href="/"
+                href={`/${locale}`}
                 className="btn-outline text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"
               >
-                ← Back to Home Page
+                {t("backToHome")}
               </a>
             </div>
           </div>
@@ -689,9 +701,9 @@ export default function TrainingSleevelessSetsPage() {
           <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading training sleeveless sets…</span>
+              <span>{t("loadingStatus")}</span>
             ) : (
-              <span>{setsFiltered.length} training sleeveless sets found</span>
+              <span>{t("resultsFound", { count: setsFiltered.length })}</span>
             )}
           </div>
 
@@ -705,25 +717,25 @@ export default function TrainingSleevelessSetsPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or set name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] sm:text-xs">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-[11px] sm:text-xs outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -756,12 +768,19 @@ export default function TrainingSleevelessSetsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full text-sm">
-                  Nenhum training sleeveless set encontrado.
+                  {t("noResults")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard
+                  key={String(p.id)}
+                  p={p}
+                  locale={locale}
+                  texts={{
+                    viewProduct: t("viewProduct"),
+                  }}
+                />
               ))}
             </div>
 
@@ -772,7 +791,7 @@ export default function TrainingSleevelessSetsPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -815,7 +834,7 @@ export default function TrainingSleevelessSetsPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-1.5 sm:py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-xs sm:text-sm"
-                  aria-label="Próxima página"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

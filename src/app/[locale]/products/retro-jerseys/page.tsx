@@ -1,8 +1,8 @@
-// src/app/products/retro-jerseys/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -48,8 +48,9 @@ function getSale(priceEur?: number | null) {
   return { compareAtCents: old, pct };
 }
 
-function moneyAfter(cents: number) {
-  const n = (cents / 100).toLocaleString(undefined, {
+function moneyAfter(cents: number, locale: string) {
+  const numberLocale = locale === "pt" ? "pt-PT" : "en-US";
+  const n = (cents / 100).toLocaleString(numberLocale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -251,11 +252,9 @@ function cleanTeamValue(v?: string | null): string {
   const up = s.toUpperCase();
   if (up === "CLUB" || up === "TEAM") return "";
 
-  // "X & Y" (cores) => fica só X
   const amp = s.split(/\s*&\s*/);
   if (amp.length > 1) s = normalizeStr(amp[0]);
 
-  // remove trailing lixo (PRIMARY/RETRO/cores/descritores)
   const tokens = s.split(/\s+/);
   let out = tokens.slice();
 
@@ -315,7 +314,6 @@ function inferClubFromName(name?: string | null): string {
   const s = normalizeStr(name);
   if (!s) return "";
 
-  // antes de "Retro ..." ou outras palavras típicas
   const cut = s.split(
     /\s+(Retro|Home|Away|Third|Fourth|Primary|Goalkeeper|GK|Kids|Kid|Women|Woman|Jersey|Kit|Tracksuit|Training|Pre-Match|Prematch|Warm-Up|Warmup|Concept)\b/i
   )[0];
@@ -330,7 +328,6 @@ function inferClubFromName(name?: string | null): string {
   return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ Só mostra label se houver algo seguro (nunca "Club") */
 function getClubLabel(p: UIProduct): string {
   const teamClean = cleanTeamValue(p.team);
   if (teamClean) return hardClampClubName(teamClean);
@@ -356,10 +353,8 @@ function isRetroJersey(p: UIProduct): boolean {
   const n = normName(p);
   if (!n) return false;
 
-  // tem de ser RETRO
   if (!n.includes("RETRO")) return false;
 
-  // excluir kits / conjuntos / outros itens
   if (n.includes("SET")) return false;
   if (n.includes("SHORTS")) return false;
   if (n.includes("TRACKSUIT")) return false;
@@ -367,20 +362,21 @@ function isRetroJersey(p: UIProduct): boolean {
   if (n.includes("KIDS KIT")) return false;
   if (n.includes("BABY")) return false;
   if (n.includes("INFANT")) return false;
-  if (n.includes(" KIT")) return false; // kit completo
-
-  // mantém tua regra: excluir retro Long Sleeve
+  if (n.includes(" KIT")) return false;
   if (n.includes("LONG SLEEVE")) return false;
 
   return true;
 }
 
 /* ============================================================
-   Card de produto (igual look & feel do search)
+   Card de produto
 ============================================================ */
 
 function ProductCard({ p }: { p: UIProduct }) {
-  const href = p.slug ? `/products/${p.slug}` : undefined;
+  const locale = useLocale();
+  const t = useTranslations("RetroJerseysPage");
+
+  const href = p.slug ? `/${locale}/products/${p.slug}` : undefined;
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
@@ -416,7 +412,6 @@ function ProductCard({ p }: { p: UIProduct }) {
         </div>
 
         <div className="p-3 sm:p-5 flex flex-col grow">
-          {/* ✅ só mostra se existir (nunca "Club") */}
           {teamLabel && (
             <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-sky-600 font-semibold/relaxed">
               {teamLabel}
@@ -431,7 +426,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="flex items-end gap-1.5 sm:gap-2">
               {sale && (
                 <div className="text-[11px] sm:text-[13px] text-slate-500 line-through">
-                  {moneyAfter(sale.compareAtCents)}
+                  {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
@@ -455,7 +450,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 sm:mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             <div className="h-10 sm:h-12 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-slate-700">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {t("viewProduct")}
               </span>
               <svg
                 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
@@ -504,10 +499,12 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Retro Jerseys
-   - Agora usa o endpoint dedicado: /api/retro-jerseys
 ============================================================ */
 
 export default function RetroJerseysPage() {
+  const locale = useLocale();
+  const t = useTranslations("RetroJerseysPage");
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UIProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -537,7 +534,7 @@ export default function RetroJerseysPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || t("fetchError"));
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -545,7 +542,7 @@ export default function RetroJerseysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const jerseysFiltered = useMemo(() => {
     let base = results.filter(isRetroJersey);
@@ -614,40 +611,38 @@ export default function RetroJerseysPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
         <div className="container-fw py-10 sm:py-14">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Retro Jerseys
+                {t("eyebrow")}
               </p>
               <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">
-                Retro jerseys
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600">
-                Throwback legends from classic seasons — iconic retro jerseys from your favourite clubs.
+                {t("description")}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3 justify-start sm:justify-end mt-2 sm:mt-0">
-              <a href="/" className="btn-outline text-sm">
-                ← Back to Home Page
+              <a href={`/${locale}`} className="btn-outline text-sm">
+                {t("backHome")}
               </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CONTEÚDO */}
       <section className="container-fw section-gap">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading retro jerseys…</span>
+              <span>{t("loading")}</span>
             ) : (
-              <span>{jerseysFiltered.length} retro jerseys found</span>
+              <span>{t("found", { count: jerseysFiltered.length })}</span>
             )}
           </div>
 
@@ -661,25 +656,25 @@ export default function RetroJerseysPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or jersey name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as any);
+                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
                   setPage(1);
                 }}
                 className="rounded-2xl border bg-white px-3 py-2 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortTeam")}</option>
+                <option value="price-asc">{t("sortPriceAsc")}</option>
+                <option value="price-desc">{t("sortPriceDesc")}</option>
+                <option value="random">{t("sortRandom")}</option>
               </select>
             </div>
           </div>
@@ -712,7 +707,7 @@ export default function RetroJerseysPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {pageItems.length === 0 && (
                 <p className="text-gray-500 col-span-full">
-                  Nenhum retro jersey encontrado.
+                  {t("noResults")}
                 </p>
               )}
 
@@ -728,7 +723,7 @@ export default function RetroJerseysPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -771,7 +766,7 @@ export default function RetroJerseysPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition"
-                  aria-label="Próxima página"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>

@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /* ============================ Tipagem (igual ao search) ============================ */
 
@@ -272,7 +273,13 @@ function isCurrentSeasonProduct(p: UIProduct): boolean {
 
 /* ============================ Card de produto (mobile-first) ============================ */
 
-function ProductCard({ p }: { p: UIProduct }) {
+function ProductCard({
+  p,
+  viewProductLabel,
+}: {
+  p: UIProduct;
+  viewProductLabel: string;
+}) {
   const href = p.slug ? `/products/${p.slug}` : "#";
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
@@ -350,7 +357,7 @@ function ProductCard({ p }: { p: UIProduct }) {
             <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
             <div className="flex h-10 items-center gap-2 text-xs font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
-                View product
+                {viewProductLabel}
               </span>
               <svg
                 className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
@@ -404,6 +411,8 @@ function buildPaginationRange(
 const PAGE_SIZE = 12;
 
 export default function CurrentSeasonPage() {
+  const t = useTranslations("CurrentSeason2526Page");
+
   const [results, setResults] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -421,7 +430,7 @@ export default function CurrentSeasonPage() {
 
     fetch(`/api/current-season-25-26`, { cache: "no-store" })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
+        if (!r.ok) throw new Error(t("fetchFailed", { status: r.status }));
         const json = await r.json();
         const arr: UIProduct[] = Array.isArray(json?.products)
           ? json.products
@@ -437,7 +446,7 @@ export default function CurrentSeasonPage() {
       .catch((e) => {
         if (!cancelled) {
           setResults([]);
-          setError(e?.message || "Fetch error");
+          setError(e?.message || t("fetchError"));
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -445,7 +454,7 @@ export default function CurrentSeasonPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filteredSorted = useMemo(() => {
     let base = results;
@@ -518,13 +527,13 @@ export default function CurrentSeasonPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
-                Product category
+                {t("eyebrow")}
               </p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
-                Current season 25/26
+                {t("title")}
               </h1>
               <p className="mt-2 max-w-xl text-sm text-gray-600 sm:text-base">
-                Latest club & national-team drops (non-player version)
+                {t("subtitle")}
               </p>
             </div>
 
@@ -533,7 +542,7 @@ export default function CurrentSeasonPage() {
                 href="/"
                 className="btn-outline w-full text-center text-xs sm:w-auto sm:text-sm"
               >
-                ← Back to Home Page
+                ← {t("backToHome")}
               </Link>
             </div>
           </div>
@@ -545,9 +554,9 @@ export default function CurrentSeasonPage() {
           <div className="flex items-center gap-2 text-xs text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
-              <span>Loading products…</span>
+              <span>{t("loadingProducts")}</span>
             ) : (
-              <span>{filteredSorted.length} products found</span>
+              <span>{t("productsFound", { count: filteredSorted.length })}</span>
             )}
           </div>
 
@@ -561,13 +570,13 @@ export default function CurrentSeasonPage() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by team or product name"
+                placeholder={t("searchPlaceholder")}
                 className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center justify-between gap-2 text-xs sm:justify-end sm:text-sm">
-              <span className="text-gray-500">Sort by:</span>
+              <span className="text-gray-500">{t("sortBy")}</span>
               <select
                 value={sort}
                 onChange={(e) => {
@@ -578,10 +587,10 @@ export default function CurrentSeasonPage() {
                 }}
                 className="w-40 rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:text-sm"
               >
-                <option value="team">Team & name</option>
-                <option value="price-asc">Price (low → high)</option>
-                <option value="price-desc">Price (high → low)</option>
-                <option value="random">Random</option>
+                <option value="team">{t("sortOptions.team")}</option>
+                <option value="price-asc">{t("sortOptions.priceAsc")}</option>
+                <option value="price-desc">{t("sortOptions.priceDesc")}</option>
+                <option value="random">{t("sortOptions.random")}</option>
               </select>
             </div>
           </div>
@@ -616,12 +625,16 @@ export default function CurrentSeasonPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
                 <p className="col-span-full text-sm text-gray-500">
-                  No current-season 25/26 products were found.
+                  {t("empty")}
                 </p>
               )}
 
               {pageItems.map((p) => (
-                <ProductCard key={String(p.id)} p={p} />
+                <ProductCard
+                  key={String(p.id)}
+                  p={p}
+                  viewProductLabel={t("viewProduct")}
+                />
               ))}
             </div>
 
@@ -632,7 +645,7 @@ export default function CurrentSeasonPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="min-w-[40px] rounded-xl bg-white/80 px-3 py-2 ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40"
-                  aria-label="Previous page"
+                  aria-label={t("previousPage")}
                 >
                   «
                 </button>
@@ -675,7 +688,7 @@ export default function CurrentSeasonPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="min-w-[40px] rounded-xl bg-white/80 px-3 py-2 ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40"
-                  aria-label="Next page"
+                  aria-label={t("nextPage")}
                 >
                   »
                 </button>
