@@ -1609,6 +1609,12 @@
       "saveFailed": "Failed to save address"
     }
   },
+  "countrySelect": {
+    "placeholder": "Country",
+    "selectCountry": "Select country",
+    "searchPlaceholder": "Search country...",
+    "noResults": "No results"
+  },
   "checkoutPage": {
     "title": "Choose Payment Method",
     "loading": "Loading…"

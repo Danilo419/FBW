@@ -1202,6 +1202,12 @@
       "saveFailed": "Falha ao guardar a morada"
     }
   },
+  "countrySelect": {
+    "placeholder": "País",
+    "selectCountry": "Selecionar país",
+    "searchPlaceholder": "Pesquisar país...",
+    "noResults": "Sem resultados"
+  },
   "checkoutPage": {
     "title": "Escolha o Método de Pagamento",
     "loading": "A carregar…"
