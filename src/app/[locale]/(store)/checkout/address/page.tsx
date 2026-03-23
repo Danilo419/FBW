@@ -1,13 +1,25 @@
-// src/app/(store)/checkout/address/page.tsx
+// src/app/[locale]/(store)/checkout/address/page.tsx
 import { Suspense } from "react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import CheckoutAddressClient from "./CheckoutAddressClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function AddressPage() {
-  const t = await getTranslations("CheckoutAddressPage");
+export default async function AddressPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  // 🔑 Garante que o locale correto é usado no server
+  setRequestLocale(locale);
+
+  const t = await getTranslations({
+    locale,
+    namespace: "CheckoutAddressPage",
+  });
 
   return (
     <main className="max-w-3xl mx-auto p-6">
