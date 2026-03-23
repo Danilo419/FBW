@@ -704,7 +704,7 @@ export default function TrainingSleevelessSetsPage() {
                 href="/"
                 className="btn-outline rounded-full px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm"
               >
-                ← {t("backToHome")}
+                {t("backToHome")}
               </Link>
             </div>
           </div>
