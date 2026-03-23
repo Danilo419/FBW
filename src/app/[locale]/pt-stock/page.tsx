@@ -1,7 +1,7 @@
-// src/app/[locale]/(store)/pt-stock/page.tsx
+// src/app/[locale]/pt-stock/page.tsx
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/money";
 import { ProductChannel } from "@prisma/client";
@@ -60,8 +60,19 @@ function formatMoneyRight(cents: number) {
   return s;
 }
 
-export default async function PtStockPage() {
-  const t = await getTranslations("ptStockPage");
+export default async function PtStockPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  setRequestLocale(locale);
+
+  const t = await getTranslations({
+    locale,
+    namespace: "ptStockPage",
+  });
 
   const products = await prisma.product.findMany({
     where: {
