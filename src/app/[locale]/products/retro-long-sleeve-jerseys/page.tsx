@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Search } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 /* ============================================================
    Tipos (iguais ao ResultsClient / outras páginas)
@@ -64,8 +64,9 @@ function pricePartsFromCents(cents: number) {
 }
 
 /* ============================================================
-   CLUB LABEL (FIX: não inventar "Chelsea Shadow", "Japan Samurai")
-   + FIX CRÍTICO: "Madrid" NÃO pode mapear para "Real Madrid"
+   CLUB LABEL
+   FIX: não inventar "Chelsea Shadow", "Japan Samurai"
+   FIX CRÍTICO: "Madrid" NÃO pode mapear para "Real Madrid"
 ============================================================ */
 
 const CLUB_PATTERNS: Array<[RegExp, string]> = [
@@ -219,6 +220,8 @@ const MULTIWORD_STARTERS = new Set(
     "NEW",
     "SOUTH",
     "NORTH",
+    "COSTA",
+    "SAUDI",
     "LOS",
     "LAS",
     "LA",
@@ -324,7 +327,6 @@ function inferClubFromName(name?: string | null): string {
   return hardClampClubName(cleanTeamValue(cleaned));
 }
 
-/** ✅ Nunca inventa: só mostra se houver label real */
 function getClubLabel(p: UIProduct): string {
   const teamClean = cleanTeamValue(p.team);
   if (teamClean) return hardClampClubName(teamClean);
@@ -339,7 +341,8 @@ function getClubLabel(p: UIProduct): string {
 }
 
 /* ============================================================
-   Filtro: RETRO long-sleeve jerseys (exclui kits/sets, etc.)
+   Filtro: RETRO long-sleeve jerseys
+   EXCLUI kits/sets/shorts/tracksuits/etc.
 ============================================================ */
 
 function normName(p: UIProduct) {
@@ -357,6 +360,7 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
     n.includes("LONG-SLEEVE") ||
     /\bL\/S\b/.test(n) ||
     /\bLS\b/.test(n);
+
   if (!isLongSleeve) return false;
 
   if (n.includes("SET")) return false;
@@ -372,30 +376,28 @@ function isRetroLongSleeveJersey(p: UIProduct): boolean {
 }
 
 /* ============================================================
-   Card de produto (mobile-first)
+   Card de produto
+   DESIGN 100% igual ao código de referência
 ============================================================ */
 
 function ProductCard({ p, locale }: { p: UIProduct; locale: string }) {
   const t = useTranslations("RetroLongSleeveJerseysPage");
-  const href = p.slug ? `/${locale}/products/${p.slug}` : "#";
+
   const cents = typeof p.price === "number" ? toCents(p.price)! : null;
   const sale = cents != null ? getSale(p.price!) : null;
   const parts = cents != null ? pricePartsFromCents(cents) : null;
+
   const teamLabel = getClubLabel(p);
 
-  return (
-    <Link
-      key={String(p.id)}
-      href={href}
-      className="group block h-full rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm hover:shadow-md hover:ring-sky-200 transition duration-200 overflow-hidden relative"
-    >
+  const content = (
+    <>
       {sale && (
-        <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-red-600 text-white px-2.5 py-1 text-[11px] font-extrabold shadow-md ring-1 ring-red-700/40">
+        <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-md ring-1 ring-red-700/40 sm:left-3 sm:top-3 sm:text-xs">
           -{sale.pct}%
         </div>
       )}
 
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         <div className="relative aspect-[4/5] bg-gradient-to-b from-slate-50 to-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -403,45 +405,45 @@ function ProductCard({ p, locale }: { p: UIProduct; locale: string }) {
             src={p.img || FALLBACK_IMG}
             loading="lazy"
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if ((img as any)._fallbackApplied) return;
-              (img as any)._fallbackApplied = true;
+              const img = e.currentTarget as HTMLImageElement & {
+                _fallbackApplied?: boolean;
+              };
+              if (img._fallbackApplied) return;
+              img._fallbackApplied = true;
               img.src = FALLBACK_IMG;
             }}
-            className="absolute inset-0 h-full w-full object-contain p-5 transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105 sm:p-6"
           />
         </div>
 
-        <div className="p-4 flex flex-col grow">
+        <div className="flex grow flex-col p-4 sm:p-5">
           {teamLabel && (
-            <div className="text-[11px] uppercase tracking-wide text-sky-600 font-semibold">
+            <div className="text-[10px] font-semibold/relaxed uppercase tracking-wide text-sky-600 sm:text-[11px]">
               {teamLabel}
             </div>
           )}
 
-          <div className={teamLabel ? "mt-1" : "mt-0.5"}>
-            <div className="text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
-              {p.name}
-            </div>
+          <div className="mt-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900 sm:text-base">
+            {p.name}
           </div>
 
-          <div className="mt-3">
+          <div className="mt-3 sm:mt-4">
             <div className="flex items-end gap-2">
               {sale && (
-                <div className="text-[12px] text-slate-500 line-through">
+                <div className="text-[12px] text-slate-500 line-through sm:text-[13px]">
                   {moneyAfter(sale.compareAtCents, locale)}
                 </div>
               )}
 
               {parts && (
                 <div className="flex items-end" style={{ color: "#1c40b7" }}>
-                  <span className="text-xl font-semibold tracking-tight leading-none">
+                  <span className="text-xl font-semibold leading-none tracking-tight sm:text-2xl">
                     {parts.int}
                   </span>
-                  <span className="text-[12px] font-medium translate-y-[1px]">
+                  <span className="translate-y-[1px] text-[12px] font-medium sm:text-[13px]">
                     ,{parts.dec}
                   </span>
-                  <span className="text-[13px] font-medium translate-y-[1px] ml-1">
+                  <span className="ml-1 translate-y-[1px] text-[14px] font-medium sm:text-[15px]">
                     {parts.sym}
                   </span>
                 </div>
@@ -450,13 +452,13 @@ function ProductCard({ p, locale }: { p: UIProduct; locale: string }) {
           </div>
 
           <div className="mt-auto">
-            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-            <div className="h-10 flex items-center gap-2 text-[12px] font-medium text-slate-700">
+            <div className="mt-3 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:mt-4" />
+            <div className="flex h-10 items-center gap-2 text-xs font-medium text-slate-700 sm:h-12 sm:text-sm">
               <span className="transition group-hover:translate-x-0.5">
                 {t("viewProduct")}
               </span>
               <svg
-                className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition group-hover:translate-x-0.5"
+                className="h-3.5 w-3.5 opacity-70 transition group-hover:translate-x-0.5 group-hover:opacity-100 sm:h-4 sm:w-4"
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden="true"
@@ -467,6 +469,23 @@ function ProductCard({ p, locale }: { p: UIProduct; locale: string }) {
           </div>
         </div>
       </div>
+    </>
+  );
+
+  if (!p.slug) {
+    return (
+      <div className="group relative block h-full overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/${locale}/products/${p.slug}`}
+      className="group relative block h-full overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm transition duration-300 hover:shadow-xl hover:ring-sky-200"
+    >
+      {content}
     </Link>
   );
 }
@@ -502,7 +521,8 @@ function buildPaginationRange(
 
 /* ============================================================
    Página Retro Long Sleeve Jerseys
-   - Agora usa: /api/retro-long-sleeve-jerseys
+   - Usa: /api/retro-long-sleeve-jerseys
+   - DESIGN igual ao código de referência
 ============================================================ */
 
 export default function RetroLongSleeveJerseysPage() {
@@ -543,7 +563,9 @@ export default function RetroLongSleeveJerseysPage() {
           setError(e?.message || t("fetchError"));
         }
       })
-      .finally(() => !cancelled && setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -615,24 +637,28 @@ export default function RetroLongSleeveJerseysPage() {
   }, [page]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-8">
+      {/* HEADER */}
       <section className="border-b bg-gradient-to-b from-slate-50 via-white to-slate-50">
-        <div className="container-fw py-6 px-4 sm:px-6">
-          <div className="flex flex-col gap-3">
+        <div className="container-fw px-4 py-8 sm:px-0 sm:py-12">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700 sm:text-[11px]">
                 {t("badge")}
               </p>
-              <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
                 {t("title")}
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
+              <p className="mt-2 max-w-xl text-xs text-gray-600 sm:text-base">
                 {t("description")}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-start mt-1">
-              <Link href={`/${locale}`} className="btn-outline text-sm">
+            <div className="mt-2 flex flex-wrap justify-start gap-2 sm:mt-0 sm:justify-end sm:gap-3">
+              <Link
+                href={`/${locale}`}
+                className="btn-outline rounded-full px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm"
+              >
                 ← {t("backToHome")}
               </Link>
             </div>
@@ -640,9 +666,10 @@ export default function RetroLongSleeveJerseysPage() {
         </div>
       </section>
 
-      <section className="container-fw section-gap px-4 sm:px-6">
-        <div className="mb-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+      {/* CONTEÚDO */}
+      <section className="container-fw section-gap px-4 sm:px-0">
+        <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs text-gray-500 sm:text-sm">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             {loading ? (
               <span>{t("loading")}</span>
@@ -653,8 +680,8 @@ export default function RetroLongSleeveJerseysPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="relative w-full">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="search"
@@ -664,19 +691,23 @@ export default function RetroLongSleeveJerseysPage() {
                   setPage(1);
                 }}
                 placeholder={t("searchPlaceholder")}
-                className="w-full rounded-2xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-full border px-9 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">{t("sortBy")}</span>
+            <div className="flex items-center justify-between gap-2 text-xs sm:justify-end sm:text-sm">
+              <span className="whitespace-nowrap text-gray-500">
+                {t("sortBy")}
+              </span>
               <select
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value as "team" | "price-asc" | "price-desc" | "random");
+                  setSort(
+                    e.target.value as "team" | "price-asc" | "price-desc" | "random"
+                  );
                   setPage(1);
                 }}
-                className="rounded-2xl border bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                className="min-w-[140px] rounded-full border bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:text-sm"
               >
                 <option value="team">{t("sortOptions.team")}</option>
                 <option value="price-asc">{t("sortOptions.priceAsc")}</option>
@@ -688,32 +719,32 @@ export default function RetroLongSleeveJerseysPage() {
         </div>
 
         {loading && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-slate-200 shadow-sm overflow-hidden animate-pulse"
+                className="overflow-hidden rounded-3xl bg-white/90 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm animate-pulse"
               >
                 <div className="aspect-[4/5] bg-slate-100" />
-                <div className="p-4">
-                  <div className="h-3 w-20 bg-slate-200 rounded mb-2" />
-                  <div className="h-4 w-3/4 bg-slate-200 rounded mb-4" />
-                  <div className="h-3 w-16 bg-slate-200 rounded" />
-                  <div className="mt-4 h-px bg-slate-200/70" />
-                  <div className="h-9" />
+                <div className="p-4 sm:p-5">
+                  <div className="mb-2 h-3 w-24 rounded bg-slate-200" />
+                  <div className="mb-4 h-4 w-3/4 rounded bg-slate-200" />
+                  <div className="h-3 w-20 rounded bg-slate-200" />
+                  <div className="mt-6 h-px bg-slate-200/70" />
+                  <div className="h-10 sm:h-12" />
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {!loading && error && <p className="text-red-600">{error}</p>}
+        {!loading && error && <p className="text-sm text-red-600">{error}</p>}
 
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
               {pageItems.length === 0 && (
-                <p className="text-gray-500 col-span-full text-sm">
+                <p className="col-span-full text-sm text-gray-500">
                   {t("noResults")}
                 </p>
               )}
@@ -724,12 +755,12 @@ export default function RetroLongSleeveJerseysPage() {
             </div>
 
             {pageItems.length > 0 && totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-2 select-none">
+              <nav className="mt-8 flex flex-wrap select-none items-center justify-center gap-1.5 sm:mt-10 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
                   aria-label={t("previousPage")}
                 >
                   «
@@ -740,7 +771,7 @@ export default function RetroLongSleeveJerseysPage() {
                     return (
                       <span
                         key={`dots-${idx}`}
-                        className="px-3 py-2 text-sm text-slate-500"
+                        className="px-2.5 py-1.5 text-xs text-slate-500 sm:px-3 sm:py-2 sm:text-sm"
                       >
                         ...
                       </span>
@@ -756,10 +787,10 @@ export default function RetroLongSleeveJerseysPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={[
-                        "min-w-[36px] px-3 py-2 rounded-xl ring-1 text-sm transition",
+                        "min-w-[34px] rounded-xl px-2.5 py-1.5 text-xs ring-1 transition sm:min-w-[40px] sm:px-3 sm:py-2 sm:text-sm",
                         active
                           ? "bg-sky-600 text-white ring-sky-600 shadow-sm"
-                          : "bg-white/80 text-slate-800 ring-slate-200 hover:ring-sky-200 hover:shadow-sm",
+                          : "bg-white/80 text-slate-800 ring-slate-200 hover:shadow-sm hover:ring-sky-200",
                       ].join(" ")}
                       aria-current={active ? "page" : undefined}
                     >
@@ -772,7 +803,7 @@ export default function RetroLongSleeveJerseysPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-2 rounded-xl ring-1 ring-slate-200 bg-white/80 disabled:opacity-40 hover:ring-sky-200 hover:shadow-sm transition text-sm"
+                  className="rounded-xl bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-slate-200 transition hover:shadow-sm hover:ring-sky-200 disabled:opacity-40 sm:px-3 sm:py-2 sm:text-sm"
                   aria-label={t("nextPage")}
                 >
                   »
