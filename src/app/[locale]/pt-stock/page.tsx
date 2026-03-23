@@ -1,4 +1,4 @@
-// src/app/pt-stock/page.tsx
+// src/app/[locale]/(store)/pt-stock/page.tsx
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
@@ -193,8 +193,8 @@ export default async function PtStockPage() {
                   {stockQty > 0 && (
                     <div className="mt-2 text-[11px] font-semibold text-emerald-700">
                       {stockQty === 1
-                        ? "Only 1 unit left"
-                        : `${stockQty} units available`}
+                        ? t("stock.onlyOne")
+                        : t("stock.unitsAvailable", { count: stockQty })}
                     </div>
                   )}
                 </div>

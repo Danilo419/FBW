@@ -1220,6 +1220,10 @@
       "two": "2 camisolas: 3€",
       "three": "3+ camisolas: envio GRÁTIS"
     },
+    "stock": {
+      "onlyOne": "Só resta 1 unidade",
+      "unitsAvailable": "{count} unidades disponíveis"
+    },
     "intro": {
       "line1": "Nesta página só é possível comprar produtos que a <brand>FootballWorld já tem em stock em Portugal</brand>, com entrega pelos CTT em <delivery>2–3 dias úteis</delivery>.",
       "line2": "As promoções usadas noutras páginas <noApply>não se aplicam</noApply> aos produtos desta página. Em vez disso, esta página utiliza uma promoção especial de envio para stock em Portugal:",
