@@ -1,8 +1,8 @@
-// src/app/(store)/checkout/address/CheckoutAddressClient.tsx
+// src/app/[locale]/(store)/checkout/address/CheckoutAddressClient.tsx
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import CountrySelect from '@/components/checkout/CountrySelect';
 
