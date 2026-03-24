@@ -293,12 +293,28 @@ model DiscountCode {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  /**
+   * 🔹 integração opcional com Stripe para exibir
+   * o desconto como linha separada no Checkout
+   *
+   * Podes usar um OU outro:
+   * - stripeCouponId: cupão do Stripe
+   * - stripePromotionCodeId: promotion code do Stripe
+   *
+   * Normalmente basta stripePromotionCodeId se quiseres
+   * espelhar diretamente cada código interno.
+   */
+  stripeCouponId        String?
+  stripePromotionCodeId String?
+
   orders Order[] @relation("AppliedDiscountCode")
 
   @@index([active])
   @@index([code, active])
   @@index([expiresAt])
   @@index([createdAt])
+  @@index([stripeCouponId])
+  @@index([stripePromotionCodeId])
 }
 
 /**
@@ -351,6 +367,12 @@ model Order {
   productSubtotalCents Int @default(0)
 
   /**
+   * 🔹 subtotal final dos produtos depois do desconto
+   * útil para bater certo com Stripe/resumos/admin
+   */
+  finalProductSubtotalCents Int @default(0)
+
+  /**
    * 🔹 shipping (em cents) — SINGLE SOURCE OF TRUTH
    */
   shipping Int @default(0)
@@ -373,6 +395,13 @@ model Order {
   discountCodeText    String?
   discountPercent     Int?
   discountAmountCents Int           @default(0)
+
+  /**
+   * 🔹 ids Stripe ligados ao desconto aplicado
+   * guardados na order para auditoria/debug
+   */
+  stripeCouponIdUsed        String?
+  stripePromotionCodeIdUsed String?
 
   stripeSessionId       String?
   stripePaymentIntentId String?
@@ -429,6 +458,8 @@ model Order {
   @@index([channel])
   @@index([discountCodeId])
   @@index([discountCodeText])
+  @@index([stripeCouponIdUsed])
+  @@index([stripePromotionCodeIdUsed])
 }
 
 model OrderItem {

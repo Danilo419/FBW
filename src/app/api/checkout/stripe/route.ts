@@ -329,19 +329,13 @@ function buildSnapshotJson(
 }
 
 /**
- * Distribui o desconto APENAS pelos itens pagos, em cêntimos,
- * sem mexer nos itens grátis.
+ * Fallback caso o código exista internamente mas ainda NÃO tenha
+ * stripePromotionCodeId / stripeCouponId configurado.
  *
- * Estratégia:
- * 1. Expande cada unidade individualmente
- * 2. Calcula desconto proporcional por unidade
- * 3. Distribui o resto dos cêntimos um a um
- * 4. Agrupa novamente por preço final unitário para Stripe
- *
- * Assim:
- * - o total no Stripe bate certo
- * - o desconto não vai para o shipping
- * - evita erros de arredondamento
+ * Nesse caso mantemos o comportamento antigo:
+ * - aplica o desconto diretamente aos line_items
+ * - total continua correto
+ * - mas o Stripe não mostra a linha separada do desconto
  */
 function buildDiscountedStripeLines(
   items: OrderItemForStripe[],
@@ -486,6 +480,14 @@ export async function POST(req: NextRequest) {
       ? await getValidDiscountCode(normalizedDiscountCode)
       : null;
 
+    const stripePromotionCodeId = safeStr(
+      (validDiscount as any)?.stripePromotionCodeId
+    );
+    const stripeCouponId = safeStr((validDiscount as any)?.stripeCouponId);
+    const hasStripeNativeDiscount = Boolean(
+      stripePromotionCodeId || stripeCouponId
+    );
+
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid },
       include: {
@@ -620,7 +622,11 @@ export async function POST(req: NextRequest) {
       "hasShipping:",
       Boolean(shippingFromCookie),
       "discountCode:",
-      validDiscount?.code ?? null
+      validDiscount?.code ?? null,
+      "stripePromotionCodeId:",
+      stripePromotionCodeId ?? null,
+      "stripeCouponId:",
+      stripeCouponId ?? null
     );
 
     /* -------- Create local order (PENDING) -------- */
@@ -695,8 +701,15 @@ export async function POST(req: NextRequest) {
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${APP}/cart`;
 
-    const distributedStripeLines = buildDiscountedStripeLines(
-      createdOrder.items.map((it) => ({
+    const orderItemsForStripe: OrderItemForStripe[] = createdOrder.items.map(
+      (it: {
+        id: string;
+        name: string;
+        image: string | null;
+        qty: number;
+        unitPrice: number;
+        totalPrice: number;
+      }) => ({
         id: it.id,
         name: it.name,
         image: it.image ?? null,
@@ -704,29 +717,59 @@ export async function POST(req: NextRequest) {
         unitPrice: Math.max(0, Number(it.unitPrice ?? 0)),
         totalPrice:
           typeof it.totalPrice === "number" ? Number(it.totalPrice) : null,
-      })),
-      reviewDiscountCents
+      })
     );
 
-    const stripeProductsSubtotalCents = distributedStripeLines.reduce(
-      (acc, line) => acc + line.qty * line.unitAmount,
-      0
-    );
-
-    const line_items = distributedStripeLines.map((line) => {
-      const img = toAbsoluteImage(line.image, APP);
+    const normalLineItems = orderItemsForStripe.map((it) => {
+      const img = toAbsoluteImage(it.image, APP);
       return {
-        quantity: line.qty,
+        quantity: it.qty,
         price_data: {
           currency,
-          unit_amount: line.unitAmount,
+          unit_amount: it.unitPrice,
           product_data: {
-            name: line.sourceName,
+            name: it.name,
             ...(img ? { images: [img] } : {}),
           },
         },
       };
     });
+
+    const fallbackDistributedStripeLines = buildDiscountedStripeLines(
+      orderItemsForStripe,
+      reviewDiscountCents
+    );
+
+    const fallbackDiscountedLineItems = fallbackDistributedStripeLines.map(
+      (line) => {
+        const img = toAbsoluteImage(line.image, APP);
+        return {
+          quantity: line.qty,
+          price_data: {
+            currency,
+            unit_amount: line.unitAmount,
+            product_data: {
+              name: line.sourceName,
+              ...(img ? { images: [img] } : {}),
+            },
+          },
+        };
+      }
+    );
+
+    const stripeProductsSubtotalCents = hasStripeNativeDiscount
+      ? normalLineItems.reduce(
+          (acc, line) => acc + line.quantity * line.price_data.unit_amount,
+          0
+        )
+      : fallbackDistributedStripeLines.reduce(
+          (acc, line) => acc + line.qty * line.unitAmount,
+          0
+        );
+
+    const line_items = hasStripeNativeDiscount
+      ? normalLineItems
+      : fallbackDiscountedLineItems;
 
     const metadata: Record<string, string> = {
       orderId: createdOrder.id,
@@ -743,6 +786,9 @@ export async function POST(req: NextRequest) {
       productSubtotalCents: String(payableProductsSubtotalCents),
       finalProductSubtotalCents: String(finalProductsSubtotalCents),
       stripeProductsSubtotalCents: String(stripeProductsSubtotalCents),
+      stripeNativeDiscountUsed: hasStripeNativeDiscount ? "true" : "false",
+      stripePromotionCodeId: stripePromotionCodeId ?? "",
+      stripeCouponId: stripeCouponId ?? "",
 
       ...shippingToMetadata(shippingFromCookie),
     };
@@ -764,7 +810,25 @@ export async function POST(req: NextRequest) {
       line_items,
       shipping_options,
       metadata,
-
+      ...(hasStripeNativeDiscount
+        ? stripePromotionCodeId
+          ? {
+              discounts: [
+                {
+                  promotion_code: stripePromotionCodeId,
+                },
+              ],
+            }
+          : stripeCouponId
+          ? {
+              discounts: [
+                {
+                  coupon: stripeCouponId,
+                },
+              ],
+            }
+          : {}
+        : {}),
       ...(userId ? { client_reference_id: userId } : {}),
       ...(shippingFromCookie?.email
         ? { customer_email: shippingFromCookie.email.slice(0, 200) }
@@ -779,6 +843,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       url: stripeSession.url,
       sessionId: stripeSession.id,
+      stripeNativeDiscountUsed: hasStripeNativeDiscount,
     });
   } catch (err: any) {
     console.error("Stripe checkout error:", err);

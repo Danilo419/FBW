@@ -96,3 +96,37 @@ export function calculateDiscountSummary(params: {
     totalCents,
   };
 }
+
+/**
+ * Helpers opcionais para integração com Stripe.
+ * Estes helpers usam cast seguro para não dar erro mesmo
+ * enquanto o Prisma Client ainda não tiver os novos campos.
+ */
+export function hasStripeNativeDiscountIds(input: {
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
+}) {
+  return Boolean(
+    String(input.stripeCouponId || "").trim() ||
+      String(input.stripePromotionCodeId || "").trim()
+  );
+}
+
+export function getStripeDiscountRefs(input: unknown) {
+  const obj = (input ?? {}) as {
+    stripeCouponId?: string | null;
+    stripePromotionCodeId?: string | null;
+  };
+
+  const stripeCouponId = String(obj.stripeCouponId || "").trim() || null;
+  const stripePromotionCodeId =
+    String(obj.stripePromotionCodeId || "").trim() || null;
+
+  return {
+    stripeCouponId,
+    stripePromotionCodeId,
+    hasStripeNativeDiscount: Boolean(
+      stripeCouponId || stripePromotionCodeId
+    ),
+  };
+}

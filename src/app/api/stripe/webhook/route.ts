@@ -44,6 +44,10 @@ type DiscountMeta = {
   percentOff: number | null;
   discountAmountCents: number | null;
   productSubtotalCents: number | null;
+  finalProductSubtotalCents: number | null;
+  stripePromotionCodeId: string | null;
+  stripeCouponId: string | null;
+  stripeNativeDiscountUsed: boolean;
 };
 
 const nz = (v: unknown) => {
@@ -214,6 +218,10 @@ function discountFromMetadata(meta?: Record<string, any> | null): DiscountMeta {
       percentOff: null,
       discountAmountCents: null,
       productSubtotalCents: null,
+      finalProductSubtotalCents: null,
+      stripePromotionCodeId: null,
+      stripeCouponId: null,
+      stripeNativeDiscountUsed: false,
     };
   }
 
@@ -221,12 +229,23 @@ function discountFromMetadata(meta?: Record<string, any> | null): DiscountMeta {
   const percentOff = intOrNull(meta.discountPercent);
   const discountAmountCents = intOrNull(meta.discountAmountCents);
   const productSubtotalCents = intOrNull(meta.productSubtotalCents);
+  const finalProductSubtotalCents = intOrNull(meta.finalProductSubtotalCents);
+  const stripePromotionCodeId = nz(meta.stripePromotionCodeId);
+  const stripeCouponId = nz(meta.stripeCouponId);
+  const stripeNativeDiscountUsed =
+    String(meta.stripeNativeDiscountUsed ?? "")
+      .trim()
+      .toLowerCase() === "true";
 
   return {
     code: code || null,
     percentOff,
     discountAmountCents,
     productSubtotalCents,
+    finalProductSubtotalCents,
+    stripePromotionCodeId,
+    stripeCouponId,
+    stripeNativeDiscountUsed,
   };
 }
 
@@ -270,6 +289,7 @@ function normalizeShipping(s: any): AnyObj {
 
 function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
   if (!base && !add) return null;
+
   if (!base) {
     const I = normalizeShipping(add);
     const out: ShippingJson = {
@@ -286,6 +306,7 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
     };
     return isEmptyShipping(out) ? null : out;
   }
+
   if (!add) {
     const B = normalizeShipping(base);
     const out: ShippingJson = {
@@ -347,7 +368,9 @@ const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
 /* -------------------- userId helpers -------------------- */
 
-function userIdFromCheckoutSession(session: Stripe.Checkout.Session): string | null {
+function userIdFromCheckoutSession(
+  session: Stripe.Checkout.Session
+): string | null {
   const metaUser = nz((session.metadata as any)?.userId);
   if (metaUser) return metaUser;
 
@@ -395,15 +418,31 @@ function totalFromOrder(order: any, optsTotalCents?: number | null): number {
   if (typeof order?.totalCents === "number") return order.totalCents / 100;
   if (typeof order?.total === "number") return order.total;
 
-  const subtotal = typeof order?.subtotal === "number" ? order.subtotal : 0;
-  const shipping = typeof order?.shipping === "number" ? order.shipping : 0;
+  const subtotal =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? order.finalProductSubtotalCents
+      : typeof order?.subtotal === "number"
+      ? order.subtotal
+      : 0;
+
+  const shipping =
+    typeof order?.shippingCents === "number"
+      ? order.shippingCents
+      : typeof order?.shipping === "number"
+      ? order.shipping
+      : 0;
+
   const tax = typeof order?.tax === "number" ? order.tax : 0;
   const discountAmountCents =
     typeof order?.discountAmountCents === "number"
       ? order.discountAmountCents
       : 0;
 
-  const sum = subtotal - discountAmountCents + shipping + tax;
+  const sum =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? subtotal + shipping + tax
+      : subtotal - discountAmountCents + shipping + tax;
+
   if (sum > 0) return sum / 100;
 
   if (typeof optsTotalCents === "number") return optsTotalCents / 100;
@@ -416,7 +455,10 @@ function shippingPriceFromOrder(order: any): number {
   return typeof order?.shipping === "number" ? order.shipping / 100 : 0;
 }
 
-function orderEmail(order: any, mergedShipping?: ShippingJson | null): string | null {
+function orderEmail(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
   return (
     nz(order?.shippingEmail) ||
     nz(order?.shippingJson?.email) ||
@@ -426,7 +468,10 @@ function orderEmail(order: any, mergedShipping?: ShippingJson | null): string | 
   );
 }
 
-function orderCustomerName(order: any, mergedShipping?: ShippingJson | null): string | null {
+function orderCustomerName(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
   return (
     nz(order?.shippingFullName) ||
     nz(order?.shippingJson?.name) ||
@@ -436,7 +481,10 @@ function orderCustomerName(order: any, mergedShipping?: ShippingJson | null): st
   );
 }
 
-function orderShippingAddress(order: any, mergedShipping?: ShippingJson | null): string | null {
+function orderShippingAddress(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
   const parts = [
     nz(order?.shippingAddress1),
     nz(order?.shippingAddress2),
@@ -479,6 +527,11 @@ async function markPaid(
       discountPercent: true,
       discountAmountCents: true,
       productSubtotalCents: true,
+      total: true,
+      totalCents: true,
+      shipping: true,
+      shippingCents: true,
+      tax: true,
     },
   });
 
@@ -488,7 +541,7 @@ async function markPaid(
     existing?.status === "delivered";
 
   const mergedShipping = mergeShipping(
-    existing?.shippingJson as ShippingJson,
+    (existing?.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
@@ -514,16 +567,17 @@ async function markPaid(
       })
     : null;
 
-  const updateData: any = {
+  const updateData: Record<string, any> = {
     ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
     status: "paid",
     paymentStatus: "paid",
     paidAt: new Date(),
     stripePaymentIntentId: opts.paymentIntentId ?? null,
-    stripeSessionId: opts.sessionId ?? undefined,
-    currency: upper(opts.currency) ?? undefined,
-    totalCents:
-      typeof opts.totalCents === "number" ? opts.totalCents : undefined,
+    ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+    ...(opts.currency ? { currency: upper(opts.currency) } : {}),
+    ...(typeof opts.totalCents === "number"
+      ? { totalCents: opts.totalCents }
+      : {}),
     ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
     ...(country ? { shippingCountry: country } : {}),
   };
@@ -540,10 +594,25 @@ async function markPaid(
       opts.discount?.productSubtotalCents ??
       existing?.productSubtotalCents ??
       undefined;
+
     updateData.subtotal =
       opts.discount?.productSubtotalCents ??
       existing?.productSubtotalCents ??
       undefined;
+
+    if (typeof opts.discount?.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents =
+        opts.discount.finalProductSubtotalCents;
+    }
+
+    if (opts.discount?.stripePromotionCodeId) {
+      updateData.stripePromotionCodeIdUsed =
+        opts.discount.stripePromotionCodeId;
+    }
+
+    if (opts.discount?.stripeCouponId) {
+      updateData.stripeCouponIdUsed = opts.discount.stripeCouponId;
+    }
 
     if (discountRecord?.id) {
       updateData.discountCodeId = discountRecord.id;
@@ -558,7 +627,7 @@ async function markPaid(
         id: orderId,
         NOT: { status: { in: ["paid", "shipped", "delivered"] } },
       },
-      data: updateData,
+      data: updateData as any,
     });
 
     transitioned = claim.count === 1;
@@ -566,32 +635,36 @@ async function markPaid(
     if (!transitioned) {
       await prisma.order.update({
         where: { id: orderId },
-        data: updateData,
+        data: updateData as any,
       });
     }
   } else {
     await prisma.order.update({
       where: { id: orderId },
-      data: updateData,
+      data: updateData as any,
     });
   }
 
-  if (
-    transitioned &&
-    discountRecord?.id &&
-    discountRecord.active &&
-    discountRecord.usesCount < discountRecord.maxUses
-  ) {
+  if (transitioned && discountRecord?.id && discountRecord.active) {
     try {
-      await prisma.discountCode.update({
-        where: { id: discountRecord.id },
-        data: {
-          usesCount: { increment: 1 },
-          usedAt: new Date(),
-        },
-      });
+      const willReachLimit =
+        discountRecord.usesCount + 1 >= discountRecord.maxUses;
+
+      if (willReachLimit) {
+        await prisma.discountCode.delete({
+          where: { id: discountRecord.id },
+        });
+      } else {
+        await prisma.discountCode.update({
+          where: { id: discountRecord.id },
+          data: {
+            usesCount: { increment: 1 },
+            usedAt: new Date(),
+          },
+        });
+      }
     } catch (err) {
-      console.error("Discount code usage update failed:", err);
+      console.error("Discount code update/delete failed:", err);
     }
   }
 
@@ -649,7 +722,7 @@ async function markPending(
   });
 
   const mergedShipping = mergeShipping(
-    existing?.shippingJson as ShippingJson,
+    (existing?.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
@@ -666,10 +739,10 @@ async function markPending(
       status: "pending",
       paymentStatus: "pending",
       stripePaymentIntentId: opts.paymentIntentId ?? null,
-      stripeSessionId: opts.sessionId ?? undefined,
+      ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
       ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
       ...(country ? { shippingCountry: country } : {}),
-    },
+    } as any,
   });
 }
 
@@ -1005,8 +1078,8 @@ export const POST = async (req: NextRequest) => {
             typeof charge.amount_captured === "number"
               ? charge.amount_captured
               : typeof charge.amount === "number"
-                ? charge.amount
-                : undefined;
+              ? charge.amount
+              : undefined;
 
           const { transitioned } = await markPaid(orderId, {
             paymentIntentId: piId,
