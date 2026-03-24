@@ -1627,6 +1627,10 @@
       "two": "2 jerseys: 3€",
       "three": "3+ jerseys: FREE shipping"
     },
+    "stock": {
+      "onlyOne": "Only 1 unit left",
+      "unitsAvailable": "{count} units available"
+    },
     "intro": {
       "line1": "On this page you can only buy products that <brand>FootballWorld already has in stock in Portugal</brand>, delivered with CTT in <delivery>2–3 business days</delivery>.",
       "line2": "The promotions used on other pages <noApply>do not apply</noApply> to the products on this page. Instead, this page uses a special Portugal stock shipping promotion:",
