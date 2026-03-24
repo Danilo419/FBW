@@ -59,6 +59,25 @@ type CartItemRow = {
 
 type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
 
+type OrderItemForStripe = {
+  id?: string;
+  name: string;
+  image: string | null;
+  qty: number;
+  unitPrice: number; // original cents
+  totalPrice?: number | null;
+};
+
+type DistributedStripeLine = {
+  sourceName: string;
+  image: string | null;
+  qty: number;
+  unitAmount: number; // final cents actually sent to Stripe
+  originalUnitAmount: number; // original cents
+  lineDiscountCents: number;
+  isFree: boolean;
+};
+
 /* ============================== HELPERS ============================== */
 
 function normalizeBaseUrl(url: string) {
@@ -309,6 +328,133 @@ function buildSnapshotJson(
   return snapshot;
 }
 
+/**
+ * Distribui o desconto APENAS pelos itens pagos, em cêntimos,
+ * sem mexer nos itens grátis.
+ *
+ * Estratégia:
+ * 1. Expande cada unidade individualmente
+ * 2. Calcula desconto proporcional por unidade
+ * 3. Distribui o resto dos cêntimos um a um
+ * 4. Agrupa novamente por preço final unitário para Stripe
+ *
+ * Assim:
+ * - o total no Stripe bate certo
+ * - o desconto não vai para o shipping
+ * - evita erros de arredondamento
+ */
+function buildDiscountedStripeLines(
+  items: OrderItemForStripe[],
+  totalDiscountCents: number
+): DistributedStripeLine[] {
+  const freeLines: DistributedStripeLine[] = [];
+  const expandedPaidUnits: Array<{
+    name: string;
+    image: string | null;
+    originalUnitAmount: number;
+    discountCents: number;
+  }> = [];
+
+  for (const item of items) {
+    const qty = Math.max(0, Number(item.qty ?? 0));
+    const unitPrice = Math.max(0, Number(item.unitPrice ?? 0));
+
+    if (qty <= 0) continue;
+
+    if (unitPrice <= 0) {
+      freeLines.push({
+        sourceName: item.name,
+        image: item.image ?? null,
+        qty,
+        unitAmount: 0,
+        originalUnitAmount: 0,
+        lineDiscountCents: 0,
+        isFree: true,
+      });
+      continue;
+    }
+
+    for (let i = 0; i < qty; i++) {
+      expandedPaidUnits.push({
+        name: item.name,
+        image: item.image ?? null,
+        originalUnitAmount: unitPrice,
+        discountCents: 0,
+      });
+    }
+  }
+
+  const paidSubtotal = expandedPaidUnits.reduce(
+    (acc, unit) => acc + unit.originalUnitAmount,
+    0
+  );
+
+  if (expandedPaidUnits.length === 0) {
+    return freeLines;
+  }
+
+  const safeTotalDiscount = Math.max(
+    0,
+    Math.min(totalDiscountCents, paidSubtotal)
+  );
+
+  if (safeTotalDiscount > 0 && paidSubtotal > 0) {
+    let assigned = 0;
+
+    for (const unit of expandedPaidUnits) {
+      const proportional = Math.floor(
+        (unit.originalUnitAmount * safeTotalDiscount) / paidSubtotal
+      );
+      unit.discountCents = Math.min(proportional, unit.originalUnitAmount);
+      assigned += unit.discountCents;
+    }
+
+    let remainder = safeTotalDiscount - assigned;
+
+    expandedPaidUnits.sort(
+      (a, b) => b.originalUnitAmount - a.originalUnitAmount
+    );
+
+    let cursor = 0;
+    while (remainder > 0 && expandedPaidUnits.length > 0) {
+      const unit = expandedPaidUnits[cursor];
+      if (unit.discountCents < unit.originalUnitAmount) {
+        unit.discountCents += 1;
+        remainder -= 1;
+      }
+      cursor = (cursor + 1) % expandedPaidUnits.length;
+    }
+  }
+
+  const grouped = new Map<string, DistributedStripeLine>();
+
+  for (const unit of expandedPaidUnits) {
+    const finalUnitAmount = Math.max(
+      0,
+      unit.originalUnitAmount - unit.discountCents
+    );
+    const key = `${unit.name}__${unit.image ?? ""}__${finalUnitAmount}`;
+
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.qty += 1;
+      existing.lineDiscountCents += unit.discountCents;
+    } else {
+      grouped.set(key, {
+        sourceName: unit.name,
+        image: unit.image ?? null,
+        qty: 1,
+        unitAmount: finalUnitAmount,
+        originalUnitAmount: unit.originalUnitAmount,
+        lineDiscountCents: unit.discountCents,
+        isFree: false,
+      });
+    }
+  }
+
+  return [...grouped.values(), ...freeLines];
+}
+
 /* ============================== ROUTE ============================== */
 
 export async function POST(req: NextRequest) {
@@ -549,15 +695,33 @@ export async function POST(req: NextRequest) {
     const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${APP}/cart`;
 
-    const line_items = createdOrder.items.map((it) => {
-      const img = toAbsoluteImage(it.image, APP);
+    const distributedStripeLines = buildDiscountedStripeLines(
+      createdOrder.items.map((it) => ({
+        id: it.id,
+        name: it.name,
+        image: it.image ?? null,
+        qty: Math.max(0, Number(it.qty ?? 0)),
+        unitPrice: Math.max(0, Number(it.unitPrice ?? 0)),
+        totalPrice:
+          typeof it.totalPrice === "number" ? Number(it.totalPrice) : null,
+      })),
+      reviewDiscountCents
+    );
+
+    const stripeProductsSubtotalCents = distributedStripeLines.reduce(
+      (acc, line) => acc + line.qty * line.unitAmount,
+      0
+    );
+
+    const line_items = distributedStripeLines.map((line) => {
+      const img = toAbsoluteImage(line.image, APP);
       return {
-        quantity: it.qty,
+        quantity: line.qty,
         price_data: {
           currency,
-          unit_amount: it.unitPrice,
+          unit_amount: line.unitAmount,
           product_data: {
-            name: it.name,
+            name: line.sourceName,
             ...(img ? { images: [img] } : {}),
           },
         },
@@ -577,6 +741,8 @@ export async function POST(req: NextRequest) {
       discountPercent: String(validDiscount?.percentOff ?? 0),
       discountAmountCents: String(reviewDiscountCents),
       productSubtotalCents: String(payableProductsSubtotalCents),
+      finalProductSubtotalCents: String(finalProductsSubtotalCents),
+      stripeProductsSubtotalCents: String(stripeProductsSubtotalCents),
 
       ...shippingToMetadata(shippingFromCookie),
     };
