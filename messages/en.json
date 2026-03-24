@@ -1524,7 +1524,7 @@
     },
     "summary": {
       "freeItemsApplied": "Free items applied: <count></count> (always the cheapest ones).",
-      "cttRules": "{one} • {two} • {three}",
+      "cttRules": "<one></one> • <two></two> • <three></three>",
       "unlockPromo": "Add more items to unlock: <promo></promo>",
       "addMoreForFreeShipping": "Add {amount} more to unlock free shipping.",
       "freeShippingUnlocked": "Free shipping unlocked.",
