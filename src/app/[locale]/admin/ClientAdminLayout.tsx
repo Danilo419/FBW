@@ -204,6 +204,7 @@ function SidebarNav() {
         indent
         badge="PT"
       />
+      <NavItem href="/admin/discount-codes" label="Discount Codes" />
       <NavItem href="/admin/users" label="Users" />
       <NavItem href="/admin/newsletter" label="Newsletter" />
       <NavItem href="/admin/analytics" label="Analytics" />
