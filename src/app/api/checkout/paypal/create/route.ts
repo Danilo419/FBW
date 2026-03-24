@@ -25,38 +25,96 @@ type Shipping = {
 };
 
 function getBaseUrl(req: NextRequest): string {
-  // Preferir cabeçalhos do proxy (Vercel/edge)
   const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+
   if (host) return `${proto}://${host}`.replace(/\/+$/, "");
 
-  // Fallback para env (opcional)
-  const env = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
+  const env =
+    (process.env.NEXT_PUBLIC_SITE_URL || "").trim() ||
+    (process.env.NEXT_PUBLIC_APP_URL || "").trim() ||
+    (process.env.SITE_URL || "").trim();
+
   if (env) return env.replace(/\/+$/, "");
 
   throw new Error(
-    "Base URL not resolvable. Set NEXT_PUBLIC_APP_URL or ensure Host headers are present."
+    "Base URL not resolvable. Set NEXT_PUBLIC_SITE_URL/NEXT_PUBLIC_APP_URL or ensure Host headers are present."
   );
 }
 
 function decodeShippingCookie(raw?: string | null): Shipping | null {
   if (!raw) return null;
+
   try {
     return JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
   } catch {
-    return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   }
 }
 
 function centsToMoney(cents: number) {
-  return (Math.round(cents) / 100).toFixed(2); // "12.34"
+  return (Math.round(cents) / 100).toFixed(2);
+}
+
+function normalizeLocale(value: unknown): "pt" | "en" {
+  const locale = String(value ?? "").trim().toLowerCase();
+  return locale === "en" ? "en" : "pt";
 }
 
 function safeCountryCode(v?: string | null) {
-  const s = String(v ?? "").trim();
+  const s = String(v ?? "").trim().toUpperCase();
   if (!s) return undefined;
-  // se vier "Portugal" ou "PT", pegamos nos 2 primeiros chars e upper
-  return s.slice(0, 2).toUpperCase();
+
+  const map: Record<string, string> = {
+    PT: "PT",
+    PORTUGAL: "PT",
+
+    ES: "ES",
+    SPAIN: "ES",
+    ESPANHA: "ES",
+
+    FR: "FR",
+    FRANCE: "FR",
+    FRANCA: "FR",
+    "FRANÇA": "FR",
+
+    DE: "DE",
+    GERMANY: "DE",
+    ALEMANHA: "DE",
+
+    IT: "IT",
+    ITALY: "IT",
+    ITALIA: "IT",
+    "ITÁLIA": "IT",
+
+    GB: "GB",
+    UK: "GB",
+    "UNITED KINGDOM": "GB",
+    ENGLAND: "GB",
+    "REINO UNIDO": "GB",
+    REINO_UNIDO: "GB",
+
+    NL: "NL",
+    NETHERLANDS: "NL",
+    HOLANDA: "NL",
+
+    BE: "BE",
+    BELGIUM: "BE",
+    BELGICA: "BE",
+    "BÉLGICA": "BE",
+
+    CH: "CH",
+    SWITZERLAND: "CH",
+    SUICA: "CH",
+    "SUÍÇA": "CH",
+  };
+
+  return map[s] || (/^[A-Z]{2}$/.test(s) ? s : undefined);
 }
 
 /* --------------------------- route --------------------------- */
@@ -64,12 +122,12 @@ function safeCountryCode(v?: string | null) {
 export async function POST(req: NextRequest) {
   try {
     const APP = getBaseUrl(req);
+    const body = await req.json().catch(() => ({}));
+    const locale = normalizeLocale(body?.locale);
 
-    // Identificar carrinho pela cookie de sessão
-    const jar = await cookies(); // Next 15: cookies() é async
+    const jar = await cookies();
     const sid = jar.get("sid")?.value ?? null;
 
-    // Se não houver sid, não dá para localizar carrinho com segurança
     if (!sid) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
@@ -93,21 +151,17 @@ export async function POST(req: NextRequest) {
 
     const currency = "EUR";
 
-    // subtotal do carrinho (cents)
     const subtotalCents = cart.items.reduce((acc, it) => {
       const line = (it as any).totalPrice ?? it.qty * it.unitPrice;
       return acc + Number(line || 0);
     }, 0);
 
-    // Morada do step /checkout/address guardada em cookie (base64 JSON)
     const shippingFromCookie = decodeShippingCookie(jar.get("ship")?.value);
 
-    // Shipping / Tax / Discount (por agora 0 — podes ligar à tua lógica depois)
     const shippingCents = 0;
     const taxCents = 0;
     const discountCents = 0;
 
-    // Criar encomenda local (status pending) antes de ir ao PayPal
     const order = await prisma.order.create({
       data: {
         sessionId: cart.sessionId ?? null,
@@ -116,10 +170,9 @@ export async function POST(req: NextRequest) {
         subtotal: subtotalCents,
         shipping: shippingCents,
         tax: taxCents,
-        total: subtotalCents, // retrocompat (mantém como tens)
+        total: subtotalCents,
         shippingJson: (shippingFromCookie as any) ?? null,
 
-        // campos canónicos (opcional)
         shippingFullName: shippingFromCookie?.name ?? null,
         shippingEmail: shippingFromCookie?.email ?? null,
         shippingPhone: shippingFromCookie?.phone ?? null,
@@ -134,7 +187,8 @@ export async function POST(req: NextRequest) {
           create: cart.items.map((it: typeof cart.items[number]) => ({
             productId: it.productId,
             name: it.product.name,
-            image: (it.product as { imageUrls?: string[] })?.imageUrls?.[0] ?? null,
+            image:
+              (it.product as { imageUrls?: string[] })?.imageUrls?.[0] ?? null,
             qty: it.qty,
             unitPrice: it.unitPrice,
             totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
@@ -145,24 +199,20 @@ export async function POST(req: NextRequest) {
       include: { items: true },
     });
 
-    // URLs de retorno/cancelamento
-    const return_url = `${APP}/checkout/paypal/return?order=${order.id}`;
-    const cancel_url = `${APP}/cart`;
+    const return_url = `${APP}/${locale}/checkout/paypal/return?order=${order.id}`;
+    const cancel_url = `${APP}/${locale}/cart`;
 
-    /**
-     * ✅ PAYPAL RULE:
-     * Se enviares purchase_units[].items, tens de enviar amount.breakdown.item_total
-     * e item_total tem de ser a soma exata de items.unit_amount * quantity.
-     */
     const itemsTotalCents = order.items.reduce((acc, it) => {
       const line = Number(it.unitPrice || 0) * Number(it.qty || 0);
       return acc + line;
     }, 0);
 
-    // total final PayPal: items + shipping + tax - discount
-    const totalCents = itemsTotalCents + shippingCents + taxCents - discountCents;
+    const totalCents =
+      itemsTotalCents + shippingCents + taxCents - discountCents;
 
-    // Pedido ao PayPal (OrdersCreateRequest)
+    const countryCode =
+      safeCountryCode(shippingFromCookie?.address?.country) ?? "PT";
+
     const ppReq = new paypal.orders.OrdersCreateRequest();
     ppReq.prefer("return=representation");
     ppReq.requestBody({
@@ -170,20 +220,31 @@ export async function POST(req: NextRequest) {
       purchase_units: [
         {
           reference_id: "default",
-          custom_id: order.id, // referência tua
+          custom_id: order.id,
 
           amount: {
             currency_code: currency,
             value: centsToMoney(totalCents),
             breakdown: {
-              item_total: { currency_code: currency, value: centsToMoney(itemsTotalCents) },
-              shipping: { currency_code: currency, value: centsToMoney(shippingCents) },
-              tax_total: { currency_code: currency, value: centsToMoney(taxCents) },
-              discount: { currency_code: currency, value: centsToMoney(discountCents) },
+              item_total: {
+                currency_code: currency,
+                value: centsToMoney(itemsTotalCents),
+              },
+              shipping: {
+                currency_code: currency,
+                value: centsToMoney(shippingCents),
+              },
+              tax_total: {
+                currency_code: currency,
+                value: centsToMoney(taxCents),
+              },
+              discount: {
+                currency_code: currency,
+                value: centsToMoney(discountCents),
+              },
             },
           },
 
-          // detalhar itens (agora com breakdown correto)
           items: order.items.map((it: typeof order.items[number]) => ({
             name: it.name.slice(0, 127),
             quantity: String(it.qty),
@@ -194,19 +255,20 @@ export async function POST(req: NextRequest) {
             category: "PHYSICAL_GOODS",
           })),
 
-          // (opcional) enviar shipping já aqui se quiseres forçar:
           shipping: shippingFromCookie?.address?.line1
             ? {
                 name: shippingFromCookie?.name
                   ? { full_name: shippingFromCookie.name }
                   : undefined,
                 address: {
-                  address_line_1: shippingFromCookie?.address?.line1 ?? "",
-                  address_line_2: shippingFromCookie?.address?.line2 ?? undefined,
-                  admin_area_2: shippingFromCookie?.address?.city ?? undefined,
-                  admin_area_1: shippingFromCookie?.address?.state ?? undefined,
-                  postal_code: shippingFromCookie?.address?.postal_code ?? undefined,
-                  country_code: safeCountryCode(shippingFromCookie?.address?.country) ?? "PT",
+                  address_line_1: shippingFromCookie.address.line1 ?? "",
+                  address_line_2:
+                    shippingFromCookie.address.line2 ?? undefined,
+                  admin_area_2: shippingFromCookie.address.city ?? undefined,
+                  admin_area_1: shippingFromCookie.address.state ?? undefined,
+                  postal_code:
+                    shippingFromCookie.address.postal_code ?? undefined,
+                  country_code: countryCode,
                 },
               }
             : undefined,
