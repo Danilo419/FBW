@@ -45,7 +45,7 @@ type Shipping = {
 type CartItemRow = {
   productId: string;
   qty: number;
-  unitPrice: number; // cents
+  unitPrice: number;
   product: {
     id?: string;
     name: string;
@@ -64,7 +64,7 @@ type OrderItemForStripe = {
   name: string;
   image: string | null;
   qty: number;
-  unitPrice: number; // original cents
+  unitPrice: number;
   totalPrice?: number | null;
 };
 
@@ -72,8 +72,8 @@ type DistributedStripeLine = {
   sourceName: string;
   image: string | null;
   qty: number;
-  unitAmount: number; // final cents actually sent to Stripe
-  originalUnitAmount: number; // original cents
+  unitAmount: number;
+  originalUnitAmount: number;
   lineDiscountCents: number;
   isFree: boolean;
 };
@@ -84,12 +84,6 @@ function normalizeBaseUrl(url: string) {
   return url.trim().replace(/\/+$/, "");
 }
 
-/**
- * ✅ Usa SEMPRE o domínio público (env) quando definido
- * - NEXT_PUBLIC_SITE_URL (recomendado)
- * - SITE_URL (alternativa)
- * Fallback: host do request (dev/local)
- */
 async function getCheckoutBaseUrl(): Promise<string> {
   const env =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
@@ -109,11 +103,17 @@ async function getCheckoutBaseUrl(): Promise<string> {
   return normalizeBaseUrl(`${proto}://${host}`);
 }
 
+function normalizeLocale(value: unknown): "pt" | "en" {
+  const locale = String(value ?? "").trim().toLowerCase();
+  return locale === "en" ? "en" : "pt";
+}
+
 function toAbsoluteImage(
   url: string | null | undefined,
   APP: string
 ): string | null {
   if (!url) return null;
+
   const t = String(url).trim();
   if (!t) return null;
   if (/^https?:\/\//i.test(t)) return t;
@@ -130,23 +130,20 @@ function safeStr(v: any): string | null {
 
 function safeObj(v: any): Record<string, any> {
   if (!v) return {};
-  if (typeof v === "object") return v as any;
+  if (typeof v === "object") return v as Record<string, any>;
+
   if (typeof v === "string") {
     try {
       const j = JSON.parse(v);
-      return typeof j === "object" && j ? (j as any) : {};
+      return typeof j === "object" && j ? (j as Record<string, any>) : {};
     } catch {
       return {};
     }
   }
+
   return {};
 }
 
-/**
- * Cookie "ship" pode vir:
- * - base64(JSON)
- * - JSON direto (em alguns browsers/setups)
- */
 function parseShipCookie(raw: string): Shipping | null {
   if (!raw) return null;
 
@@ -164,10 +161,6 @@ function parseShipCookie(raw: string): Shipping | null {
   return null;
 }
 
-/**
- * ✅ Stripe metadata MUST be Record<string, string>
- * ❌ undefined values are NOT allowed
- */
 function shippingToMetadata(s?: Shipping | null): Record<string, string> {
   const out: Record<string, string> = {};
 
@@ -181,7 +174,6 @@ function shippingToMetadata(s?: Shipping | null): Record<string, string> {
   put("ship_name", s.name);
   put("ship_phone", s.phone);
   put("ship_email", s.email);
-
   put("ship_line1", s.address?.line1);
   put("ship_line2", s.address?.line2);
   put("ship_city", s.address?.city);
@@ -192,11 +184,6 @@ function shippingToMetadata(s?: Shipping | null): Record<string, string> {
   return out;
 }
 
-/**
- * ✅ IMPORTANTE:
- * O admin extractor procura line1/city/postal_code no ROOT do JSON.
- * Então aqui nós "flatten" o shipping para evitar ficar tudo dentro de address:{...}
- */
 function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
   if (!s) return null;
 
@@ -224,16 +211,14 @@ function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
   };
 }
 
-/**
- * ✅ Fallback: tenta ler shipping do BODY (caso passes do form no fetch)
- */
 function parseShippingFromBody(body: any): Shipping | null {
   const b = body && typeof body === "object" ? body : {};
   const s = b.shipping ?? b.ship ?? b.shippingFromCookie ?? null;
+
   if (!s || typeof s !== "object") return null;
 
   const addr = safeObj((s as any).address);
-  const out: Shipping = {
+  return {
     name: safeStr((s as any).name) ?? undefined,
     phone: safeStr((s as any).phone) ?? undefined,
     email: safeStr((s as any).email) ?? undefined,
@@ -246,7 +231,6 @@ function parseShippingFromBody(body: any): Shipping | null {
       country: safeStr(addr.country) ?? undefined,
     },
   };
-  return out;
 }
 
 const MAX_FREE_ITEMS_PER_ORDER = 2;
@@ -267,21 +251,13 @@ function detectCartChannel(items: CartItemRow[]): CartChannel {
 function extractSelectedSize(optionsJson: any): string | null {
   const root = safeObj(optionsJson);
 
-  const direct = safeStr(root.size);
-  if (direct) return direct;
-
-  const selectedSize = safeStr(root.selectedSize);
-  if (selectedSize) return selectedSize;
-
-  const options = safeObj(root.options);
-  const optionsSize = safeStr(options.size);
-  if (optionsSize) return optionsSize;
-
-  const selectedOptions = safeObj(root.selectedOptions);
-  const selectedOptionsSize = safeStr(selectedOptions.size);
-  if (selectedOptionsSize) return selectedOptionsSize;
-
-  return null;
+  return (
+    safeStr(root.size) ||
+    safeStr(root.selectedSize) ||
+    safeStr(safeObj(root.options).size) ||
+    safeStr(safeObj(root.selectedOptions).size) ||
+    null
+  );
 }
 
 function buildSnapshotJson(
@@ -328,15 +304,6 @@ function buildSnapshotJson(
   return snapshot;
 }
 
-/**
- * Fallback caso o código exista internamente mas ainda NÃO tenha
- * stripePromotionCodeId / stripeCouponId configurado.
- *
- * Nesse caso mantemos o comportamento antigo:
- * - aplica o desconto diretamente aos line_items
- * - total continua correto
- * - mas o Stripe não mostra a linha separada do desconto
- */
 function buildDiscountedStripeLines(
   items: OrderItemForStripe[],
   totalDiscountCents: number
@@ -460,6 +427,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const method = (body?.method ?? "automatic") as Method;
+    const locale = normalizeLocale(body?.locale);
     void method;
 
     const APP = await getCheckoutBaseUrl();
@@ -603,7 +571,6 @@ export async function POST(req: NextRequest) {
     );
     const totalCents = finalProductsSubtotalCents + shippingCents;
 
-    /* -------- Shipping (cookie -> body fallback) -------- */
     const rawShip = jar.get("ship")?.value ?? "";
     let shippingFromCookie = rawShip ? parseShipCookie(rawShip) : null;
 
@@ -617,6 +584,8 @@ export async function POST(req: NextRequest) {
     console.log(
       "[checkout/stripe] sid:",
       sid,
+      "locale:",
+      locale,
       "shipCookie:",
       Boolean(rawShip),
       "hasShipping:",
@@ -629,7 +598,6 @@ export async function POST(req: NextRequest) {
       stripeCouponId ?? null
     );
 
-    /* -------- Create local order (PENDING) -------- */
     const orderItemsCreate = promo.lines.flatMap((line) => {
       const idx = Number(line.id);
       const it = cartItems[idx]!;
@@ -674,32 +642,28 @@ export async function POST(req: NextRequest) {
         status: "pending",
         currency: currency.toUpperCase(),
         channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
-
         subtotal: payableProductsSubtotalCents,
         productSubtotalCents: payableProductsSubtotalCents,
-
         shipping: shippingCents,
         shippingCents,
-
         tax: 0,
-
         discountCodeId: validDiscount?.id ?? null,
         discountCodeText: validDiscount?.code ?? null,
         discountPercent: validDiscount?.percentOff ?? null,
         discountAmountCents: reviewDiscountCents,
-
         total: totalCents / 100,
         totalCents,
-
         shippingJson: shippingJsonFlat as any,
-
         items: { create: orderItemsCreate },
       },
       include: { items: true },
     });
 
-    const success_url = `${APP}/checkout/success?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
-    const cancel_url = `${APP}/cart`;
+    const success_url =
+      `${APP}/${locale}/checkout/success` +
+      `?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
+
+    const cancel_url = `${APP}/${locale}/cart`;
 
     const orderItemsForStripe: OrderItemForStripe[] = createdOrder.items.map(
       (it: {
@@ -779,7 +743,6 @@ export async function POST(req: NextRequest) {
       discountCents: String(totalDiscountCents),
       maxFreeItemsCap: String(MAX_FREE_ITEMS_PER_ORDER),
       ...(userId ? { userId } : {}),
-
       discountCode: String(validDiscount?.code ?? ""),
       discountPercent: String(validDiscount?.percentOff ?? 0),
       discountAmountCents: String(reviewDiscountCents),
@@ -789,7 +752,7 @@ export async function POST(req: NextRequest) {
       stripeNativeDiscountUsed: hasStripeNativeDiscount ? "true" : "false",
       stripePromotionCodeId: stripePromotionCodeId ?? "",
       stripeCouponId: stripeCouponId ?? "",
-
+      locale,
       ...shippingToMetadata(shippingFromCookie),
     };
 
@@ -813,21 +776,13 @@ export async function POST(req: NextRequest) {
       ...(hasStripeNativeDiscount
         ? stripePromotionCodeId
           ? {
-              discounts: [
-                {
-                  promotion_code: stripePromotionCodeId,
-                },
-              ],
+              discounts: [{ promotion_code: stripePromotionCodeId }],
             }
           : stripeCouponId
-          ? {
-              discounts: [
-                {
-                  coupon: stripeCouponId,
-                },
-              ],
-            }
-          : {}
+            ? {
+                discounts: [{ coupon: stripeCouponId }],
+              }
+            : {}
         : {}),
       ...(userId ? { client_reference_id: userId } : {}),
       ...(shippingFromCookie?.email

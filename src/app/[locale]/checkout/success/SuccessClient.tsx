@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 
 type OrderItem = {
   id: string;
@@ -213,6 +214,7 @@ function splitBadgesString(s: string): string[] {
 
 function normalizeBadges(rawBadges: unknown): string[] {
   if (!rawBadges) return [];
+
   if (Array.isArray(rawBadges)) {
     const out: string[] = [];
     for (const v of rawBadges) {
@@ -223,6 +225,7 @@ function normalizeBadges(rawBadges: unknown): string[] {
     }
     return out;
   }
+
   if (isRecord(rawBadges)) {
     const out: string[] = [];
     for (const v of Object.values(rawBadges)) {
@@ -233,6 +236,7 @@ function normalizeBadges(rawBadges: unknown): string[] {
     }
     return out;
   }
+
   return splitBadgesString(String(rawBadges));
 }
 
@@ -375,11 +379,25 @@ function deriveItemDetails(it: OrderItem) {
   return { size, personalization, badges, optionsPairs };
 }
 
+/* ========================= locale helpers ========================= */
+
+function normalizeLocale(locale: string): "pt" | "en" {
+  return locale === "en" ? "en" : "pt";
+}
+
+function withLocale(locale: string, path: string) {
+  const safeLocale = normalizeLocale(locale);
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `/${safeLocale}${cleanPath}`;
+}
+
 /* ========================= Component ========================= */
 
 export default function SuccessClient() {
   const params = useSearchParams();
   const router = useRouter();
+  const rawLocale = useLocale();
+  const locale = normalizeLocale(rawLocale);
   const confirmingRef = useRef(false);
 
   const { orderId, provider, sessionId } = useMemo(() => {
@@ -573,13 +591,13 @@ export default function SuccessClient() {
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         <div className="flex gap-2">
           <button
-            onClick={() => router.replace("/account")}
+            onClick={() => router.replace(withLocale(locale, "/account"))}
             className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
             Go to my account
           </button>
           <button
-            onClick={() => router.replace("/")}
+            onClick={() => router.replace(withLocale(locale, "/"))}
             className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
             Continue shopping
@@ -704,13 +722,15 @@ export default function SuccessClient() {
 
           <div className="flex gap-2">
             <button
-              onClick={() => router.replace(`/orders/${encodeURIComponent(order.id)}`)}
+              onClick={() =>
+                router.replace(withLocale(locale, `/orders/${encodeURIComponent(order.id)}`))
+              }
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               View order
             </button>
             <button
-              onClick={() => router.replace("/")}
+              onClick={() => router.replace(withLocale(locale, "/"))}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               Continue shopping
@@ -722,13 +742,13 @@ export default function SuccessClient() {
           <p>Order processed. You can check the details in your account.</p>
           <div className="flex gap-2">
             <button
-              onClick={() => router.replace("/account")}
+              onClick={() => router.replace(withLocale(locale, "/account"))}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               Go to my account
             </button>
             <button
-              onClick={() => router.replace("/")}
+              onClick={() => router.replace(withLocale(locale, "/"))}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               Home

@@ -9,7 +9,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// ✅ Remove apiVersion para não bater com o tipo literal do teu pacote Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 function absUrl(path: string) {
@@ -25,6 +24,11 @@ function safeInt(v: any, fallback = 0) {
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
+function normalizeLocale(value: unknown) {
+  const locale = String(value || "").trim().toLowerCase();
+  return locale === "en" ? "en" : "pt";
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -35,9 +39,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Espera receber { cartId }
+    // Espera receber { cartId, locale }
     const body = await req.json().catch(() => ({}));
     const cartId = String(body?.cartId || "").trim();
+    const locale = normalizeLocale(body?.locale);
 
     if (!cartId) {
       return NextResponse.json({ error: "Missing cartId" }, { status: 400 });
@@ -61,14 +66,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Totais (cents)
     const subtotal = cart.items.reduce((acc, it) => {
       const line = safeInt((it as any).totalPrice, it.qty * it.unitPrice);
       return acc + line;
     }, 0);
 
-    const shipping = 0; // cents (ajusta)
-    const tax = 0; // cents (ajusta)
+    const shipping = 0;
+    const tax = 0;
     const total = subtotal + shipping + tax;
 
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
@@ -95,26 +99,26 @@ export async function POST(req: Request) {
       mode: "payment",
       line_items,
 
-      success_url: absUrl(`/checkout/success?session_id={CHECKOUT_SESSION_ID}`),
-      cancel_url: absUrl(`/cart`),
+      success_url: absUrl(
+        `/${locale}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
+      ),
+      cancel_url: absUrl(`/${locale}/cart`),
 
-      // ✅ CRÍTICO para o webhook ligar a compra ao utilizador
       client_reference_id: userId,
       metadata: {
         userId,
         cartId,
+        locale,
         subtotal: String(subtotal),
         shipping: String(shipping),
         tax: String(tax),
         totalCents: String(total),
       },
 
-      // Opcional: recolha de morada no Checkout
       shipping_address_collection: {
         allowed_countries: ["PT", "ES", "FR", "DE", "IT", "GB", "NL", "BE", "CH"],
       },
 
-      // ✅ evita erro "session possibly null"
       customer_email: userEmail || undefined,
     });
 
