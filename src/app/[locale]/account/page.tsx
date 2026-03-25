@@ -1,10 +1,12 @@
+// src/app/[locale]/account/page.tsx
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import AccountClient from "./AccountClient";
@@ -12,28 +14,19 @@ import AccountClient from "./AccountClient";
 const fallbackImg =
   "https://api.dicebear.com/7.x/initials/svg?radius=50&backgroundType=gradientLinear&seed=FW";
 
-type AccountPageMessages = {
-  title: string;
-  subtitle: string;
-  profileLoadError: string;
-  profileLoadHelp: string;
-  credentialsProvider: string;
+type Props = {
+  params: {
+    locale: string;
+  };
 };
 
-async function getAccountPageMessages(
-  locale: string
-): Promise<AccountPageMessages> {
-  const messages =
-    locale === "pt"
-      ? (await import("../../../../messages/pt.json")).default
-      : (await import("../../../../messages/en.json")).default;
+export default async function AccountPage({ params }: Props) {
+  const locale = params.locale;
 
-  return messages.AccountPage as AccountPageMessages;
-}
-
-export default async function AccountPage() {
-  const locale = await getLocale();
-  const msg = await getAccountPageMessages(locale);
+  const t = await getTranslations({
+    locale,
+    namespace: "AccountPage",
+  });
 
   const session = await getServerSession(authOptions);
 
@@ -74,20 +67,15 @@ export default async function AccountPage() {
   if (!dbUser) {
     return (
       <div className="container-fw py-16 space-y-4">
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-          <div><b>DEBUG locale:</b> {locale}</div>
-          <div><b>DEBUG title:</b> {msg.title}</div>
-          <div><b>DEBUG subtitle:</b> {msg.subtitle}</div>
-        </div>
+        <h1 className="text-3xl font-extrabold">{t("title")}</h1>
 
-        <h1 className="text-3xl font-extrabold">{msg.title}</h1>
+        <p className="text-gray-700">{t("profileLoadError")}</p>
 
-        <p className="text-gray-700">{msg.profileLoadError}</p>
-
-        <p
-          className="text-gray-600"
-          dangerouslySetInnerHTML={{ __html: msg.profileLoadHelp }}
-        />
+        <p className="text-gray-600">
+          {t.rich("profileLoadHelp", {
+            b: (chunks) => <b>{chunks}</b>,
+          })}
+        </p>
       </div>
     );
   }
@@ -99,19 +87,22 @@ export default async function AccountPage() {
 
   const provider = oauth?.provider
     ? oauth.provider.charAt(0).toUpperCase() + oauth.provider.slice(1)
-    : msg.credentialsProvider;
+    : t("credentialsProvider");
 
   return (
     <div className="container-fw py-16 space-y-8">
-      <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-        <div><b>DEBUG locale:</b> {locale}</div>
-        <div><b>DEBUG title:</b> {msg.title}</div>
-        <div><b>DEBUG subtitle:</b> {msg.subtitle}</div>
+      {/* DEBUG (pode apagar depois) */}
+      <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded">
+        DEBUG locale: {locale}
+        <br />
+        DEBUG title: {t("title")}
+        <br />
+        DEBUG subtitle: {t("subtitle")}
       </div>
 
       <div>
-        <h1 className="text-3xl font-extrabold">{msg.title}</h1>
-        <p className="mt-2 text-gray-600">{msg.subtitle}</p>
+        <h1 className="text-3xl font-extrabold">{t("title")}</h1>
+        <p className="mt-2 text-gray-600">{t("subtitle")}</p>
       </div>
 
       <AccountClient
