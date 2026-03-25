@@ -2,9 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from '@/i18n/navigation'
 import { useSearchParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   CalendarDays,
   Mail,
@@ -128,6 +127,7 @@ export default function AccountClient(props: Props) {
           ).map(([key, label]) => (
             <button
               key={key}
+              type="button"
               onClick={() => setTab(key)}
               className={`shrink-0 min-w-max whitespace-nowrap text-left rounded-xl px-3 py-2 leading-5 transition text-sm sm:text-base ${
                 tab === key ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'
@@ -222,6 +222,7 @@ function isPaidStatus(status: string) {
 
 function MyOrders() {
   const t = useTranslations('Account')
+  const locale = useLocale()
   const { status } = useSession()
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
@@ -234,7 +235,7 @@ function MyOrders() {
       setLoading(true)
       setErr(null)
       try {
-        const r = await fetch('/api/account/orders', { method: 'GET' })
+        const r = await fetch('/api/account/orders', { method: 'GET', cache: 'no-store' })
         const j = await r.json()
         if (!r.ok) throw new Error(j?.error || t('orders.errors.failedToLoad'))
 
@@ -257,6 +258,11 @@ function MyOrders() {
       alive = false
     }
   }, [status, t])
+
+  function goToOrderDetails(orderId: string) {
+    const href = `/${locale}/account/orders/${encodeURIComponent(orderId)}`
+    window.location.assign(href)
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-4 sm:p-6">
@@ -317,12 +323,13 @@ function MyOrders() {
                   </div>
                 </div>
 
-                <Link
-                  href={`/account/orders/${encodeURIComponent(o.id)}`}
+                <button
+                  type="button"
+                  onClick={() => goToOrderDetails(o.id)}
                   className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border px-4 py-2 hover:bg-gray-50"
                 >
                   {t('orders.viewDetails')} <ChevronRight className="h-4 w-4" />
-                </Link>
+                </button>
               </div>
             ))}
           </div>
