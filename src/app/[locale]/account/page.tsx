@@ -91,15 +91,6 @@ export default async function AccountPage({ params }: Props) {
 
   return (
     <div className="container-fw py-16 space-y-8">
-      {/* DEBUG (pode apagar depois) */}
-      <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded">
-        DEBUG locale: {locale}
-        <br />
-        DEBUG title: {t("title")}
-        <br />
-        DEBUG subtitle: {t("subtitle")}
-      </div>
-
       <div>
         <h1 className="text-3xl font-extrabold">{t("title")}</h1>
         <p className="mt-2 text-gray-600">{t("subtitle")}</p>
