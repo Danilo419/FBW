@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import AccountClient from "./AccountClient";
@@ -12,12 +12,28 @@ import AccountClient from "./AccountClient";
 const fallbackImg =
   "https://api.dicebear.com/7.x/initials/svg?radius=50&backgroundType=gradientLinear&seed=FW";
 
+type AccountPageMessages = {
+  title: string;
+  subtitle: string;
+  profileLoadError: string;
+  profileLoadHelp: string;
+  credentialsProvider: string;
+};
+
+async function getAccountPageMessages(
+  locale: string
+): Promise<AccountPageMessages> {
+  const messages =
+    locale === "pt"
+      ? (await import("../../../../messages/pt.json")).default
+      : (await import("../../../../messages/en.json")).default;
+
+  return messages.AccountPage as AccountPageMessages;
+}
+
 export default async function AccountPage() {
   const locale = await getLocale();
-  const t = await getTranslations({
-    locale,
-    namespace: "AccountPage",
-  });
+  const t = await getAccountPageMessages(locale);
 
   const session = await getServerSession(authOptions);
 
@@ -58,15 +74,14 @@ export default async function AccountPage() {
   if (!dbUser) {
     return (
       <div className="container-fw py-16 space-y-4">
-        <h1 className="text-3xl font-extrabold">{t("title")}</h1>
+        <h1 className="text-3xl font-extrabold">{t.title}</h1>
 
-        <p className="text-gray-700">{t("profileLoadError")}</p>
+        <p className="text-gray-700">{t.profileLoadError}</p>
 
-        <p className="text-gray-600">
-          {t.rich("profileLoadHelp", {
-            b: (chunks) => <b>{chunks}</b>,
-          })}
-        </p>
+        <p
+          className="text-gray-600"
+          dangerouslySetInnerHTML={{ __html: t.profileLoadHelp }}
+        />
       </div>
     );
   }
@@ -78,13 +93,13 @@ export default async function AccountPage() {
 
   const provider = oauth?.provider
     ? oauth.provider.charAt(0).toUpperCase() + oauth.provider.slice(1)
-    : t("credentialsProvider");
+    : t.credentialsProvider;
 
   return (
     <div className="container-fw py-16 space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold">{t("title")}</h1>
-        <p className="mt-2 text-gray-600">{t("subtitle")}</p>
+        <h1 className="text-3xl font-extrabold">{t.title}</h1>
+        <p className="mt-2 text-gray-600">{t.subtitle}</p>
       </div>
 
       <AccountClient
