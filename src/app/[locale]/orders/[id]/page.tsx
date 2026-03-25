@@ -1,8 +1,9 @@
-// src/app/orders/[id]/page.tsx
-import Link from "next/link";
+// src/app/[locale]/orders/[id]/page.tsx
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import OrderItemThumb from "@/components/OrderItemThumb";
+import { Link } from "@/i18n/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,9 +11,16 @@ export const revalidate = 0;
 
 /* --------------------------- money --------------------------- */
 
-function money(cents?: number | null, currency = "EUR") {
+function money(cents?: number | null, currency = "EUR", locale = "en") {
   const n = typeof cents === "number" ? cents : 0;
-  return (n / 100).toLocaleString(undefined, { style: "currency", currency });
+
+  const normalizedLocale =
+    locale === "pt" ? "pt-PT" : locale === "en" ? "en" : locale;
+
+  return (n / 100).toLocaleString(normalizedLocale, {
+    style: "currency",
+    currency,
+  });
 }
 
 /* --------------------------- url helpers --------------------------- */
@@ -74,50 +82,60 @@ function resolveItemImage(it: OrderItemRow) {
 
 /* ========================= Badge labels ========================= */
 
-const BADGE_LABELS: Record<string, string> = {
-  "premier-league-regular": "Premier League – League Badge",
-  "premier-league-champions": "Premier League – Champions (Gold)",
-  "la-liga-regular": "La Liga – League Badge",
-  "la-liga-champions": "La Liga – Champion",
-  "serie-a-regular": "Serie A – League Badge",
-  "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
-  "bundesliga-regular": "Bundesliga – League Badge",
-  "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
-  "ligue1-regular": "Ligue 1 – League Badge",
-  "ligue1-champions": "Ligue 1 – Champion",
-  "primeira-liga-regular": "Primeira Liga – League Badge",
-  "primeira-liga-champions": "Primeira Liga – Champion",
-  "eredivisie-regular": "Eredivisie – League Badge",
-  "eredivisie-champions": "Eredivisie – Champion",
-  "scottish-premiership-regular": "Scottish Premiership – League Badge",
-  "scottish-premiership-champions": "Scottish Premiership – Champion",
-  "mls-regular": "MLS – League Badge",
-  "mls-champions": "MLS – Champions (MLS Cup Holders)",
-  "brasileirao-regular": "Brasileirão – League Badge",
-  "brasileirao-champions": "Brasileirão – Champion",
-  "super-lig-regular": "Süper Lig – League Badge",
-  "super-lig-champions": "Süper Lig – Champion",
-  "spl-saudi-regular": "Saudi Pro League – League Badge",
-  "spl-saudi-champions": "Saudi Pro League – Champion",
-  "ucl-regular": "UEFA Champions League – Starball Badge",
-  "ucl-winners": "UEFA Champions League – Winners Badge",
-  "uel-regular": "UEFA Europa League – Badge",
-  "uel-winners": "UEFA Europa League – Winners Badge",
-  "uecl-regular": "UEFA Europa Conference League – Badge",
-  "uecl-winners": "UEFA Europa Conference League – Winners Badge",
-  "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
-  "intercontinental-cup-champions": "FIFA Intercontinental Cup – Champions Badge",
+const BADGE_LABEL_KEYS: Record<string, string> = {
+  "premier-league-regular": "premierLeagueRegular",
+  "premier-league-champions": "premierLeagueChampions",
+  "la-liga-regular": "laLigaRegular",
+  "la-liga-champions": "laLigaChampions",
+  "serie-a-regular": "serieARegular",
+  "serie-a-scudetto": "serieAScudetto",
+  "bundesliga-regular": "bundesligaRegular",
+  "bundesliga-champions": "bundesligaChampions",
+  "ligue1-regular": "ligue1Regular",
+  "ligue1-champions": "ligue1Champions",
+  "primeira-liga-regular": "primeiraLigaRegular",
+  "primeira-liga-champions": "primeiraLigaChampions",
+  "eredivisie-regular": "eredivisieRegular",
+  "eredivisie-champions": "eredivisieChampions",
+  "scottish-premiership-regular": "scottishPremiershipRegular",
+  "scottish-premiership-champions": "scottishPremiershipChampions",
+  "mls-regular": "mlsRegular",
+  "mls-champions": "mlsChampions",
+  "brasileirao-regular": "brasileiraoRegular",
+  "brasileirao-champions": "brasileiraoChampions",
+  "super-lig-regular": "superLigRegular",
+  "super-lig-champions": "superLigChampions",
+  "spl-saudi-regular": "splSaudiRegular",
+  "spl-saudi-champions": "splSaudiChampions",
+  "ucl-regular": "uclRegular",
+  "ucl-winners": "uclWinners",
+  "uel-regular": "uelRegular",
+  "uel-winners": "uelWinners",
+  "uecl-regular": "ueclRegular",
+  "uecl-winners": "ueclWinners",
+  "club-world-cup-champions": "clubWorldCupChampions",
+  "intercontinental-cup-champions": "intercontinentalCupChampions",
 };
 
-function humanizeBadge(value: string) {
-  const key = String(value ?? "").trim();
-  if (!key) return "";
-  if (BADGE_LABELS[key]) return BADGE_LABELS[key];
-  return key
+function fallbackHumanize(value: string) {
+  return value
     .replace(/[-_]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function humanizeBadge(
+  value: string,
+  t: (key: string) => string
+) {
+  const key = String(value ?? "").trim();
+  if (!key) return "";
+
+  const translationKey = BADGE_LABEL_KEYS[key];
+  if (translationKey) return t(`badges.${translationKey}`);
+
+  return fallbackHumanize(key);
 }
 
 /* ----------------------------- shipping ----------------------------- */
@@ -206,7 +224,6 @@ function pickStr(o: unknown, keys: string[]): string | null {
   return null;
 }
 
-/* ✅ badges split (fix) */
 function splitBadgesString(s: string): string[] {
   const raw = String(s ?? "").trim();
   if (!raw) return [];
@@ -336,21 +353,75 @@ function deriveItemDetails(it: OrderItemRow) {
   return { size, personalization, badges: allBadges, optionsPairs };
 }
 
-function prettyKey(k: string) {
+function prettyKey(
+  k: string,
+  t: (key: string) => string
+) {
   const map: Record<string, string> = {
-    custName: "Name",
-    custNumber: "Number",
-    nameOnShirt: "Name",
-    numberOnShirt: "Number",
-    playerName: "Name",
-    playerNumber: "Number",
+    custName: "name",
+    custNumber: "number",
+    nameOnShirt: "name",
+    numberOnShirt: "number",
+    playerName: "name",
+    playerNumber: "number",
   };
-  if (map[k]) return map[k];
+
+  if (map[k]) return t(`fields.${map[k]}`);
 
   return k
     .replace(/[_-]+/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function formatStatus(
+  status: string,
+  t: (key: string) => string
+) {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  const map: Record<string, string> = {
+    pending: "pending",
+    paid: "paid",
+    processing: "processing",
+    shipped: "shipped",
+    delivered: "delivered",
+    cancelled: "cancelled",
+    canceled: "cancelled",
+    refunded: "refunded",
+    failed: "failed",
+  };
+
+  const key = map[normalized];
+  if (key) return t(`status.${key}`);
+
+  return normalized
+    ? normalized.replace(/\b\w/g, (m) => m.toUpperCase())
+    : t("status.unknown");
+}
+
+function formatPaymentStatus(
+  paymentStatus: string,
+  t: (key: string) => string
+) {
+  const normalized = String(paymentStatus || "").trim().toLowerCase();
+
+  const map: Record<string, string> = {
+    pending: "pending",
+    paid: "paid",
+    processing: "processing",
+    failed: "failed",
+    refunded: "refunded",
+    cancelled: "cancelled",
+    canceled: "cancelled",
+  };
+
+  const key = map[normalized];
+  if (key) return t(`status.${key}`);
+
+  return normalized
+    ? normalized.replace(/\b\w/g, (m) => m.toUpperCase())
+    : t("status.unknown");
 }
 
 /* ========================= Types (local DTO to fix TS) ========================= */
@@ -367,7 +438,7 @@ type OrderItemRow = {
   id: string;
   name: string;
   qty: number;
-  unitPrice: number | null; // may exist in db
+  unitPrice: number | null;
   totalPrice: number | null;
   image: string | null;
   snapshotJson: unknown;
@@ -405,7 +476,6 @@ type OrderRow = {
 /* ----------------------------- data load ----------------------------- */
 
 async function loadOrder(id: string): Promise<OrderRow | null> {
-  // ⚠️ use select and then cast to our DTO to avoid prisma/TS mismatch
   const order = await prisma.order.findUnique({
     where: { id },
     select: {
@@ -439,7 +509,7 @@ async function loadOrder(id: string): Promise<OrderRow | null> {
           id: true,
           name: true,
           qty: true,
-          unitPrice: true, // se no teu schema existir, ótimo
+          unitPrice: true,
           totalPrice: true,
           image: true,
           snapshotJson: true,
@@ -465,9 +535,12 @@ async function loadOrder(id: string): Promise<OrderRow | null> {
 export default async function OrderPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale, id } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("OrderPage");
   const order = await loadOrder(id);
 
   if (!order) notFound();
@@ -493,15 +566,17 @@ export default async function OrderPage({
     <main className="container-fw pt-12 pb-20">
       <div className="mb-6">
         <Link href="/" className="text-sm text-blue-600 hover:underline">
-          ← Back to store
+          ← {t("backToStore")}
         </Link>
       </div>
 
       <div className="rounded-2xl border bg-white p-4 sm:p-6 shadow-sm space-y-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="text-2xl font-bold">Order details</h1>
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>
-            {order.status}
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}
+          >
+            {formatStatus(order.status, t)}
           </span>
         </div>
 
@@ -509,12 +584,12 @@ export default async function OrderPage({
           {/* Main */}
           <section className="md:col-span-2 space-y-4">
             <div className="rounded-xl border">
-              <div className="border-b px-4 py-3 font-semibold">Items</div>
+              <div className="border-b px-4 py-3 font-semibold">{t("itemsTitle")}</div>
 
               <ul className="divide-y">
                 {order.items.map((it: OrderItemRow) => {
                   const img = resolveItemImage(it);
-                  const title = it.name || it.product?.name || "Item";
+                  const title = it.name || it.product?.name || t("itemFallback");
                   const productHref = it.product?.slug ? `/products/${it.product.slug}` : null;
 
                   const details = deriveItemDetails(it);
@@ -549,14 +624,16 @@ export default async function OrderPage({
                             </div>
 
                             <div className="text-sm text-gray-600">
-                              Qty: {it.qty}
+                              {t("qtyLabel")}: {it.qty}
                               <span className="mx-2">·</span>
-                              {money(unit, currency)} each
+                              {money(unit, currency, locale)} {t("each")}
                             </div>
                           </div>
                         </div>
 
-                        <div className="shrink-0 font-semibold">{money(it.totalPrice ?? 0, currency)}</div>
+                        <div className="shrink-0 font-semibold">
+                          {money(it.totalPrice ?? 0, currency, locale)}
+                        </div>
                       </div>
 
                       {(details.size ||
@@ -571,15 +648,22 @@ export default async function OrderPage({
                             <div className="text-sm text-gray-700 space-y-0.5">
                               {details.size ? (
                                 <div>
-                                  <span className="text-gray-500">Size:</span> {details.size}
+                                  <span className="text-gray-500">{t("sizeLabel")}:</span>{" "}
+                                  {String(details.size)}
                                 </div>
                               ) : null}
 
                               {details.personalization ? (
                                 <div>
-                                  <span className="text-gray-500">Personalization:</span>{" "}
-                                  {details.personalization.name ? details.personalization.name : "—"}
-                                  {details.personalization.number ? ` · #${details.personalization.number}` : ""}
+                                  <span className="text-gray-500">
+                                    {t("personalizationLabel")}:
+                                  </span>{" "}
+                                  {details.personalization.name
+                                    ? details.personalization.name
+                                    : t("emptyValue")}
+                                  {details.personalization.number
+                                    ? ` · #${details.personalization.number}`
+                                    : ""}
                                 </div>
                               ) : null}
                             </div>
@@ -593,7 +677,10 @@ export default async function OrderPage({
                                   className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
                                   title={p.k}
                                 >
-                                  <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
+                                  <span className="text-gray-500">
+                                    {prettyKey(p.k, t)}:
+                                  </span>{" "}
+                                  {p.v}
                                 </span>
                               ))}
                             </div>
@@ -601,7 +688,9 @@ export default async function OrderPage({
 
                           {details.badges.length > 0 && (
                             <div>
-                              <div className="text-xs font-semibold text-gray-500 mb-1">Badges:</div>
+                              <div className="text-xs font-semibold text-gray-500 mb-1">
+                                {t("badgesLabel")}:
+                              </div>
                               <div className="flex flex-wrap gap-2">
                                 {details.badges.map((b, idx) => (
                                   <span
@@ -609,7 +698,7 @@ export default async function OrderPage({
                                     className="text-xs px-2 py-1 rounded-full border bg-white max-w-full break-words"
                                     title={b}
                                   >
-                                    {humanizeBadge(b)}
+                                    {humanizeBadge(b, t)}
                                   </span>
                                 ))}
                               </div>
@@ -624,23 +713,23 @@ export default async function OrderPage({
             </div>
 
             <div className="rounded-xl border p-4">
-              <h2 className="font-semibold">Summary</h2>
+              <h2 className="font-semibold">{t("summaryTitle")}</h2>
               <div className="mt-3 space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{money(order.subtotal ?? itemsSubtotal, currency)}</span>
+                  <span>{t("subtotal")}</span>
+                  <span>{money(order.subtotal ?? itemsSubtotal, currency, locale)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>{money(order.shipping ?? 0, currency)}</span>
+                  <span>{t("shipping")}</span>
+                  <span>{money(order.shipping ?? 0, currency, locale)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tax</span>
-                  <span>{money(order.tax ?? 0, currency)}</span>
+                  <span>{t("tax")}</span>
+                  <span>{money(order.tax ?? 0, currency, locale)}</span>
                 </div>
                 <div className="mt-2 flex justify-between border-t pt-2 font-bold">
-                  <span>Total</span>
-                  <span>{money(totalCents, currency)}</span>
+                  <span>{t("total")}</span>
+                  <span>{money(totalCents, currency, locale)}</span>
                 </div>
               </div>
             </div>
@@ -649,34 +738,39 @@ export default async function OrderPage({
           {/* Sidebar */}
           <aside className="space-y-4">
             <div className="rounded-xl border p-4">
-              <h2 className="font-semibold">Meta</h2>
+              <h2 className="font-semibold">{t("metaTitle")}</h2>
               <div className="mt-2 text-sm text-gray-700 space-y-1">
                 <div>
-                  <span className="text-gray-500">ID:</span>{" "}
+                  <span className="text-gray-500">{t("idLabel")}:</span>{" "}
                   <span className="font-mono break-all">{order.id}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Created:</span>{" "}
-                  {new Date(order.createdAt).toLocaleString()}
+                  <span className="text-gray-500">{t("createdLabel")}:</span>{" "}
+                  {new Date(order.createdAt).toLocaleString(
+                    locale === "pt" ? "pt-PT" : "en"
+                  )}
                 </div>
 
                 {order.paidAt ? (
                   <div>
-                    <span className="text-gray-500">Paid at:</span>{" "}
-                    {new Date(order.paidAt).toLocaleString()}
+                    <span className="text-gray-500">{t("paidAtLabel")}:</span>{" "}
+                    {new Date(order.paidAt).toLocaleString(
+                      locale === "pt" ? "pt-PT" : "en"
+                    )}
                   </div>
                 ) : null}
 
                 {order.paymentStatus ? (
                   <div>
-                    <span className="text-gray-500">Payment:</span> {order.paymentStatus}
+                    <span className="text-gray-500">{t("paymentLabel")}:</span>{" "}
+                    {formatPaymentStatus(order.paymentStatus, t)}
                   </div>
                 ) : null}
               </div>
             </div>
 
             <div className="rounded-xl border p-4">
-              <h2 className="font-semibold">Shipping</h2>
+              <h2 className="font-semibold">{t("shippingTitle")}</h2>
               {ship ? (
                 <div className="mt-2 text-sm text-gray-700 space-y-1">
                   {ship.name && <div>{ship.name}</div>}
@@ -696,18 +790,18 @@ export default async function OrderPage({
                   )}
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-gray-500">No shipping info.</p>
+                <p className="mt-2 text-sm text-gray-500">{t("noShippingInfo")}</p>
               )}
             </div>
 
             <div className="rounded-xl border p-4">
-              <h2 className="font-semibold">Actions</h2>
+              <h2 className="font-semibold">{t("actionsTitle")}</h2>
               <div className="mt-2 flex flex-col gap-2">
                 <Link href="/" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
-                  Continue shopping
+                  {t("continueShopping")}
                 </Link>
                 <Link href="/account" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
-                  Go to my account
+                  {t("goToMyAccount")}
                 </Link>
               </div>
             </div>
@@ -723,14 +817,19 @@ export default async function OrderPage({
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale, id } = await params;
+  const t = await getTranslations({ locale, namespace: "OrderPage" });
+
   const order = await prisma.order.findUnique({
     where: { id },
     select: { id: true, status: true },
   });
 
-  const title = order ? `Order ${order.id} — ${order.status}` : "Order details";
+  const title = order
+    ? `${t("metadataTitlePrefix")} ${order.id} — ${formatStatus(order.status, t)}`
+    : t("metadataFallbackTitle");
+
   return { title };
 }

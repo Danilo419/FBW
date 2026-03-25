@@ -1,6 +1,6 @@
 // src/app/[locale]/admin/(panel)/orders/page.tsx
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import { ProductChannel, type Prisma } from "@prisma/client";
 import { Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import ResolveCheckbox from "@/components/admin/ResolveCheckbox";
 import { revalidatePath } from "next/cache";
@@ -30,6 +30,7 @@ function normalizeTotal(o: any): number {
       typeof o.subtotal === "number" ||
       typeof o.shipping === "number" ||
       typeof o.tax === "number";
+
     if (!hasParts && Number.isInteger(t) && t % 100 === 0) {
       return t / 100;
     }
@@ -37,6 +38,7 @@ function normalizeTotal(o: any): number {
     const parts = [o.subtotal, o.shipping, o.tax].filter(
       (x) => typeof x === "number"
     ) as number[];
+
     const looksLikeCents =
       parts.length > 0 &&
       parts.filter((p) => p >= 1000 || (Number.isInteger(p) && p % 100 === 0)).length >=
@@ -125,12 +127,35 @@ const paidWhere: Prisma.OrderWhereInput = {
   ],
 };
 
+/**
+ * Excluir orders que tenham pelo menos 1 item de stock em Portugal.
+ *
+ * Neste projeto o channel correto é:
+ * ProductChannel.PT_STOCK_CTT
+ */
+const excludePtStockWhere: Prisma.OrderWhereInput = {
+  NOT: {
+    items: {
+      some: {
+        product: {
+          channel: ProductChannel.PT_STOCK_CTT,
+        },
+      },
+    },
+  },
+};
+
+const ordersWhere: Prisma.OrderWhereInput = {
+  AND: [paidWhere, excludePtStockWhere],
+};
+
 /* ---------- select ---------- */
 const orderSelect = {
   id: true,
   status: true,
   paymentStatus: true,
   paidAt: true,
+  createdAt: true,
 
   currency: true,
   subtotal: true,
@@ -153,32 +178,36 @@ async function deleteOrderAction(formData: FormData): Promise<void> {
 
   const orderId = String(formData.get("orderId") ?? "").trim();
   const page = String(formData.get("page") ?? "1").trim();
+  const locale = String(formData.get("locale") ?? "pt").trim();
 
   if (!orderId) return;
 
   await prisma.order.delete({ where: { id: orderId } });
 
-  revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/${locale}/admin/orders`);
+  revalidatePath(`/${locale}/admin/orders/${orderId}`);
 
-  redirect(`/admin/orders?page=${encodeURIComponent(page || "1")}`);
+  redirect(`/${locale}/admin/orders?page=${encodeURIComponent(page || "1")}`);
 }
 
 /* ---------- page ---------- */
 type PageProps = {
+  params: Promise<{ locale: string }>;
   searchParams?: Promise<{ page?: string }>;
 };
 
-export default async function OrdersPage({ searchParams }: PageProps) {
+export default async function OrdersPage({ params, searchParams }: PageProps) {
+  const { locale } = await params;
   const sp = (await searchParams) ?? {};
+
   const rawPage = (sp.page ?? "1").toString();
   const currentPage = Math.max(1, Number.parseInt(rawPage, 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
   const [totalCount, orders] = await Promise.all([
-    prisma.order.count({ where: paidWhere }),
+    prisma.order.count({ where: ordersWhere }),
     prisma.order.findMany({
-      where: paidWhere,
+      where: ordersWhere,
       orderBy: { createdAt: "desc" },
       skip,
       take: PAGE_SIZE,
@@ -189,7 +218,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   if (currentPage > totalPages) {
-    redirect(`/admin/orders?page=${totalPages}`);
+    redirect(`/${locale}/admin/orders?page=${totalPages}`);
   }
 
   const windowSize = 7;
@@ -206,7 +235,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
       <header className="space-y-1">
         <h1 className="text-2xl font-extrabold md:text-3xl">Orders</h1>
         <p className="text-sm text-gray-500">
-          Showing only paid orders. ({totalCount} total)
+          Showing only paid orders without Portugal stock items. ({totalCount} total)
         </p>
       </header>
 
@@ -260,6 +289,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                       <div className="flex justify-end gap-2">
                         <Link
                           href={`/admin/orders/${ord.id}`}
+                          locale={locale}
                           className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                           aria-label={`View order ${ord.id}`}
                           title="View details"
@@ -271,6 +301,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         <form action={deleteOrderAction}>
                           <input type="hidden" name="orderId" value={ord.id} />
                           <input type="hidden" name="page" value={String(currentPage)} />
+                          <input type="hidden" name="locale" value={locale} />
                           <button
                             type="submit"
                             className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100"
@@ -300,6 +331,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
             <nav className="flex items-center gap-1">
               <Link
                 href={`/admin/orders?page=${Math.max(1, currentPage - 1)}`}
+                locale={locale}
                 aria-disabled={currentPage === 1}
                 className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs hover:bg-gray-50 ${
                   currentPage === 1 ? "pointer-events-none opacity-50" : ""
@@ -314,6 +346,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 <>
                   <Link
                     href="/admin/orders?page=1"
+                    locale={locale}
                     className="inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                   >
                     1
@@ -326,6 +359,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 <Link
                   key={p}
                   href={`/admin/orders?page=${p}`}
+                  locale={locale}
                   className={`inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50 ${
                     p === currentPage ? "border-gray-900 bg-gray-900 text-white hover:bg-gray-900" : ""
                   }`}
@@ -340,6 +374,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                   {end < totalPages - 1 && <span className="px-1 text-gray-400">…</span>}
                   <Link
                     href={`/admin/orders?page=${totalPages}`}
+                    locale={locale}
                     className="inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
                   >
                     {totalPages}
@@ -349,6 +384,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
 
               <Link
                 href={`/admin/orders?page=${Math.min(totalPages, currentPage + 1)}`}
+                locale={locale}
                 aria-disabled={currentPage === totalPages}
                 className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs hover:bg-gray-50 ${
                   currentPage === totalPages ? "pointer-events-none opacity-50" : ""

@@ -22,6 +22,7 @@ export default async function AdminPtStockOrdersPage() {
   const orders = await prisma.order.findMany({
     where: {
       channel: "PT_STOCK_CTT" as any,
+      status: "paid",
     },
     include: {
       items: {
@@ -64,13 +65,13 @@ export default async function AdminPtStockOrdersPage() {
           </div>
 
           <div className="text-xs text-gray-500">
-            Only orders from the <code>PT_STOCK_CTT</code> channel.
+            Only <code>paid</code> orders from <code>PT_STOCK_CTT</code>.
           </div>
         </div>
 
         {orders.length === 0 ? (
           <div className="p-8 text-sm text-gray-600">
-            There are no PT Stock orders yet.
+            There are no paid PT Stock orders yet.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -107,8 +108,8 @@ export default async function AdminPtStockOrdersPage() {
                         <div className="font-semibold text-gray-900">
                           #{order.id.slice(0, 8)}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {order.paymentStatus || "pending"}
+                        <div className="text-xs text-emerald-600 font-semibold">
+                          paid
                         </div>
                       </td>
 

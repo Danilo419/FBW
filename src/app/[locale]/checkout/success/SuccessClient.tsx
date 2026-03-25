@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 type OrderItem = {
   id: string;
@@ -46,54 +46,153 @@ type ApiResponse =
   | { error: string }
   | Record<string, any>;
 
-function moneyCents(cents: number | null | undefined, currency = "EUR") {
+function moneyCents(cents: number | null | undefined, currency = "EUR", locale = "pt-PT") {
   const n = typeof cents === "number" ? cents : 0;
-  return (n / 100).toLocaleString(undefined, { style: "currency", currency });
+  return (n / 100).toLocaleString(locale, { style: "currency", currency });
 }
 
 const FINAL_STATUSES = new Set(["paid", "shipped", "delivered"]);
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* ========================= Badge labels ========================= */
-const BADGE_LABELS: Record<string, string> = {
-  "premier-league-regular": "Premier League – League Badge",
-  "premier-league-champions": "Premier League – Champions (Gold)",
-  "la-liga-regular": "La Liga – League Badge",
-  "la-liga-champions": "La Liga – Champion",
-  "serie-a-regular": "Serie A – League Badge",
-  "serie-a-scudetto": "Italy – Scudetto (Serie A Champion)",
-  "bundesliga-regular": "Bundesliga – League Badge",
-  "bundesliga-champions": "Bundesliga – Champion (Meister Badge)",
-  "ligue1-regular": "Ligue 1 – League Badge",
-  "ligue1-champions": "Ligue 1 – Champion",
-  "primeira-liga-regular": "Primeira Liga – League Badge",
-  "primeira-liga-champions": "Primeira Liga – Champion",
-  "eredivisie-regular": "Eredivisie – League Badge",
-  "eredivisie-champions": "Eredivisie – Champion",
-  "scottish-premiership-regular": "Scottish Premiership – League Badge",
-  "scottish-premiership-champions": "Scottish Premiership – Champion",
-  "mls-regular": "MLS – League Badge",
-  "mls-champions": "MLS – Champions (MLS Cup Holders)",
-  "brasileirao-regular": "Brasileirão – League Badge",
-  "brasileirao-champions": "Brasileirão – Champion",
-  "super-lig-regular": "Süper Lig – League Badge",
-  "super-lig-champions": "Süper Lig – Champion",
-  "spl-saudi-regular": "Saudi Pro League – League Badge",
-  "spl-saudi-champions": "Saudi Pro League – Champion",
-  "ucl-regular": "UEFA Champions League – Starball Badge",
-  "ucl-winners": "UEFA Champions League – Winners Badge",
-  "uel-regular": "UEFA Europa League – Badge",
-  "uel-winners": "UEFA Europa League – Winners Badge",
-  "uecl-regular": "UEFA Europa Conference League – Badge",
-  "uecl-winners": "UEFA Europa Conference League – Winners Badge",
-  "club-world-cup-champions": "FIFA Club World Cup – Champions Badge",
-  "intercontinental-cup-champions": "FIFA Intercontinental Cup – Champions Badge",
+const BADGE_LABELS: Record<string, { en: string; pt: string }> = {
+  "premier-league-regular": {
+    en: "Premier League – League Badge",
+    pt: "Premier League – Emblema da Liga",
+  },
+  "premier-league-champions": {
+    en: "Premier League – Champions (Gold)",
+    pt: "Premier League – Campeão (Dourado)",
+  },
+  "la-liga-regular": {
+    en: "La Liga – League Badge",
+    pt: "La Liga – Emblema da Liga",
+  },
+  "la-liga-champions": {
+    en: "La Liga – Champion",
+    pt: "La Liga – Campeão",
+  },
+  "serie-a-regular": {
+    en: "Serie A – League Badge",
+    pt: "Serie A – Emblema da Liga",
+  },
+  "serie-a-scudetto": {
+    en: "Italy – Scudetto (Serie A Champion)",
+    pt: "Itália – Scudetto (Campeão da Serie A)",
+  },
+  "bundesliga-regular": {
+    en: "Bundesliga – League Badge",
+    pt: "Bundesliga – Emblema da Liga",
+  },
+  "bundesliga-champions": {
+    en: "Bundesliga – Champion (Meister Badge)",
+    pt: "Bundesliga – Campeão (Emblema Meister)",
+  },
+  "ligue1-regular": {
+    en: "Ligue 1 – League Badge",
+    pt: "Ligue 1 – Emblema da Liga",
+  },
+  "ligue1-champions": {
+    en: "Ligue 1 – Champion",
+    pt: "Ligue 1 – Campeão",
+  },
+  "primeira-liga-regular": {
+    en: "Primeira Liga – League Badge",
+    pt: "Primeira Liga – Emblema da Liga",
+  },
+  "primeira-liga-champions": {
+    en: "Primeira Liga – Champion",
+    pt: "Primeira Liga – Campeão",
+  },
+  "eredivisie-regular": {
+    en: "Eredivisie – League Badge",
+    pt: "Eredivisie – Emblema da Liga",
+  },
+  "eredivisie-champions": {
+    en: "Eredivisie – Champion",
+    pt: "Eredivisie – Campeão",
+  },
+  "scottish-premiership-regular": {
+    en: "Scottish Premiership – League Badge",
+    pt: "Scottish Premiership – Emblema da Liga",
+  },
+  "scottish-premiership-champions": {
+    en: "Scottish Premiership – Champion",
+    pt: "Scottish Premiership – Campeão",
+  },
+  "mls-regular": {
+    en: "MLS – League Badge",
+    pt: "MLS – Emblema da Liga",
+  },
+  "mls-champions": {
+    en: "MLS – Champions (MLS Cup Holders)",
+    pt: "MLS – Campeões (Vencedores da MLS Cup)",
+  },
+  "brasileirao-regular": {
+    en: "Brasileirão – League Badge",
+    pt: "Brasileirão – Emblema da Liga",
+  },
+  "brasileirao-champions": {
+    en: "Brasileirão – Champion",
+    pt: "Brasileirão – Campeão",
+  },
+  "super-lig-regular": {
+    en: "Süper Lig – League Badge",
+    pt: "Süper Lig – Emblema da Liga",
+  },
+  "super-lig-champions": {
+    en: "Süper Lig – Champion",
+    pt: "Süper Lig – Campeão",
+  },
+  "spl-saudi-regular": {
+    en: "Saudi Pro League – League Badge",
+    pt: "Saudi Pro League – Emblema da Liga",
+  },
+  "spl-saudi-champions": {
+    en: "Saudi Pro League – Champion",
+    pt: "Saudi Pro League – Campeão",
+  },
+  "ucl-regular": {
+    en: "UEFA Champions League – Starball Badge",
+    pt: "UEFA Champions League – Emblema Starball",
+  },
+  "ucl-winners": {
+    en: "UEFA Champions League – Winners Badge",
+    pt: "UEFA Champions League – Emblema de Vencedor",
+  },
+  "uel-regular": {
+    en: "UEFA Europa League – Badge",
+    pt: "UEFA Europa League – Emblema",
+  },
+  "uel-winners": {
+    en: "UEFA Europa League – Winners Badge",
+    pt: "UEFA Europa League – Emblema de Vencedor",
+  },
+  "uecl-regular": {
+    en: "UEFA Europa Conference League – Badge",
+    pt: "UEFA Europa Conference League – Emblema",
+  },
+  "uecl-winners": {
+    en: "UEFA Europa Conference League – Winners Badge",
+    pt: "UEFA Europa Conference League – Emblema de Vencedor",
+  },
+  "club-world-cup-champions": {
+    en: "FIFA Club World Cup – Champions Badge",
+    pt: "FIFA Club World Cup – Emblema de Campeão",
+  },
+  "intercontinental-cup-champions": {
+    en: "FIFA Intercontinental Cup – Champions Badge",
+    pt: "FIFA Intercontinental Cup – Emblema de Campeão",
+  },
 };
 
-function humanizeBadge(value: string) {
+function humanizeBadge(value: string, locale: "pt" | "en") {
   const key = String(value ?? "").trim();
   if (!key) return "";
-  if (BADGE_LABELS[key]) return BADGE_LABELS[key];
+
+  const mapped = BADGE_LABELS[key];
+  if (mapped) return mapped[locale];
+
   return key
     .replace(/[-_]/g, " ")
     .replace(/\s+/g, " ")
@@ -314,16 +413,18 @@ function extractPersonalization(
   return { name, number };
 }
 
-function prettyKey(k: string) {
+function prettyKey(k: string, t: ReturnType<typeof useTranslations>) {
   const map: Record<string, string> = {
-    custName: "Name",
-    custNumber: "Number",
-    nameOnShirt: "Name",
-    numberOnShirt: "Number",
-    playerName: "Name",
-    playerNumber: "Number",
+    custName: t("optionLabels.name"),
+    custNumber: t("optionLabels.number"),
+    nameOnShirt: t("optionLabels.name"),
+    numberOnShirt: t("optionLabels.number"),
+    playerName: t("optionLabels.name"),
+    playerNumber: t("optionLabels.number"),
   };
+
   if (map[k]) return map[k];
+
   return k
     .replace(/[_-]+/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
@@ -391,6 +492,10 @@ function withLocale(locale: string, path: string) {
   return `/${safeLocale}${cleanPath}`;
 }
 
+function getIntlLocale(locale: "pt" | "en") {
+  return locale === "pt" ? "pt-PT" : "en-US";
+}
+
 /* ========================= Component ========================= */
 
 export default function SuccessClient() {
@@ -398,6 +503,8 @@ export default function SuccessClient() {
   const router = useRouter();
   const rawLocale = useLocale();
   const locale = normalizeLocale(rawLocale);
+  const intlLocale = getIntlLocale(locale);
+  const t = useTranslations("SuccessPage");
   const confirmingRef = useRef(false);
 
   const { orderId, provider, sessionId } = useMemo(() => {
@@ -408,143 +515,153 @@ export default function SuccessClient() {
   }, [params]);
 
   const [loading, setLoading] = useState(true);
-  const [loadingMsg, setLoadingMsg] = useState("Loading your order…");
+  const [loadingMsg, setLoadingMsg] = useState(t("loadingOrder"));
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const confirmStripe = useCallback(async (oid: string, sid: string) => {
-    if (!oid || !sid || confirmingRef.current) return;
-    confirmingRef.current = true;
-    setLoading(true);
-    setLoadingMsg("Finalizing your payment…");
+  useEffect(() => {
+    setLoadingMsg(t("loadingOrder"));
+  }, [t]);
 
-    const MAX_TRIES = 6;
+  const confirmStripe = useCallback(
+    async (oid: string, sid: string) => {
+      if (!oid || !sid || confirmingRef.current) return;
+      confirmingRef.current = true;
+      setLoading(true);
+      setLoadingMsg(t("finalizingPayment"));
 
-    for (let i = 0; i < MAX_TRIES; i++) {
-      try {
-        const res = await fetch(
-          `/api/checkout/stripe/confirm?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
-          { method: "POST" }
-        );
+      const MAX_TRIES = 6;
 
-        const json: any = await res.json().catch(() => ({}));
-
-        if (res.ok && json?.ok) return true;
-
-        if (res.status === 202 || json?.status === "processing") {
-          await wait(1500);
-          continue;
-        }
-
-        setError(json?.error || "Could not confirm the payment.");
-        return false;
-      } catch {
-        await wait(1200);
-      }
-    }
-
-    return false;
-  }, []);
-
-  const fetchOrder = useCallback(async (oid: string, sid: string) => {
-    if (!oid) {
-      setLoading(false);
-      setOrder(null);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setLoadingMsg("Loading your order…");
-
-    try {
-      if (sid) {
-        const MAX_TRIES = 8;
-        let lastOrder: Order | null = null;
-
-        for (let i = 0; i < MAX_TRIES; i++) {
+      for (let i = 0; i < MAX_TRIES; i++) {
+        try {
           const res = await fetch(
-            `/api/checkout/success/order?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
-            { method: "GET", cache: "no-store" }
+            `/api/checkout/stripe/confirm?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+            { method: "POST" }
           );
 
-          if (res.status === 202) {
-            setLoadingMsg("Finalizing your payment…");
-            await wait(1200);
+          const json: any = await res.json().catch(() => ({}));
+
+          if (res.ok && json?.ok) return true;
+
+          if (res.status === 202 || json?.status === "processing") {
+            await wait(1500);
             continue;
           }
 
-          const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
+          setError(json?.error || t("errors.couldNotConfirmPayment"));
+          return false;
+        } catch {
+          await wait(1200);
+        }
+      }
 
-          if (!res.ok) {
-            setError((json as any)?.error || "Could not load the order.");
-            setOrder(null);
+      return false;
+    },
+    [t]
+  );
+
+  const fetchOrder = useCallback(
+    async (oid: string, sid: string) => {
+      if (!oid) {
+        setLoading(false);
+        setOrder(null);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      setLoadingMsg(t("loadingOrder"));
+
+      try {
+        if (sid) {
+          const MAX_TRIES = 8;
+          let lastOrder: Order | null = null;
+
+          for (let i = 0; i < MAX_TRIES; i++) {
+            const res = await fetch(
+              `/api/checkout/success/order?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+              { method: "GET", cache: "no-store" }
+            );
+
+            if (res.status === 202) {
+              setLoadingMsg(t("finalizingPayment"));
+              await wait(1200);
+              continue;
+            }
+
+            const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
+
+            if (!res.ok) {
+              setError((json as any)?.error || t("errors.couldNotLoadOrder"));
+              setOrder(null);
+              return;
+            }
+
+            const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
+
+            if (!o?.id) {
+              setError(t("errors.orderNotFound"));
+              setOrder(null);
+              return;
+            }
+
+            lastOrder = o;
+            setOrder(o);
+
+            if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
+              await wait(900);
+              continue;
+            }
+
             return;
           }
 
-          const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
-
-          if (!o?.id) {
-            setError("Order not found.");
-            setOrder(null);
-            return;
-          }
-
-          lastOrder = o;
-          setOrder(o);
-
-          if (!FINAL_STATUSES.has((o.status || "").toLowerCase())) {
-            await wait(900);
-            continue;
+          if (!lastOrder) {
+            setError(t("errors.paymentStillProcessing"));
           }
 
           return;
         }
 
-        if (!lastOrder) {
-          setError("Payment is still processing. Please check your order in your account in a moment.");
-        }
-
-        return;
-      }
-
-      let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, {
+        let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
           method: "GET",
           cache: "no-store",
         });
-      }
 
-      const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
+        if (!res.ok) {
+          res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, {
+            method: "GET",
+            cache: "no-store",
+          });
+        }
 
-      if (!res.ok) {
-        setError((json as any)?.error || "Could not load the order.");
+        const json: ApiResponse = await res.json().catch(() => ({} as ApiResponse));
+
+        if (!res.ok) {
+          setError((json as any)?.error || t("errors.couldNotLoadOrder"));
+          setOrder(null);
+          return;
+        }
+
+        const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
+
+        if (!o?.id) {
+          setError(t("errors.orderNotFound"));
+          setOrder(null);
+          return;
+        }
+
+        setOrder(o);
+      } catch {
+        setError(t("errors.networkErrorLoadingOrder"));
         setOrder(null);
-        return;
+      } finally {
+        setLoading(false);
+        setLoadingMsg(t("loadingOrder"));
       }
-
-      const o: Order | undefined = (json as any)?.order ?? (json as any)?.data?.order;
-
-      if (!o?.id) {
-        setError("Order not found.");
-        setOrder(null);
-        return;
-      }
-
-      setOrder(o);
-    } catch {
-      setError("Network error while loading the order.");
-      setOrder(null);
-    } finally {
-      setLoading(false);
-      setLoadingMsg("Loading your order…");
-    }
-  }, []);
+    },
+    [t]
+  );
 
   useEffect(() => {
     let alive = true;
@@ -594,13 +711,13 @@ export default function SuccessClient() {
             onClick={() => router.replace(withLocale(locale, "/account"))}
             className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
-            Go to my account
+            {t("goToMyAccount")}
           </button>
           <button
             onClick={() => router.replace(withLocale(locale, "/"))}
             className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
-            Continue shopping
+            {t("continueShopping")}
           </button>
         </div>
       </div>
@@ -610,16 +727,18 @@ export default function SuccessClient() {
   return (
     <div className="space-y-4 rounded-2xl border bg-white p-5">
       <p className="text-sm text-gray-800">
-        Your payment was successful
-        {provider ? ` via ${provider}` : ""}.
+        {t("paymentSuccessful")}
+        {provider ? ` ${t("via")} ${provider}` : ""}
+        .
       </p>
 
       {order ? (
         <>
           <div className="text-sm">
-            <div className="text-gray-500">Order</div>
+            <div className="text-gray-500">{t("order")}</div>
             <div className="break-all font-mono">{order.id}</div>
-            <div className="mt-1 text-gray-500">Status</div>
+
+            <div className="mt-1 text-gray-500">{t("status")}</div>
             <div className="font-semibold capitalize">{order.status}</div>
           </div>
 
@@ -643,14 +762,16 @@ export default function SuccessClient() {
                       <div className="min-w-0">
                         <div className="truncate font-medium">{it.name}</div>
                         <div className="text-sm text-gray-600">
-                          Qty: {it.qty}
+                          {t("qty")}: {it.qty}
                           <span className="mx-2">·</span>
-                          {moneyCents(unit, currency)} each
+                          {moneyCents(unit, currency, intlLocale)} {t("each")}
                         </div>
                       </div>
                     </div>
 
-                    <div className="shrink-0 font-semibold">{moneyCents(it.totalPrice, currency)}</div>
+                    <div className="shrink-0 font-semibold">
+                      {moneyCents(it.totalPrice, currency, intlLocale)}
+                    </div>
                   </div>
 
                   {(details.size ||
@@ -665,14 +786,14 @@ export default function SuccessClient() {
                         <div className="space-y-0.5 text-sm text-gray-700">
                           {details.size ? (
                             <div>
-                              <span className="text-gray-500">Size:</span> {String(details.size)}
+                              <span className="text-gray-500">{t("size")}:</span> {String(details.size)}
                             </div>
                           ) : null}
 
                           {details.personalization ? (
                             <div>
-                              <span className="text-gray-500">Personalization:</span>{" "}
-                              {details.personalization.name ? details.personalization.name : "—"}
+                              <span className="text-gray-500">{t("personalization")}:</span>{" "}
+                              {details.personalization.name ? details.personalization.name : t("dash")}
                               {details.personalization.number
                                 ? ` · #${details.personalization.number}`
                                 : ""}
@@ -689,7 +810,7 @@ export default function SuccessClient() {
                               className="max-w-full break-words rounded-full border bg-white px-2 py-1 text-xs"
                               title={p.k}
                             >
-                              <span className="text-gray-500">{prettyKey(p.k)}:</span> {p.v}
+                              <span className="text-gray-500">{prettyKey(p.k, t)}:</span> {p.v}
                             </span>
                           ))}
                         </div>
@@ -697,7 +818,7 @@ export default function SuccessClient() {
 
                       {details.badges.length > 0 && (
                         <div>
-                          <div className="mb-1 text-xs font-semibold text-gray-500">Badges:</div>
+                          <div className="mb-1 text-xs font-semibold text-gray-500">{t("badges")}:</div>
                           <div className="flex flex-wrap gap-2">
                             {details.badges.map((b, idx) => (
                               <span
@@ -705,7 +826,7 @@ export default function SuccessClient() {
                                 className="max-w-full break-words rounded-full border bg-white px-2 py-1 text-xs"
                                 title={b}
                               >
-                                {humanizeBadge(b)}
+                                {humanizeBadge(b, locale)}
                               </span>
                             ))}
                           </div>
@@ -718,7 +839,9 @@ export default function SuccessClient() {
             })}
           </ul>
 
-          <div className="text-right font-bold">Total: {moneyCents(computedTotalCents, currency)}</div>
+          <div className="text-right font-bold">
+            {t("total")}: {moneyCents(computedTotalCents, currency, intlLocale)}
+          </div>
 
           <div className="flex gap-2">
             <button
@@ -727,31 +850,31 @@ export default function SuccessClient() {
               }
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
-              View order
+              {t("viewOrder")}
             </button>
             <button
               onClick={() => router.replace(withLocale(locale, "/"))}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
-              Continue shopping
+              {t("continueShopping")}
             </button>
           </div>
         </>
       ) : (
         <>
-          <p>Order processed. You can check the details in your account.</p>
+          <p>{t("orderProcessedCheckAccount")}</p>
           <div className="flex gap-2">
             <button
               onClick={() => router.replace(withLocale(locale, "/account"))}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
-              Go to my account
+              {t("goToMyAccount")}
             </button>
             <button
               onClick={() => router.replace(withLocale(locale, "/"))}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
-              Home
+              {t("home")}
             </button>
           </div>
         </>
