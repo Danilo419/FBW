@@ -11,34 +11,56 @@ import { Link } from "@/i18n/navigation";
 const PAGE_SIZE = 20;
 
 /* ---------- helpers ---------- */
-function formatMoneyRight(cents: number) {
-  const euros = Number(cents ?? 0) / 100;
-
-  const s = new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "EUR",
-  }).format(euros);
-
-  let m = s.match(/^-€\s*(.+)$/);
-  if (m) return `-${m[1]}€`;
-
-  m = s.match(/^€\s*(.+)$/);
-  if (m) return `${m[1]}€`;
-
-  return s;
+function fmtMoney(amount: number, currency = "EUR") {
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
 }
 
-function getOrderTotalCents(order: any) {
-  if (typeof order.totalCents === "number") return order.totalCents;
+/** Heurística robusta para normalizar total (euros vs. cêntimos) */
+function normalizeTotal(o: any): number {
+  if (typeof o.totalCents === "number" && !Number.isNaN(o.totalCents)) {
+    return o.totalCents / 100;
+  }
 
-  return (
-    Number(order.subtotal ?? 0) +
-    Number(order.shipping ?? 0) +
-    Number(order.tax ?? 0)
-  );
+  if (typeof o.total === "number" && !Number.isNaN(o.total)) {
+    const t = o.total;
+
+    if (t >= 1000) return t / 100;
+
+    const hasParts =
+      typeof o.subtotal === "number" ||
+      typeof o.shipping === "number" ||
+      typeof o.tax === "number";
+
+    if (!hasParts && Number.isInteger(t) && t % 100 === 0) {
+      return t / 100;
+    }
+
+    const parts = [o.subtotal, o.shipping, o.tax].filter(
+      (x) => typeof x === "number"
+    ) as number[];
+
+    const looksLikeCents =
+      parts.length > 0 &&
+      parts.filter((p) => p >= 1000 || (Number.isInteger(p) && p % 100 === 0)).length >=
+        Math.ceil(parts.length / 2);
+
+    if (looksLikeCents) return t / 100;
+
+    return t;
+  }
+
+  const parts = [Number(o.subtotal ?? 0), Number(o.shipping ?? 0), Number(o.tax ?? 0)];
+  return parts
+    .map((p) => {
+      if (Number.isNaN(p)) return 0;
+      if (p >= 1000) return p / 100;
+      if (Number.isInteger(p) && p % 100 === 0 && p !== 0) return p / 100;
+      return p;
+    })
+    .reduce((a, b) => a + b, 0);
 }
 
-/* ---------- customer helpers ---------- */
+/* ---------- shipping utils ---------- */
 function safeParseJSON(input: any): Record<string, any> {
   if (!input) return {};
   if (typeof input === "string") {
@@ -48,13 +70,13 @@ function safeParseJSON(input: any): Record<string, any> {
       return {};
     }
   }
-  if (typeof input === "object") return input;
+  if (typeof input === "object") return input as Record<string, any>;
   return {};
 }
 
 function getDeep(obj: any, paths: string[][]): string | undefined {
   for (const p of paths) {
-    let cur = obj;
+    let cur: any = obj;
     for (const k of p) {
       if (cur && typeof cur === "object" && k in cur) cur = cur[k];
       else {
@@ -64,13 +86,13 @@ function getDeep(obj: any, paths: string[][]): string | undefined {
     }
     if (cur != null) {
       const s = String(cur).trim();
-      if (s) return s;
+      if (s !== "") return s;
     }
   }
   return undefined;
 }
 
-function getCustomerInfo(order: any) {
+function fromOrder(order: any) {
   if (order.shippingFullName || order.shippingEmail) {
     return {
       fullName: order.shippingFullName ?? order?.user?.name ?? null,
@@ -79,9 +101,8 @@ function getCustomerInfo(order: any) {
   }
 
   const j = safeParseJSON(order?.shippingJson);
-
   const candidates = (keys: string[]) =>
-    [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]];
+    [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
 
   return {
     fullName:
@@ -90,26 +111,33 @@ function getCustomerInfo(order: any) {
       getDeep(j, candidates(["recipient"])) ??
       order?.user?.name ??
       null,
-
-    email:
-      getDeep(j, candidates(["email"])) ??
-      order?.user?.email ??
-      null,
+    email: getDeep(j, candidates(["email"])) ?? order?.user?.email ?? null,
   };
 }
 
-/* ---------- filter ---------- */
-const ptStockPaidWhere: Prisma.OrderWhereInput = {
-  channel: "PT_STOCK_CTT" as any,
+/* ---------- paid filter (server-side) ---------- */
+const paidWhere: Prisma.OrderWhereInput = {
   OR: [
-    { status: "paid" },
     { paidAt: { not: null } },
     {
       paymentStatus: {
         in: ["PAID", "SUCCEEDED", "COMPLETED", "CAPTURED", "SETTLED"],
       },
     },
+    { status: "paid" },
   ],
+};
+
+/**
+ * Aqui a diferença principal:
+ * mostrar apenas orders do canal PT_STOCK_CTT
+ */
+const ptStockWhere: Prisma.OrderWhereInput = {
+  channel: "PT_STOCK_CTT" as any,
+};
+
+const ordersWhere: Prisma.OrderWhereInput = {
+  AND: [paidWhere, ptStockWhere],
 };
 
 /* ---------- select ---------- */
@@ -117,68 +145,60 @@ const orderSelect = {
   id: true,
   status: true,
   paymentStatus: true,
+  paidAt: true,
   createdAt: true,
 
-  totalCents: true,
+  currency: true,
   subtotal: true,
   shipping: true,
   tax: true,
+  total: true,
+  totalCents: true,
 
   shippingFullName: true,
   shippingEmail: true,
   shippingJson: true,
-
-  user: {
-    select: {
-      name: true,
-      email: true,
-    },
-  },
-
-  items: {
-    select: {
-      name: true,
-      qty: true,
-    },
-  },
+  user: { select: { name: true, email: true } },
 } as const;
 
 type OrderRow = Prisma.OrderGetPayload<{ select: typeof orderSelect }>;
 
-/* ---------- actions ---------- */
-async function deleteOrderAction(formData: FormData) {
+/* ---------- server actions ---------- */
+async function deleteOrderAction(formData: FormData): Promise<void> {
   "use server";
 
-  const orderId = String(formData.get("orderId") ?? "");
-  const page = String(formData.get("page") ?? "1");
-  const locale = String(formData.get("locale") ?? "pt");
+  const orderId = String(formData.get("orderId") ?? "").trim();
+  const page = String(formData.get("page") ?? "1").trim();
+  const locale = String(formData.get("locale") ?? "pt").trim();
 
   if (!orderId) return;
 
   await prisma.order.delete({ where: { id: orderId } });
 
   revalidatePath(`/${locale}/admin/pt-stock/orders`);
-  redirect(`/${locale}/admin/pt-stock/orders?page=${page}`);
+  revalidatePath(`/${locale}/admin/orders/${orderId}`);
+
+  redirect(`/${locale}/admin/pt-stock/orders?page=${encodeURIComponent(page || "1")}`);
 }
 
 /* ---------- page ---------- */
-export default async function AdminPtStockOrdersPage({
-  params,
-  searchParams,
-}: {
+type PageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ page?: string }>;
-}) {
+};
+
+export default async function AdminPtStockOrdersPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const sp = (await searchParams) ?? {};
 
-  const currentPage = Math.max(1, Number(sp.page ?? 1));
+  const rawPage = (sp.page ?? "1").toString();
+  const currentPage = Math.max(1, Number.parseInt(rawPage, 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
   const [totalCount, orders] = await Promise.all([
-    prisma.order.count({ where: ptStockPaidWhere }),
+    prisma.order.count({ where: ordersWhere }),
     prisma.order.findMany({
-      where: ptStockPaidWhere,
+      where: ordersWhere,
       orderBy: { createdAt: "desc" },
       skip,
       take: PAGE_SIZE,
@@ -188,12 +208,25 @@ export default async function AdminPtStockOrdersPage({
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  if (currentPage > totalPages) {
+    redirect(`/${locale}/admin/pt-stock/orders?page=${totalPages}`);
+  }
+
+  const windowSize = 7;
+  const half = Math.floor(windowSize / 2);
+  let start = Math.max(1, currentPage - half);
+  let end = Math.min(totalPages, start + windowSize - 1);
+  start = Math.max(1, end - windowSize + 1);
+
+  const pages: number[] = [];
+  for (let p = start; p <= end; p++) pages.push(p);
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-extrabold md:text-3xl">PT Stock Orders</h1>
+      <header className="space-y-1">
+        <h1 className="text-2xl font-extrabold md:text-3xl">Orders</h1>
         <p className="text-sm text-gray-500">
-          ({totalCount} total)
+          Showing only paid PT Stock orders. ({totalCount} total)
         </p>
       </header>
 
@@ -205,7 +238,7 @@ export default async function AdminPtStockOrdersPage({
                 <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">Full name</th>
                 <th className="py-2 pr-3">Email</th>
-                <th className="py-2 pr-3">Items</th>
+                <th className="py-2 pr-3">Status</th>
                 <th className="py-2 pr-3">Total</th>
                 <th className="py-2 pr-3">Resolve</th>
                 <th className="py-2 pr-3 text-right">Actions</th>
@@ -215,62 +248,59 @@ export default async function AdminPtStockOrdersPage({
             <tbody>
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-3 text-gray-500">
-                    No orders
+                  <td className="py-3 text-gray-500" colSpan={7}>
+                    No paid PT Stock orders found.
                   </td>
                 </tr>
               )}
 
-              {orders.map((order: OrderRow) => {
-                const total = getOrderTotalCents(order);
-                const customer = getCustomerInfo(order);
-
-                const itemCount = order.items.reduce(
-                  (acc, it) => acc + (it.qty ?? 0),
-                  0
-                );
+              {orders.map((ord: OrderRow) => {
+                const ship = fromOrder(ord);
+                const total = normalizeTotal(ord);
+                const currency = (ord?.currency || "EUR").toString().toUpperCase();
+                const isResolved = (ord?.status || "").toUpperCase() === "RESOLVED";
 
                 return (
-                  <tr key={order.id} className="border-b bg-yellow-50">
-                    <td className="py-2 pr-3 font-mono">{order.id}</td>
-
-                    <td className="py-2 pr-3">
-                      {customer.fullName ?? "—"}
-                    </td>
-
-                    <td className="py-2 pr-3">
-                      {customer.email ?? "—"}
-                    </td>
-
-                    <td className="py-2 pr-3">
-                      {itemCount} items
-                    </td>
-
-                    <td className="py-2 pr-3 font-semibold">
-                      {formatMoneyRight(total)}
-                    </td>
+                  <tr key={ord.id} className="align-top border-b bg-yellow-50 last:border-0">
+                    <td className="whitespace-nowrap py-2 pr-3 font-mono">{ord.id}</td>
+                    <td className="py-2 pr-3">{ship.fullName ?? "—"}</td>
+                    <td className="py-2 pr-3">{ship.email ?? "—"}</td>
+                    <td className="py-2 pr-3 capitalize">{ord.status ?? "—"}</td>
+                    <td className="py-2 pr-3">{fmtMoney(total, currency)}</td>
 
                     <td className="py-2 pr-3">
                       <ResolveCheckbox
-                        orderId={order.id}
-                        initialResolved={false}
-                        initialStatus={order.status || "pending"}
+                        orderId={ord.id}
+                        initialResolved={isResolved}
+                        initialStatus={ord?.status || "pending"}
                       />
                     </td>
 
                     <td className="py-2 pr-3">
                       <div className="flex justify-end gap-2">
-                        <Link href={`/admin/orders/${order.id}`} locale={locale}>
+                        <Link
+                          href={`/admin/orders/${ord.id}`}
+                          locale={locale}
+                          className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                          aria-label={`View order ${ord.id}`}
+                          title="View details"
+                        >
                           <Eye className="h-4 w-4" />
+                          View
                         </Link>
 
                         <form action={deleteOrderAction}>
-                          <input type="hidden" name="orderId" value={order.id} />
-                          <input type="hidden" name="page" value={currentPage} />
+                          <input type="hidden" name="orderId" value={ord.id} />
+                          <input type="hidden" name="page" value={String(currentPage)} />
                           <input type="hidden" name="locale" value={locale} />
-
-                          <button type="submit">
-                            <Trash2 className="h-4 w-4 text-red-600" />
+                          <button
+                            type="submit"
+                            className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100"
+                            aria-label={`Delete order ${ord.id}`}
+                            title="Delete order"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
                           </button>
                         </form>
                       </div>
@@ -281,6 +311,83 @@ export default async function AdminPtStockOrdersPage({
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-gray-500">
+              Page <span className="font-semibold text-gray-700">{currentPage}</span> of{" "}
+              <span className="font-semibold text-gray-700">{totalPages}</span>
+            </div>
+
+            <nav className="flex items-center gap-1">
+              <Link
+                href={`/admin/pt-stock/orders?page=${Math.max(1, currentPage - 1)}`}
+                locale={locale}
+                aria-disabled={currentPage === 1}
+                className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs hover:bg-gray-50 ${
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }`}
+                title="Previous"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Prev
+              </Link>
+
+              {start > 1 && (
+                <>
+                  <Link
+                    href="/admin/pt-stock/orders?page=1"
+                    locale={locale}
+                    className="inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                  >
+                    1
+                  </Link>
+                  {start > 2 && <span className="px-1 text-gray-400">…</span>}
+                </>
+              )}
+
+              {pages.map((p) => (
+                <Link
+                  key={p}
+                  href={`/admin/pt-stock/orders?page=${p}`}
+                  locale={locale}
+                  className={`inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50 ${
+                    p === currentPage ? "border-gray-900 bg-gray-900 text-white hover:bg-gray-900" : ""
+                  }`}
+                  aria-current={p === currentPage ? "page" : undefined}
+                >
+                  {p}
+                </Link>
+              ))}
+
+              {end < totalPages && (
+                <>
+                  {end < totalPages - 1 && <span className="px-1 text-gray-400">…</span>}
+                  <Link
+                    href={`/admin/pt-stock/orders?page=${totalPages}`}
+                    locale={locale}
+                    className="inline-flex min-w-9 items-center justify-center rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                  >
+                    {totalPages}
+                  </Link>
+                </>
+              )}
+
+              <Link
+                href={`/admin/pt-stock/orders?page=${Math.min(totalPages, currentPage + 1)}`}
+                locale={locale}
+                aria-disabled={currentPage === totalPages}
+                className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs hover:bg-gray-50 ${
+                  currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                }`}
+                title="Next"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </nav>
+          </div>
+        )}
       </section>
     </div>
   );
