@@ -45,6 +45,78 @@ function getOrderTotalCents(order: {
   );
 }
 
+/* ---------- shipping / customer helpers ---------- */
+function safeParseJSON(input: unknown): Record<string, any> {
+  if (!input) return {};
+
+  if (typeof input === "string") {
+    try {
+      return JSON.parse(input);
+    } catch {
+      return {};
+    }
+  }
+
+  if (typeof input === "object") {
+    return input as Record<string, any>;
+  }
+
+  return {};
+}
+
+function getDeep(obj: any, paths: string[][]): string | undefined {
+  for (const path of paths) {
+    let cur = obj;
+
+    for (const key of path) {
+      if (cur && typeof cur === "object" && key in cur) {
+        cur = cur[key];
+      } else {
+        cur = undefined;
+        break;
+      }
+    }
+
+    if (cur != null) {
+      const s = String(cur).trim();
+      if (s) return s;
+    }
+  }
+
+  return undefined;
+}
+
+function getCustomerInfo(order: any) {
+  if (order.shippingFullName || order.shippingEmail) {
+    return {
+      fullName: order.shippingFullName ?? order?.user?.name ?? null,
+      email: order.shippingEmail ?? order?.user?.email ?? null,
+    };
+  }
+
+  const j = safeParseJSON(order?.shippingJson);
+
+  const candidates = (keys: string[]) =>
+    [keys, ["shipping", ...keys], ["address", ...keys], ["delivery", ...keys]] as string[][];
+
+  return {
+    fullName:
+      getDeep(j, candidates(["fullName"])) ??
+      getDeep(j, candidates(["name"])) ??
+      getDeep(j, candidates(["recipient"])) ??
+      getDeep(j, candidates(["customerName"])) ??
+      getDeep(j, candidates(["firstName"])) ??
+      order?.user?.name ??
+      null,
+
+    email:
+      getDeep(j, candidates(["email"])) ??
+      getDeep(j, candidates(["customerEmail"])) ??
+      order?.user?.email ??
+      null,
+  };
+}
+
 /* ---------- paid PT Stock filter ---------- */
 const ptStockPaidWhere: Prisma.OrderWhereInput = {
   channel: "PT_STOCK_CTT" as any,
@@ -74,7 +146,15 @@ const orderSelect = {
 
   shippingFullName: true,
   shippingEmail: true,
+  shippingJson: true,
   shippingStatus: true,
+
+  user: {
+    select: {
+      name: true,
+      email: true,
+    },
+  },
 
   items: {
     select: {
@@ -209,22 +289,20 @@ export default async function AdminPtStockOrdersPage({
                   .join(", ");
 
                 const isResolved = (order?.status || "").toUpperCase() === "RESOLVED";
+                const customer = getCustomerInfo(order);
 
                 let shippingLabel = "Pending";
-                let shippingClass =
-                  "border-gray-200 bg-gray-50 text-gray-700";
+                let shippingClass = "border-gray-200 bg-gray-50 text-gray-700";
 
                 if (order.shippingStatus === "DELIVERED") {
                   shippingLabel = "Delivered";
-                  shippingClass =
-                    "border-emerald-200 bg-emerald-50 text-emerald-800";
+                  shippingClass = "border-emerald-200 bg-emerald-50 text-emerald-800";
                 } else if (order.shippingStatus === "SHIPPED") {
                   shippingLabel = "Shipped";
                   shippingClass = "border-blue-200 bg-blue-50 text-blue-800";
                 } else if (order.shippingStatus === "PROCESSING") {
                   shippingLabel = "Processing";
-                  shippingClass =
-                    "border-yellow-200 bg-yellow-50 text-yellow-800";
+                  shippingClass = "border-yellow-200 bg-yellow-50 text-yellow-800";
                 }
 
                 return (
@@ -234,11 +312,11 @@ export default async function AdminPtStockOrdersPage({
                     </td>
 
                     <td className="py-2 pr-3">
-                      {order.shippingFullName?.trim() || "—"}
+                      {customer.fullName ?? "—"}
                     </td>
 
                     <td className="py-2 pr-3">
-                      {order.shippingEmail?.trim() || "—"}
+                      {customer.email ?? "—"}
                     </td>
 
                     <td className="py-2 pr-3">
