@@ -2,9 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useSearchParams } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import {
   CalendarDays,
   Mail,
@@ -222,7 +222,6 @@ function isPaidStatus(status: string) {
 
 function MyOrders() {
   const t = useTranslations('Account')
-  const locale = useLocale()
   const { status } = useSession()
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
@@ -319,7 +318,7 @@ function MyOrders() {
                 </div>
 
                 <Link
-                  href={`/${locale}/account/orders/${encodeURIComponent(o.id)}`}
+                  href={`/account/orders/${encodeURIComponent(o.id)}`}
                   className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border px-4 py-2 hover:bg-gray-50"
                 >
                   {t('orders.viewDetails')} <ChevronRight className="h-4 w-4" />
