@@ -54,7 +54,7 @@ export default async function AccountPage() {
   if (!dbUser) {
     return (
       <div className="container-fw py-16 space-y-4">
-        <h1 className="text-3xl font-extrabold">{t("title")}</h1>
+        <h1 className="text-3xl font-extrabold">A MINHA CONTA TESTE</h1>
 
         <p className="text-gray-700">{t("profileLoadError")}</p>
 
@@ -79,8 +79,8 @@ export default async function AccountPage() {
   return (
     <div className="container-fw py-16 space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold">{t("title")}</h1>
-        <p className="mt-2 text-gray-600">{t("subtitle")}</p>
+        <h1 className="text-3xl font-extrabold">A MINHA CONTA TESTE</h1>
+        <p className="mt-2 text-gray-600">SUBTÍTULO TESTE PORTUGUÊS</p>
       </div>
 
       <AccountClient
