@@ -16,7 +16,7 @@ function orderTotalCents(o: {
   shipping: number;
   tax: number;
 }) {
-  return (o.totalCents ?? o.subtotal + o.shipping + o.tax) | 0;
+  return o.totalCents ?? o.subtotal + o.shipping + o.tax;
 }
 
 /* ------------------------- GET ------------------------- */
@@ -42,7 +42,7 @@ export async function GET(_req: NextRequest, context: any) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId, // 🔒 segurança: só o dono vê
+        userId,
       },
       select: {
         id: true,
@@ -54,7 +54,6 @@ export async function GET(_req: NextRequest, context: any) {
         tax: true,
         totalCents: true,
         items: {
-          // OrderItem NÃO tem createdAt → usar id
           orderBy: { id: "asc" },
           select: {
             id: true,
@@ -87,15 +86,13 @@ export async function GET(_req: NextRequest, context: any) {
         totalCents: orderTotalCents(order),
         items: order.items.map((it) => ({
           ...it,
-          product: {
-            ...it.product,
-            imageUrls: Array.isArray(it.product.imageUrls)
-              ? it.product.imageUrls
-              : [],
-            badges: Array.isArray(it.product.badges)
-              ? it.product.badges
-              : [],
-          },
+          product: it.product
+            ? {
+                ...it.product,
+                imageUrls: Array.isArray(it.product.imageUrls) ? it.product.imageUrls : [],
+                badges: Array.isArray(it.product.badges) ? it.product.badges : [],
+              }
+            : null,
         })),
       },
     });
