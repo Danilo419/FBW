@@ -33,7 +33,7 @@ async function getAccountPageMessages(
 
 export default async function AccountPage() {
   const locale = await getLocale();
-  const t = await getAccountPageMessages(locale);
+  const msg = await getAccountPageMessages(locale);
 
   const session = await getServerSession(authOptions);
 
@@ -74,13 +74,19 @@ export default async function AccountPage() {
   if (!dbUser) {
     return (
       <div className="container-fw py-16 space-y-4">
-        <h1 className="text-3xl font-extrabold">{t.title}</h1>
+        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          <div><b>DEBUG locale:</b> {locale}</div>
+          <div><b>DEBUG title:</b> {msg.title}</div>
+          <div><b>DEBUG subtitle:</b> {msg.subtitle}</div>
+        </div>
 
-        <p className="text-gray-700">{t.profileLoadError}</p>
+        <h1 className="text-3xl font-extrabold">{msg.title}</h1>
+
+        <p className="text-gray-700">{msg.profileLoadError}</p>
 
         <p
           className="text-gray-600"
-          dangerouslySetInnerHTML={{ __html: t.profileLoadHelp }}
+          dangerouslySetInnerHTML={{ __html: msg.profileLoadHelp }}
         />
       </div>
     );
@@ -93,13 +99,19 @@ export default async function AccountPage() {
 
   const provider = oauth?.provider
     ? oauth.provider.charAt(0).toUpperCase() + oauth.provider.slice(1)
-    : t.credentialsProvider;
+    : msg.credentialsProvider;
 
   return (
     <div className="container-fw py-16 space-y-8">
+      <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+        <div><b>DEBUG locale:</b> {locale}</div>
+        <div><b>DEBUG title:</b> {msg.title}</div>
+        <div><b>DEBUG subtitle:</b> {msg.subtitle}</div>
+      </div>
+
       <div>
-        <h1 className="text-3xl font-extrabold">{t.title}</h1>
-        <p className="mt-2 text-gray-600">{t.subtitle}</p>
+        <h1 className="text-3xl font-extrabold">{msg.title}</h1>
+        <p className="mt-2 text-gray-600">{msg.subtitle}</p>
       </div>
 
       <AccountClient
