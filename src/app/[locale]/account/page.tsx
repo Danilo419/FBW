@@ -14,7 +14,11 @@ const fallbackImg =
 
 export default async function AccountPage() {
   const locale = await getLocale();
-  const t = await getTranslations("AccountPage");
+  const t = await getTranslations({
+    locale,
+    namespace: "AccountPage",
+  });
+
   const session = await getServerSession(authOptions);
 
   if (!session) {
