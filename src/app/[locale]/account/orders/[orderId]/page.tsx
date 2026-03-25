@@ -1,4 +1,4 @@
-// src/app/account/orders/[orderId]/page.tsx
+// src/app/[locale]/account/orders/[orderId]/page.tsx
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -9,18 +9,17 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type PageProps = {
-  // ✅ Next build is expecting params as a Promise in your project
-  params: Promise<{ orderId: string }>;
+  params: Promise<{ locale: string; orderId: string }>;
 };
 
 export default async function OrderDetailsPage({ params }: PageProps) {
-  const { orderId } = await params;
+  const { locale, orderId } = await params;
 
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
 
   if (!userId) {
-    redirect(`/account/login?next=/account/orders/${orderId}`);
+    redirect(`/${locale}/account/login?next=/${locale}/account/orders/${orderId}`);
   }
 
   return <OrderDetailsClient orderId={orderId} />;
