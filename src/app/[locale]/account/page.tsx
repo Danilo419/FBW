@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import AccountClient from "./AccountClient";
@@ -13,11 +13,12 @@ const fallbackImg =
   "https://api.dicebear.com/7.x/initials/svg?radius=50&backgroundType=gradientLinear&seed=FW";
 
 export default async function AccountPage() {
+  const locale = await getLocale();
   const t = await getTranslations("AccountPage");
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/login?next=/account");
+    redirect(`/${locale}/login?next=/${locale}/account`);
   }
 
   const email = session.user?.email ?? null;

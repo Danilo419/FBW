@@ -2426,7 +2426,7 @@
   },
   "AccountPage": {
     "title": "A minha conta",
-    "subtitle": "Gira o teu perfil, segurança e informações pessoais.",
+    "subtitle": "Acede ao teu perfil, segurança e informações pessoais.",
     "profileLoadError": "Não foi possível carregar o registo do teu perfil. Isto pode acontecer se tiveres iniciado sessão com um nome de utilizador e o teu email não estiver associado à sessão.",
     "profileLoadHelp": "Tenta terminar sessão e iniciar novamente usando o teu <b>email</b>. Se o problema persistir, contacta o suporte.",
     "credentialsProvider": "Credenciais"
