@@ -93,13 +93,15 @@ type OrderItemDTO = {
   image?: string | null
   snapshotJson?: unknown
   personalizationJson?: unknown
-  product: {
-    id: string
-    name: string
-    slug?: string | null
-    imageUrls: unknown
-    badges: unknown
-  }
+  product:
+    | {
+        id: string
+        name: string
+        slug?: string | null
+        imageUrls: unknown
+        badges: unknown
+      }
+    | null
 }
 
 type OrderDetailsDTO = {
@@ -481,7 +483,10 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
       setErr(null)
 
       try {
-        const r = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, { method: 'GET' })
+        const r = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, {
+          method: 'GET',
+          cache: 'no-store',
+        })
         const j: unknown = await r.json()
 
         const data = j as {
@@ -508,7 +513,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
     return () => {
       alive = false
     }
-  }, [orderId, t])
+  }, [orderId])
 
   const currency = useMemo(() => (order?.currency || 'eur').toUpperCase(), [order?.currency])
 
@@ -563,14 +568,10 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
           </div>
         )}
 
-        {!loading && err && (
-          <div className="rounded-2xl border bg-red-50 p-4 text-sm text-red-700">{err}</div>
-        )}
+        {!loading && err && <div className="rounded-2xl border bg-red-50 p-4 text-sm text-red-700">{err}</div>}
 
         {!loading && !err && !order && (
-          <div className="rounded-2xl border bg-white/70 p-6 text-center text-sm text-gray-600">
-            {t('notFound')}
-          </div>
+          <div className="rounded-2xl border bg-white/70 p-6 text-center text-sm text-gray-600">{t('notFound')}</div>
         )}
 
         {!loading && !err && order && (
@@ -625,9 +626,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                             </div>
                           </div>
 
-                          <div className="shrink-0 font-semibold">
-                            {money(it.totalPrice, currency, locale)}
-                          </div>
+                          <div className="shrink-0 font-semibold">{money(it.totalPrice, currency, locale)}</div>
                         </div>
 
                         <div className="relative mt-0.5 hidden h-14 w-14 shrink-0 overflow-hidden rounded-md border bg-gray-50 sm:block">
@@ -671,9 +670,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                                 <div>
                                   <span className="text-gray-500">{t('personalization')}:</span>{' '}
                                   {details.personalization.name ? details.personalization.name : '—'}
-                                  {details.personalization.number
-                                    ? ` · #${details.personalization.number}`
-                                    : ''}
+                                  {details.personalization.number ? ` · #${details.personalization.number}` : ''}
                                 </div>
                               ) : null}
                             </div>
@@ -695,9 +692,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
 
                           {details.badges.length > 0 && (
                             <div className="mt-2">
-                              <div className="mb-1 text-xs font-semibold text-gray-500">
-                                {t('badgesLabel')}
-                              </div>
+                              <div className="mb-1 text-xs font-semibold text-gray-500">{t('badgesLabel')}</div>
 
                               <div className="flex flex-wrap gap-2">
                                 {details.badges.map((b, idx) => (
@@ -731,9 +726,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                                 <div>
                                   <span className="text-gray-500">{t('personalization')}:</span>{' '}
                                   {details.personalization.name ? details.personalization.name : '—'}
-                                  {details.personalization.number
-                                    ? ` · #${details.personalization.number}`
-                                    : ''}
+                                  {details.personalization.number ? ` · #${details.personalization.number}` : ''}
                                 </div>
                               ) : null}
                             </div>
@@ -755,9 +748,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
 
                           {details.badges.length > 0 && (
                             <div className="mt-2">
-                              <div className="mb-1 text-xs font-semibold text-gray-500">
-                                {t('badgesLabel')}
-                              </div>
+                              <div className="mb-1 text-xs font-semibold text-gray-500">{t('badgesLabel')}</div>
 
                               <div className="flex flex-wrap gap-2">
                                 {details.badges.map((b, idx) => (
@@ -817,14 +808,12 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                   </div>
 
                   <div>
-                    <span className="text-gray-500">{t('created')}:</span>{' '}
-                    {new Date(order.createdAt).toLocaleString(locale)}
+                    <span className="text-gray-500">{t('created')}:</span> {new Date(order.createdAt).toLocaleString(locale)}
                   </div>
 
                   {order.paidAt && (
                     <div>
-                      <span className="text-gray-500">{t('paidAt')}:</span>{' '}
-                      {new Date(order.paidAt).toLocaleString(locale)}
+                      <span className="text-gray-500">{t('paidAt')}:</span> {new Date(order.paidAt).toLocaleString(locale)}
                     </div>
                   )}
 
