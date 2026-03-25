@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 type OrderItem = {
@@ -486,12 +487,6 @@ function normalizeLocale(locale: string): "pt" | "en" {
   return locale === "en" ? "en" : "pt";
 }
 
-function withLocale(locale: string, path: string) {
-  const safeLocale = normalizeLocale(locale);
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `/${safeLocale}${cleanPath}`;
-}
-
 function getIntlLocale(locale: "pt" | "en") {
   return locale === "pt" ? "pt-PT" : "en-US";
 }
@@ -708,13 +703,13 @@ export default function SuccessClient() {
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         <div className="flex gap-2">
           <button
-            onClick={() => router.replace(withLocale(locale, "/account"))}
+            onClick={() => router.replace("/account")}
             className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
             {t("goToMyAccount")}
           </button>
           <button
-            onClick={() => router.replace(withLocale(locale, "/"))}
+            onClick={() => router.replace("/")}
             className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
           >
             {t("continueShopping")}
@@ -845,15 +840,13 @@ export default function SuccessClient() {
 
           <div className="flex gap-2">
             <button
-              onClick={() =>
-                router.replace(withLocale(locale, `/orders/${encodeURIComponent(order.id)}`))
-              }
+              onClick={() => router.replace(`/orders/${encodeURIComponent(order.id)}`)}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               {t("viewOrder")}
             </button>
             <button
-              onClick={() => router.replace(withLocale(locale, "/"))}
+              onClick={() => router.replace("/")}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               {t("continueShopping")}
@@ -865,13 +858,13 @@ export default function SuccessClient() {
           <p>{t("orderProcessedCheckAccount")}</p>
           <div className="flex gap-2">
             <button
-              onClick={() => router.replace(withLocale(locale, "/account"))}
+              onClick={() => router.replace("/account")}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               {t("goToMyAccount")}
             </button>
             <button
-              onClick={() => router.replace(withLocale(locale, "/"))}
+              onClick={() => router.replace("/")}
               className="w-full rounded-xl border px-4 py-2 font-semibold hover:bg-gray-50"
             >
               {t("home")}
