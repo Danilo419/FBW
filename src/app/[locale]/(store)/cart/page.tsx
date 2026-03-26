@@ -534,15 +534,7 @@ export default async function CartPage({
               pt: (chunks) => <b>{chunks}</b>,
               normal: (chunks) => <b>{chunks}</b>,
             })}
-          </div>
-          <div className="mt-3 text-sm">
-            <Link
-              href="/pt-stock"
-              className="font-semibold text-red-900 underline"
-            >
-              {t("cartPage.mixedCart.link")}
-            </Link>
-          </div>
+          </div>        
         </div>
       )}
 
