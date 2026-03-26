@@ -157,20 +157,24 @@ model Product {
 }
 
 model SizeStock {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   productId String
   size      String
   available Boolean @default(true)
 
   /**
    * 🔹 stock por tamanho em Portugal
+   * este é o campo que deve ser decrementado
+   * quando uma order PT Stock é paga
    */
   ptStockQty Int @default(0)
 
-  product Product @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, size])
   @@index([productId])
+  @@index([size])
+  @@index([available])
   @@index([ptStockQty])
 }
 
@@ -182,7 +186,7 @@ model OptionGroup {
   type      OptionType
   required  Boolean    @default(false)
 
-  product Product       @relation("ProductOptions", fields: [productId], references: [id])
+  product Product       @relation("ProductOptions", fields: [productId], references: [id], onDelete: Cascade)
   values  OptionValue[]
 
   @@index([productId])
@@ -199,8 +203,8 @@ model OptionValue {
   playerName   String?
   playerNumber Int?
 
-  group  OptionGroup @relation(fields: [groupId], references: [id])
-  player Player?     @relation(fields: [playerId], references: [id])
+  group  OptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player Player?     @relation(fields: [playerId], references: [id], onDelete: SetNull)
 
   @@index([groupId])
   @@index([playerId])
@@ -265,7 +269,7 @@ model CartItem {
   optionsJson     Json?
   personalization Json?
 
-  product Product @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
@@ -343,7 +347,7 @@ enum ShippingStatus {
 model Order {
   id     String  @id @default(cuid())
   userId String?
-  user   User?   @relation(fields: [userId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   sessionId String?
 
@@ -444,6 +448,8 @@ model Order {
 
   items OrderItem[]
 
+  @@index([userId])
+  @@index([sessionId])
   @@index([status])
   @@index([paymentStatus])
   @@index([createdAt])
@@ -474,7 +480,7 @@ model OrderItem {
   snapshotJson Json?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([productId])

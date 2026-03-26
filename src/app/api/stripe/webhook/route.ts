@@ -518,6 +518,7 @@ async function markPaid(
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
     select: {
+      id: true,
       status: true,
       shippingJson: true,
       shippingCountry: true,
@@ -527,28 +528,34 @@ async function markPaid(
       discountPercent: true,
       discountAmountCents: true,
       productSubtotalCents: true,
+      finalProductSubtotalCents: true,
       total: true,
       totalCents: true,
       shipping: true,
       shippingCents: true,
       tax: true,
+      confirmationEmailSentAt: true,
     },
   });
 
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
   const wasAlreadyFinal =
-    existing?.status === "paid" ||
-    existing?.status === "shipped" ||
-    existing?.status === "delivered";
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
 
   const mergedShipping = mergeShipping(
-    (existing?.shippingJson as ShippingJson) ?? null,
+    (existing.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
   const country =
     (mergedShipping?.country ||
       mergedShipping?.address?.country ||
-      existing?.shippingCountry ||
+      existing.shippingCountry ||
       null)?.toString() || null;
 
   const normalizedCode = normalizeDiscountCode(opts.discount?.code ?? "");
@@ -568,7 +575,7 @@ async function markPaid(
     : null;
 
   const updateData: Record<string, any> = {
-    ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
+    ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
     status: "paid",
     paymentStatus: "paid",
     paidAt: new Date(),
@@ -585,24 +592,26 @@ async function markPaid(
   if (hasDiscountMeta) {
     updateData.discountCodeText = normalizedCode;
     updateData.discountPercent =
-      opts.discount?.percentOff ?? existing?.discountPercent ?? undefined;
+      opts.discount?.percentOff ?? existing.discountPercent ?? undefined;
     updateData.discountAmountCents =
       opts.discount?.discountAmountCents ??
-      existing?.discountAmountCents ??
+      existing.discountAmountCents ??
       undefined;
     updateData.productSubtotalCents =
       opts.discount?.productSubtotalCents ??
-      existing?.productSubtotalCents ??
+      existing.productSubtotalCents ??
       undefined;
 
     updateData.subtotal =
       opts.discount?.productSubtotalCents ??
-      existing?.productSubtotalCents ??
+      existing.productSubtotalCents ??
       undefined;
 
     if (typeof opts.discount?.finalProductSubtotalCents === "number") {
       updateData.finalProductSubtotalCents =
         opts.discount.finalProductSubtotalCents;
+    } else if (typeof existing.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents = existing.finalProductSubtotalCents;
     }
 
     if (opts.discount?.stripePromotionCodeId) {
@@ -678,7 +687,7 @@ async function markPaid(
         include: { items: true },
       });
 
-      if (order) {
+      if (order && !order.confirmationEmailSentAt) {
         const to = orderEmail(order, mergedShipping);
 
         if (to) {
@@ -688,7 +697,7 @@ async function markPaid(
             price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
           }));
 
-          await sendOrderConfirmationEmail({
+          const emailResult = await sendOrderConfirmationEmail({
             to,
             orderId: order.id,
             items,
@@ -696,6 +705,19 @@ async function markPaid(
             shippingPrice: shippingPriceFromOrder(order),
             customerName: orderCustomerName(order, mergedShipping),
             shippingAddress: orderShippingAddress(order, mergedShipping),
+          });
+
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              confirmationEmailSentAt: new Date(),
+              confirmationEmailProviderId:
+                typeof (emailResult as any)?.id === "string"
+                  ? (emailResult as any).id
+                  : typeof (emailResult as any)?.messageId === "string"
+                  ? (emailResult as any).messageId
+                  : null,
+            },
           });
         }
       }
@@ -721,21 +743,25 @@ async function markPending(
     select: { shippingJson: true, shippingCountry: true, userId: true },
   });
 
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
   const mergedShipping = mergeShipping(
-    (existing?.shippingJson as ShippingJson) ?? null,
+    (existing.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
   const country =
     (mergedShipping?.country ||
       mergedShipping?.address?.country ||
-      existing?.shippingCountry ||
+      existing.shippingCountry ||
       null)?.toString() || null;
 
   await prisma.order.update({
     where: { id: orderId },
     data: {
-      ...(opts.userId && !existing?.userId ? { userId: opts.userId } : {}),
+      ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
       status: "pending",
       paymentStatus: "pending",
       stripePaymentIntentId: opts.paymentIntentId ?? null,

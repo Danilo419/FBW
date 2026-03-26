@@ -1,41 +1,82 @@
 import { prisma } from "@/lib/prisma";
+import { ProductChannel } from "@prisma/client";
 
 type JsonRecord = Record<string, unknown>;
 
-function extractSizeFromSnapshot(snapshot: unknown): string | null {
-  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+function asRecord(value: unknown): JsonRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
+  return value as JsonRecord;
+}
 
-  const snap = snapshot as JsonRecord;
+function normalizeSize(value: unknown): string | null {
+  if (typeof value !== "string") return null;
 
-  const directSize = snap.size;
-  if (typeof directSize === "string" && directSize.trim()) {
-    return directSize.trim();
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return null;
+
+  return normalized;
+}
+
+function extractSizeFromSnapshot(snapshot: unknown): string | null {
+  const snap = asRecord(snapshot);
+  if (!snap) return null;
+
+  const directCandidates: unknown[] = [
+    snap.size,
+    snap.selectedSize,
+    snap.variantSize,
+    snap.chosenSize,
+  ];
+
+  for (const candidate of directCandidates) {
+    const normalized = normalizeSize(candidate);
+    if (normalized) return normalized;
   }
 
-  const selectedSize = snap.selectedSize;
-  if (typeof selectedSize === "string" && selectedSize.trim()) {
-    return selectedSize.trim();
-  }
+  const options = asRecord(snap.options);
+  if (options) {
+    const optionCandidates: unknown[] = [
+      options.size,
+      options.selectedSize,
+      options.variantSize,
+      options.chosenSize,
+      options.Size,
+    ];
 
-  const options = snap.options;
-  if (options && typeof options === "object" && !Array.isArray(options)) {
-    const optionSize = (options as JsonRecord).size;
-    if (typeof optionSize === "string" && optionSize.trim()) {
-      return optionSize.trim();
+    for (const candidate of optionCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
     }
   }
 
-  const selectedOptions = snap.selectedOptions;
-  if (
-    selectedOptions &&
-    typeof selectedOptions === "object" &&
-    !Array.isArray(selectedOptions)
-  ) {
-    const selectedOptionSize = (selectedOptions as JsonRecord).size;
-    if (typeof selectedOptionSize === "string" && selectedOptionSize.trim()) {
-      return selectedOptionSize.trim();
+  const selectedOptions = asRecord(snap.selectedOptions);
+  if (selectedOptions) {
+    const selectedOptionCandidates: unknown[] = [
+      selectedOptions.size,
+      selectedOptions.selectedSize,
+      selectedOptions.variantSize,
+      selectedOptions.chosenSize,
+      selectedOptions.Size,
+    ];
+
+    for (const candidate of selectedOptionCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  const personalization = asRecord(snap.personalization);
+  if (personalization) {
+    const personalizationCandidates: unknown[] = [
+      personalization.size,
+      personalization.selectedSize,
+    ];
+
+    for (const candidate of personalizationCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
     }
   }
 
@@ -44,9 +85,12 @@ function extractSizeFromSnapshot(snapshot: unknown): string | null {
 
 /**
  * Deduz o stock PT por tamanho quando a encomenda fica paga.
+ *
+ * Regras:
  * - Evita descontar duas vezes usando order.stockDeductedAt
+ * - Só desconta itens de produtos com channel = PT_STOCK_CTT
  * - Atualiza SizeStock.ptStockQty e SizeStock.available
- * - Recalcula Product.ptStockQty
+ * - Recalcula Product.ptStockQty como soma de todos os tamanhos
  */
 export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
   if (!orderId?.trim()) {
@@ -64,14 +108,22 @@ export async function deductPtStockForPaidOrder(orderId: string): Promise<void> 
             id: true,
             productId: true,
             qty: true,
+            name: true,
             snapshotJson: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                channel: true,
+              },
+            },
           },
         },
       },
     });
 
     if (!order) {
-      throw new Error("Order not found");
+      throw new Error(`Order not found: ${orderId}`);
     }
 
     // Evita descontar duas vezes caso o webhook repita
@@ -85,19 +137,32 @@ export async function deductPtStockForPaidOrder(orderId: string): Promise<void> 
       const qty = Math.max(0, Number(item.qty ?? 0));
       if (qty <= 0) continue;
 
-      const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
-
-      if (!selectedSize) {
+      if (!item.product) {
         console.warn(
-          `[deductPtStockForPaidOrder] Missing size for order item ${item.id} (product ${item.productId})`
+          `[deductPtStockForPaidOrder] Missing product relation for order item ${item.id}`
         );
         continue;
       }
 
-      const sizeStock = await tx.sizeStock.findFirst({
+      // Só desconta stock de produtos PT Stock
+      if (item.product.channel !== ProductChannel.PT_STOCK_CTT) {
+        continue;
+      }
+
+      const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
+
+      if (!selectedSize) {
+        throw new Error(
+          `Missing size for PT Stock order item ${item.id} (${item.name}) on product ${item.productId}`
+        );
+      }
+
+      const sizeStock = await tx.sizeStock.findUnique({
         where: {
-          productId: item.productId,
-          size: selectedSize,
+          productId_size: {
+            productId: item.productId,
+            size: selectedSize,
+          },
         },
         select: {
           id: true,

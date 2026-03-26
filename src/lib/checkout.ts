@@ -54,6 +54,52 @@ function detectCartChannel(
   return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
 }
 
+function extractSelectedSize(
+  optionsJson: Record<string, string | null> | null,
+  personalization: unknown
+): string | null {
+  if (optionsJson && typeof optionsJson === "object") {
+    const directCandidates = [
+      optionsJson.size,
+      optionsJson.Size,
+      optionsJson.selectedSize,
+      optionsJson.variantSize,
+    ];
+
+    for (const candidate of directCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim().toUpperCase();
+      }
+    }
+
+    for (const [key, value] of Object.entries(optionsJson)) {
+      if (typeof value !== "string" || !value.trim()) continue;
+
+      const normalizedKey = key.trim().toLowerCase();
+      if (normalizedKey === "size" || normalizedKey.includes("size")) {
+        return value.trim().toUpperCase();
+      }
+    }
+  }
+
+  if (
+    personalization &&
+    typeof personalization === "object" &&
+    !Array.isArray(personalization)
+  ) {
+    const p = personalization as Record<string, unknown>;
+    const candidates = [p.size, p.selectedSize];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim().toUpperCase();
+      }
+    }
+  }
+
+  return null;
+}
+
 /** Cria uma Order 'pending' a partir do carrinho atual e devolve a Order completa */
 export async function createOrderFromCart() {
   const jar = await cookies();
@@ -96,7 +142,6 @@ export async function createOrderFromCart() {
 
   const cartChannel = detectCartChannel(cart.items);
 
-  // Recalcular preços com base nos produtos e opções atuais
   let productSubtotalCents = 0;
 
   const orderItemsData: Array<{
@@ -118,6 +163,8 @@ export async function createOrderFromCart() {
 
     productSubtotalCents += totalPrice;
 
+    const selectedSize = extractSelectedSize(optionsJson, personalization);
+
     orderItemsData.push({
       productId: it.productId,
       name: it.product.name,
@@ -129,7 +176,16 @@ export async function createOrderFromCart() {
         team: it.product.team,
         productSlug: it.product.slug,
         productChannel: it.product.channel ?? "GLOBAL",
+
+        // guardar o tamanho explicitamente para a dedução de stock funcionar
+        size: selectedSize,
+        selectedSize,
+
+        // manter também as estruturas antigas/úteis
+        options: optionsJson,
         optionsJson,
+        selectedOptions: optionsJson,
+
         personalization,
       } as any,
     });
@@ -148,9 +204,13 @@ export async function createOrderFromCart() {
 
   const shippingCents = 0; // ajusta se tiveres portes calculados aqui
   const tax = 0;
+  const finalProductSubtotalCents = Math.max(
+    0,
+    productSubtotalCents - discountAmountCents
+  );
   const totalCents = Math.max(
     0,
-    productSubtotalCents - discountAmountCents + shippingCents + tax
+    finalProductSubtotalCents + shippingCents + tax
   );
 
   const order = await prisma.order.create({
@@ -163,6 +223,7 @@ export async function createOrderFromCart() {
 
       subtotal: productSubtotalCents,
       productSubtotalCents,
+      finalProductSubtotalCents,
 
       shipping: shippingCents,
       shippingCents,
@@ -185,7 +246,7 @@ export async function createOrderFromCart() {
   return order;
 }
 
-/** Após pagamento bem-sucedido: baixa stock e limpa carrinho */
+/** Após pagamento bem-sucedido: limpa carrinho */
 export async function finalizePaidOrder(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -193,10 +254,9 @@ export async function finalizePaidOrder(orderId: string) {
 
   if (!order) return;
 
-  // TODO (opcional): baixar stock em SizeStock com base nas opções
-  // Exemplo (simplificado): sem gestão de stock por tamanho.
+  // O desconto de stock PT por tamanho é feito separadamente em:
+  // deductPtStockForPaidOrder(orderId)
 
-  // Limpar carrinho desta session
   if (order.sessionId) {
     const cart = await prisma.cart.findFirst({
       where: { sessionId: order.sessionId },

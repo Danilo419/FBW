@@ -248,16 +248,62 @@ function detectCartChannel(items: CartItemRow[]): CartChannel {
   return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
 }
 
+function normalizeSize(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const s = value.trim().toUpperCase();
+  return s || null;
+}
+
 function extractSelectedSize(optionsJson: any): string | null {
   const root = safeObj(optionsJson);
 
-  return (
-    safeStr(root.size) ||
-    safeStr(root.selectedSize) ||
-    safeStr(safeObj(root.options).size) ||
-    safeStr(safeObj(root.selectedOptions).size) ||
-    null
-  );
+  const directCandidates = [
+    root.size,
+    root.selectedSize,
+    root.variantSize,
+    root.chosenSize,
+    root.Size,
+  ];
+
+  for (const candidate of directCandidates) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  const options = safeObj(root.options);
+  for (const candidate of [
+    options.size,
+    options.selectedSize,
+    options.variantSize,
+    options.chosenSize,
+    options.Size,
+  ]) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  const selectedOptions = safeObj(root.selectedOptions);
+  for (const candidate of [
+    selectedOptions.size,
+    selectedOptions.selectedSize,
+    selectedOptions.variantSize,
+    selectedOptions.chosenSize,
+    selectedOptions.Size,
+  ]) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  for (const [key, value] of Object.entries(root)) {
+    if (typeof value !== "string") continue;
+    const k = key.trim().toLowerCase();
+    if (k === "size" || k.includes("size")) {
+      const size = normalizeSize(value);
+      if (size) return size;
+    }
+  }
+
+  return null;
 }
 
 function buildSnapshotJson(
@@ -302,6 +348,73 @@ function buildSnapshotJson(
   }
 
   return snapshot;
+}
+
+async function validatePtStockOrThrow(items: CartItemRow[]) {
+  const aggregated = new Map<
+    string,
+    { productId: string; size: string; qty: number; productName: string }
+  >();
+
+  for (const it of items) {
+    const qty = Math.max(0, Number(it.qty ?? 0));
+    if (qty <= 0) continue;
+
+    const channel = String(it.product?.channel ?? "GLOBAL");
+    if (channel !== "PT_STOCK_CTT") continue;
+
+    const size = extractSelectedSize(it.optionsJson);
+    if (!size) {
+      throw new Error(
+        `O produto PT Stock "${it.product?.name ?? "Produto"}" não tem tamanho selecionado.`
+      );
+    }
+
+    const key = `${it.productId}__${size}`;
+    const existing = aggregated.get(key);
+
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      aggregated.set(key, {
+        productId: it.productId,
+        size,
+        qty,
+        productName: String(it.product?.name ?? "Produto"),
+      });
+    }
+  }
+
+  if (aggregated.size === 0) return;
+
+  for (const entry of aggregated.values()) {
+    const row = await prisma.sizeStock.findUnique({
+      where: {
+        productId_size: {
+          productId: entry.productId,
+          size: entry.size,
+        },
+      },
+      select: {
+        ptStockQty: true,
+        available: true,
+      },
+    });
+
+    if (!row) {
+      throw new Error(
+        `Não existe stock configurado para "${entry.productName}" no tamanho ${entry.size}.`
+      );
+    }
+
+    const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+
+    if (!row.available || availableQty < entry.qty) {
+      throw new Error(
+        `Stock insuficiente para "${entry.productName}" no tamanho ${entry.size}. Disponível: ${availableQty}.`
+      );
+    }
+  }
 }
 
 function buildDiscountedStripeLines(
@@ -496,6 +609,8 @@ export async function POST(req: NextRequest) {
       totalPrice: (it as any).totalPrice ?? null,
     }));
 
+    await validatePtStockOrThrow(cartItems);
+
     const cartChannel = detectCartChannel(cartItems);
     const isPtStockCart = cartChannel === "PT_STOCK_CTT";
 
@@ -613,7 +728,10 @@ export async function POST(req: NextRequest) {
           qty: line.payQty,
           unitPrice: it.unitPrice,
           totalPrice: line.payQty * it.unitPrice,
-          snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization),
+          snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+            productId: it.productId,
+            productChannel: it.product.channel ?? "GLOBAL",
+          }),
         });
       }
 
@@ -626,6 +744,8 @@ export async function POST(req: NextRequest) {
           unitPrice: 0,
           totalPrice: 0,
           snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+            productId: it.productId,
+            productChannel: it.product.channel ?? "GLOBAL",
             __isFree: true,
             __originalUnitPrice: it.unitPrice,
           }),
@@ -644,6 +764,7 @@ export async function POST(req: NextRequest) {
         channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
         subtotal: payableProductsSubtotalCents,
         productSubtotalCents: payableProductsSubtotalCents,
+        finalProductSubtotalCents: finalProductsSubtotalCents,
         shipping: shippingCents,
         shippingCents,
         tax: 0,

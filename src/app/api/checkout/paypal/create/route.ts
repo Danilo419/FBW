@@ -20,8 +20,27 @@ type Shipping = {
     city?: string;
     state?: string;
     postal_code?: string;
-    country?: string; // ISO-3166 alpha-2 ou nome
+    country?: string;
   };
+};
+
+type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+
+type CartItemRow = {
+  productId: string;
+  qty: number;
+  unitPrice: number;
+  product: {
+    id?: string;
+    name: string;
+    imageUrls?: string[] | null;
+    slug?: string | null;
+    channel?: string | null;
+    team?: string | null;
+  };
+  optionsJson?: any;
+  personalization?: any;
+  totalPrice?: number | null;
 };
 
 function getBaseUrl(req: NextRequest): string {
@@ -117,6 +136,210 @@ function safeCountryCode(v?: string | null) {
   return map[s] || (/^[A-Z]{2}$/.test(s) ? s : undefined);
 }
 
+function safeStr(v: any): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+function safeObj(v: any): Record<string, any> {
+  if (!v) return {};
+  if (typeof v === "object") return v as Record<string, any>;
+
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return typeof j === "object" && j ? (j as Record<string, any>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+function normalizeSize(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const s = value.trim().toUpperCase();
+  return s || null;
+}
+
+function extractSelectedSize(optionsJson: any): string | null {
+  const root = safeObj(optionsJson);
+
+  const directCandidates = [
+    root.size,
+    root.selectedSize,
+    root.variantSize,
+    root.chosenSize,
+    root.Size,
+  ];
+
+  for (const candidate of directCandidates) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  const options = safeObj(root.options);
+  for (const candidate of [
+    options.size,
+    options.selectedSize,
+    options.variantSize,
+    options.chosenSize,
+    options.Size,
+  ]) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  const selectedOptions = safeObj(root.selectedOptions);
+  for (const candidate of [
+    selectedOptions.size,
+    selectedOptions.selectedSize,
+    selectedOptions.variantSize,
+    selectedOptions.chosenSize,
+    selectedOptions.Size,
+  ]) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  for (const [key, value] of Object.entries(root)) {
+    if (typeof value !== "string") continue;
+    const k = key.trim().toLowerCase();
+    if (k === "size" || k.includes("size")) {
+      const size = normalizeSize(value);
+      if (size) return size;
+    }
+  }
+
+  return null;
+}
+
+function detectCartChannel(items: CartItemRow[]): CartChannel {
+  const channels = new Set<string>();
+
+  for (const it of items) {
+    channels.add(String(it.product?.channel ?? "GLOBAL"));
+  }
+
+  if (channels.size > 1) return "MIXED";
+
+  const only = Array.from(channels)[0];
+  return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+}
+
+function buildSnapshotJson(
+  optionsJson: any,
+  personalization: any,
+  extras?: Record<string, any>
+) {
+  const baseSnapshot = safeObj(optionsJson);
+  const selectedSize = extractSelectedSize(baseSnapshot);
+
+  const snapshot: Record<string, any> = {
+    ...baseSnapshot,
+    personalization: personalization ?? null,
+  };
+
+  if (selectedSize) {
+    snapshot.size = selectedSize;
+
+    if (!safeStr(snapshot.selectedSize)) {
+      snapshot.selectedSize = selectedSize;
+    }
+
+    const options = safeObj(snapshot.options);
+    if (!safeStr(options.size)) {
+      snapshot.options = {
+        ...options,
+        size: selectedSize,
+      };
+    }
+
+    const selectedOptions = safeObj(snapshot.selectedOptions);
+    if (!safeStr(selectedOptions.size)) {
+      snapshot.selectedOptions = {
+        ...selectedOptions,
+        size: selectedSize,
+      };
+    }
+  }
+
+  if (extras && typeof extras === "object") {
+    Object.assign(snapshot, extras);
+  }
+
+  return snapshot;
+}
+
+async function validatePtStockOrThrow(items: CartItemRow[]) {
+  const aggregated = new Map<
+    string,
+    { productId: string; size: string; qty: number; productName: string }
+  >();
+
+  for (const it of items) {
+    const qty = Math.max(0, Number(it.qty ?? 0));
+    if (qty <= 0) continue;
+
+    const channel = String(it.product?.channel ?? "GLOBAL");
+    if (channel !== "PT_STOCK_CTT") continue;
+
+    const size = extractSelectedSize(it.optionsJson);
+    if (!size) {
+      throw new Error(
+        `O produto PT Stock "${it.product?.name ?? "Produto"}" não tem tamanho selecionado.`
+      );
+    }
+
+    const key = `${it.productId}__${size}`;
+    const existing = aggregated.get(key);
+
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      aggregated.set(key, {
+        productId: it.productId,
+        size,
+        qty,
+        productName: String(it.product?.name ?? "Produto"),
+      });
+    }
+  }
+
+  if (aggregated.size === 0) return;
+
+  for (const entry of aggregated.values()) {
+    const row = await prisma.sizeStock.findUnique({
+      where: {
+        productId_size: {
+          productId: entry.productId,
+          size: entry.size,
+        },
+      },
+      select: {
+        ptStockQty: true,
+        available: true,
+      },
+    });
+
+    if (!row) {
+      throw new Error(
+        `Não existe stock configurado para "${entry.productName}" no tamanho ${entry.size}.`
+      );
+    }
+
+    const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+
+    if (!row.available || availableQty < entry.qty) {
+      throw new Error(
+        `Stock insuficiente para "${entry.productName}" no tamanho ${entry.size}. Disponível: ${availableQty}.`
+      );
+    }
+  }
+}
+
 /* --------------------------- route --------------------------- */
 
 export async function POST(req: NextRequest) {
@@ -138,7 +361,14 @@ export async function POST(req: NextRequest) {
         items: {
           include: {
             product: {
-              select: { name: true, imageUrls: true, slug: true },
+              select: {
+                id: true,
+                name: true,
+                imageUrls: true,
+                slug: true,
+                channel: true,
+                team: true,
+              },
             },
           },
         },
@@ -149,10 +379,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
+    const cartItems: CartItemRow[] = cart.items.map((it: any) => ({
+      productId: it.productId,
+      qty: Math.max(0, Number(it.qty ?? 0)),
+      unitPrice: Math.max(0, Number(it.unitPrice ?? 0)),
+      product: it.product,
+      optionsJson:
+        it.optionsJson ??
+        it.options ??
+        it.snapshotJson ??
+        it.optionsJSON ??
+        (it as any).optionsJson ??
+        {},
+      personalization: it.personalization ?? null,
+      totalPrice: (it as any).totalPrice ?? null,
+    }));
+
+    await validatePtStockOrThrow(cartItems);
+
+    const cartChannel = detectCartChannel(cartItems);
     const currency = "EUR";
 
-    const subtotalCents = cart.items.reduce((acc, it) => {
-      const line = (it as any).totalPrice ?? it.qty * it.unitPrice;
+    const subtotalCents = cartItems.reduce((acc, it) => {
+      const line = it.totalPrice ?? it.qty * it.unitPrice;
       return acc + Number(line || 0);
     }, 0);
 
@@ -161,16 +410,28 @@ export async function POST(req: NextRequest) {
     const shippingCents = 0;
     const taxCents = 0;
     const discountCents = 0;
+    const finalProductSubtotalCents = Math.max(0, subtotalCents - discountCents);
 
     const order = await prisma.order.create({
       data: {
         sessionId: cart.sessionId ?? null,
         status: "pending",
         currency: currency.toLowerCase(),
+        channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+
         subtotal: subtotalCents,
+        productSubtotalCents: subtotalCents,
+        finalProductSubtotalCents,
+
         shipping: shippingCents,
+        shippingCents,
         tax: taxCents,
-        total: subtotalCents,
+
+        discountAmountCents: discountCents,
+
+        total: (finalProductSubtotalCents + shippingCents + taxCents) / 100,
+        totalCents: finalProductSubtotalCents + shippingCents + taxCents,
+
         shippingJson: (shippingFromCookie as any) ?? null,
 
         shippingFullName: shippingFromCookie?.name ?? null,
@@ -184,15 +445,19 @@ export async function POST(req: NextRequest) {
         shippingCountry: shippingFromCookie?.address?.country ?? null,
 
         items: {
-          create: cart.items.map((it: typeof cart.items[number]) => ({
+          create: cartItems.map((it) => ({
             productId: it.productId,
             name: it.product.name,
-            image:
-              (it.product as { imageUrls?: string[] })?.imageUrls?.[0] ?? null,
+            image: it.product.imageUrls?.[0] ?? null,
             qty: it.qty,
             unitPrice: it.unitPrice,
-            totalPrice: (it as any).totalPrice ?? it.qty * it.unitPrice,
-            snapshotJson: (it as any).optionsJson ?? {},
+            totalPrice: it.totalPrice ?? it.qty * it.unitPrice,
+            snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+              productId: it.productId,
+              productSlug: it.product.slug ?? null,
+              productChannel: it.product.channel ?? "GLOBAL",
+              team: it.product.team ?? null,
+            }),
           })),
         },
       },
@@ -207,8 +472,7 @@ export async function POST(req: NextRequest) {
       return acc + line;
     }, 0);
 
-    const totalCents =
-      itemsTotalCents + shippingCents + taxCents - discountCents;
+    const totalCents = itemsTotalCents + shippingCents + taxCents - discountCents;
 
     const countryCode =
       safeCountryCode(shippingFromCookie?.address?.country) ?? "PT";

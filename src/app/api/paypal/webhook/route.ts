@@ -1,6 +1,7 @@
 // src/app/api/paypal/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -155,48 +156,108 @@ async function markPaid(
     totalCents?: number | null;
     shipping?: ShippingJson;
   }
-) {
+): Promise<{ transitioned: boolean }> {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { status: true, shippingJson: true, shippingCountry: true },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+    },
   });
 
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
   const alreadyFinal =
-    existing?.status === "paid" ||
-    existing?.status === "shipped" ||
-    existing?.status === "delivered";
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
 
   const mergedShipping = mergeShipping(
-    existing?.shippingJson as ShippingJson,
+    (existing.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
   const country =
-    (mergedShipping?.address?.country || existing?.shippingCountry || null)?.toString() ||
+    (mergedShipping?.address?.country || existing.shippingCountry || null)?.toString() ||
     null;
 
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      status: "paid",
-      paymentStatus: "paid",
-      paidAt: new Date(),
-      paypalCaptured: true,
-      paypalOrderId: opts.paypalOrderId ?? undefined,
-      paypalCaptureId: opts.captureId ?? undefined,
-      currency: upper(opts.currency) ?? undefined,
-      totalCents:
-        typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
-          ? Math.round(opts.totalCents)
-          : undefined,
-      ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
-      ...(country ? { shippingCountry: country } : {}),
-    },
-  });
+  let transitioned = false;
 
   if (!alreadyFinal) {
+    const claim = await prisma.order.updateMany({
+      where: {
+        id: orderId,
+        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+      },
+      data: {
+        status: "paid",
+        paymentStatus: "paid",
+        paidAt: new Date(),
+        paypalCaptured: true,
+        paypalOrderId: opts.paypalOrderId ?? undefined,
+        paypalCaptureId: opts.captureId ?? undefined,
+        currency: upper(opts.currency) ?? undefined,
+        totalCents:
+          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+            ? Math.round(opts.totalCents)
+            : undefined,
+        ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+        ...(country ? { shippingCountry: country } : {}),
+      },
+    });
+
+    transitioned = claim.count === 1;
+
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "paid",
+          paymentStatus: "paid",
+          paidAt: new Date(),
+          paypalCaptured: true,
+          paypalOrderId: opts.paypalOrderId ?? undefined,
+          paypalCaptureId: opts.captureId ?? undefined,
+          currency: upper(opts.currency) ?? undefined,
+          totalCents:
+            typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+              ? Math.round(opts.totalCents)
+              : undefined,
+          ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+          ...(country ? { shippingCountry: country } : {}),
+        },
+      });
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: "paid",
+        paymentStatus: "paid",
+        paidAt: new Date(),
+        paypalCaptured: true,
+        paypalOrderId: opts.paypalOrderId ?? undefined,
+        paypalCaptureId: opts.captureId ?? undefined,
+        currency: upper(opts.currency) ?? undefined,
+        totalCents:
+          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+            ? Math.round(opts.totalCents)
+            : undefined,
+        ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+        ...(country ? { shippingCountry: country } : {}),
+      },
+    });
+  }
+
+  if (transitioned) {
     const { finalizePaidOrder } = await import("@/lib/checkout");
     await finalizePaidOrder(orderId);
+
+    await deductPtStockForPaidOrder(orderId);
 
     try {
       const { pusherServer } = await import("@/lib/pusher");
@@ -210,6 +271,8 @@ async function markPaid(
       });
     } catch {}
   }
+
+  return { transitioned };
 }
 
 async function markPending(orderId: string) {
