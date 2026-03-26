@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -164,6 +166,7 @@ async function markPaid(
       status: true,
       shippingJson: true,
       shippingCountry: true,
+      discountCodeText: true,
     },
   });
 
@@ -185,71 +188,60 @@ async function markPaid(
     (mergedShipping?.address?.country || existing.shippingCountry || null)?.toString() ||
     null;
 
+  const normalizedDiscountCode = normalizeDiscountCode(
+    existing.discountCodeText ?? ""
+  );
+  const hasDiscountCode = !!normalizedDiscountCode;
+
+  const updateData = {
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    paypalCaptured: true,
+    paypalOrderId: opts.paypalOrderId ?? undefined,
+    paypalCaptureId: opts.captureId ?? undefined,
+    currency: upper(opts.currency) ?? undefined,
+    totalCents:
+      typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+        ? Math.round(opts.totalCents)
+        : undefined,
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
   let transitioned = false;
 
   if (!alreadyFinal) {
-    const claim = await prisma.order.updateMany({
-      where: {
-        id: orderId,
-        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
-      },
-      data: {
-        status: "paid",
-        paymentStatus: "paid",
-        paidAt: new Date(),
-        paypalCaptured: true,
-        paypalOrderId: opts.paypalOrderId ?? undefined,
-        paypalCaptureId: opts.captureId ?? undefined,
-        currency: upper(opts.currency) ?? undefined,
-        totalCents:
-          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
-            ? Math.round(opts.totalCents)
-            : undefined,
-        ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
-        ...(country ? { shippingCountry: country } : {}),
-      },
-    });
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData,
+      });
 
-    transitioned = claim.count === 1;
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+      }
+
+      return true;
+    });
 
     if (!transitioned) {
       await prisma.order.update({
         where: { id: orderId },
-        data: {
-          status: "paid",
-          paymentStatus: "paid",
-          paidAt: new Date(),
-          paypalCaptured: true,
-          paypalOrderId: opts.paypalOrderId ?? undefined,
-          paypalCaptureId: opts.captureId ?? undefined,
-          currency: upper(opts.currency) ?? undefined,
-          totalCents:
-            typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
-              ? Math.round(opts.totalCents)
-              : undefined,
-          ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
-          ...(country ? { shippingCountry: country } : {}),
-        },
+        data: updateData,
       });
     }
   } else {
     await prisma.order.update({
       where: { id: orderId },
-      data: {
-        status: "paid",
-        paymentStatus: "paid",
-        paidAt: new Date(),
-        paypalCaptured: true,
-        paypalOrderId: opts.paypalOrderId ?? undefined,
-        paypalCaptureId: opts.captureId ?? undefined,
-        currency: upper(opts.currency) ?? undefined,
-        totalCents:
-          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
-            ? Math.round(opts.totalCents)
-            : undefined,
-        ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
-        ...(country ? { shippingCountry: country } : {}),
-      },
+      data: updateData,
     });
   }
 
@@ -307,12 +299,15 @@ export async function POST(req: NextRequest) {
     const authAlgo = req.headers.get("paypal-auth-algo");
 
     if (!transmissionId || !timestamp || !signature || !certUrl || !authAlgo) {
-      return new NextResponse("Missing PayPal verification headers", { status: 400 });
+      return new NextResponse("Missing PayPal verification headers", {
+        status: 400,
+      });
     }
 
     const { paypalClient, paypal } = await import("@/lib/paypal");
 
-    const verifyReq = new (paypal as any).notifications.VerifyWebhookSignatureRequest();
+    const verifyReq =
+      new (paypal as any).notifications.VerifyWebhookSignatureRequest();
     verifyReq.requestBody({
       auth_algo: authAlgo,
       cert_url: certUrl,
@@ -362,7 +357,9 @@ export async function POST(req: NextRequest) {
 
         if (paypalOrderId) {
           try {
-            const getReq = new (paypal as any).orders.OrdersGetRequest(paypalOrderId);
+            const getReq = new (paypal as any).orders.OrdersGetRequest(
+              paypalOrderId
+            );
             const orderGet = await (paypalClient as any).execute(getReq);
             shipping = shippingFromOrderGet(orderGet);
           } catch {}

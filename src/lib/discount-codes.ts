@@ -42,10 +42,22 @@ export async function getValidDiscountCode(rawCode: string) {
   });
 
   if (!discount) return null;
+
+  const safeDiscount = discount as typeof discount & {
+    usedByOrderId?: string | null;
+  };
+
   if (!discount.active) return null;
-  if (discount.maxUses <= 0) return null;
-  if (discount.usesCount >= discount.maxUses) return null;
   if (discount.expiresAt && discount.expiresAt < now) return null;
+
+  // uso único real
+  if (discount.usedAt) return null;
+  if (safeDiscount.usedByOrderId) return null;
+
+  // compatibilidade extra com campos antigos/atuais
+  if (discount.maxUses <= 0) return null;
+  if (discount.usesCount >= 1) return null;
+  if (discount.usesCount >= discount.maxUses) return null;
 
   return discount;
 }
@@ -55,13 +67,20 @@ export function getDiscountCodeStatus(input: {
   maxUses: number;
   usesCount: number;
   expiresAt: Date | null;
+  usedAt?: Date | null;
+  usedByOrderId?: string | null;
 }) {
   const now = new Date();
 
   if (!input.active) return "inactive";
   if (input.maxUses <= 0) return "invalid";
-  if (input.usesCount >= input.maxUses) return "used";
   if (input.expiresAt && input.expiresAt < now) return "expired";
+
+  // prioridade para uso único
+  if (input.usedAt) return "used";
+  if (input.usedByOrderId) return "used";
+  if (input.usesCount >= 1) return "used";
+  if (input.usesCount >= input.maxUses) return "used";
 
   return "valid";
 }

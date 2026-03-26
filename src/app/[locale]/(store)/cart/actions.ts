@@ -35,7 +35,9 @@ const AddToCartSchema = z.object({
 type AddToCartInput = z.infer<typeof AddToCartSchema>;
 
 /* ========= helpers ========= */
-function normalizeOptions(obj?: Record<string, string | null>): Record<string, string> {
+function normalizeOptions(
+  obj?: Record<string, string | null>
+): Record<string, string> {
   if (!obj) return {};
 
   const entries = Object.entries(obj).filter(
@@ -225,7 +227,16 @@ async function setDiscountCookie(code: string) {
 
 async function clearDiscountCookie() {
   const jar = await cookies();
-  jar.delete(DISCOUNT_COOKIE);
+  const secure = shouldUseSecureCookies();
+
+  jar.set(DISCOUNT_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    expires: new Date(0),
+    maxAge: 0,
+  });
 }
 
 async function resolveShippingCents(
@@ -480,7 +491,9 @@ export async function getCartSummary() {
   );
 
   const appliedCode = await getAppliedDiscountCodeFromCookie();
-  const validDiscount = appliedCode ? await getValidDiscountCode(appliedCode) : null;
+  const validDiscount = appliedCode
+    ? await getValidDiscountCode(appliedCode)
+    : null;
 
   if (appliedCode && !validDiscount) {
     await clearDiscountCookie();

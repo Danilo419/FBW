@@ -26,6 +26,7 @@ type DiscountCodeRow = {
   updatedAt: Date;
   expiresAt: Date | null;
   usedAt: Date | null;
+  usedByOrderId?: string | null;
   stripeCouponId?: string | null;
   stripePromotionCodeId?: string | null;
 };
@@ -39,41 +40,6 @@ function formatDate(value?: Date | null) {
   }).format(value);
 }
 
-function getStatus(code: {
-  active: boolean;
-  usesCount: number;
-  maxUses: number;
-  expiresAt: Date | null;
-}) {
-  const now = new Date();
-
-  if (!code.active) {
-    return {
-      label: "Inactive",
-      className: "bg-neutral-200 text-neutral-700",
-    };
-  }
-
-  if (code.usesCount >= code.maxUses) {
-    return {
-      label: "Used",
-      className: "bg-blue-100 text-blue-700",
-    };
-  }
-
-  if (code.expiresAt && code.expiresAt < now) {
-    return {
-      label: "Expired",
-      className: "bg-amber-100 text-amber-700",
-    };
-  }
-
-  return {
-    label: "Active",
-    className: "bg-green-100 text-green-700",
-  };
-}
-
 function hasStripeNativeDiscount(code: {
   stripeCouponId?: string | null;
   stripePromotionCodeId?: string | null;
@@ -84,6 +50,71 @@ function hasStripeNativeDiscount(code: {
   );
 }
 
+function isCodeUsed(code: {
+  usedAt?: Date | null;
+  usedByOrderId?: string | null;
+  usesCount: number;
+  maxUses: number;
+}) {
+  return Boolean(
+    code.usedAt ||
+      code.usedByOrderId ||
+      code.usesCount >= 1 ||
+      code.usesCount >= code.maxUses
+  );
+}
+
+function isCodeExpired(code: { expiresAt: Date | null }) {
+  const now = new Date();
+  return Boolean(code.expiresAt && code.expiresAt < now);
+}
+
+function isCodeAvailable(code: {
+  active: boolean;
+  usedAt?: Date | null;
+  usedByOrderId?: string | null;
+  usesCount: number;
+  maxUses: number;
+  expiresAt: Date | null;
+}) {
+  return code.active && !isCodeUsed(code) && !isCodeExpired(code);
+}
+
+function getStatus(code: {
+  active: boolean;
+  usesCount: number;
+  maxUses: number;
+  expiresAt: Date | null;
+  usedAt?: Date | null;
+  usedByOrderId?: string | null;
+}) {
+  if (isCodeUsed(code)) {
+    return {
+      label: "Used",
+      className: "bg-blue-100 text-blue-700",
+    };
+  }
+
+  if (isCodeExpired(code)) {
+    return {
+      label: "Expired",
+      className: "bg-amber-100 text-amber-700",
+    };
+  }
+
+  if (!code.active) {
+    return {
+      label: "Inactive",
+      className: "bg-neutral-200 text-neutral-700",
+    };
+  }
+
+  return {
+    label: "Available",
+    className: "bg-green-100 text-green-700",
+  };
+}
+
 export default async function DiscountCodesPage({ params }: PageProps) {
   const { locale } = await params;
 
@@ -92,7 +123,12 @@ export default async function DiscountCodesPage({ params }: PageProps) {
   });
 
   const codes: DiscountCodeRow[] = rawCodes.map((code) => {
-    const row = code as DiscountCodeRow;
+    const row = code as DiscountCodeRow & {
+      usedByOrderId?: string | null;
+      stripeCouponId?: string | null;
+      stripePromotionCodeId?: string | null;
+    };
+
     return {
       id: row.id,
       code: row.code,
@@ -104,6 +140,8 @@ export default async function DiscountCodesPage({ params }: PageProps) {
       updatedAt: row.updatedAt,
       expiresAt: row.expiresAt ?? null,
       usedAt: row.usedAt ?? null,
+      usedByOrderId:
+        typeof row.usedByOrderId === "string" ? row.usedByOrderId : null,
       stripeCouponId:
         typeof row.stripeCouponId === "string" ? row.stripeCouponId : null,
       stripePromotionCodeId:
@@ -113,17 +151,11 @@ export default async function DiscountCodesPage({ params }: PageProps) {
     };
   });
 
-  const now = new Date();
-
   const totalCodes = codes.length;
-  const activeCodes = codes.filter(
-    (code) =>
-      code.active &&
-      code.usesCount < code.maxUses &&
-      (!code.expiresAt || code.expiresAt >= now)
-  ).length;
-  const usedCodes = codes.filter(
-    (code) => code.usesCount >= code.maxUses
+  const availableCodes = codes.filter((code) => isCodeAvailable(code)).length;
+  const usedCodes = codes.filter((code) => isCodeUsed(code)).length;
+  const expiredCodes = codes.filter(
+    (code) => !isCodeUsed(code) && isCodeExpired(code)
   ).length;
   const stripeReadyCodes = codes.filter((code) =>
     hasStripeNativeDiscount(code)
@@ -136,13 +168,15 @@ export default async function DiscountCodesPage({ params }: PageProps) {
           <h1 className="text-2xl font-bold tracking-tight">Discount Codes</h1>
           <p className="mt-1 text-sm text-neutral-500">
             Crie códigos únicos para dar desconto apenas no preço dos produtos,
-            sem descontar o shipping. Se um código tiver Stripe Coupon ID ou
-            Stripe Promotion Code ID, o desconto poderá aparecer como linha
-            separada no Stripe Checkout.
+            sem descontar o shipping. Cada código é de uso único real: depois de
+            pago, fica automaticamente marcado como usado e ligado à respetiva
+            encomenda. Se um código tiver Stripe Coupon ID ou Stripe Promotion
+            Code ID, o desconto poderá aparecer como linha separada no Stripe
+            Checkout.
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
               Total codes
@@ -152,9 +186,9 @@ export default async function DiscountCodesPage({ params }: PageProps) {
 
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Active available
+              Available
             </p>
-            <p className="mt-2 text-2xl font-bold">{activeCodes}</p>
+            <p className="mt-2 text-2xl font-bold">{availableCodes}</p>
           </div>
 
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
@@ -162,6 +196,13 @@ export default async function DiscountCodesPage({ params }: PageProps) {
               Used
             </p>
             <p className="mt-2 text-2xl font-bold">{usedCodes}</p>
+          </div>
+
+          <div className="rounded-2xl border bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+              Expired
+            </p>
+            <p className="mt-2 text-2xl font-bold">{expiredCodes}</p>
           </div>
 
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
@@ -244,7 +285,10 @@ export default async function DiscountCodesPage({ params }: PageProps) {
           </div>
 
           <div className="space-y-2 md:col-span-2 xl:col-span-2">
-            <label htmlFor="stripePromotionCodeId" className="text-sm font-medium">
+            <label
+              htmlFor="stripePromotionCodeId"
+              className="text-sm font-medium"
+            >
               Stripe Promotion Code ID (optional)
             </label>
             <input
@@ -292,11 +336,12 @@ export default async function DiscountCodesPage({ params }: PageProps) {
                 <th className="px-4 py-3 font-semibold">Code</th>
                 <th className="px-4 py-3 font-semibold">% Off</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Uses</th>
+                <th className="px-4 py-3 font-semibold">Usage</th>
                 <th className="px-4 py-3 font-semibold">Stripe</th>
                 <th className="px-4 py-3 font-semibold">Created</th>
                 <th className="px-4 py-3 font-semibold">Expires</th>
                 <th className="px-4 py-3 font-semibold">Used at</th>
+                <th className="px-4 py-3 font-semibold">Order</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
@@ -304,15 +349,16 @@ export default async function DiscountCodesPage({ params }: PageProps) {
             <tbody>
               {codes.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={10} className="px-4 py-8 text-center text-neutral-500">
                     No discount codes created yet.
                   </td>
                 </tr>
               ) : (
                 codes.map((code) => {
                   const status = getStatus(code);
-                  const isUsed = code.usesCount >= code.maxUses;
+                  const isUsed = isCodeUsed(code);
                   const stripeReady = hasStripeNativeDiscount(code);
+                  const canToggle = !isUsed && !isCodeExpired(code);
 
                   return (
                     <tr key={code.id} className="border-t align-middle">
@@ -333,7 +379,14 @@ export default async function DiscountCodesPage({ params }: PageProps) {
                       </td>
 
                       <td className="px-4 py-3">
-                        {code.usesCount}/{code.maxUses}
+                        <div className="space-y-1">
+                          <div>
+                            {isUsed ? "1/1" : "0/1"}
+                          </div>
+                          <div className="text-xs text-neutral-500">
+                            Stored: {code.usesCount}/{code.maxUses}
+                          </div>
+                        </div>
                       </td>
 
                       <td className="px-4 py-3">
@@ -372,8 +425,14 @@ export default async function DiscountCodesPage({ params }: PageProps) {
                       <td className="px-4 py-3">{formatDate(code.usedAt)}</td>
 
                       <td className="px-4 py-3">
+                        <span className="font-mono text-xs">
+                          {code.usedByOrderId || "—"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          {!isUsed && (
+                          {canToggle && (
                             <form action={toggleDiscountCode}>
                               <input type="hidden" name="id" value={code.id} />
                               <input type="hidden" name="locale" value={locale} />

@@ -230,9 +230,11 @@ export async function createOrderFromCart() {
 
       tax,
 
-      discountCodeId: validDiscount?.id ?? null,
       discountCodeText: validDiscount?.code ?? null,
-      discountPercent: validDiscount?.percentOff ?? null,
+      discountPercent:
+        validDiscount?.percentOff != null
+          ? Number(validDiscount.percentOff)
+          : null,
       discountAmountCents,
 
       total: totalCents / 100,

@@ -157,7 +157,7 @@ model Product {
 }
 
 model SizeStock {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   productId String
   size      String
   available Boolean @default(true)
@@ -286,37 +286,49 @@ model CartItem {
  */
 
 model DiscountCode {
-  id         String    @id @default(cuid())
-  code       String    @unique
-  percentOff Int       @default(10)
-  active     Boolean   @default(true)
-  maxUses    Int       @default(1)
-  usesCount  Int       @default(0)
-  usedAt     DateTime?
-  expiresAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id         String  @id @default(cuid())
+  code       String  @unique
+  percentOff Int     @default(10)
+  active     Boolean @default(true)
+
+  /**
+   * 🔹 uso único:
+   * maxUses e usesCount mantidos para compatibilidade/histórico,
+   * mas o fluxo passa a ser de 1 utilização apenas.
+   */
+  maxUses   Int       @default(1)
+  usesCount Int       @default(0)
+  usedAt    DateTime?
+  expiresAt DateTime?
+
+  /**
+   * 🔹 order que consumiu este código
+   * um código só pode ficar ligado a UMA única order
+   */
+  usedByOrderId String? @unique
+  usedByOrder   Order?  @relation("DiscountCodeUsedByOrder", fields: [usedByOrderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /**
    * 🔹 integração opcional com Stripe para exibir
    * o desconto como linha separada no Checkout
-   *
    * Podes usar um OU outro:
    * - stripeCouponId: cupão do Stripe
    * - stripePromotionCodeId: promotion code do Stripe
-   *
    * Normalmente basta stripePromotionCodeId se quiseres
    * espelhar diretamente cada código interno.
    */
   stripeCouponId        String?
   stripePromotionCodeId String?
 
-  orders Order[] @relation("AppliedDiscountCode")
-
   @@index([active])
   @@index([code, active])
   @@index([expiresAt])
   @@index([createdAt])
+  @@index([usedAt])
+  @@index([usedByOrderId])
   @@index([stripeCouponId])
   @@index([stripePromotionCodeId])
 }
@@ -392,13 +404,12 @@ model Order {
   totalCents Int?
 
   /**
-   * 🔹 desconto aplicado APENAS aos produtos
+   * 🔹 dados do desconto aplicado à order
+   * o vínculo do código consumido fica no model DiscountCode.usedByOrderId
    */
-  discountCodeId      String?
-  discountCode        DiscountCode? @relation("AppliedDiscountCode", fields: [discountCodeId], references: [id], onDelete: SetNull)
   discountCodeText    String?
   discountPercent     Int?
-  discountAmountCents Int           @default(0)
+  discountAmountCents Int     @default(0)
 
   /**
    * 🔹 ids Stripe ligados ao desconto aplicado
@@ -448,6 +459,12 @@ model Order {
 
   items OrderItem[]
 
+  /**
+   * 🔹 relação inversa do DiscountCode usado por esta order
+   * cada order pode ter no máximo um código consumido
+   */
+  usedDiscountCode DiscountCode? @relation("DiscountCodeUsedByOrder")
+
   @@index([userId])
   @@index([sessionId])
   @@index([status])
@@ -462,7 +479,6 @@ model Order {
   @@index([trackingCode])
   @@index([confirmationEmailSentAt])
   @@index([channel])
-  @@index([discountCodeId])
   @@index([discountCodeText])
   @@index([stripeCouponIdUsed])
   @@index([stripePromotionCodeIdUsed])

@@ -8,6 +8,7 @@ import { pusherServer } from "@/lib/pusher";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { normalizeDiscountCode } from "@/lib/discount-codes";
 import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -523,7 +524,6 @@ async function markPaid(
       shippingJson: true,
       shippingCountry: true,
       userId: true,
-      discountCodeId: true,
       discountCodeText: true,
       discountPercent: true,
       discountAmountCents: true,
@@ -535,6 +535,8 @@ async function markPaid(
       shippingCents: true,
       tax: true,
       confirmationEmailSentAt: true,
+      stripePromotionCodeIdUsed: true,
+      stripeCouponIdUsed: true,
     },
   });
 
@@ -560,19 +562,6 @@ async function markPaid(
 
   const normalizedCode = normalizeDiscountCode(opts.discount?.code ?? "");
   const hasDiscountMeta = !!normalizedCode;
-
-  const discountRecord = normalizedCode
-    ? await prisma.discountCode.findUnique({
-        where: { code: normalizedCode },
-        select: {
-          id: true,
-          code: true,
-          maxUses: true,
-          usesCount: true,
-          active: true,
-        },
-      })
-    : null;
 
   const updateData: Record<string, any> = {
     ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
@@ -622,24 +611,30 @@ async function markPaid(
     if (opts.discount?.stripeCouponId) {
       updateData.stripeCouponIdUsed = opts.discount.stripeCouponId;
     }
-
-    if (discountRecord?.id) {
-      updateData.discountCodeId = discountRecord.id;
-    }
   }
 
   let transitioned = false;
 
   if (!wasAlreadyFinal) {
-    const claim = await prisma.order.updateMany({
-      where: {
-        id: orderId,
-        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
-      },
-      data: updateData as any,
-    });
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData as any,
+      });
 
-    transitioned = claim.count === 1;
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountMeta && normalizedCode) {
+        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+      }
+
+      return true;
+    });
 
     if (!transitioned) {
       await prisma.order.update({
@@ -652,29 +647,6 @@ async function markPaid(
       where: { id: orderId },
       data: updateData as any,
     });
-  }
-
-  if (transitioned && discountRecord?.id && discountRecord.active) {
-    try {
-      const willReachLimit =
-        discountRecord.usesCount + 1 >= discountRecord.maxUses;
-
-      if (willReachLimit) {
-        await prisma.discountCode.delete({
-          where: { id: discountRecord.id },
-        });
-      } else {
-        await prisma.discountCode.update({
-          where: { id: discountRecord.id },
-          data: {
-            usesCount: { increment: 1 },
-            usedAt: new Date(),
-          },
-        });
-      }
-    } catch (err) {
-      console.error("Discount code update/delete failed:", err);
-    }
   }
 
   if (transitioned) {

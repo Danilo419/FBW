@@ -768,13 +768,28 @@ export async function POST(req: NextRequest) {
         shipping: shippingCents,
         shippingCents,
         tax: 0,
-        discountCodeId: validDiscount?.id ?? null,
         discountCodeText: validDiscount?.code ?? null,
-        discountPercent: validDiscount?.percentOff ?? null,
+        discountPercent:
+          validDiscount?.percentOff != null
+            ? Number(validDiscount.percentOff)
+            : null,
         discountAmountCents: reviewDiscountCents,
+        stripeCouponIdUsed: stripeCouponId,
+        stripePromotionCodeIdUsed: stripePromotionCodeId,
         total: totalCents / 100,
         totalCents,
         shippingJson: shippingJsonFlat as any,
+        shippingFullName: safeStr(shippingFromCookie?.name),
+        shippingEmail: safeStr(shippingFromCookie?.email),
+        shippingPhone: safeStr(shippingFromCookie?.phone),
+        shippingAddress1: safeStr(shippingFromCookie?.address?.line1),
+        shippingAddress2: safeStr(shippingFromCookie?.address?.line2),
+        shippingCity: safeStr(shippingFromCookie?.address?.city),
+        shippingRegion: safeStr(shippingFromCookie?.address?.state),
+        shippingPostalCode: safeStr(
+          shippingFromCookie?.address?.postal_code
+        ),
+        shippingCountry: safeStr(shippingFromCookie?.address?.country),
         items: { create: orderItemsCreate },
       },
       include: { items: true },

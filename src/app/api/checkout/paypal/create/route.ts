@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { paypalClient, paypal } from "@/lib/paypal";
+import { getShippingForCart } from "@/lib/shipping";
+import {
+  DISCOUNT_COOKIE,
+  calcDiscountOnProductsOnly,
+  getValidDiscountCode,
+  normalizeDiscountCode,
+} from "@/lib/discount-codes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -340,6 +347,46 @@ async function validatePtStockOrThrow(items: CartItemRow[]) {
   }
 }
 
+function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
+  if (!s) return null;
+
+  const addr = safeObj(s.address);
+  return {
+    name: safeStr(s.name),
+    phone: safeStr(s.phone),
+    email: safeStr(s.email),
+
+    line1: safeStr(addr.line1),
+    line2: safeStr(addr.line2),
+    city: safeStr(addr.city),
+    state: safeStr(addr.state),
+    postal_code: safeStr(addr.postal_code),
+    country: safeStr(addr.country),
+
+    address: {
+      line1: safeStr(addr.line1),
+      line2: safeStr(addr.line2),
+      city: safeStr(addr.city),
+      state: safeStr(addr.state),
+      postal_code: safeStr(addr.postal_code),
+      country: safeStr(addr.country),
+    },
+  };
+}
+
+function resolvePtStockShippingCents(items: CartItemRow[]) {
+  const result = getShippingForCart(
+    items.map((it) => ({
+      qty: Math.max(0, Number(it.qty ?? 0)),
+      channel: "PT_STOCK_CTT" as const,
+    }))
+  );
+
+  return typeof (result as any)?.shippingCents === "number"
+    ? Math.max(0, Number((result as any).shippingCents))
+    : 0;
+}
+
 /* --------------------------- route --------------------------- */
 
 export async function POST(req: NextRequest) {
@@ -354,6 +401,12 @@ export async function POST(req: NextRequest) {
     if (!sid) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
+
+    const rawDiscountCode = jar.get(DISCOUNT_COOKIE)?.value ?? "";
+    const normalizedDiscountCode = normalizeDiscountCode(rawDiscountCode);
+    const validDiscount = normalizedDiscountCode
+      ? await getValidDiscountCode(normalizedDiscountCode)
+      : null;
 
     const cart = await prisma.cart.findFirst({
       where: { sessionId: sid },
@@ -400,17 +453,32 @@ export async function POST(req: NextRequest) {
     const cartChannel = detectCartChannel(cartItems);
     const currency = "EUR";
 
-    const subtotalCents = cartItems.reduce((acc, it) => {
+    const productSubtotalCents = cartItems.reduce((acc, it) => {
       const line = it.totalPrice ?? it.qty * it.unitPrice;
       return acc + Number(line || 0);
     }, 0);
 
     const shippingFromCookie = decodeShippingCookie(jar.get("ship")?.value);
+    const shippingJsonFlat = shippingToFlatJson(shippingFromCookie);
 
-    const shippingCents = 0;
+    const shippingCents =
+      cartChannel === "PT_STOCK_CTT" ? resolvePtStockShippingCents(cartItems) : 0;
+
     const taxCents = 0;
-    const discountCents = 0;
-    const finalProductSubtotalCents = Math.max(0, subtotalCents - discountCents);
+
+    const discountCents = validDiscount
+      ? calcDiscountOnProductsOnly(
+          productSubtotalCents,
+          Number(validDiscount.percentOff ?? 0)
+        )
+      : 0;
+
+    const finalProductSubtotalCents = Math.max(
+      0,
+      productSubtotalCents - discountCents
+    );
+
+    const totalCents = finalProductSubtotalCents + shippingCents + taxCents;
 
     const order = await prisma.order.create({
       data: {
@@ -419,20 +487,25 @@ export async function POST(req: NextRequest) {
         currency: currency.toLowerCase(),
         channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
 
-        subtotal: subtotalCents,
-        productSubtotalCents: subtotalCents,
+        subtotal: productSubtotalCents,
+        productSubtotalCents,
         finalProductSubtotalCents,
 
         shipping: shippingCents,
         shippingCents,
         tax: taxCents,
 
+        discountCodeText: validDiscount?.code ?? null,
+        discountPercent:
+          validDiscount?.percentOff != null
+            ? Number(validDiscount.percentOff)
+            : null,
         discountAmountCents: discountCents,
 
-        total: (finalProductSubtotalCents + shippingCents + taxCents) / 100,
-        totalCents: finalProductSubtotalCents + shippingCents + taxCents,
+        total: totalCents / 100,
+        totalCents,
 
-        shippingJson: (shippingFromCookie as any) ?? null,
+        shippingJson: (shippingJsonFlat as any) ?? null,
 
         shippingFullName: shippingFromCookie?.name ?? null,
         shippingEmail: shippingFromCookie?.email ?? null,
@@ -467,13 +540,6 @@ export async function POST(req: NextRequest) {
     const return_url = `${APP}/${locale}/checkout/paypal/return?order=${order.id}`;
     const cancel_url = `${APP}/${locale}/cart`;
 
-    const itemsTotalCents = order.items.reduce((acc, it) => {
-      const line = Number(it.unitPrice || 0) * Number(it.qty || 0);
-      return acc + line;
-    }, 0);
-
-    const totalCents = itemsTotalCents + shippingCents + taxCents - discountCents;
-
     const countryCode =
       safeCountryCode(shippingFromCookie?.address?.country) ?? "PT";
 
@@ -485,6 +551,9 @@ export async function POST(req: NextRequest) {
         {
           reference_id: "default",
           custom_id: order.id,
+          description: validDiscount?.code
+            ? `Order ${order.id} - Discount ${validDiscount.code}`
+            : `Order ${order.id}`,
 
           amount: {
             currency_code: currency,
@@ -492,7 +561,7 @@ export async function POST(req: NextRequest) {
             breakdown: {
               item_total: {
                 currency_code: currency,
-                value: centsToMoney(itemsTotalCents),
+                value: centsToMoney(productSubtotalCents),
               },
               shipping: {
                 currency_code: currency,
@@ -577,6 +646,8 @@ export async function POST(req: NextRequest) {
       approveUrl,
       orderId: order.id,
       paypalOrderId: ppOrderId,
+      discountCode: validDiscount?.code ?? null,
+      discountAmountCents: discountCents,
     });
   } catch (err: any) {
     console.error("PayPal create error:", err);
