@@ -264,6 +264,104 @@ function computeTotalCents(order: OrderDetailsDTO): number {
   return itemsSum + shipping + tax
 }
 
+/* ========================= Discount helpers ========================= */
+
+function allocateProportionally(values: number[], targetTotal: number): number[] {
+  const safeValues = values.map((v) => Math.max(0, Math.round(Number(v) || 0)))
+  const safeTarget = Math.max(0, Math.round(Number(targetTotal) || 0))
+
+  const sourceTotal = safeValues.reduce((a, b) => a + b, 0)
+
+  if (safeValues.length === 0) return []
+  if (safeTarget === 0) return safeValues.map(() => 0)
+
+  if (sourceTotal <= 0) {
+    const base = Math.floor(safeTarget / safeValues.length)
+    let remainder = safeTarget - base * safeValues.length
+
+    return safeValues.map(() => {
+      const extra = remainder > 0 ? 1 : 0
+      if (remainder > 0) remainder -= 1
+      return base + extra
+    })
+  }
+
+  const provisional = safeValues.map((v, idx) => {
+    const exact = (v * safeTarget) / sourceTotal
+    const floor = Math.floor(exact)
+    return { idx, floor, frac: exact - floor }
+  })
+
+  const result = new Array(safeValues.length).fill(0)
+  let assigned = 0
+
+  for (const row of provisional) {
+    result[row.idx] = row.floor
+    assigned += row.floor
+  }
+
+  let remainder = safeTarget - assigned
+
+  provisional
+    .slice()
+    .sort((a, b) => {
+      if (b.frac !== a.frac) return b.frac - a.frac
+      return a.idx - b.idx
+    })
+    .forEach((row) => {
+      if (remainder <= 0) return
+      result[row.idx] += 1
+      remainder -= 1
+    })
+
+  return result
+}
+
+function buildDiscountedPricing(order: OrderDetailsDTO | null) {
+  if (!order) {
+    return {
+      shippingCents: 0,
+      taxCents: 0,
+      orderTotalCents: 0,
+      originalItemsSubtotal: 0,
+      discountedItemsSubtotal: 0,
+      discountedItemTotals: [] as number[],
+      discountedUnitPrices: [] as number[],
+    }
+  }
+
+  const originalItemTotals = (order.items || []).map((it) =>
+    Math.max(0, Number(it.totalPrice) || 0)
+  )
+
+  const originalItemsSubtotal = originalItemTotals.reduce((a, b) => a + b, 0)
+  const shippingCents = Math.max(0, Number(order.shipping) || 0)
+  const taxCents = Math.max(0, Number(order.tax) || 0)
+  const orderTotalCents = Math.max(0, computeTotalCents(order))
+
+  const discountedItemsSubtotal = Math.max(0, orderTotalCents - shippingCents - taxCents)
+
+  const discountedItemTotals =
+    originalItemsSubtotal > 0
+      ? allocateProportionally(originalItemTotals, discountedItemsSubtotal)
+      : originalItemTotals.map(() => 0)
+
+  const discountedUnitPrices = discountedItemTotals.map((itemTotal, idx) => {
+    const qty = Math.max(1, Number(order.items[idx]?.qty) || 1)
+    return Math.round(itemTotal / qty)
+  })
+
+  return {
+    shippingCents,
+    taxCents,
+    orderTotalCents,
+    originalItemsSubtotal,
+    discountedItemsSubtotal,
+    discountedItemTotals,
+    discountedUnitPrices,
+  }
+}
+
 /* ========================= Item detail extraction ========================= */
 
 function extractPersonalization(
@@ -517,14 +615,11 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
 
   const currency = useMemo(() => (order?.currency || 'eur').toUpperCase(), [order?.currency])
 
-  const itemsSubtotal = useMemo(() => {
-    if (!order) return 0
-    return order.items.reduce((acc, it) => acc + (Number(it.totalPrice) || 0), 0)
-  }, [order])
+  const pricing = useMemo(() => buildDiscountedPricing(order), [order])
 
   const ship = useMemo(() => (order ? shippingFromOrder(order) : null), [order])
 
-  const totalCents = useMemo(() => (order ? computeTotalCents(order) : 0), [order])
+  const totalCents = useMemo(() => pricing.orderTotalCents, [pricing])
 
   const statusStyle = useMemo(() => {
     const status = String(order?.status || '').toLowerCase()
@@ -581,7 +676,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                 <div className="border-b px-4 py-3 font-semibold">{t('items')}</div>
 
                 <ul className="divide-y">
-                  {order.items.map((it) => {
+                  {order.items.map((it, index) => {
                     const title = it.name || it.product?.name || t('itemFallback')
                     const details = deriveItemDetails(it)
 
@@ -590,6 +685,8 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                     const external = isExternalUrl(img)
 
                     const productHref = it.product?.slug ? `/products/${it.product.slug}` : null
+                    const discountedUnitPrice = pricing.discountedUnitPrices[index] ?? 0
+                    const discountedItemTotal = pricing.discountedItemTotals[index] ?? 0
 
                     return (
                       <li key={it.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4">
@@ -621,12 +718,12 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                               <div className="text-sm text-gray-600">
                                 {t('qty')}: {it.qty}
                                 <span className="mx-2">·</span>
-                                {money(it.unitPrice, currency, locale)} {t('each')}
+                                {money(discountedUnitPrice, currency, locale)} {t('each')}
                               </div>
                             </div>
                           </div>
 
-                          <div className="shrink-0 font-semibold">{money(it.totalPrice, currency, locale)}</div>
+                          <div className="shrink-0 font-semibold">{money(discountedItemTotal, currency, locale)}</div>
                         </div>
 
                         <div className="relative mt-0.5 hidden h-14 w-14 shrink-0 overflow-hidden rounded-md border bg-gray-50 sm:block">
@@ -655,7 +752,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                           <div className="text-sm text-gray-600">
                             {t('qty')}: {it.qty}
                             <span className="mx-2">·</span>
-                            {money(it.unitPrice, currency, locale)} {t('each')}
+                            {money(discountedUnitPrice, currency, locale)} {t('each')}
                           </div>
 
                           {(details.size || details.personalization?.name || details.personalization?.number) && (
@@ -710,7 +807,7 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                         </div>
 
                         <div className="hidden shrink-0 font-semibold sm:block">
-                          {money(it.totalPrice, currency, locale)}
+                          {money(discountedItemTotal, currency, locale)}
                         </div>
 
                         <div className="sm:hidden">
@@ -776,17 +873,17 @@ export default function OrderDetailsClient({ orderId }: { orderId: string }) {
                 <div className="mt-3 space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>{t('subtotal')}</span>
-                    <span>{money(order.subtotal ?? itemsSubtotal, currency, locale)}</span>
+                    <span>{money(pricing.discountedItemsSubtotal, currency, locale)}</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span>{t('shipping')}</span>
-                    <span>{money(order.shipping ?? 0, currency, locale)}</span>
+                    <span>{money(pricing.shippingCents, currency, locale)}</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span>{t('tax')}</span>
-                    <span>{money(order.tax ?? 0, currency, locale)}</span>
+                    <span>{money(pricing.taxCents, currency, locale)}</span>
                   </div>
 
                   <div className="mt-2 flex justify-between border-t pt-2 font-bold">

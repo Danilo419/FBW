@@ -2906,7 +2906,7 @@
       "intercontinentalCupChampions": "FIFA Intercontinental Cup – Emblema de campeão"
     }
   },
-    "SuccessPage": {
+      "SuccessPage": {
     "loadingOrder": "A carregar a sua encomenda…",
     "finalizingPayment": "A finalizar o seu pagamento…",
     "paymentSuccessful": "O seu pagamento foi efetuado com sucesso",
@@ -2937,7 +2937,6 @@
       "networkErrorLoadingOrder": "Erro de rede ao carregar a encomenda."
     }
   },
-
   "OrderPage": {
     "title": "Detalhes da encomenda",
     "backToStore": "Voltar à loja",
@@ -3015,5 +3014,9 @@
       "clubWorldCupChampions": "Mundial de Clubes FIFA – Emblema de campeão",
       "intercontinentalCupChampions": "Taça Intercontinental FIFA – Emblema de campeão"
     }
+  },
+  "CheckoutSuccessPage": {
+    "title": "Obrigado!",
+    "loadingOrder": "A carregar a sua encomenda…"
   }
 }

@@ -125,10 +125,7 @@ function fallbackHumanize(value: string) {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function humanizeBadge(
-  value: string,
-  t: (key: string) => string
-) {
+function humanizeBadge(value: string, t: (key: string) => string) {
   const key = String(value ?? "").trim();
   if (!key) return "";
 
@@ -195,6 +192,90 @@ function computeTotalCents(order: OrderRow) {
   const shipping = Number(order.shipping) || 0;
   const tax = Number(order.tax) || 0;
   return itemsSum + shipping + tax;
+}
+
+/* ---------------------- discount-aware helpers ---------------------- */
+
+function allocateProportionally(values: number[], targetTotal: number): number[] {
+  const safeValues = values.map((v) => Math.max(0, Math.round(Number(v) || 0)));
+  const safeTarget = Math.max(0, Math.round(Number(targetTotal) || 0));
+
+  const sourceTotal = safeValues.reduce((a, b) => a + b, 0);
+
+  if (safeValues.length === 0) return [];
+  if (safeTarget === 0) return safeValues.map(() => 0);
+  if (sourceTotal <= 0) {
+    const base = Math.floor(safeTarget / safeValues.length);
+    let remainder = safeTarget - base * safeValues.length;
+    return safeValues.map(() => {
+      const extra = remainder > 0 ? 1 : 0;
+      if (remainder > 0) remainder -= 1;
+      return base + extra;
+    });
+  }
+
+  const provisional = safeValues.map((v, idx) => {
+    const exact = (v * safeTarget) / sourceTotal;
+    const floor = Math.floor(exact);
+    return { idx, floor, frac: exact - floor };
+  });
+
+  const result = new Array(safeValues.length).fill(0);
+  let assigned = 0;
+
+  for (const row of provisional) {
+    result[row.idx] = row.floor;
+    assigned += row.floor;
+  }
+
+  let remainder = safeTarget - assigned;
+
+  provisional
+    .slice()
+    .sort((a, b) => {
+      if (b.frac !== a.frac) return b.frac - a.frac;
+      return a.idx - b.idx;
+    })
+    .forEach((row) => {
+      if (remainder <= 0) return;
+      result[row.idx] += 1;
+      remainder -= 1;
+    });
+
+  return result;
+}
+
+function buildDiscountedPricing(order: OrderRow) {
+  const originalItemTotals = (order.items || []).map(
+    (it) => Math.max(0, Number(it.totalPrice) || 0)
+  );
+
+  const originalItemsSubtotal = originalItemTotals.reduce((a, b) => a + b, 0);
+  const shippingCents = Math.max(0, Number(order.shipping) || 0);
+  const taxCents = Math.max(0, Number(order.tax) || 0);
+  const orderTotalCents = Math.max(0, computeTotalCents(order));
+
+  const discountedItemsSubtotal = Math.max(0, orderTotalCents - shippingCents - taxCents);
+
+  const discountedItemTotals =
+    originalItemsSubtotal > 0
+      ? allocateProportionally(originalItemTotals, discountedItemsSubtotal)
+      : originalItemTotals.map(() => 0);
+
+  const discountedUnitPrices = discountedItemTotals.map((itemTotal, idx) => {
+    const qty = Math.max(1, Number(order.items[idx]?.qty) || 1);
+    return Math.round(itemTotal / qty);
+  });
+
+  return {
+    shippingCents,
+    taxCents,
+    orderTotalCents,
+    originalItemsSubtotal,
+    discountedItemsSubtotal,
+    discountedItemTotals,
+    discountedUnitPrices,
+  };
 }
 
 /* ========================= Item detail extraction ========================= */
@@ -353,10 +434,7 @@ function deriveItemDetails(it: OrderItemRow) {
   return { size, personalization, badges: allBadges, optionsPairs };
 }
 
-function prettyKey(
-  k: string,
-  t: (key: string) => string
-) {
+function prettyKey(k: string, t: (key: string) => string) {
   const map: Record<string, string> = {
     custName: "name",
     custNumber: "number",
@@ -374,10 +452,7 @@ function prettyKey(
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function formatStatus(
-  status: string,
-  t: (key: string) => string
-) {
+function formatStatus(status: string, t: (key: string) => string) {
   const normalized = String(status || "").trim().toLowerCase();
 
   const map: Record<string, string> = {
@@ -400,10 +475,7 @@ function formatStatus(
     : t("status.unknown");
 }
 
-function formatPaymentStatus(
-  paymentStatus: string,
-  t: (key: string) => string
-) {
+function formatPaymentStatus(paymentStatus: string, t: (key: string) => string) {
   const normalized = String(paymentStatus || "").trim().toLowerCase();
 
   const map: Record<string, string> = {
@@ -546,8 +618,10 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const ship = shippingFromOrder(order);
-  const totalCents = computeTotalCents(order);
   const currency = (order.currency || "eur").toUpperCase();
+
+  const pricing = buildDiscountedPricing(order);
+  const totalCents = pricing.orderTotalCents;
 
   const status = String(order.status || "").toLowerCase();
   const statusStyle =
@@ -556,11 +630,6 @@ export default async function OrderPage({
       : status === "pending"
       ? "bg-amber-100 text-amber-800 border border-amber-200"
       : "bg-gray-100 text-gray-700 border";
-
-  const itemsSubtotal =
-    (order.items || []).reduce((acc: number, it: OrderItemRow) => {
-      return acc + (Number(it.totalPrice) || 0);
-    }, 0) || 0;
 
   return (
     <main className="container-fw pt-12 pb-20">
@@ -587,19 +656,14 @@ export default async function OrderPage({
               <div className="border-b px-4 py-3 font-semibold">{t("itemsTitle")}</div>
 
               <ul className="divide-y">
-                {order.items.map((it: OrderItemRow) => {
+                {order.items.map((it: OrderItemRow, index: number) => {
                   const img = resolveItemImage(it);
                   const title = it.name || it.product?.name || t("itemFallback");
                   const productHref = it.product?.slug ? `/products/${it.product.slug}` : null;
 
                   const details = deriveItemDetails(it);
-
-                  const unit =
-                    typeof it.unitPrice === "number" && it.unitPrice > 0
-                      ? it.unitPrice
-                      : typeof it.totalPrice === "number" && it.qty > 0
-                      ? Math.round(it.totalPrice / it.qty)
-                      : 0;
+                  const discountedItemTotal = pricing.discountedItemTotals[index] ?? 0;
+                  const discountedUnitPrice = pricing.discountedUnitPrices[index] ?? 0;
 
                   return (
                     <li key={it.id} className="p-4">
@@ -626,13 +690,13 @@ export default async function OrderPage({
                             <div className="text-sm text-gray-600">
                               {t("qtyLabel")}: {it.qty}
                               <span className="mx-2">·</span>
-                              {money(unit, currency, locale)} {t("each")}
+                              {money(discountedUnitPrice, currency, locale)} {t("each")}
                             </div>
                           </div>
                         </div>
 
                         <div className="shrink-0 font-semibold">
-                          {money(it.totalPrice ?? 0, currency, locale)}
+                          {money(discountedItemTotal, currency, locale)}
                         </div>
                       </div>
 
@@ -717,15 +781,15 @@ export default async function OrderPage({
               <div className="mt-3 space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>{t("subtotal")}</span>
-                  <span>{money(order.subtotal ?? itemsSubtotal, currency, locale)}</span>
+                  <span>{money(pricing.discountedItemsSubtotal, currency, locale)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("shipping")}</span>
-                  <span>{money(order.shipping ?? 0, currency, locale)}</span>
+                  <span>{money(pricing.shippingCents, currency, locale)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("tax")}</span>
-                  <span>{money(order.tax ?? 0, currency, locale)}</span>
+                  <span>{money(pricing.taxCents, currency, locale)}</span>
                 </div>
                 <div className="mt-2 flex justify-between border-t pt-2 font-bold">
                   <span>{t("total")}</span>

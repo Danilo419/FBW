@@ -2985,7 +2985,7 @@
       "intercontinentalCupChampions": "FIFA Intercontinental Cup – Champions Badge"
     }
   },
-  "SuccessPage": {
+    "SuccessPage": {
     "loadingOrder": "Loading your order…",
     "finalizingPayment": "Finalizing your payment…",
     "paymentSuccessful": "Your payment was successful",
@@ -3015,5 +3015,9 @@
       "paymentStillProcessing": "Payment is still processing. Please check your order in your account in a moment.",
       "networkErrorLoadingOrder": "Network error while loading the order."
     }
+  },
+  "CheckoutSuccessPage": {
+    "title": "Thank you!",
+    "loadingOrder": "Loading your order…"
   }
 }
