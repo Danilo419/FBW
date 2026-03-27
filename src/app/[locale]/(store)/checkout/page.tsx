@@ -1,13 +1,21 @@
-// src/app/(store)/checkout/page.tsx
+// src/app/[locale]/(store)/checkout/page.tsx
 import { Suspense } from "react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import CheckoutClient from "./CheckoutClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function CheckoutPage() {
-  const t = await getTranslations("checkoutPage");
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function CheckoutPage({ params }: Props) {
+  const { locale } = await params;
+
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "checkoutPage" });
 
   return (
     <main className="mx-auto max-w-3xl p-6">
