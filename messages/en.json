@@ -1617,7 +1617,21 @@
   },
   "checkoutPage": {
     "title": "Choose Payment Method",
-    "loading": "Loading…"
+    "loading": "Loading…",
+
+    "payWithCard": "Pay with Card",
+    "payWithPaypal": "Pay with PayPal",
+    "payWithAmazon": "Pay with Amazon Pay",
+    "payWithMultibanco": "Pay with Multibanco",
+    "payWithRevolut": "Pay with Revolut Pay",
+    "payWithKlarna": "Pay with Klarna",
+    "payWithSatispay": "Pay with Satispay",
+    "payWithLink": "Pay with Link",
+
+    "seeAll": "See all payment methods",
+
+    "openingCheckout": "Opening checkout…",
+    "error": "An error occurred. Please try again."
   },
   "ptStockPage": {
     "title": "Portugal Stock Jerseys",

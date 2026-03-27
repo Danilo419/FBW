@@ -3,7 +3,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 type StripeMethod =
   | 'card'
@@ -43,7 +43,7 @@ async function startPayPal() {
 
 /* ---------- Icons ---------- */
 const IconCard = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24">
+  <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
     <rect x="2" y="6" width="20" height="12" rx="2" fill="#111" />
     <rect x="4" y="9" width="16" height="2" fill="#fff" />
     <rect x="4" y="13" width="8" height="2" fill="#ccc" />
@@ -51,38 +51,52 @@ const IconCard = () => (
 );
 
 const IconPayPal = () => (
-  <svg width="24" height="24" viewBox="0 0 32 32">
-    <path fill="#003087" d="M23.5 9.3c-.3-2.1-2.2-3.3-4.8-3.3H11l-2.5 17h3.7l.7-5h3.5c4.1 0 7.4-1.7 7.8-5.2.1-.5.1-1 0-1.5z"/>
-    <path fill="#009cde" d="M25.9 10.8c-.5 3.5-3.7 5.2-7.8 5.2h-3.5l-1 7h3.1l.6-4h2.4c3.1 0 5.6-1.1 6.3-4.4.2-1 .2-2 0-2.8z"/>
+  <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+    <path fill="#003087" d="M23.5 9.3c-.3-2.1-2.2-3.3-4.8-3.3H11l-2.5 17h3.7l.7-5h3.5c4.1 0 7.4-1.7 7.8-5.2.1-.5.1-1 0-1.5z" />
+    <path fill="#009cde" d="M25.9 10.8c-.5 3.5-3.7 5.2-7.8 5.2h-3.5l-1 7h3.1l.6-4h2.4c3.1 0 5.6-1.1 6.3-4.4.2-1 .2-2 0-2.8z" />
   </svg>
 );
 
 const IconMultibanco = () => (
-  <div className="w-6 h-6 bg-[#0B1E3B] rounded flex items-center justify-center text-white text-xs font-bold">MB</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-[#0B1E3B] text-xs font-bold text-white">
+    MB
+  </div>
 );
 
 const IconRevolut = () => (
-  <div className="w-6 h-6 bg-[#00E1A1] rounded flex items-center justify-center font-bold">R</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-[#00E1A1] font-bold">
+    R
+  </div>
 );
 
 const IconKlarna = () => (
-  <div className="w-6 h-6 bg-pink-300 rounded flex items-center justify-center font-bold">K</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-pink-300 font-bold">
+    K
+  </div>
 );
 
 const IconSatispay = () => (
-  <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center text-white">⇄</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-red-500 text-white">
+    ⇄
+  </div>
 );
 
 const IconAmazonPay = () => (
-  <div className="w-6 h-6 bg-[#232F3E] rounded flex items-center justify-center text-orange-400">A</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-[#232F3E] text-orange-400">
+    A
+  </div>
 );
 
 const IconLink = () => (
-  <div className="w-6 h-6 bg-green-400 rounded flex items-center justify-center">→</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-green-400">
+    →
+  </div>
 );
 
 const IconMore = () => (
-  <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">⋯</div>
+  <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-200">
+    ⋯
+  </div>
 );
 
 /* ---------- Button ---------- */
@@ -92,27 +106,34 @@ function PayButton({
   loading,
   variant = 'outline',
   left,
+  loadingLabel,
 }: {
   label: string;
   onClick: () => Promise<void> | void;
   loading: boolean;
   variant?: 'primary' | 'paypal' | 'outline';
   left?: ReactNode;
+  loadingLabel: string;
 }) {
   const base =
-    'w-full rounded-2xl px-5 py-3 font-semibold flex items-center justify-center gap-3 disabled:opacity-60';
+    'flex w-full items-center justify-center gap-3 rounded-2xl px-5 py-3 font-semibold disabled:opacity-60';
 
   const styles =
     variant === 'primary'
       ? 'bg-black text-white'
       : variant === 'paypal'
-      ? 'bg-yellow-400 text-black'
-      : 'border';
+        ? 'bg-yellow-400 text-black'
+        : 'border';
 
   return (
-    <button className={`${base} ${styles}`} onClick={onClick} disabled={loading}>
+    <button
+      type="button"
+      className={`${base} ${styles}`}
+      onClick={onClick}
+      disabled={loading}
+    >
       {left}
-      <span>{loading ? 'Opening checkout…' : label}</span>
+      <span>{loading ? loadingLabel : label}</span>
     </button>
   );
 }
@@ -121,11 +142,11 @@ function PayButton({
 export default function CheckoutClient() {
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations('checkoutPage');
 
   const [checkedShip, setCheckedShip] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
 
-  /* ✅ FIX: redirect com locale */
   useEffect(() => {
     let alive = true;
 
@@ -155,92 +176,111 @@ export default function CheckoutClient() {
     };
   }, [router, locale]);
 
+  async function handleStripe(method: StripeMethod, loadingKey: string) {
+    setLoading(loadingKey);
+    try {
+      await startStripe(method, locale);
+    } catch (e: any) {
+      alert(e?.message || t('error'));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handlePayPal() {
+    setLoading('paypal');
+    try {
+      await startPayPal();
+    } catch (e: any) {
+      alert(e?.message || t('error'));
+    } finally {
+      setLoading(null);
+    }
+  }
+
   if (!checkedShip) {
     return (
       <div className="rounded-2xl border bg-white p-5 text-center">
-        Loading…
+        {t('loading')}
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border bg-white p-5 space-y-4">
-
+    <div className="space-y-4 rounded-2xl border bg-white p-5">
       <PayButton
         variant="primary"
-        label="Pay with Card"
+        label={t('payWithCard')}
         loading={loading === 'card'}
+        loadingLabel={t('openingCheckout')}
         left={<IconCard />}
-        onClick={async () => {
-          setLoading('card');
-          try { await startStripe('card', locale); }
-          catch (e: any) { alert(e?.message); }
-          finally { setLoading(null); }
-        }}
+        onClick={() => handleStripe('card', 'card')}
       />
 
       <PayButton
         variant="paypal"
-        label="Pay with PayPal"
+        label={t('payWithPaypal')}
         loading={loading === 'paypal'}
+        loadingLabel={t('openingCheckout')}
         left={<IconPayPal />}
-        onClick={async () => {
-          setLoading('paypal');
-          try { await startPayPal(); }
-          catch (e: any) { alert(e?.message); }
-          finally { setLoading(null); }
-        }}
+        onClick={handlePayPal}
       />
 
       <PayButton
-        label="Pay with Amazon Pay"
+        label={t('payWithAmazon')}
         loading={loading === 'amazon_pay'}
+        loadingLabel={t('openingCheckout')}
         left={<IconAmazonPay />}
-        onClick={() => startStripe('amazon_pay', locale)}
+        onClick={() => handleStripe('amazon_pay', 'amazon_pay')}
       />
 
       <PayButton
-        label="Pay with Multibanco"
+        label={t('payWithMultibanco')}
         loading={loading === 'multibanco'}
+        loadingLabel={t('openingCheckout')}
         left={<IconMultibanco />}
-        onClick={() => startStripe('multibanco', locale)}
+        onClick={() => handleStripe('multibanco', 'multibanco')}
       />
 
       <PayButton
-        label="Pay with Revolut Pay"
+        label={t('payWithRevolut')}
         loading={loading === 'revolut_pay'}
+        loadingLabel={t('openingCheckout')}
         left={<IconRevolut />}
-        onClick={() => startStripe('revolut_pay', locale)}
+        onClick={() => handleStripe('revolut_pay', 'revolut_pay')}
       />
 
       <PayButton
-        label="Pay with Klarna"
+        label={t('payWithKlarna')}
         loading={loading === 'klarna'}
+        loadingLabel={t('openingCheckout')}
         left={<IconKlarna />}
-        onClick={() => startStripe('klarna', locale)}
+        onClick={() => handleStripe('klarna', 'klarna')}
       />
 
       <PayButton
-        label="Pay with Satispay"
+        label={t('payWithSatispay')}
         loading={loading === 'satispay'}
+        loadingLabel={t('openingCheckout')}
         left={<IconSatispay />}
-        onClick={() => startStripe('satispay', locale)}
+        onClick={() => handleStripe('satispay', 'satispay')}
       />
 
       <PayButton
-        label="Pay with Link"
+        label={t('payWithLink')}
         loading={loading === 'link'}
+        loadingLabel={t('openingCheckout')}
         left={<IconLink />}
-        onClick={() => startStripe('link', locale)}
+        onClick={() => handleStripe('link', 'link')}
       />
 
       <PayButton
-        label="See all payment methods"
+        label={t('seeAll')}
         loading={loading === 'automatic'}
+        loadingLabel={t('openingCheckout')}
         left={<IconMore />}
-        onClick={() => startStripe('automatic', locale)}
+        onClick={() => handleStripe('automatic', 'automatic')}
       />
-
     </div>
   );
 }

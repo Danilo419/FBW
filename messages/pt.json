@@ -1210,7 +1210,21 @@
   },
   "checkoutPage": {
     "title": "Escolha o Método de Pagamento",
-    "loading": "A carregar…"
+    "loading": "A carregar…",
+
+    "payWithCard": "Pagar com Cartão",
+    "payWithPaypal": "Pagar com PayPal",
+    "payWithAmazon": "Pagar com Amazon Pay",
+    "payWithMultibanco": "Pagar com Multibanco",
+    "payWithRevolut": "Pagar com Revolut Pay",
+    "payWithKlarna": "Pagar com Klarna",
+    "payWithSatispay": "Pagar com Satispay",
+    "payWithLink": "Pagar com Link",
+
+    "seeAll": "Ver todos os métodos de pagamento",
+
+    "openingCheckout": "A abrir checkout…",
+    "error": "Ocorreu um erro. Tente novamente."
   },
   "ptStockPage": {
     "title": "Camisolas em Stock em Portugal",

@@ -1,0 +1,881 @@
+
+================ ROUTING / NEXT-INTL ================
+
+
+--- .\src\i18n\routing.ts ---
+
+// src/i18n/routing.ts
+import { defineRouting } from "next-intl/routing";
+
+export const routing = defineRouting({
+  // Idiomas disponíveis na loja
+  locales: ["en", "pt"] as const,
+
+  // Idioma padrão
+  defaultLocale: "en",
+
+  // Sempre mostrar o prefixo no URL (/en, /pt)
+  localePrefix: "always"
+});
+
+export type AppLocale = (typeof routing.locales)[number];
+
+--- .\src\i18n\request.ts ---
+
+// src/i18n/request.ts
+import { getRequestConfig } from "next-intl/server";
+import { hasLocale } from "next-intl";
+import { routing } from "@/i18n/routing";
+
+export default getRequestConfig(async ({ requestLocale }) => {
+  const requested = await requestLocale;
+
+  // Garantir que o locale é válido
+  const locale = hasLocale(routing.locales, requested)
+    ? requested
+    : routing.defaultLocale;
+
+  return {
+    locale,
+    messages: (await import(`../../messages/${locale}.json`)).default,
+  };
+});
+
+--- .\middleware.ts ---
+
+// middleware.ts
+import createMiddleware from "next-intl/middleware";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { routing } from "./src/i18n/routing";
+
+const PUBLIC_UNDER_ADMIN = ["/admin/login", "/admin/logout"];
+const intlMiddleware = createMiddleware(routing);
+
+function getLocales(): string[] {
+  return [...routing.locales];
+}
+
+function getLocaleFromPathname(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const firstSegment = segments[0];
+  const locales = getLocales();
+
+  if (firstSegment && locales.includes(firstSegment)) {
+    return firstSegment;
+  }
+
+  return routing.defaultLocale;
+}
+
+function stripLocaleFromPathname(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const firstSegment = segments[0];
+  const locales = getLocales();
+
+  if (firstSegment && locales.includes(firstSegment)) {
+    const stripped = "/" + segments.slice(1).join("/");
+    return stripped || "/";
+  }
+
+  return pathname;
+}
+
+function hasAuthSessionCookie(req: NextRequest): boolean {
+  return (
+    Boolean(req.cookies.get("__Secure-next-auth.session-token")?.value) ||
+    Boolean(req.cookies.get("next-auth.session-token")?.value)
+  );
+}
+
+export default function middleware(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
+
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_vercel") ||
+    /\.[^/]+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
+  const pathnameWithoutLocale = stripLocaleFromPathname(pathname);
+
+  // Deixa o next-intl tratar primeiro locale/rewrite/redirect
+  const intlResponse = intlMiddleware(req);
+
+  if (!pathnameWithoutLocale.startsWith("/admin")) {
+    return intlResponse;
+  }
+
+  const isPublicAdminRoute = PUBLIC_UNDER_ADMIN.some(
+    (p) => pathnameWithoutLocale === p || pathnameWithoutLocale.startsWith(`${p}/`)
+  );
+
+  if (isPublicAdminRoute) {
+    return intlResponse;
+  }
+
+  if (hasAuthSessionCookie(req)) {
+    return intlResponse;
+  }
+
+  // ⚠️ usar sempre locale já resolvido pelo pathname ou fallback
+  const locale = getLocaleFromPathname(pathname);
+
+  const url = req.nextUrl.clone();
+  url.pathname = `/${locale}/admin/login`;
+  url.search = "";
+  url.searchParams.set("next", pathname + search);
+
+  return NextResponse.redirect(url);
+}
+
+export const config = {
+  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+};
+
+================ LAYOUTS ================
+
+
+--- .\src\app\layout.tsx ---
+
+// src/app/layout.tsx
+import "./globals.css";
+import type {Metadata} from "next";
+
+export const metadata: Metadata = {
+  title: "FootballWorld",
+  description: "Authentic & concept football jerseys with worldwide shipping."
+};
+
+export default function RootLayout({
+  children
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}
+
+--- .\src\app\[locale]\layout.tsx (NOT FOUND) ---
+
+
+================ CHECKOUT FILES ================
+
+
+--- .\src\app\[locale]\(store)\checkout\page.tsx (NOT FOUND) ---
+
+
+================ SEARCH: checkoutPage usage ================
+
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\page.tsx:9: export default async function CheckoutPage() {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\page.tsx:10: const t = await getTranslations("checkoutPage");
+
+================ SEARCH: TRANSLATION HOOKS ================
+
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\HomeClient.tsx:6: import { useTranslations } from 'next-intl'
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\HomeClient.tsx:749: const t = useTranslations('HomePage')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\HomeClient.tsx:861: const t = useTranslations('HomePage')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\HomeClient.tsx:1149: const t = useTranslations('HomePage')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\HomeClient.tsx:1267: const t = useTranslations('HomePage')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:6: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:29: type Translator = Awaited<ReturnType<typeof getTranslations>>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:367: const t = await getTranslations({ locale });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\page.tsx:3: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\page.tsx:10: const t = await getTranslations("checkoutPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\address\CheckoutAddressClient.tsx:6: import { useTranslations } from 'next-intl';
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\address\CheckoutAddressClient.tsx:27: const t = useTranslations('checkoutAddressPage');
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\address\page.tsx:3: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\address\page.tsx:19: const t = await getTranslations({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\about\page.tsx:20: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\about\page.tsx:31: const t = await getTranslations({ locale, namespace: "aboutPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\about\page.tsx:65: const t = await getTranslations({ locale, namespace: "aboutPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:6: import { useLocale, useTranslations } from 'next-intl'
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:105: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:155: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:224: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:345: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:466: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:480: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:550: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:590: const t = useTranslations('Account')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\page.tsx:9: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\page.tsx:26: const t = await getTranslations({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\login\LoginClient.tsx:8: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\login\LoginClient.tsx:19: const t = useTranslations("loginPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:6: import { useLocale, useTranslations } from 'next-intl'
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:565: const tRaw = useTranslations('OrderDetailsPage')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:566: const tBadgesRaw = useTranslations('OrderDetailsPage.badges')
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\signup\SignupClient.tsx:7: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\signup\SignupClient.tsx:67: const t = useTranslations("signupPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\page.tsx:3: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\page.tsx:10: const t = await getTranslations("CheckoutSuccessPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:7: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:417: function prettyKey(k: string, t: ReturnType<typeof useTranslations>) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:502: const t = useTranslations("SuccessPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\contact\ContactClient.tsx:14: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\contact\ContactClient.tsx:47: const t = useTranslations("contactPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\faq\page.tsx:22: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\faq\page.tsx:49: const t = await getTranslations({ locale, namespace: "faqPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\faq\page.tsx:65: const t = await getTranslations({ locale, namespace: "faqPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\forgot-password\page.tsx:7: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\forgot-password\page.tsx:10: const t = useTranslations("forgotPasswordPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\leagues\[slug]\page.tsx:5: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\leagues\[slug]\page.tsx:56: const t = await getTranslations({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:6: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:615: const t = await getTranslations("OrderPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:887: const t = await getTranslations({ locale, namespace: "OrderPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\privacy-policy\PrivacyClient.tsx:7: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\privacy-policy\PrivacyClient.tsx:24: const t = useTranslations("privacyPolicyPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\adult\page.tsx:7: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\adult\page.tsx:470: const t = useTranslations("AdultPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\adult\page.tsx:604: const t = useTranslations("AdultPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\concept-kits\page.tsx:6: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\concept-kits\page.tsx:403: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\concept-kits\page.tsx:539: const t = useTranslations("conceptKitsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\crop-tops\page.tsx:6: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\crop-tops\page.tsx:392: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\crop-tops\page.tsx:523: const t = useTranslations("CropTopsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\current-season-25-26\page.tsx:7: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\current-season-25-26\page.tsx:414: const t = useTranslations("CurrentSeason2526Page");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\fifa-world-cup-2026-jerseys\page.tsx:6: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\fifa-world-cup-2026-jerseys\page.tsx:389: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\fifa-world-cup-2026-jerseys\page.tsx:528: const t = useTranslations("fifaWorldCup2026Page");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\jerseys\page.tsx:5: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\jerseys\page.tsx:372: const t = useTranslations("JerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\jerseys\page.tsx:517: const t = useTranslations("JerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\kids\page.tsx:6: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\kids\page.tsx:459: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\kids\page.tsx:601: const t = useTranslations("kidsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\kids-kits\page.tsx:5: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\kids-kits\page.tsx:419: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\kids-kits\page.tsx:571: const t = useTranslations("kidsKitsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\long-sleeve-jerseys\page.tsx:5: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\long-sleeve-jerseys\page.tsx:517: const t = useTranslations("LongSleeveJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\player-version-jerseys\page.tsx:5: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\player-version-jerseys\page.tsx:381: t: ReturnType<typeof useTranslations<"playerVersionJerseysPage">>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\player-version-jerseys\page.tsx:514: const t = useTranslations("playerVersionJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\player-version-long-sleeve-jerseys\page.tsx:6: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\player-version-long-sleeve-jerseys\page.tsx:550: const t = useTranslations("playerVersionLongSleevePage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\pre-match-jerseys\page.tsx:5: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\pre-match-jerseys\page.tsx:400: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\pre-match-jerseys\page.tsx:547: const t = useTranslations("preMatchJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro\page.tsx:7: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro\page.tsx:445: t: ReturnType<typeof useTranslations>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro\page.tsx:602: const t = useTranslations("retroPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro-jerseys\page.tsx:5: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro-jerseys\page.tsx:377: const t = useTranslations("RetroJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro-jerseys\page.tsx:506: const t = useTranslations("RetroJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro-long-sleeve-jerseys\page.tsx:5: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro-long-sleeve-jerseys\page.tsx:384: const t = useTranslations("RetroLongSleeveJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\retro-long-sleeve-jerseys\page.tsx:529: const t = useTranslations("RetroLongSleeveJerseysPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\team\[team]\page.tsx:7: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\team\[team]\page.tsx:217: const t = await getTranslations({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\tracksuits\page.tsx:7: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\tracksuits\page.tsx:414: t: ReturnType<typeof useTranslations<"TracksuitsPage">>;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\tracksuits\page.tsx:547: const t = useTranslations("TracksuitsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\training-sleeveless-sets\page.tsx:5: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\training-sleeveless-sets\page.tsx:384: const t = useTranslations("TrainingSleevelessSetsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\training-sleeveless-sets\page.tsx:528: const t = useTranslations("TrainingSleevelessSetsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\training-tracksuits\page.tsx:6: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\training-tracksuits\page.tsx:609: const t = useTranslations("TrainingTracksuitsPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:4: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:72: const t = await getTranslations({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:2: import { getTranslations } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:114: const t = await getTranslations({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\reset-password\page.tsx:6: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\reset-password\page.tsx:49: const t = useTranslations("resetPasswordPage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\return-and-refund-policy\page.tsx:22: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\return-and-refund-policy\page.tsx:31: const t = await getTranslations({ locale, namespace: "returnRefundPolicyPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\return-and-refund-policy\page.tsx:41: const t = await getTranslations({ locale, namespace: "returnRefundPolicyPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\return-and-refund-policy\page.tsx:68: const t = await getTranslations({ locale, namespace: "returnRefundPolicyPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\returns\page.tsx:20: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\returns\page.tsx:33: const t = await getTranslations({ locale, namespace: "returnsPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\returns\page.tsx:49: const t = await getTranslations({ locale, namespace: "returnsPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping\page.tsx:16: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping\page.tsx:26: const t = await getTranslations({ locale, namespace: "shippingPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping\page.tsx:42: const t = await getTranslations({ locale, namespace: "shippingPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping-policy\page.tsx:20: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping-policy\page.tsx:29: const t = await getTranslations({ locale, namespace: "shippingPolicyPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping-policy\page.tsx:39: const t = await getTranslations({ locale, namespace: "shippingPolicyPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping-policy\page.tsx:68: const t = await getTranslations({ locale, namespace: "shippingPolicyPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:6: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:97: const t = useTranslations("sizeGuidePage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:175: function makeKidsTable(t: ReturnType<typeof useTranslations>): KidsTableShape {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:197: const t = useTranslations("sizeGuidePage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:271: const t = useTranslations("sizeGuidePage");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\terms-of-service\page.tsx:22: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\terms-of-service\page.tsx:31: const t = await getTranslations({ locale, namespace: "termsPage.metadata" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\terms-of-service\page.tsx:41: const t = await getTranslations({ locale, namespace: "termsPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\terms-of-service\page.tsx:72: const t = await getTranslations({ locale, namespace: "termsPage" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Footer.tsx:6: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Footer.tsx:20: const t = useTranslations("Footer");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\FreeShippingBanner.tsx:6: import { useTranslations, useLocale } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\FreeShippingBanner.tsx:33: const t = useTranslations("FreeShippingBanner");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Header.tsx:7: import { useLocale, useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Header.tsx:38: const t = useTranslations("Header");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Header.tsx:605: const t = useTranslations("Header");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Header.tsx:750: const t = useTranslations("Header");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\Header.tsx:1181: const t = useTranslations("Header");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:7: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:297: const t = useTranslations("ProductConfigurator");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:1438: const t = useTranslations("ProductConfigurator");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:1553: const t = useTranslations("ProductConfigurator");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:1656: const t = useTranslations("ProductConfigurator");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductOptions.tsx:4: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductOptions.tsx:14: const t = useTranslations("ProductOptions");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductReviews.tsx:5: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductReviews.tsx:110: const t = useTranslations("ProductReviews");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductReviews.tsx:315: const t = useTranslations("ProductReviews");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductReviews.tsx:459: const t = useTranslations("ProductReviews");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:7: import { useTranslations } from "next-intl";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:232: const t = useTranslations("PtStockProductConfigurator");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\checkout\CountrySelect.tsx:4: import { useLocale, useTranslations } from 'next-intl';
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\checkout\CountrySelect.tsx:44: const t = useTranslations('countrySelect');
+
+================ SEARCH: LOCALE SET ================
+
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\layout.tsx:6: import { getMessages, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\layout.tsx:36: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\page.tsx:4: import { setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\page.tsx:18: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\address\page.tsx:3: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\address\page.tsx:17: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\about\page.tsx:20: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\about\page.tsx:63: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\faq\page.tsx:22: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\faq\page.tsx:63: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:6: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:613: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:4: import { setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:153: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:4: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:70: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\return-and-refund-policy\page.tsx:22: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\return-and-refund-policy\page.tsx:66: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\returns\page.tsx:20: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\returns\page.tsx:47: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping\page.tsx:16: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping\page.tsx:40: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping-policy\page.tsx:20: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\shipping-policy\page.tsx:66: setRequestLocale(locale);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\terms-of-service\page.tsx:22: import { getTranslations, setRequestLocale } from "next-intl/server";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\terms-of-service\page.tsx:70: setRequestLocale(locale);
+
+================ SEARCH: HARDCODED ENGLISH ================
+
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:171: label="Pay with Card"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:184: label="Pay with PayPal"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:196: label="Pay with Amazon Pay"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:203: label="Pay with Multibanco"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:210: label="Pay with Revolut Pay"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:217: label="Pay with Klarna"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:224: label="Pay with Satispay"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:231: label="Pay with Link"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\CheckoutClient.tsx:238: label="See all payment methods"
+
+================ MESSAGES FILES ================
+
+
+--- C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json ---
+
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:89: "title": "Free Shipping on orders above {threshold}",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:106: "title": "The jersey you want, made to order and shipped worldwide.",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:147: "title": "Real photos. Real feedback.",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:154: "title": "Shop by collection",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:159: "title": "Best picks across every style",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:164: "title": "FIFA World Cup 2026 Jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:176: "title": "New Season 25/26 Drops",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:180: "title": "Classic Jerseys (Short Sleeve)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:184: "title": "Long Sleeve Jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:188: "title": "Player Version (On-Pitch Fit)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:192: "title": "Player Version (Long Sleeve)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:196: "title": "Retro Jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:200: "title": "Retro Long Sleeve",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:204: "title": "Concept Kits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:208: "title": "Pre-Match Tops",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:212: "title": "Tracksuits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:216: "title": "Sleeveless Training Sets",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:220: "title": "Training Tracksuits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:224: "title": "Kids Kits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:228: "title": "Crop Tops",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:233: "title": "How it works",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:238: "title": "Choose your jersey",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:242: "title": "Select size & options",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:246: "title": "Made to order",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:250: "title": "Tracked delivery",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:255: "title": "Choose your next jersey with confidence",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:265: "title": "14-day guarantee",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:269: "title": "Secure checkout",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:273: "title": "Made on demand",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:277: "title": "Fast support",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:282: "title": "Frequently asked questions"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:313: "title": "Standard short-sleeve jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:316: "loading": "Loading jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:334: "title": "Long sleeve jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:337: "loading": "Loading jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:356: "title": "Player version jerseys (on-pitch fit, short-sleeve)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:359: "loading": "Loading player version jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:381: "title": "Player version jerseys (long sleeve)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:391: "loading": "Loading player version long-sleeve jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:409: "title": "Pre-match jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:412: "loading": "Loading pre-match jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:434: "title": "Tracksuits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:437: "loading": "Loading tracksuits…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:455: "title": "Training tracksuits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:468: "loading": "Loading training tracksuits…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:481: "title": "Training sleeveless sets",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:502: "title": "Current season 25/26",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:524: "title": "Adult",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:544: "title": "Kids",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:564: "title": "Kids kits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:567: "loading": "Loading kids kits…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:590: "title": "Crop tops",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:593: "loading": "Loading crop tops…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:613: "title": "Concept kits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:616: "loading": "Loading concept kits…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:638: "title": "Retro",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:658: "title": "Retro jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:661: "loading": "Loading retro jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:677: "title": "Retro long-sleeve jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:680: "loading": "Loading retro long-sleeve jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:698: "title": "FIFA World Cup 2026 Jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:701: "loading": "Loading World Cup 2026 jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:720: "title": "Terms of Service — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:724: "title": "Terms of Service",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:736: "title": "On this page",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:755: "title": "Introduction",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:761: "title": "Eligibility & Account",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:770: "title": "Ordering Process",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:779: "title": "Pricing & Taxes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:788: "title": "Shipping & Delivery",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:807: "title": "Custom Products",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:816: "title": "Returns & Refunds",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:821: "title": "Cancellations & Changes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:829: "title": "Product Info & Sizing",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:834: "title": "Payments & Security",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:843: "title": "Promotions & Discount Codes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:851: "title": "Intellectual Property",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:856: "title": "Acceptable Use",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:865: "title": "Third-Party Links",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:870: "title": "Warranties & Liability",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:879: "title": "Governing Law & Disputes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:884: "title": "Contact",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:895: "title": "Shipping Policy — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:900: "title": "Shipping Policy",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:908: "title": "On this page",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:927: "title": "Introduction",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:932: "title": "Processing Times",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:955: "title": "Carriers & Methods",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:960: "title": "Rates & Free Shipping",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:969: "title": "Delivery Estimates (after dispatch)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1001: "title": "Tracking",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1006: "title": "Address Changes & Corrections",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1014: "title": "Customs, Duties & Taxes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1023: "title": "Failed Delivery / Returned to Sender",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1032: "title": "Lost or Heavily Delayed Parcels",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1041: "title": "Split Shipments",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1046: "title": "Pre-orders & Back-orders",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1051: "title": "Holidays & Peak Periods",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1056: "title": "Service Interruptions / Force Majeure",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1061: "title": "Need help with shipping?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1072: "title": "Return & Refund Policy — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1077: "title": "Return & Refund Policy",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1085: "title": "On this page",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1104: "title": "Introduction",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1109: "title": "Return window",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1119: "title": "Item condition requirements",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1130: "title": "Non-returnable items",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1139: "title": "Personalized / Custom products",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1148: "title": "How to start a return",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1161: "title": "Exchanges (size / variant)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1169: "title": "Refund method & timing",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1179: "title": "Return shipping costs & responsibility",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1188: "title": "Defective, damaged, or wrong item received",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1198: "title": "Gifts",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1206: "title": "Bundles, promotions & partial returns",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1214: "title": "Questions or special cases?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1225: "title": "About Us — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1230: "title": "About FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1241: "title": "What we make",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1250: "title": "How we build",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1260: "title": "What we stand for",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1263: "title": "Quality first",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1267: "title": "Customer care",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1271: "title": "Fair pricing",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1275: "title": "Design culture",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1281: "title": "Sustainability, thoughtfully",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1290: "title": "Our Story – Quick Timeline",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1293: "title": "January 2026 Kick-Off",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1297: "title": "The First Products Arrive",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1301: "title": "Today — Built for the Fans",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1305: "title": "Future — More to Come",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1311: "title": "Ready to find your next jersey?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1323: "title": "Sign up",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1370: "title": "Log in",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1371: "loading": "Loading…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1404: "title": "Reset your password",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1429: "title": "New password",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1470: "title": "Your Cart",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1486: "title": "Promotion Preview",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1494: "title": "Cart issue",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1499: "title": "Portugal Delivery (CTT Stock PT)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1534: "title": "Free shipping from {amount}",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1538: "title": "Discount code",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1589: "title": "Shipping address",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1590: "loading": "Loading address form…"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1618: "checkoutPage": {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1619: "title": "Choose Payment Method",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1620: "loading": "Loading…"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1623: "title": "Portugal Stock Jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1625: "title": "Portugal Shipping Rules",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1655: "title": "Stock status",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1661: "title": "Sizes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1666: "title": "Shipping information",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1675: "title": "Delivered with CTT",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1680: "title": "Description",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1722: "title": "Secure payment",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1726: "title": "Tracked shipping",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1730: "title": "Fast support",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1760: "title": "Shipping & delivery",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1769: "title": "Returns & support",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1777: "title": "Quality details",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1798: "title": "Size Guide",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1972: "title": "Customer Reviews",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:1992: "title": "Nations",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2003: "title": "Leagues",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2017: "title": "Clubs",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2036: "title": "Shipping & Tracking – FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2040: "title": "Shipping & Tracking",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2048: "title": "Standard Tracked Delivery",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2057: "title": "Handling & Production",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2069: "title": "Address Changes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2080: "title": "How to track your order",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2089: "title": "Customs, Duties & Taxes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2097: "title": "Delays & Lost Parcels",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2113: "title": "Need help with your shipment?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2120: "title": "Returns & Exchanges – FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2124: "title": "Returns & Exchanges",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2129: "title": "Return window",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2140: "title": "Item condition",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2148: "title": "Refunds & costs",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2158: "title": "Eligible items",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2166: "title": "Not returnable",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2179: "title": "How to start a return/exchange",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2194: "title": "Size exchanges",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2203: "title": "Damaged / incorrect items",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2216: "title": "Refund timing",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2226: "title": "Order cancellations",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2237: "title": "Need assistance?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2244: "title": "Privacy Policy",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2252: "title": "On this page",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2258: "title": "What this policy covers",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2263: "title": "Data we collect",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2266: "title": "Account & order data:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2270: "title": "Payment data:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2274: "title": "Support messages:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2278: "title": "Usage data:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2282: "title": "Cookies:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2289: "title": "How we use your data",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2301: "title": "Legal bases (GDPR)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2304: "title": "Contract:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2308: "title": "Legitimate interests:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2312: "title": "Consent:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2316: "title": "Legal obligation:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2323: "title": "Sharing & processors",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2327: "title": "Payment processors:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2331: "title": "Shipping & logistics:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2335: "title": "Analytics:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2339: "title": "Infrastructure & hosting:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2347: "title": "Payments",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2352: "title": "Shipping",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2357: "title": "Analytics & cookies",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2361: "title": "Essential:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2365: "title": "Analytics:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2369: "title": "Marketing:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2376: "title": "Data retention",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2381: "title": "Your rights",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2394: "title": "Security",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2399: "title": "International transfers",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2404: "title": "Children’s privacy",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2409: "title": "Changes to this policy",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2414: "title": "Contact us",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2422: "title": "FAQ — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2427: "title": "Frequently Asked Questions",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2437: "title": "Orders",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2468: "title": "Shipping & Delivery",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2531: "title": "Products & Quality",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2563: "title": "Payments",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2599: "title": "Returns & Issues",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2620: "title": "Support",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2640: "title": "We’re here to help with your order.",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2653: "title": "Contact FootballWorld Support",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2704: "title": "What happens next?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2707: "title": "Copy by email",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2711: "title": "24–48h reply",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2715: "title": "Photos help",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2722: "title": "Quick help",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2736: "title": "Prefer email?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2742: "title": "Useful links",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2744: "title": "Privacy Policy",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2748: "title": "Size Guide",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2762: "title": "My account",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2788: "loading": "Loading orders…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2843: "title": "Order details",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2922: "title": "Order details",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:2923: "loading": "Loading order…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\en.json:3020: "title": "Thank you!",
+
+--- C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json ---
+
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:89: "title": "Envio grátis em encomendas acima de {threshold}",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:106: "title": "A camisola que quer, feita por encomenda e enviada para todo o mundo.",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:147: "title": "Fotos reais. Feedback real.",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:154: "title": "Comprar por coleção",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:159: "title": "As melhores escolhas em todos os estilos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:164: "title": "Camisolas do FIFA World Cup 2026",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:176: "title": "Novidades da Época 25/26",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:180: "title": "Camisolas Clássicas (Manga Curta)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:184: "title": "Camisolas de Manga Comprida",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:188: "title": "Versão Jogador (Corte de Campo)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:192: "title": "Versão Jogador (Manga Comprida)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:196: "title": "Camisolas Retro",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:200: "title": "Retro Manga Comprida",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:204: "title": "Concept Kits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:208: "title": "Camisolas Pre-Match",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:212: "title": "Fatos de Treino",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:216: "title": "Conjuntos de Treino Sem Mangas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:220: "title": "Fatos de Treino de Treino",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:224: "title": "Equipamentos de Criança",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:228: "title": "Crop Tops",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:233: "title": "Como funciona",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:238: "title": "Escolha a sua camisola",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:242: "title": "Selecione tamanho e opções",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:246: "title": "Feito por encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:250: "title": "Entrega com tracking",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:255: "title": "Escolha a sua próxima camisola com confiança",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:265: "title": "Garantia de 14 dias",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:269: "title": "Checkout seguro",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:273: "title": "Feito por encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:277: "title": "Suporte rápido",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:282: "title": "Perguntas frequentes"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:313: "title": "Termos de Serviço — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:317: "title": "Termos de Serviço",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:329: "title": "Nesta página",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:348: "title": "Introdução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:354: "title": "Elegibilidade e Conta",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:363: "title": "Processo de Encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:372: "title": "Preços e Taxas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:381: "title": "Envio e Entrega",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:400: "title": "Produtos Personalizados",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:409: "title": "Devoluções e Reembolsos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:414: "title": "Cancelamentos e Alterações",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:422: "title": "Informação do Produto e Tamanhos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:427: "title": "Pagamentos e Segurança",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:436: "title": "Promoções e Códigos de Desconto",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:444: "title": "Propriedade Intelectual",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:449: "title": "Utilização Aceitável",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:458: "title": "Links de Terceiros",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:463: "title": "Garantias e Responsabilidade",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:472: "title": "Lei Aplicável e Litígios",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:477: "title": "Contacto",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:488: "title": "Política de Envio — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:493: "title": "Política de Envio",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:501: "title": "Nesta página",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:520: "title": "Introdução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:525: "title": "Tempos de Processamento",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:548: "title": "Transportadoras e Métodos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:553: "title": "Taxas e Envio Grátis",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:562: "title": "Estimativas de Entrega (após expedição)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:594: "title": "Tracking",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:599: "title": "Alterações e Correções de Morada",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:607: "title": "Alfândega, Taxas e Impostos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:616: "title": "Entrega Falhada / Devolvida ao Remetente",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:625: "title": "Encomendas Perdidas ou Muito Atrasadas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:634: "title": "Envios Separados",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:639: "title": "Pré-encomendas e Back-orders",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:644: "title": "Feriados e Períodos de Pico",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:649: "title": "Interrupções de Serviço / Força Maior",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:654: "title": "Precisa de ajuda com o envio?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:665: "title": "Política de Devolução e Reembolso — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:670: "title": "Política de Devolução e Reembolso",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:678: "title": "Nesta página",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:697: "title": "Introdução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:702: "title": "Prazo de devolução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:712: "title": "Requisitos de estado do artigo",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:723: "title": "Artigos não devolvíveis",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:732: "title": "Produtos personalizados / custom",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:741: "title": "Como iniciar uma devolução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:754: "title": "Trocas (tamanho / variante)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:762: "title": "Método e prazo de reembolso",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:772: "title": "Custos e responsabilidade do envio de devolução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:781: "title": "Artigo defeituoso, danificado ou errado recebido",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:791: "title": "Presentes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:799: "title": "Bundles, promoções e devoluções parciais",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:807: "title": "Dúvidas ou casos especiais?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:818: "title": "Sobre Nós — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:823: "title": "Sobre a FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:834: "title": "O que criamos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:843: "title": "Como produzimos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:853: "title": "Aquilo que defendemos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:856: "title": "Qualidade em primeiro lugar",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:860: "title": "Apoio ao cliente",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:864: "title": "Preços justos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:868: "title": "Cultura de design",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:874: "title": "Sustentabilidade com intenção",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:883: "title": "A Nossa História – Linha Temporal Rápida",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:886: "title": "Janeiro de 2026 — Pontapé de Saída",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:890: "title": "Chegam os Primeiros Produtos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:894: "title": "Hoje — Feito para os Adeptos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:898: "title": "Futuro — Muito Mais por Vir",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:904: "title": "Pronto para encontrar a sua próxima camisola?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:916: "title": "Criar conta",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:963: "title": "Iniciar sessão",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:964: "loading": "A carregar…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:997: "title": "Redefinir palavra-passe",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1022: "title": "Nova palavra-passe",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1063: "title": "O Seu Carrinho",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1079: "title": "Pré-visualização da Promoção",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1087: "title": "Problema no carrinho",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1092: "title": "Entrega em Portugal (CTT Stock PT)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1101: "title": "Portes grátis a partir de {amount}",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1105: "title": "Código de desconto",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1182: "title": "Morada de envio",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1183: "loading": "A carregar formulário de morada…"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1211: "checkoutPage": {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1212: "title": "Escolha o Método de Pagamento",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1213: "loading": "A carregar…"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1216: "title": "Camisolas em Stock em Portugal",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1218: "title": "Regras de Envio em Portugal",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1245: "title": "Estado do stock",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1251: "title": "Tamanhos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1256: "title": "Informação de envio",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1265: "title": "Entrega com os CTT",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1270: "title": "Descrição",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1312: "title": "Pagamento seguro",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1316: "title": "Envio com rastreio",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1320: "title": "Suporte rápido",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1350: "title": "Envio & entrega",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1359: "title": "Devoluções & suporte",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1367: "title": "Detalhes de qualidade",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1388: "title": "Guia de Tamanhos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1564: "title": "Avaliações dos Clientes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1584: "title": "Seleções",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1595: "title": "Ligas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1609: "title": "Clubes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1628: "title": "Envio e Tracking – FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1632: "title": "Envio e Tracking",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1640: "title": "Entrega Standard com Tracking",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1649: "title": "Processamento e Produção",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1661: "title": "Alterações de Morada",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1672: "title": "Como acompanhar a sua encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1681: "title": "Alfândega, Taxas e Impostos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1689: "title": "Atrasos e Encomendas Perdidas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1705: "title": "Precisa de ajuda com a sua encomenda?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1712: "title": "Devoluções e Trocas – FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1716: "title": "Devoluções e Trocas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1721: "title": "Prazo de devolução",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1732: "title": "Estado do artigo",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1740: "title": "Reembolsos e custos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1750: "title": "Artigos elegíveis",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1758: "title": "Não devolvível",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1771: "title": "Como iniciar uma devolução/troca",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1786: "title": "Trocas de tamanho",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1795: "title": "Artigos danificados / incorretos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1808: "title": "Prazo de reembolso",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1818: "title": "Cancelamentos de encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1829: "title": "Precisa de ajuda?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1836: "title": "Política de Privacidade",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1844: "title": "Nesta página",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1850: "title": "O que esta política abrange",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1855: "title": "Dados que recolhemos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1858: "title": "Dados de conta e encomenda:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1862: "title": "Dados de pagamento:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1866: "title": "Mensagens de suporte:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1870: "title": "Dados de utilização:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1874: "title": "Cookies:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1881: "title": "Como usamos os seus dados",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1893: "title": "Bases legais (RGPD)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1896: "title": "Contrato:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1900: "title": "Interesses legítimos:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1904: "title": "Consentimento:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1908: "title": "Obrigação legal:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1915: "title": "Partilha e processadores",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1919: "title": "Processadores de pagamento:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1923: "title": "Envio e logística:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1927: "title": "Analytics:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1931: "title": "Infraestrutura e alojamento:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1939: "title": "Pagamentos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1944: "title": "Envio",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1949: "title": "Analytics e cookies",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1953: "title": "Essenciais:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1957: "title": "Analytics:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1961: "title": "Marketing:",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1968: "title": "Conservação de dados",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1973: "title": "Os seus direitos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1986: "title": "Segurança",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1991: "title": "Transferências internacionais",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:1996: "title": "Privacidade de crianças",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2001: "title": "Alterações a esta política",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2006: "title": "Contacte-nos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2014: "title": "FAQ — FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2019: "title": "Perguntas Frequentes",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2029: "title": "Encomendas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2060: "title": "Envio e Entrega",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2123: "title": "Produtos e Qualidade",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2155: "title": "Pagamentos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2191: "title": "Devoluções e Problemas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2212: "title": "Suporte",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2232: "title": "Estamos aqui para ajudar com a sua encomenda.",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2245: "title": "Contactar o Suporte FootballWorld",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2296: "title": "O que acontece a seguir?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2299: "title": "Cópia por email",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2303: "title": "Resposta em 24–48h",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2307: "title": "As fotos ajudam",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2314: "title": "Ajuda rápida",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2328: "title": "Prefere email?",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2334: "title": "Links úteis",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2336: "title": "Política de Privacidade",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2340: "title": "Guia de Tamanhos",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2373: "loading": "A carregar encomendas…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2428: "title": "A minha conta",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2436: "title": "Camisolas de manga comprida",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2439: "loading": "A carregar camisolas…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2458: "title": "Época atual 25/26",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2480: "title": "Camisolas FIFA World Cup 2026",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2483: "loading": "A carregar camisolas do Mundial 2026…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2502: "title": "Camisolas standard de manga curta",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2505: "loading": "A carregar camisolas…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2523: "title": "Adulto",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2543: "title": "Kids",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2563: "title": "Kits infantis",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2566: "loading": "A carregar kits infantis…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2589: "title": "Concept kits",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2592: "loading": "A carregar concept kits…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2614: "title": "Crop tops",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2617: "loading": "A carregar crop tops…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2637: "title": "Camisolas player version (ajuste de jogo, manga curta)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2640: "loading": "A carregar camisolas player version…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2662: "title": "Camisolas player version (manga comprida)",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2672: "loading": "A carregar camisolas player version de manga comprida…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2690: "title": "Pre-match jerseys",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2693: "loading": "A carregar pre-match jerseys…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2715: "title": "Retro",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2735: "title": "Camisolas retro",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2738: "loading": "A carregar camisolas retro…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2754: "title": "Camisolas retro de manga comprida",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2757: "loading": "A carregar camisolas retro de manga comprida…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2775: "title": "Fatos de treino",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2778: "loading": "A carregar fatos de treino…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2796: "title": "Conjuntos de treino sem mangas",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2817: "title": "Fatos de treino",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2830: "loading": "A carregar fatos de treino…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2843: "title": "Detalhes da encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2844: "loading": "A carregar encomenda…",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:2941: "title": "Detalhes da encomenda",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\messages\pt.json:3019: "title": "Obrigado!",
+
+================ DONE ================
+
+Debug terminado.
