@@ -22,13 +22,12 @@ const FALLBACK_IMG = "/images/players/RealMadrid/RealMadrid12.png";
 /* ============================ Promo map (EUR) ============================ */
 
 const SALE_MAP_EUR: Record<number, number> = {
-  29.99: 70,
-  34.99: 100,
-  39.99: 120,
-  44.99: 150,
-  49.99: 165,
-  59.99: 200,
-  69.99: 230,
+  24.99: 100,
+  29.99: 120,
+  34.99: 140,
+  39.99: 160,
+  49.99: 200,
+  59.99: 240,
 };
 
 function toCents(eur?: number | null) {

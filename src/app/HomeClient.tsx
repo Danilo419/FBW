@@ -931,14 +931,13 @@ function FromOurCustomers({ compact = false }: { compact?: boolean }) {
 ====================================================================================== */
 
 const SALE_MAP_EUR: Record<number, number> = {
-  29.99: 70,
-  34.99: 100,
-  39.99: 120,
-  44.99: 150,
-  49.99: 165,
-  59.99: 200,
-  69.99: 230,
-}
+  24.99: 100,
+  29.99: 120,
+  34.99: 140,
+  39.99: 160,
+  49.99: 200,
+  59.99: 240,
+};
 
 const SALE_MAP_CENTS: Record<number, number> = Object.fromEntries(
   Object.entries(SALE_MAP_EUR).map(([k, v]) => [

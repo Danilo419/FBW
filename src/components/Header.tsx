@@ -1,6 +1,7 @@
 "use client";
 
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -30,6 +31,24 @@ function isExternalUrl(u: string) {
   return /^https?:\/\//i.test(u) || u.startsWith("//");
 }
 
+function buildQueryObject(searchParams: { entries(): IterableIterator<[string, string]> }) {
+  const query: Record<string, string | string[]> = {};
+
+  for (const [key, value] of searchParams.entries()) {
+    const existing = query[key];
+
+    if (existing === undefined) {
+      query[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      query[key] = [existing, value];
+    }
+  }
+
+  return query;
+}
+
 /**
  * Optional: pass cartCount to show the cart badge.
  * e.g. <Header cartCount={cart.totalQty} />
@@ -39,6 +58,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   const locale = useLocale() as "en" | "pt";
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { data: session, status, update } = useSession();
   const isAdmin = (session?.user as any)?.isAdmin === true;
@@ -157,7 +177,15 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
   const displayName = session?.user?.name || session?.user?.email || t("userFallback");
 
   function handleChangeLocale(nextLocale: "en" | "pt") {
-    router.replace(pathname, { locale: nextLocale });
+    const query = buildQueryObject(searchParams);
+
+    router.replace(
+      {
+        pathname,
+        query,
+      },
+      { locale: nextLocale }
+    );
   }
 
   return (
