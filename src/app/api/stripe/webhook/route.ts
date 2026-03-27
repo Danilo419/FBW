@@ -651,8 +651,11 @@ async function markPaid(
 
   if (transitioned) {
     await finalizePaidOrder(orderId);
-    await deductPtStockForPaidOrder(orderId);
+  }
 
+  await deductPtStockForPaidOrder(orderId);
+
+  if (transitioned) {
     try {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
@@ -687,8 +690,8 @@ async function markPaid(
                 typeof (emailResult as any)?.id === "string"
                   ? (emailResult as any).id
                   : typeof (emailResult as any)?.messageId === "string"
-                  ? (emailResult as any).messageId
-                  : null,
+                    ? (emailResult as any).messageId
+                    : null,
             },
           });
         }
@@ -1076,8 +1079,8 @@ export const POST = async (req: NextRequest) => {
             typeof charge.amount_captured === "number"
               ? charge.amount_captured
               : typeof charge.amount === "number"
-              ? charge.amount
-              : undefined;
+                ? charge.amount
+                : undefined;
 
           const { transitioned } = await markPaid(orderId, {
             paymentIntentId: piId,

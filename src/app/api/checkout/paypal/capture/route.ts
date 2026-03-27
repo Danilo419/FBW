@@ -1,6 +1,8 @@
 // src/app/api/checkout/paypal/capture/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,7 +84,10 @@ function isEmptyShipping(s?: ShippingJson | null) {
   );
 }
 
-function prefer<A>(primary: A | null | undefined, fallback: A | null | undefined): A | null {
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
   return primary != null && !(typeof primary === "string" && (primary as any).trim?.() === "")
     ? (primary as A)
     : (fallback ?? null);
@@ -102,7 +107,10 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
       line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
       city: prefer(base.address?.city ?? null, add.address?.city ?? null),
       state: prefer(base.address?.state ?? null, add.address?.state ?? null),
-      postal_code: prefer(base.address?.postal_code ?? null, add.address?.postal_code ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
       country: prefer(base.address?.country ?? null, add.address?.country ?? null),
     },
   };
@@ -151,6 +159,7 @@ const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 function canonFromShipping(s?: ShippingJson) {
   const a = s?.address ?? null;
   const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+
   return {
     shippingFullName: nz(s?.name),
     shippingEmail: nz(s?.email),
@@ -178,48 +187,113 @@ async function markPaid(
 ) {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { status: true, shippingJson: true, shippingCountry: true },
-  });
-
-  const alreadyFinal =
-    existing?.status === "paid" || existing?.status === "shipped" || existing?.status === "delivered";
-
-  const mergedShipping = mergeShipping(existing?.shippingJson as ShippingJson, opts.newShipping ?? null);
-  const canon = canonFromShipping(mergedShipping);
-  const country = canon.shippingCountry || upper(existing?.shippingCountry || null) || null;
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      status: "paid",
-      paymentStatus: "paid",
-      paidAt: new Date(),
-      paypalCaptured: true,
-      paypalOrderId: opts.paypalOrderId ?? undefined,
-      paypalCaptureId: opts.captureId ?? undefined,
-      currency: upper(opts.currency) ?? undefined,
-      totalCents:
-        typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
-          ? Math.round(opts.totalCents)
-          : undefined,
-      shippingJson: (mergedShipping as any) ?? undefined,
-      ...(country ? { shippingCountry: country } : {}),
-      // ✅ grava também as colunas canónicas para o painel/admin
-      ...canon,
+    select: {
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      discountCodeText: true,
     },
   });
 
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const alreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    existing.shippingJson as ShippingJson,
+    opts.newShipping ?? null
+  );
+  const canon = canonFromShipping(mergedShipping);
+  const country = canon.shippingCountry || upper(existing.shippingCountry || null) || null;
+
+  const normalizedDiscountCode = normalizeDiscountCode(
+    existing.discountCodeText ?? ""
+  );
+  const hasDiscountCode = !!normalizedDiscountCode;
+
+  let transitioned = false;
+
   if (!alreadyFinal) {
-    // Se tiveres lógica pós-pagamento (limpar carrinho, enviar email, etc.)
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: {
+          status: "paid",
+          paymentStatus: "paid",
+          paidAt: new Date(),
+          paypalCaptured: true,
+          paypalOrderId: opts.paypalOrderId ?? undefined,
+          paypalCaptureId: opts.captureId ?? undefined,
+          currency: upper(opts.currency) ?? undefined,
+          totalCents:
+            typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+              ? Math.round(opts.totalCents)
+              : undefined,
+          shippingJson: (mergedShipping as any) ?? undefined,
+          ...(country ? { shippingCountry: country } : {}),
+          ...canon,
+        },
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      return { transitioned: false };
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: "paid",
+        paymentStatus: "paid",
+        paidAt: new Date(),
+        paypalCaptured: true,
+        paypalOrderId: opts.paypalOrderId ?? undefined,
+        paypalCaptureId: opts.captureId ?? undefined,
+        currency: upper(opts.currency) ?? undefined,
+        totalCents:
+          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+            ? Math.round(opts.totalCents)
+            : undefined,
+        shippingJson: (mergedShipping as any) ?? undefined,
+        ...(country ? { shippingCountry: country } : {}),
+        ...canon,
+      },
+    });
+  }
+
+  if (transitioned) {
     try {
       const { finalizePaidOrder } = await import("@/lib/checkout");
       await finalizePaidOrder(orderId);
-    } catch {
-      /* noop: util opcional */
-    }
+    } catch {}
+
+    try {
+      const { deductPtStockForPaidOrder } = await import(
+        "@/lib/deductPtStockForPaidOrder"
+      );
+      await deductPtStockForPaidOrder(orderId);
+    } catch {}
   }
 
-  return { transitioned: !alreadyFinal };
+  return { transitioned };
 }
 
 async function markFailed(orderId: string) {
@@ -236,7 +310,8 @@ export async function POST(req: NextRequest) {
     // Aceita dados no body e/ou via query (?token=paypalOrderId&order=localId)
     const body = (await req.json().catch(() => ({}))) as CaptureBody;
     const url = new URL(req.url);
-    const paypalOrderId = body.paypalOrderId || url.searchParams.get("token") || undefined;
+    const paypalOrderId =
+      body.paypalOrderId || url.searchParams.get("token") || undefined;
     const orderId = body.orderId || url.searchParams.get("order") || undefined;
 
     if (!paypalOrderId || !orderId) {
@@ -272,9 +347,10 @@ export async function POST(req: NextRequest) {
 
     const captureId = capture?.id ?? null;
     const currency = capture?.amount?.currency_code ?? null;
-    // amount.value é string — converter para cents com arredondamento seguro
     const totalCents =
-      capture?.amount?.value != null ? Math.round(parseFloat(capture.amount.value) * 100) : null;
+      capture?.amount?.value != null
+        ? Math.round(parseFloat(capture.amount.value) * 100)
+        : null;
 
     if (status === "COMPLETED") {
       const newShipping = shippingFromPayPal(res);
@@ -286,19 +362,19 @@ export async function POST(req: NextRequest) {
         newShipping,
       });
 
-      // (Opcional) emitir eventos em tempo real se tiveres Pusher
       try {
         if (transitioned) {
           const { pusherServer } = await import("@/lib/pusher");
-          await pusherServer.trigger("stats", "metric:update", { metric: "orders", value: 1 });
+          await pusherServer.trigger("stats", "metric:update", {
+            metric: "orders",
+            value: 1,
+          });
           await pusherServer.trigger("stats", "metric:update", {
             metric: "countriesMaybeChanged",
             value: 1,
           });
         }
-      } catch {
-        /* noop */
-      }
+      } catch {}
 
       return NextResponse.json({
         ok: true,
@@ -307,7 +383,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Outros estados (raros após o capture): tratar como falha
     await markFailed(orderId);
     return NextResponse.json({ ok: false, status }, { status: 400 });
   } catch (e) {

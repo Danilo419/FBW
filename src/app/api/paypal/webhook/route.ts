@@ -248,9 +248,11 @@ async function markPaid(
   if (transitioned) {
     const { finalizePaidOrder } = await import("@/lib/checkout");
     await finalizePaidOrder(orderId);
+  }
 
-    await deductPtStockForPaidOrder(orderId);
+  await deductPtStockForPaidOrder(orderId);
 
+  if (transitioned) {
     try {
       const { pusherServer } = await import("@/lib/pusher");
       await pusherServer.trigger("stats", "metric:update", {

@@ -1,0 +1,739 @@
+===== 1. DISCOUNT NA ORDER =====
+
+src\app\HomeClient.tsx:1044:  const discountPercent = hasDiscount
+src\app\HomeClient.tsx:1048:  return { priceCents, compareAtCents, hasDiscount, discountPercent }
+src\app\HomeClient.tsx:1153:  const { priceCents, compareAtCents, hasDiscount, discountPercent } =
+src\app\HomeClient.tsx:1171:          {discountPercent != null && (
+src\app\HomeClient.tsx:1173:              -{discountPercent}%
+src\app\api\admin\analytics\route.ts:144:  paypalCaptured: boolean | null;
+src\app\api\admin\analytics\route.ts:152:  if (o.paypalCaptured === true) return true;
+src\app\api\analytics\series\route.ts:99:      { paypalCaptured: true as any },
+src\app\api\analytics\series\route.ts:100:      { stripePaymentIntentId: { not: null } as any },
+src\app\api\analytics\series\route.ts:101:      { stripeSessionId: { not: null } as any },
+src\app\api\checkout\link\start\route.ts:81:    if (order.stripePaymentIntentId) {
+src\app\api\checkout\link\start\route.ts:83:      pi = await stripe.paymentIntents.update(order.stripePaymentIntentId, {
+src\app\api\checkout\link\start\route.ts:102:        data: { stripePaymentIntentId: pi.id, status: "pending" },
+src\app\api\checkout\paypal\capture\route.ts:9:type CaptureBody = { paypalOrderId?: string; orderId?: string };
+src\app\api\checkout\paypal\capture\route.ts:173:    paypalOrderId?: string | null;
+src\app\api\checkout\paypal\capture\route.ts:197:      paypalCaptured: true,
+src\app\api\checkout\paypal\capture\route.ts:198:      paypalOrderId: opts.paypalOrderId ?? undefined,
+src\app\api\checkout\paypal\capture\route.ts:199:      paypalCaptureId: opts.captureId ?? undefined,
+src\app\api\checkout\paypal\capture\route.ts:236:    // Aceita dados no body e/ou via query (?token=paypalOrderId&order=localId)
+src\app\api\checkout\paypal\capture\route.ts:239:    const paypalOrderId = body.paypalOrderId || url.searchParams.get("token") || undefined;
+src\app\api\checkout\paypal\capture\route.ts:242:    if (!paypalOrderId || !orderId) {
+src\app\api\checkout\paypal\capture\route.ts:244:        { error: "Missing required fields: paypalOrderId and orderId." },
+src\app\api\checkout\paypal\capture\route.ts:263:    const capReq = new (paypal as any).orders.OrdersCaptureRequest(paypalOrderId);
+src\app\api\checkout\paypal\capture\route.ts:283:        paypalOrderId,
+src\app\api\checkout\paypal\create\route.ts:498:        discountCodeText: validDiscount?.code ?? null,
+src\app\api\checkout\paypal\create\route.ts:499:        discountPercent:
+src\app\api\checkout\paypal\create\route.ts:503:        discountAmountCents: discountCents,
+src\app\api\checkout\paypal\create\route.ts:630:        data: { paypalOrderId: ppOrderId },
+src\app\api\checkout\paypal\create\route.ts:648:      paypalOrderId: ppOrderId,
+src\app\api\checkout\paypal\create\route.ts:650:      discountAmountCents: discountCents,
+src\app\api\checkout\paypal\return\route.ts:17:    // PayPal envia ?token=<paypalOrderId>; no create definimos também ?order=<id_local>
+src\app\api\checkout\paypal\return\route.ts:18:    const paypalOrderId = url.searchParams.get("token");
+src\app\api\checkout\paypal\return\route.ts:21:    if (!paypalOrderId) {
+src\app\api\checkout\paypal\return\route.ts:31:        paypalOrderId
+src\app\api\checkout\paypal\return\route.ts:52:        paypalOrderId
+src\app\api\checkout\paypal\start\route.ts:43:  paypalOrderId?: string;
+src\app\api\checkout\stripe\route.ts:771:        discountCodeText: validDiscount?.code ?? null,
+src\app\api\checkout\stripe\route.ts:772:        discountPercent:
+src\app\api\checkout\stripe\route.ts:776:        discountAmountCents: reviewDiscountCents,
+src\app\api\checkout\stripe\route.ts:883:      discountPercent: String(validDiscount?.percentOff ?? 0),
+src\app\api\checkout\stripe\route.ts:884:      discountAmountCents: String(reviewDiscountCents),
+src\app\api\checkout\stripe\route.ts:931:      data: { stripeSessionId: stripeSession.id },
+src\app\api\checkout\stripe\confirm\route.ts:142:        stripeSessionId: true,
+src\app\api\checkout\stripe\confirm\route.ts:155:    if (existing.stripeSessionId && existing.stripeSessionId !== sessionId) {
+src\app\api\checkout\stripe\confirm\route.ts:189:        stripeSessionId: sessionId,
+src\app\api\checkout\stripe\confirm\route.ts:190:        stripePaymentIntentId: pi?.id ?? undefined,
+src\app\api\checkout\success\order\route.ts:20:    // 1) DB check (and if order already has stripeSessionId saved, it must match)
+src\app\api\checkout\success\order\route.ts:23:      select: { id: true, stripeSessionId: true },
+src\app\api\checkout\success\order\route.ts:30:    if (existing.stripeSessionId && existing.stripeSessionId !== sessionId) {
+src\app\api\paypal\webhook\route.ts:128:  paypalOrderId: string | null,
+src\app\api\paypal\webhook\route.ts:131:  if (paypalOrderId) {
+src\app\api\paypal\webhook\route.ts:133:      where: { paypalOrderId },
+src\app\api\paypal\webhook\route.ts:141:      where: { paypalCaptureId: captureId },
+src\app\api\paypal\webhook\route.ts:156:    paypalOrderId?: string | null;
+src\app\api\paypal\webhook\route.ts:169:      discountCodeText: true,
+src\app\api\paypal\webhook\route.ts:192:    existing.discountCodeText ?? ""
+src\app\api\paypal\webhook\route.ts:200:    paypalCaptured: true,
+src\app\api\paypal\webhook\route.ts:201:    paypalOrderId: opts.paypalOrderId ?? undefined,
+src\app\api\paypal\webhook\route.ts:202:    paypalCaptureId: opts.captureId ?? undefined,
+src\app\api\paypal\webhook\route.ts:343:        const paypalOrderId: string | null =
+src\app\api\paypal\webhook\route.ts:348:        const order = await getOrderByPayPalIds(paypalOrderId, captureId);
+src\app\api\paypal\webhook\route.ts:353:            paypalOrderId,
+src\app\api\paypal\webhook\route.ts:360:        if (paypalOrderId) {
+src\app\api\paypal\webhook\route.ts:363:              paypalOrderId
+src\app\api\paypal\webhook\route.ts:372:          paypalOrderId,
+src\app\api\paypal\webhook\route.ts:383:        const paypalOrderId: string | null =
+src\app\api\paypal\webhook\route.ts:386:        const order = await getOrderByPayPalIds(paypalOrderId, null);
+src\app\api\paypal\webhook\route.ts:394:        const paypalOrderId: string | null =
+src\app\api\paypal\webhook\route.ts:397:        const order = await getOrderByPayPalIds(paypalOrderId, null);
+src\app\api\stripe\webhook\route.ts:46:  discountAmountCents: number | null;
+src\app\api\stripe\webhook\route.ts:220:      discountAmountCents: null,
+src\app\api\stripe\webhook\route.ts:230:  const percentOff = intOrNull(meta.discountPercent);
+src\app\api\stripe\webhook\route.ts:231:  const discountAmountCents = intOrNull(meta.discountAmountCents);
+src\app\api\stripe\webhook\route.ts:244:    discountAmountCents,
+src\app\api\stripe\webhook\route.ts:437:  const discountAmountCents =
+src\app\api\stripe\webhook\route.ts:438:    typeof order?.discountAmountCents === "number"
+src\app\api\stripe\webhook\route.ts:439:      ? order.discountAmountCents
+src\app\api\stripe\webhook\route.ts:445:      : subtotal - discountAmountCents + shipping + tax;
+src\app\api\stripe\webhook\route.ts:527:      discountCodeText: true,
+src\app\api\stripe\webhook\route.ts:528:      discountPercent: true,
+src\app\api\stripe\webhook\route.ts:529:      discountAmountCents: true,
+src\app\api\stripe\webhook\route.ts:571:    stripePaymentIntentId: opts.paymentIntentId ?? null,
+src\app\api\stripe\webhook\route.ts:572:    ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+src\app\api\stripe\webhook\route.ts:582:    updateData.discountCodeText = normalizedCode;
+src\app\api\stripe\webhook\route.ts:583:    updateData.discountPercent =
+src\app\api\stripe\webhook\route.ts:584:      opts.discount?.percentOff ?? existing.discountPercent ?? undefined;
+src\app\api\stripe\webhook\route.ts:585:    updateData.discountAmountCents =
+src\app\api\stripe\webhook\route.ts:586:      opts.discount?.discountAmountCents ??
+src\app\api\stripe\webhook\route.ts:587:      existing.discountAmountCents ??
+src\app\api\stripe\webhook\route.ts:742:      stripePaymentIntentId: opts.paymentIntentId ?? null,
+src\app\api\stripe\webhook\route.ts:743:      ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+src\app\api\stripe\webhook\route.ts:810:            where: { stripeSessionId: session.id },
+src\app\api\stripe\webhook\route.ts:818:            where: { stripePaymentIntentId: piId },
+src\app\api\stripe\webhook\route.ts:888:                  { stripeSessionId: session.id },
+src\app\api\stripe\webhook\route.ts:889:                  ...(piId ? [{ stripePaymentIntentId: piId }] : []),
+src\app\api\stripe\webhook\route.ts:941:            where: { stripePaymentIntentId: pi.id },
+src\app\api\stripe\webhook\route.ts:985:              where: { stripePaymentIntentId: pi.id },
+src\app\api\stripe\webhook\route.ts:1007:              where: { stripePaymentIntentId: pi.id },
+src\app\api\stripe\webhook\route.ts:1022:              where: { stripePaymentIntentId: pi.id },
+src\app\api\stripe\webhook\route.ts:1039:                  { stripeSessionId: session.id },
+src\app\api\stripe\webhook\route.ts:1041:                    ? [{ stripePaymentIntentId: session.payment_intent }]
+src\app\api\stripe\webhook\route.ts:1065:            where: { stripePaymentIntentId: piId },
+src\app\[locale]\(store)\cart\actions.ts:511:    discount: summary.discountAmountCents,
+src\app\[locale]\(store)\cart\page.tsx:487:  const discountCents = discountSummary.discountAmountCents;
+src\app\[locale]\(store)\checkout\actions.ts:128:  discountAmountCents: number;
+src\app\[locale]\(store)\checkout\actions.ts:139:  const discountAmountCents = calcDiscountOnProductsOnly(
+src\app\[locale]\(store)\checkout\actions.ts:144:  if (payableSubtotalCents <= 0 || discountAmountCents <= 0) {
+src\app\[locale]\(store)\checkout\actions.ts:147:      discountAmountCents: 0,
+src\app\[locale]\(store)\checkout\actions.ts:164:    const rawShare = (discountAmountCents * lineSubtotal) / payableSubtotalCents;
+src\app\[locale]\(store)\checkout\actions.ts:178:  let leftover = discountAmountCents - assigned;
+src\app\[locale]\(store)\checkout\actions.ts:251:    discountAmountCents,
+src\app\[locale]\(store)\checkout\actions.ts:358:  const discountAmountCents = paidItemsBuild.discountAmountCents;
+src\app\[locale]\(store)\checkout\actions.ts:361:    productSubtotalBeforeDiscountCents - discountAmountCents + shippingCents
+src\app\[locale]\(store)\checkout\actions.ts:382:      discountPercent: String(validDiscount?.percentOff ?? 0),
+src\app\[locale]\(store)\checkout\actions.ts:383:      discountAmountCents: String(discountAmountCents),
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:87:    usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:101:      usesCount: 0,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:128:      usesCount: true,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:130:      usedAt: true,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:140:    usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:145:    current.usedAt ||
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:146:      safeCurrent.usedByOrderId ||
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:147:      current.usesCount >= 1 ||
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:148:      current.usesCount >= current.maxUses
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:24:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:28:  usedAt: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:29:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:54:  usedAt?: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:55:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:56:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:60:    code.usedAt ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:61:      code.usedByOrderId ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:62:      code.usesCount >= 1 ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:63:      code.usesCount >= code.maxUses
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:74:  usedAt?: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:75:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:76:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:85:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:88:  usedAt?: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:89:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:127:      usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:138:      usesCount: row.usesCount,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:142:      usedAt: row.usedAt ?? null,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:143:      usedByOrderId:
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:144:        typeof row.usedByOrderId === "string" ? row.usedByOrderId : null,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:387:                            Stored: {code.usesCount}/{code.maxUses}
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:425:                      <td className="px-4 py-3">{formatDate(code.usedAt)}</td>
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:429:                          {code.usedByOrderId || "—"}
+src\app\[locale]\pt-stock\[slug]\page.tsx:90:  const discountPercent = hasDiscount
+src\app\[locale]\pt-stock\[slug]\page.tsx:96:    discountPercent,
+src\components\ProductConfigurator.tsx:369:  const discountPercent = hasDiscount
+src\components\ProductConfigurator.tsx:918:                  -{discountPercent}%
+src\components\ProductConfigurator.tsx:1035:                      {t("savePercent", { percent: discountPercent })}
+src\components\PtStockProductConfigurator.tsx:34:    discountPercent?: number;
+src\components\PtStockProductConfigurator.tsx:269:      discountPercent: Number(product?.pricePresentation?.discountPercent ?? 0),
+src\components\PtStockProductConfigurator.tsx:666:                    -{safePricePresentation.discountPercent}%
+src\components\PtStockProductConfigurator.tsx:790:                        {t("savePercent", { percent: safePricePresentation.discountPercent })}
+src\lib\checkout.ts:198:  const discountAmountCents = validDiscount
+src\lib\checkout.ts:209:    productSubtotalCents - discountAmountCents
+src\lib\checkout.ts:233:      discountCodeText: validDiscount?.code ?? null,
+src\lib\checkout.ts:234:      discountPercent:
+src\lib\checkout.ts:238:      discountAmountCents,
+src\lib\discount-codes.ts:47:    usedByOrderId?: string | null;
+src\lib\discount-codes.ts:54:  if (discount.usedAt) return null;
+src\lib\discount-codes.ts:55:  if (safeDiscount.usedByOrderId) return null;
+src\lib\discount-codes.ts:59:  if (discount.usesCount >= 1) return null;
+src\lib\discount-codes.ts:60:  if (discount.usesCount >= discount.maxUses) return null;
+src\lib\discount-codes.ts:68:  usesCount: number;
+src\lib\discount-codes.ts:70:  usedAt?: Date | null;
+src\lib\discount-codes.ts:71:  usedByOrderId?: string | null;
+src\lib\discount-codes.ts:80:  if (input.usedAt) return "used";
+src\lib\discount-codes.ts:81:  if (input.usedByOrderId) return "used";
+src\lib\discount-codes.ts:82:  if (input.usesCount >= 1) return "used";
+src\lib\discount-codes.ts:83:  if (input.usesCount >= input.maxUses) return "used";
+src\lib\discount-codes.ts:100:  const discountAmountCents = calcDiscountOnProductsOnly(
+src\lib\discount-codes.ts:107:    productSubtotalCents - discountAmountCents + shippingCents
+src\lib\discount-codes.ts:114:    discountAmountCents,
+src\lib\redeem-discount-code.ts:22:    usedByOrderId?: string | null;
+src\lib\redeem-discount-code.ts:31:  if (discount.usedAt) {
+src\lib\redeem-discount-code.ts:35:  if (safeDiscount.usedByOrderId) {
+src\lib\redeem-discount-code.ts:41:  if (discount.usesCount >= 1) {
+src\lib\redeem-discount-code.ts:44:  if (discount.usesCount >= discount.maxUses) {
+src\lib\redeem-discount-code.ts:54:      usedAt: null,
+src\lib\redeem-discount-code.ts:55:      usesCount: 0,
+src\lib\redeem-discount-code.ts:56:      ...(safeDiscount.usedByOrderId === undefined
+src\lib\redeem-discount-code.ts:58:        : { usedByOrderId: null }),
+src\lib\redeem-discount-code.ts:62:      usedAt: now,
+src\lib\redeem-discount-code.ts:63:      usesCount: 1,
+src\lib\redeem-discount-code.ts:64:      usedByOrderId: orderId,
+src\lib\redeem-discount-code.ts:75:    usedAt: now,
+src\lib\redeem-discount-code.ts:76:    usesCount: 1,
+src\lib\redeem-discount-code.ts:77:    usedByOrderId: orderId,
+
+
+===== 2. ONDE ORDER VIRA PAID =====
+
+src\app\api\checkout\paypal\capture\route.ts:194:      status: "paid",
+src\app\api\checkout\paypal\capture\route.ts:195:      paymentStatus: "paid",
+src\app\api\checkout\stripe\confirm\route.ts:186:        status: "paid",
+src\app\api\checkout\stripe\confirm\route.ts:187:        paymentStatus: "paid",
+src\app\api\checkout\stripe\confirm\route.ts:208:    return NextResponse.json({ ok: true, status: "paid" });
+src\app\api\paypal\webhook\route.ts:197:    status: "paid",
+src\app\api\paypal\webhook\route.ts:198:    paymentStatus: "paid",
+src\app\api\paypal\webhook\route.ts:229:        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+src\app\api\stripe\webhook\route.ts:568:    status: "paid",
+src\app\api\stripe\webhook\route.ts:569:    paymentStatus: "paid",
+src\app\api\stripe\webhook\route.ts:633:        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+src\app\[locale]\admin\pt-stock\orders\page.tsx:127:    { status: "paid" },
+src\lib\redeem-discount-code.ts:7:export async function redeemDiscountCodeTx(
+
+
+===== 3. WEBHOOKS E MARKPAID =====
+
+src\app\api\checkout\paypal\capture\route.ts:169:async function markPaid(
+src\app\api\checkout\paypal\capture\route.ts:281:      const { transitioned } = await markPaid(orderId, {
+src\app\api\paypal\webhook\route.ts:152:async function markPaid(
+src\app\api\paypal\webhook\route.ts:229:        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+src\app\api\paypal\webhook\route.ts:334:      case "PAYMENT.CAPTURE.COMPLETED": {
+src\app\api\paypal\webhook\route.ts:370:        await markPaid(order.id, {
+src\app\api\stripe\webhook\route.ts:507:async function markPaid(
+src\app\api\stripe\webhook\route.ts:633:        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+src\app\api\stripe\webhook\route.ts:791:      case "checkout.session.completed": {
+src\app\api\stripe\webhook\route.ts:840:          const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:905:        const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:933:      case "payment_intent.succeeded": {
+src\app\api\stripe\webhook\route.ts:949:        const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:1085:          const { transitioned } = await markPaid(orderId, {
+src\lib\redeem-discount-code.ts:7:export async function redeemDiscountCodeTx(
+
+
+===== 4. POSSÍVEIS BUGS =====
+
+src\app\api\checkout\paypal\create\route.ts:408:      ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\api\checkout\stripe\route.ts:561:      ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\[locale]\(store)\cart\actions.ts:395:    const discount = await getValidDiscountCode(code);
+src\app\[locale]\(store)\cart\actions.ts:495:    ? await getValidDiscountCode(appliedCode)
+src\app\[locale]\(store)\cart\actions.ts:599:  const discount = await getValidDiscountCode(code);
+src\app\[locale]\(store)\cart\page.tsx:478:    ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\[locale]\(store)\checkout\actions.ts:319:    ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:99:      active: true,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:101:      usesCount: 0,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:127:      active: true,
+src\lib\checkout.ts:195:    ? await getValidDiscountCode(normalizedDiscountCode)
+src\lib\discount-codes.ts:34:export async function getValidDiscountCode(rawCode: string) {
+src\lib\redeem-discount-code.ts:53:      active: true,
+src\lib\redeem-discount-code.ts:54:      usedAt: null,
+src\lib\redeem-discount-code.ts:55:      usesCount: 0,
+src\lib\redeem-discount-code.ts:58:        : { usedByOrderId: null }),
+
+
+===== 5. SCHEMA PRISMA =====
+
+model DiscountCode {
+  active     Boolean @default(true)
+   * maxUses e usesCount mantidos para compatibilidade/histórico,
+  usesCount Int       @default(0)
+  usedAt    DateTime?
+  usedByOrderId String? @unique
+  usedByOrder   Order?  @relation("DiscountCodeUsedByOrder", fields: [usedByOrderId], references: [id], onDelete: SetNull)
+  @@index([active])
+  @@index([code, active])
+  @@index([usedAt])
+  @@index([usedByOrderId])
+   * o vínculo do código consumido fica no model DiscountCode.usedByOrderId
+
+
+===== 6. MIGRATIONS =====
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----          23/08/2025    04:00                20250823030014_init_auth
+d----          24/08/2025    20:51                20250824195151_product_options
+d----          25/08/2025    20:16                20250825191622_add_player_model_and_optionvalue_link
+d----          27/08/2025    12:37                20250827113711_player_unique_team_name
+d----          31/08/2025    01:38                20250831003804_add_cart_backref
+d----          31/08/2025    02:10                20250831011045_sync_cart_schema
+d----          02/09/2025    01:11                20250902001155_add_total_price_default
+d----          02/09/2025    12:55                20250902115536_add_orders_backrelations
+d----          06/09/2025    13:26                20250906122649_add_shipping_json_to_order
+d----          10/09/2025    20:49                20250910194921_init_public_stats
+d----          12/09/2025    18:04                20250912170416_add_order_shipping_columns
+d----          15/09/2025    00:42                20250914234207_add_visit_table
+d----          16/09/2025    13:51                20250916125109_add_paid_at_and_paypal_capture_id
+d----          17/09/2025    18:34                20250917173411_init
+d----          18/09/2025    13:33                20250918123355_add_payment_status
+d----          25/09/2025    00:17                20250924231743_add_season_to_product
+d----          19/10/2025    22:36                20251019213633_size_stock_available_boolean
+d----          25/10/2025    16:59                20251025155941_add_image_urls_and_badges_to_product
+d----          26/10/2025    02:27                20251026022726_add_allow_name_number_and_arrays
+d----          26/10/2025    19:31                20251026193144_review_images_and_required_product
+d----          12/12/2025    16:51                20251212165135_add_password_reset
+d----          10/01/2026    17:25                20260110172556_add_team_type
+d----          14/01/2026    13:25                20260114132550_add_newsletter_subscribers
+d----          14/01/2026    18:06                20260114180629_add_newsletter_campaigns
+d----          04/03/2026    17:31                20260128193646_add_order_confirmation_email
+d----          04/03/2026    17:31                20260130145151_add_product_visibility
+d----          04/03/2026    23:31                20260304233146_add_channel
+d----          15/03/2026    12:20                20260315122017_make_pt_stock_qty_required
+d----          16/03/2026    23:56                20260316235649_add_pt_stock_qty_to_size_stock
+d----          17/03/2026    13:43                20260317134302_add_discount_codes
+d----          17/03/2026    18:09                20260317180902_add_stock_deducted_at_to_order
+d----          24/03/2026    01:46                20260324014631_add_stripe_discount_fields
+d----          26/03/2026    13:50                20260326135030_pt_stock_size_deduction
+d----          26/03/2026    17:50                20260326175006_discount_code_single_use
+-a---          26/03/2026    17:50            128 migration_lock.toml
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250823030014_init_auth
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          23/08/2025    04:00           2322 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250824195151_product_options
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          24/08/2025    20:51           1933 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250825191622_add_player_model_and_optionvalue_link
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          25/08/2025    20:16           1059 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250827113711_player_unique_team_name
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          27/08/2025    12:37            268 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250831003804_add_cart_backref
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          31/08/2025    01:38           1427 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250831011045_sync_cart_schema
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          31/08/2025    02:10           1456 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250902001155_add_total_price_default
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          02/09/2025    01:11            434 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250902115536_add_orders_backrelations
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          02/09/2025    12:55           2288 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250906122649_add_shipping_json_to_order
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          06/09/2025    13:26             80 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250910194921_init_public_stats
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          10/09/2025    20:49           2202 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250912170416_add_order_shipping_columns
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          12/09/2025    18:04           1473 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250914234207_add_visit_table
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          15/09/2025    00:42            473 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250916125109_add_paid_at_and_paypal_capture_id
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          16/09/2025    13:51            199 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250917173411_init
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          17/09/2025    18:34            243 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250918123355_add_payment_status
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          18/09/2025    13:33            418 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250924231743_add_season_to_product
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          25/09/2025    00:17            158 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251019213633_size_stock_available_boolean
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          19/10/2025    22:36            531 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251025155941_add_image_urls_and_badges_to_product
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          25/10/2025    16:59            313 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251026022726_add_allow_name_number_and_arrays
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          26/10/2025    02:27            109 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251026193144_review_images_and_required_product
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          26/10/2025    19:31            568 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251212165135_add_password_reset
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          12/12/2025    16:51           1387 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260110172556_add_team_type
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          10/01/2026    17:25            378 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260114132550_add_newsletter_subscribers
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          14/01/2026    13:25            549 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260114180629_add_newsletter_campaigns
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          14/01/2026    18:06           1338 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260128193646_add_order_confirmation_email
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          04/03/2026    17:31            268 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260130145151_add_product_visibility
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          04/03/2026    17:31            197 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260304233146_add_channel
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          04/03/2026    23:31            537 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260315122017_make_pt_stock_qty_required
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          15/03/2026    12:20             90 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260316235649_add_pt_stock_qty_to_size_stock
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          16/03/2026    23:56            198 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260317134302_add_discount_codes
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          17/03/2026    13:43           1740 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260317180902_add_stock_deducted_at_to_order
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          17/03/2026    18:09            187 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260324014631_add_stripe_discount_fields
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          24/03/2026    01:46            791 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260326135030_pt_stock_size_deduction
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          26/03/2026    13:50           1501 migration.sql
+
+    Directory: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260326175006_discount_code_single_use
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          26/03/2026    17:50           1134 migration.sql
+
+
+prisma\migrations\20250823030014_init_auth\migration.sql:74:ALTER TABLE "public"."Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20250823030014_init_auth\migration.sql:77:ALTER TABLE "public"."Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20250824195151_product_options\migration.sql:56:ALTER TABLE "public"."SizeStock" ADD CONSTRAINT "SizeStock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+prisma\migrations\20250824195151_product_options\migration.sql:59:ALTER TABLE "public"."OptionGroup" ADD CONSTRAINT "OptionGroup_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+prisma\migrations\20250824195151_product_options\migration.sql:62:ALTER TABLE "public"."OptionValue" ADD CONSTRAINT "OptionValue_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "public"."OptionGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+prisma\migrations\20250825191622_add_player_model_and_optionvalue_link\migration.sql:2:ALTER TABLE "public"."OptionValue" ADD COLUMN     "playerId" TEXT,
+prisma\migrations\20250825191622_add_player_model_and_optionvalue_link\migration.sql:3:ADD COLUMN     "playerName" TEXT,
+prisma\migrations\20250825191622_add_player_model_and_optionvalue_link\migration.sql:4:ADD COLUMN     "playerNumber" INTEGER;
+prisma\migrations\20250825191622_add_player_model_and_optionvalue_link\migration.sql:32:ALTER TABLE "public"."OptionValue" ADD CONSTRAINT "OptionValue_playerId_fkey" FOREIGN KEY ("playerId") REFERENCES "public"."Player"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+prisma\migrations\20250831003804_add_cart_backref\migration.sql:41:ALTER TABLE "public"."CartItem" ADD CONSTRAINT "CartItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+prisma\migrations\20250831003804_add_cart_backref\migration.sql:44:ALTER TABLE "public"."CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "public"."Cart"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+prisma\migrations\20250831011045_sync_cart_schema\migration.sql:12:ALTER TABLE "public"."CartItem" DROP CONSTRAINT "CartItem_cartId_fkey";
+prisma\migrations\20250831011045_sync_cart_schema\migration.sql:18:ALTER TABLE "public"."CartItem" DROP COLUMN "optionsJson",
+prisma\migrations\20250831011045_sync_cart_schema\migration.sql:20:ADD COLUMN     "lineTotal" INTEGER NOT NULL,
+prisma\migrations\20250831011045_sync_cart_schema\migration.sql:21:ADD COLUMN     "options" JSONB NOT NULL;
+prisma\migrations\20250831011045_sync_cart_schema\migration.sql:27:ALTER TABLE "public"."Cart" ADD CONSTRAINT "Cart_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+prisma\migrations\20250831011045_sync_cart_schema\migration.sql:30:ALTER TABLE "public"."CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "public"."Cart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20250902001155_add_total_price_default\migration.sql:9:ALTER TABLE "public"."CartItem" DROP COLUMN "lineTotal",
+prisma\migrations\20250902001155_add_total_price_default\migration.sql:11:ADD COLUMN     "optionsJson" JSONB,
+prisma\migrations\20250902001155_add_total_price_default\migration.sql:12:ADD COLUMN     "totalPrice" INTEGER NOT NULL DEFAULT 0;
+prisma\migrations\20250902115536_add_orders_backrelations\migration.sql:5:ALTER TABLE "public"."OptionValue" ALTER COLUMN "priceDelta" SET DEFAULT 0;
+prisma\migrations\20250902115536_add_orders_backrelations\migration.sql:62:ALTER TABLE "public"."Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+prisma\migrations\20250902115536_add_orders_backrelations\migration.sql:65:ALTER TABLE "public"."OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "public"."Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20250902115536_add_orders_backrelations\migration.sql:68:ALTER TABLE "public"."OrderItem" ADD CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+prisma\migrations\20250906122649_add_shipping_json_to_order\migration.sql:2:ALTER TABLE "public"."Order" ADD COLUMN     "shippingJson" JSONB;
+prisma\migrations\20250910194921_init_public_stats\migration.sql:13:ALTER TABLE "public"."Order" ADD COLUMN     "shippingCountry" TEXT;
+prisma\migrations\20250910194921_init_public_stats\migration.sql:67:ALTER TABLE "public"."Review" ADD CONSTRAINT "Review_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+prisma\migrations\20250910194921_init_public_stats\migration.sql:70:ALTER TABLE "public"."Review" ADD CONSTRAINT "Review_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:21:ALTER TABLE "public"."Order" DROP COLUMN "paypalCaptureId",
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:22:ADD COLUMN     "paypalCaptured" BOOLEAN,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:23:ADD COLUMN     "shippingAddress1" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:24:ADD COLUMN     "shippingAddress2" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:25:ADD COLUMN     "shippingCity" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:26:ADD COLUMN     "shippingEmail" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:27:ADD COLUMN     "shippingFullName" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:28:ADD COLUMN     "shippingPhone" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:29:ADD COLUMN     "shippingPostalCode" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:30:ADD COLUMN     "shippingRegion" TEXT,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:31:ADD COLUMN     "totalCents" INTEGER,
+prisma\migrations\20250912170416_add_order_shipping_columns\migration.sql:33:ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'pending',
+prisma\migrations\20250916125109_add_paid_at_and_paypal_capture_id\migration.sql:2:ALTER TABLE "public"."Order" ADD COLUMN     "paidAt" TIMESTAMP(3),
+prisma\migrations\20250916125109_add_paid_at_and_paypal_capture_id\migration.sql:3:ADD COLUMN     "paypalCaptureId" TEXT;
+prisma\migrations\20250917173411_init\migration.sql:2:ALTER TABLE "public"."Product" ALTER COLUMN "description" DROP NOT NULL;
+prisma\migrations\20250918123355_add_payment_status\migration.sql:8:ALTER TABLE "public"."Order" ADD COLUMN     "paymentStatus" TEXT;
+prisma\migrations\20250924231743_add_season_to_product\migration.sql:2:ALTER TABLE "public"."Product" ADD COLUMN     "season" TEXT;
+prisma\migrations\20251019213633_size_stock_available_boolean\migration.sql:9:ALTER TABLE "public"."SizeStock" DROP COLUMN "stock",
+prisma\migrations\20251019213633_size_stock_available_boolean\migration.sql:10:ADD COLUMN     "available" BOOLEAN NOT NULL DEFAULT true;
+prisma\migrations\20251025155941_add_image_urls_and_badges_to_product\migration.sql:8:ALTER TABLE "public"."Product" DROP COLUMN "images",
+prisma\migrations\20251025155941_add_image_urls_and_badges_to_product\migration.sql:9:ADD COLUMN     "badges" TEXT[] DEFAULT ARRAY[]::TEXT[],
+prisma\migrations\20251025155941_add_image_urls_and_badges_to_product\migration.sql:10:ADD COLUMN     "imageUrls" TEXT[] DEFAULT ARRAY[]::TEXT[];
+prisma\migrations\20251026022726_add_allow_name_number_and_arrays\migration.sql:2:ALTER TABLE "public"."Product" ADD COLUMN     "allowNameNumber" BOOLEAN NOT NULL DEFAULT true;
+prisma\migrations\20251026193144_review_images_and_required_product\migration.sql:8:ALTER TABLE "public"."Review" DROP CONSTRAINT "Review_productId_fkey";
+prisma\migrations\20251026193144_review_images_and_required_product\migration.sql:11:ALTER TABLE "public"."Review" ADD COLUMN     "imageUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
+prisma\migrations\20251026193144_review_images_and_required_product\migration.sql:15:ALTER TABLE "public"."Review" ADD CONSTRAINT "Review_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20251212165135_add_password_reset\migration.sql:5:ALTER TABLE "public"."Order" ADD COLUMN     "deliveredAt" TIMESTAMP(3),
+prisma\migrations\20251212165135_add_password_reset\migration.sql:6:ADD COLUMN     "shippedAt" TIMESTAMP(3),
+prisma\migrations\20251212165135_add_password_reset\migration.sql:7:ADD COLUMN     "shippingStatus" "public"."ShippingStatus" NOT NULL DEFAULT 'PENDING',
+prisma\migrations\20251212165135_add_password_reset\migration.sql:8:ADD COLUMN     "trackingCode" TEXT,
+prisma\migrations\20251212165135_add_password_reset\migration.sql:9:ADD COLUMN     "trackingUrl" TEXT;
+prisma\migrations\20260110172556_add_team_type\migration.sql:5:ALTER TABLE "public"."Product" ADD COLUMN     "teamType" "public"."TeamType" NOT NULL DEFAULT 'CLUB';
+prisma\migrations\20260114180629_add_newsletter_campaigns\migration.sql:39:ALTER TABLE "public"."NewsletterSendLog" ADD CONSTRAINT "NewsletterSendLog_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "public"."NewsletterCampaign"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20260128193646_add_order_confirmation_email\migration.sql:2:ALTER TABLE "public"."Order" ADD COLUMN     "confirmationEmailProviderId" TEXT,
+prisma\migrations\20260128193646_add_order_confirmation_email\migration.sql:3:ADD COLUMN     "confirmationEmailSentAt" TIMESTAMP(3);
+prisma\migrations\20260130145151_add_product_visibility\migration.sql:2:ALTER TABLE "public"."Product" ADD COLUMN     "isVisible" BOOLEAN NOT NULL DEFAULT true;
+prisma\migrations\20260304233146_add_channel\migration.sql:5:ALTER TABLE "public"."Order" ADD COLUMN     "channel" "public"."ProductChannel" NOT NULL DEFAULT 'GLOBAL';
+prisma\migrations\20260304233146_add_channel\migration.sql:8:ALTER TABLE "public"."Product" ADD COLUMN     "channel" "public"."ProductChannel" NOT NULL DEFAULT 'GLOBAL',
+prisma\migrations\20260304233146_add_channel\migration.sql:9:ADD COLUMN     "ptStockQty" INTEGER;
+prisma\migrations\20260316235649_add_pt_stock_qty_to_size_stock\migration.sql:2:ALTER TABLE "public"."SizeStock" ADD COLUMN     "ptStockQty" INTEGER NOT NULL DEFAULT 0;
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:2:ALTER TABLE "public"."Order" ADD COLUMN     "discountAmountCents" INTEGER NOT NULL DEFAULT 0,
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:3:ADD COLUMN     "discountCodeId" TEXT,
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:4:ADD COLUMN     "discountCodeText" TEXT,
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:5:ADD COLUMN     "discountPercent" INTEGER,
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:6:ADD COLUMN     "productSubtotalCents" INTEGER NOT NULL DEFAULT 0,
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:7:ADD COLUMN     "shippingCents" INTEGER NOT NULL DEFAULT 0;
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:16:    "usesCount" INTEGER NOT NULL DEFAULT 0,
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:17:    "usedAt" TIMESTAMP(3),
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:41:CREATE INDEX "Order_discountCodeId_idx" ON "public"."Order"("discountCodeId");
+prisma\migrations\20260317134302_add_discount_codes\migration.sql:47:ALTER TABLE "public"."Order" ADD CONSTRAINT "Order_discountCodeId_fkey" FOREIGN KEY ("discountCodeId") REFERENCES "public"."DiscountCode"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+prisma\migrations\20260317180902_add_stock_deducted_at_to_order\migration.sql:2:ALTER TABLE "public"."Order" ADD COLUMN     "stockDeductedAt" TIMESTAMP(3);
+prisma\migrations\20260324014631_add_stripe_discount_fields\migration.sql:2:ALTER TABLE "public"."DiscountCode" ADD COLUMN     "stripeCouponId" TEXT,
+prisma\migrations\20260324014631_add_stripe_discount_fields\migration.sql:3:ADD COLUMN     "stripePromotionCodeId" TEXT;
+prisma\migrations\20260324014631_add_stripe_discount_fields\migration.sql:6:ALTER TABLE "public"."Order" ADD COLUMN     "finalProductSubtotalCents" INTEGER NOT NULL DEFAULT 0,
+prisma\migrations\20260324014631_add_stripe_discount_fields\migration.sql:7:ADD COLUMN     "stripeCouponIdUsed" TEXT,
+prisma\migrations\20260324014631_add_stripe_discount_fields\migration.sql:8:ADD COLUMN     "stripePromotionCodeIdUsed" TEXT;
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:2:ALTER TABLE "public"."CartItem" DROP CONSTRAINT "CartItem_productId_fkey";
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:5:ALTER TABLE "public"."OptionGroup" DROP CONSTRAINT "OptionGroup_productId_fkey";
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:8:ALTER TABLE "public"."OptionValue" DROP CONSTRAINT "OptionValue_groupId_fkey";
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:11:ALTER TABLE "public"."SizeStock" DROP CONSTRAINT "SizeStock_productId_fkey";
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:26:ALTER TABLE "public"."SizeStock" ADD CONSTRAINT "SizeStock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:29:ALTER TABLE "public"."OptionGroup" ADD CONSTRAINT "OptionGroup_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:32:ALTER TABLE "public"."OptionValue" ADD CONSTRAINT "OptionValue_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "public"."OptionGroup"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:35:ALTER TABLE "public"."CartItem" ADD CONSTRAINT "CartItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:4:  - You are about to drop the column `discountCodeId` on the `Order` table. All the data in the column will be lost.
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:5:  - A unique constraint covering the columns `[usedByOrderId]` on the table `DiscountCode` will be added. If there are existing duplicate values, this will fail.
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:9:ALTER TABLE "public"."Order" DROP CONSTRAINT "Order_discountCodeId_fkey";
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:12:DROP INDEX "public"."Order_discountCodeId_idx";
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:15:ALTER TABLE "public"."DiscountCode" ADD COLUMN     "usedByOrderId" TEXT;
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:18:ALTER TABLE "public"."Order" DROP COLUMN "discountCodeId";
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:21:CREATE UNIQUE INDEX "DiscountCode_usedByOrderId_key" ON "public"."DiscountCode"("usedByOrderId");
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:24:CREATE INDEX "DiscountCode_usedAt_idx" ON "public"."DiscountCode"("usedAt");
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:27:CREATE INDEX "DiscountCode_usedByOrderId_idx" ON "public"."DiscountCode"("usedByOrderId");
+prisma\migrations\20260326175006_discount_code_single_use\migration.sql:30:ALTER TABLE "public"."DiscountCode" ADD CONSTRAINT "DiscountCode_usedByOrderId_fkey" FOREIGN KEY ("usedByOrderId") REFERENCES "public"."Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+
+===== 7. PRISMA CHECK =====
+Prisma schema loaded from prisma\schema.prisma
+The schema at prisma\schema.prisma is valid ­ƒÜÇ
+Prisma schema loaded from prisma\schema.prisma
+
+Ô£ö Generated Prisma Client (v6.16.0) to .\node_modules\@prisma\client in 309ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+
+===== 8. BUSCA FINAL GLOBAL =====
+
+src\app\api\checkout\paypal\capture\route.ts:169:async function markPaid(
+src\app\api\checkout\paypal\capture\route.ts:215:      const { finalizePaidOrder } = await import("@/lib/checkout");
+src\app\api\checkout\paypal\capture\route.ts:216:      await finalizePaidOrder(orderId);
+src\app\api\checkout\paypal\capture\route.ts:281:      const { transitioned } = await markPaid(orderId, {
+src\app\api\checkout\paypal\create\route.ts:10:  getValidDiscountCode,
+src\app\api\checkout\paypal\create\route.ts:408:      ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\api\checkout\paypal\create\route.ts:498:        discountCodeText: validDiscount?.code ?? null,
+src\app\api\checkout\stripe\route.ts:13:  getValidDiscountCode,
+src\app\api\checkout\stripe\route.ts:561:      ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\api\checkout\stripe\route.ts:771:        discountCodeText: validDiscount?.code ?? null,
+src\app\api\checkout\stripe\confirm\route.ts:202:      const { finalizePaidOrder } = await import("@/lib/checkout");
+src\app\api\checkout\stripe\confirm\route.ts:203:      await finalizePaidOrder(orderId);
+src\app\api\paypal\webhook\route.ts:6:import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+src\app\api\paypal\webhook\route.ts:152:async function markPaid(
+src\app\api\paypal\webhook\route.ts:169:      discountCodeText: true,
+src\app\api\paypal\webhook\route.ts:192:    existing.discountCodeText ?? ""
+src\app\api\paypal\webhook\route.ts:229:        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+src\app\api\paypal\webhook\route.ts:249:    const { finalizePaidOrder } = await import("@/lib/checkout");
+src\app\api\paypal\webhook\route.ts:250:    await finalizePaidOrder(orderId);
+src\app\api\paypal\webhook\route.ts:370:        await markPaid(order.id, {
+src\app\api\stripe\webhook\route.ts:6:import { finalizePaidOrder } from "@/lib/checkout";
+src\app\api\stripe\webhook\route.ts:11:import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+src\app\api\stripe\webhook\route.ts:507:async function markPaid(
+src\app\api\stripe\webhook\route.ts:527:      discountCodeText: true,
+src\app\api\stripe\webhook\route.ts:582:    updateData.discountCodeText = normalizedCode;
+src\app\api\stripe\webhook\route.ts:633:        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+src\app\api\stripe\webhook\route.ts:653:    await finalizePaidOrder(orderId);
+src\app\api\stripe\webhook\route.ts:840:          const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:905:        const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:949:        const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:1085:          const { transitioned } = await markPaid(orderId, {
+src\app\[locale]\(store)\cart\actions.ts:12:  getValidDiscountCode,
+src\app\[locale]\(store)\cart\actions.ts:395:    const discount = await getValidDiscountCode(code);
+src\app\[locale]\(store)\cart\actions.ts:495:    ? await getValidDiscountCode(appliedCode)
+src\app\[locale]\(store)\cart\actions.ts:599:  const discount = await getValidDiscountCode(code);
+src\app\[locale]\(store)\cart\page.tsx:19:  getValidDiscountCode,
+src\app\[locale]\(store)\cart\page.tsx:478:    ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\[locale]\(store)\checkout\actions.ts:13:  getValidDiscountCode,
+src\app\[locale]\(store)\checkout\actions.ts:319:    ? await getValidDiscountCode(normalizedDiscountCode)
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:87:    usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:101:      usesCount: 0,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:128:      usesCount: true,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:130:      usedAt: true,
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:140:    usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:145:    current.usedAt ||
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:146:      safeCurrent.usedByOrderId ||
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:147:      current.usesCount >= 1 ||
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:148:      current.usesCount >= current.maxUses
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:24:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:28:  usedAt: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:29:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:54:  usedAt?: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:55:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:56:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:60:    code.usedAt ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:61:      code.usedByOrderId ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:62:      code.usesCount >= 1 ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:63:      code.usesCount >= code.maxUses
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:74:  usedAt?: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:75:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:76:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:85:  usesCount: number;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:88:  usedAt?: Date | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:89:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:127:      usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:138:      usesCount: row.usesCount,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:142:      usedAt: row.usedAt ?? null,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:143:      usedByOrderId:
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:144:        typeof row.usedByOrderId === "string" ? row.usedByOrderId : null,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:387:                            Stored: {code.usesCount}/{code.maxUses}
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:425:                      <td className="px-4 py-3">{formatDate(code.usedAt)}</td>
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:429:                          {code.usedByOrderId || "—"}
+src\lib\checkout.ts:7:  getValidDiscountCode,
+src\lib\checkout.ts:195:    ? await getValidDiscountCode(normalizedDiscountCode)
+src\lib\checkout.ts:233:      discountCodeText: validDiscount?.code ?? null,
+src\lib\checkout.ts:252:export async function finalizePaidOrder(orderId: string) {
+src\lib\discount-codes.ts:34:export async function getValidDiscountCode(rawCode: string) {
+src\lib\discount-codes.ts:47:    usedByOrderId?: string | null;
+src\lib\discount-codes.ts:54:  if (discount.usedAt) return null;
+src\lib\discount-codes.ts:55:  if (safeDiscount.usedByOrderId) return null;
+src\lib\discount-codes.ts:59:  if (discount.usesCount >= 1) return null;
+src\lib\discount-codes.ts:60:  if (discount.usesCount >= discount.maxUses) return null;
+src\lib\discount-codes.ts:68:  usesCount: number;
+src\lib\discount-codes.ts:70:  usedAt?: Date | null;
+src\lib\discount-codes.ts:71:  usedByOrderId?: string | null;
+src\lib\discount-codes.ts:80:  if (input.usedAt) return "used";
+src\lib\discount-codes.ts:81:  if (input.usedByOrderId) return "used";
+src\lib\discount-codes.ts:82:  if (input.usesCount >= 1) return "used";
+src\lib\discount-codes.ts:83:  if (input.usesCount >= input.maxUses) return "used";
+src\lib\redeem-discount-code.ts:7:export async function redeemDiscountCodeTx(
+src\lib\redeem-discount-code.ts:22:    usedByOrderId?: string | null;
+src\lib\redeem-discount-code.ts:31:  if (discount.usedAt) {
+src\lib\redeem-discount-code.ts:35:  if (safeDiscount.usedByOrderId) {
+src\lib\redeem-discount-code.ts:41:  if (discount.usesCount >= 1) {
+src\lib\redeem-discount-code.ts:44:  if (discount.usesCount >= discount.maxUses) {
+src\lib\redeem-discount-code.ts:54:      usedAt: null,
+src\lib\redeem-discount-code.ts:55:      usesCount: 0,
+src\lib\redeem-discount-code.ts:56:      ...(safeDiscount.usedByOrderId === undefined
+src\lib\redeem-discount-code.ts:58:        : { usedByOrderId: null }),
+src\lib\redeem-discount-code.ts:62:      usedAt: now,
+src\lib\redeem-discount-code.ts:63:      usesCount: 1,
+src\lib\redeem-discount-code.ts:64:      usedByOrderId: orderId,
+src\lib\redeem-discount-code.ts:75:    usedAt: now,
+src\lib\redeem-discount-code.ts:76:    usesCount: 1,
+src\lib\redeem-discount-code.ts:77:    usedByOrderId: orderId,
+

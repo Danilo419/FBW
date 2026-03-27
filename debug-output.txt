@@ -1,0 +1,3908 @@
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:4: import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:252: await deductPtStockForPaidOrder(orderId);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:10: import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:654: await deductPtStockForPaidOrder(orderId);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:260: // deductPtStockForPaidOrder(orderId)
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:95: export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:142: `[deductPtStockForPaidOrder] Missing product relation for order item ${item.id}`
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\capture\route.ts:169: async function markPaid(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\capture\route.ts:194: status: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\capture\route.ts:195: paymentStatus: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\capture\route.ts:215: const { finalizePaidOrder } = await import("@/lib/checkout");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\capture\route.ts:216: await finalizePaidOrder(orderId);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\capture\route.ts:281: const { transitioned } = await markPaid(orderId, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\confirm\route.ts:186: status: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\confirm\route.ts:187: paymentStatus: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\confirm\route.ts:202: const { finalizePaidOrder } = await import("@/lib/checkout");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\confirm\route.ts:203: await finalizePaidOrder(orderId);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\confirm\route.ts:208: return NextResponse.json({ ok: true, status: "paid" });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:152: async function markPaid(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:197: status: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:198: paymentStatus: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:249: const { finalizePaidOrder } = await import("@/lib/checkout");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:250: await finalizePaidOrder(orderId);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\paypal\webhook\route.ts:368: await markPaid(order.id, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:6: import { finalizePaidOrder } from "@/lib/checkout";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:507: async function markPaid(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:568: status: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:569: paymentStatus: "paid",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:653: await finalizePaidOrder(orderId);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:837: const { transitioned } = await markPaid(orderId, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:902: const { transitioned } = await markPaid(orderId, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:946: const { transitioned } = await markPaid(orderId, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\stripe\webhook\route.ts:1082: const { transitioned } = await markPaid(orderId, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\orders\page.tsx:127: { status: "paid" },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:252: export async function finalizePaidOrder(orderId: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\globals.css:171: html { font-size: 90%; } /* ~14.4px — evita texto cortado em mobile */
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\HomeClient.tsx:692: background-size: cover;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\account\orders\[orderId]\route.ts:65: snapshotJson: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\create-product\route.ts:204: size: s,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:93: size: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:96: orderBy: { size: "asc" },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:48: optionsJson?: any;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:174: function extractSelectedSize(optionsJson: any): string | null {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:175: const root = safeObj(optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:179: root.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:193: options.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:202: const selectedOptions = safeObj(root.selectedOptions);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:204: selectedOptions.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:205: selectedOptions.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:206: selectedOptions.variantSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:207: selectedOptions.chosenSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:208: selectedOptions.Size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:239: function buildSnapshotJson(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:240: optionsJson: any,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:244: const baseSnapshot = safeObj(optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:245: const selectedSize = extractSelectedSize(baseSnapshot);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:252: if (selectedSize) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:253: snapshot.size = selectedSize;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:255: if (!safeStr(snapshot.selectedSize)) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:256: snapshot.selectedSize = selectedSize;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:263: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:267: const selectedOptions = safeObj(snapshot.selectedOptions);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:268: if (!safeStr(selectedOptions.size)) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:269: snapshot.selectedOptions = {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:270: ...selectedOptions,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:271: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:286: { productId: string; size: string; qty: number; productName: string }
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:296: const size = extractSelectedSize(it.optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:323: productId_size: {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:325: size: entry.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:440: optionsJson:
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:441: it.optionsJson ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:443: it.snapshotJson ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:444: it.optionsJSON ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:445: (it as any).optionsJson ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:528: snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:55: optionsJson?: any;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:257: function extractSelectedSize(optionsJson: any): string | null {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:258: const root = safeObj(optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:262: root.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:276: options.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:285: const selectedOptions = safeObj(root.selectedOptions);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:287: selectedOptions.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:288: selectedOptions.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:289: selectedOptions.variantSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:290: selectedOptions.chosenSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:291: selectedOptions.Size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:309: function buildSnapshotJson(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:310: optionsJson: any,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:314: const baseSnapshot = safeObj(optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:315: const selectedSize = extractSelectedSize(baseSnapshot);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:322: if (selectedSize) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:323: snapshot.size = selectedSize;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:325: if (!safeStr(snapshot.selectedSize)) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:326: snapshot.selectedSize = selectedSize;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:333: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:337: const selectedOptions = safeObj(snapshot.selectedOptions);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:338: if (!safeStr(selectedOptions.size)) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:339: snapshot.selectedOptions = {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:340: ...selectedOptions,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:341: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:356: { productId: string; size: string; qty: number; productName: string }
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:366: const size = extractSelectedSize(it.optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:393: productId_size: {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:395: size: entry.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:601: optionsJson:
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:602: it.optionsJson ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:604: it.snapshotJson ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:605: it.optionsJSON ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:606: (it as any).optionsJson ??
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:731: snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:746: snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\success\order\route.ts:63: snapshotJson: true, // ✅ exists in your schema
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\contact\route.ts:99: <div style="font-size:12px;color:#64748b;margin-bottom:8px">Message</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\contact\route.ts:100: <div style="font-size:14px;color:#0f172a">${safeMessage}</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\contact\route.ts:103: <p style="margin:14px 0 0;color:#64748b;font-size:12px">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\contact\route.ts:148: <div style="font-size:12px;color:#64748b;margin-bottom:8px">Your message (${ticketId})</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\contact\route.ts:149: <div style="font-size:14px;color:#0f172a">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\contact\route.ts:157: <p style="margin:14px 0 0;color:#64748b;font-size:12px">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\upload\route.ts:79: size: file.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:290: const optionsJson = normalizeOptions(input.options ?? undefined);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:305: const optionsJsonWithPersonalization: Record<string, string> = {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:306: ...optionsJson,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:309: if (cleanName) optionsJsonWithPersonalization.custName = cleanName;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:310: if (cleanNumber) optionsJsonWithPersonalization.custNumber = cleanNumber;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:317: optionsJson: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:325: sameJson(it.optionsJson ?? {}, optionsJsonWithPersonalization) &&
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:338: optionsJson: optionsJsonWithPersonalization as any,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:350: optionsJson: optionsJsonWithPersonalization as any,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:147: size: t("cartPage.optionLabels.size"),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:427: const opts = parseMaybeJsonObject((it as any).optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\AccountClient.tsx:613: <span className="font-semibold" style={{ fontSize: Math.max(12, size / 3.2) }}>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:94: snapshotJson?: unknown
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:501: const snap = safeParseJSON(it?.snapshotJson)
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:504: safeParseJSON(snap.optionsJson) ||
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:43: `<div style="margin:0 0 12px 0;font-size:14px;line-height:1.75;color:#111">${safe}</div>`
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:67: padding:11px 16px;border-radius:14px;font-weight:800;font-size:13px">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:95: <div style="font-size:12px;color:${text};line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:128: <div style="font-weight:900;font-size:16px;letter-spacing:0.2px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:131: <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:146: <div style="font-weight:900;font-size:16px;color:#fff">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:147: <div style="margin-left:auto;font-size:12px;color:#A7A7A7">Newsletter</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:150: <h1 style="margin:0 0 12px 0;font-size:20px;line-height:1.2;color:#fff">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:166: <div style="font-weight:900;font-size:16px;letter-spacing:0.2px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:167: <div style="font-size:12px;opacity:0.9">Limited-time offers</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:170: <div style="display:inline-block;background:#111;color:#fff;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">SALE</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:171: <h1 style="margin:10px 0 12px 0;font-size:20px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:174: <div style="font-size:12px;color:#7a1f1f">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:192: <div style="font-weight:900;font-size:16px;color:#111">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:193: <div style="margin-left:auto;font-size:12px;color:#5b6b88">New drop</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:198: <div style="font-size:12px;color:#5b6b88;font-weight:700">Just released</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:200: <h1 style="margin:0 0 12px 0;font-size:22px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:216: <div style="font-weight:900;font-size:16px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:217: <div style="margin-left:auto;font-size:12px;color:#666">Featured</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:220: <h1 style="margin:0 0 12px 0;font-size:20px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:221: <div style="font-size:14px;color:#111;line-height:1.7">${body}</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:224: <div style="font-size:12px;color:#666;font-weight:700">Idea</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:225: <div style="font-size:12px;color:#666;line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:230: <div style="font-size:12px;color:#666;font-weight:700">Tip</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:231: <div style="font-size:12px;color:#666;line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:251: <div style="color:#fff;font-weight:900;font-size:18px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:252: <div style="color:#cbd5e1;font-size:12px;margin-top:2px">Premium newsletter</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:255: <h1 style="margin:0 0 12px 0;font-size:22px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:273: <div style="font-weight:900;font-size:16px;color:#111">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:274: <div style="margin-left:auto;font-size:12px;color:#5f6f66">Matchday vibes</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:277: <h1 style="margin:0 0 10px 0;font-size:20px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:279: <div style="font-size:12px;color:#2f4b3a;font-weight:800">Kick-off</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:280: <div style="font-size:12px;color:#2f4b3a;line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:298: <div style="font-weight:800;font-size:18px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:299: <div style="margin-left:auto;font-size:12px;color:#666">Newsletter</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:303: <h1 style="margin:0 0 12px 0;font-size:20px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:304: <div style="font-size:14px;color:#111;line-height:1.7">${body}</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:307: <div style="font-size:12px;color:#555">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\actions.ts:313: <div style="padding:16px 22px;border-top:1px solid #f0f0f0;font-size:12px;color:#666">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:127: <p style="font-size:12px;color:#666">Unsubscribe link will be included.</p>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:135: <div style="font-weight:900;font-size:16px;letter-spacing:0.2px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:138: <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:140: <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:151: <div style="font-weight:900;font-size:16px;color:#fff">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:152: <div style="margin-left:auto;font-size:12px;color:#A7A7A7">Preview</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:155: <h1 style="margin:0 0 10px 0;font-size:18px;color:#fff">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:157: <div style="margin-top:14px;font-size:12px;color:#A7A7A7">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:168: <div style="font-weight:900;font-size:16px;letter-spacing:0.2px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:169: <div style="font-size:12px;opacity:0.9">Limited-time offers</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:172: <div style="display:inline-block;background:#111;color:#fff;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">SALE</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:173: <h1 style="margin:10px 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:175: <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:186: <div style="font-weight:900;font-size:16px;color:#111">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:187: <div style="margin-left:auto;font-size:12px;color:#5b6b88">New drop</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:192: <div style="font-size:12px;color:#5b6b88;font-weight:700">Just released</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:194: <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:196: <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:207: <div style="font-weight:900;font-size:16px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:208: <div style="margin-left:auto;font-size:12px;color:#666">Featured</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:211: <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:215: <div style="font-size:12px;color:#666;font-weight:700">Tip</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:216: <div style="font-size:12px;color:#666;line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:221: <div style="font-size:12px;color:#666;font-weight:700">Tip</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:222: <div style="font-size:12px;color:#666;line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:227: <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:239: <div style="color:#fff;font-weight:900;font-size:16px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:240: <div style="color:#cbd5e1;font-size:12px;margin-top:2px">Premium newsletter</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:243: <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:245: <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:258: <div style="font-weight:900;font-size:16px;color:#111">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:259: <div style="margin-left:auto;font-size:12px;color:#5f6f66">Matchday vibes</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:262: <h1 style="margin:0 0 10px 0;font-size:18px;line-height:1.2">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:264: <div style="font-size:12px;color:#2f4b3a;font-weight:800">Kick-off</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:265: <div style="font-size:12px;color:#2f4b3a;line-height:1.6">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:270: <div style="margin-top:14px;font-size:12px;color:#666">Unsubscribe link will be included.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:282: <div style="font-weight:800;font-size:16px">FootballWorld</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:283: <div style="margin-left:auto;font-size:12px;color:#666">Preview</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:286: <h1 style="margin:0 0 10px 0;font-size:18px">${safeSubject}</h1>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:595: `<div style="margin:0 0 12px 0;font-size:14px;line-height:1.7;color:#111">${safe}</div>`
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\newsletter\ui\NewsletterComposer.tsx:622: padding:10px 14px;border-radius:12px;font-weight:700;font-size:13px">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\page.tsx:106: sizes: { select: { id: true, size: true, available: true } },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\size-actions.ts:17: select: { id: true, size: true, available: true, productId: true },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\new\page.tsx:205: function addAdult(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\new\page.tsx:209: function removeAdult(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\new\page.tsx:213: function addKid(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\new\page.tsx:217: function removeKid(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\[id]\page.tsx:56: function sortByOrder<T extends { size: string }>(list: T[], order: readonly string[]): T[] {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\[id]\page.tsx:62: function completeAdultsWithGhosts<T extends { id?: string; size: string; available?: boolean }>(rows: T[]) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\[id]\page.tsx:67: return { id: `ghost-${sz}`, size: sz, available: false, __ghost: true as const } as T & {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\[id]\page.tsx:90: select: { id: true, sizes: { select: { id: true, size: true } } },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\[id]\page.tsx:322: .map((s) => ({ ...s, size: normalizeAdultSizeLabel(s.size) }))
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:48: function addAdult(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:52: function removeAdult(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:56: function addKid(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:60: function removeKid(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:140: function addAdult(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:144: function removeAdult(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:148: function addKid(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:152: function removeKid(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\orders\[id]\page.tsx:296: // ✅ IMPORTANT: não uses select no item (assim vem snapshotJson/personalizationJson/etc)
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\orders\[id]\page.tsx:323: // unitPrice, totalPrice, snapshotJson, personalizationJson, product.badges
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\orders\[id]\page.tsx:344: snapshotJson: it?.snapshotJson ?? null,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:78: size: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\auth\error\page.tsx:27: <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:17: snapshotJson?: unknown;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:436: const snap = safeParseJSON(it.snapshotJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:438: const optionsJson = snap.optionsJson;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\checkout\success\SuccessClient.tsx:443: ...safeParseJSON(optionsJson),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:389: const snap = safeParseJSON(it.snapshotJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:392: safeParseJSON((snap as any)?.optionsJson) ||
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:516: snapshotJson: unknown;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\orders\[id]\page.tsx:587: snapshotJson: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:32: size: string;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:70: rows: { id: string | number; size: string; available: boolean }[]
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:74: size: String(s.size).toUpperCase(),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:176: select: { id: true, size: true, available: true },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:15: sizes: { size: string; stock: number }[];
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:38: const [selectedSize, setSelectedSize] = useState<string | null>(() => {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:52: if (!selectedSize) return 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:53: return product.sizes.find((s) => s.size === selectedSize)?.stock ?? 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:54: }, [product.sizes, selectedSize]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:87: if (!selectedSize) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:96: alert(`Only ${stockForSize} in stock for size ${selectedSize}.`);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:105: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:122: const isActive = selectedSize === v.value;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:130: onClick={() => setSelectedSize(v.value)}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:140: {selectedSize && (
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:142: Stock for <b>{selectedSize}</b>: {stockForSize}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\product-configurator.tsx:255: disabled={!selectedSize || qty < 1 || qty > stockForSize}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:134: orderBy: { size: "asc" },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:137: size: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:217: size: String(s.size ?? "").trim(),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:53: size: string;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:62: { size: "#16", length: 43, bust: 32, height: [95, 105], age: "2–3", shortsLength: 32 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:63: { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4", shortsLength: 34 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:64: { size: "#20", length: 50, bust: 36, height: [115, 125], age: "4–5", shortsLength: 36 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:65: { size: "#22", length: 53, bust: 38, height: [125, 135], age: "6–7", shortsLength: 38 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:66: { size: "#24", length: 56, bust: 40, height: [135, 145], age: "8–9", shortsLength: 39 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:67: { size: "#26", length: 58, bust: 42, height: [145, 155], age: "10–11", shortsLength: 40 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\size-guide\page.tsx:68: { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:33: type SizeUI = { id: string; size: string; stock?: number | null; available?: boolean | null };
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:78: size: t("size"),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:84: size: t("size"),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:242: size: string;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:251: { size: "#16", length: 43, bust: 32, height: [95, 105], age: "2–3", shortsLength: 32 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:252: { size: "#18", length: 47, bust: 34, height: [105, 115], age: "3–4", shortsLength: 34 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:253: { size: "#20", length: 50, bust: 36, height: [115, 125], age: "4–5", shortsLength: 36 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:254: { size: "#22", length: 53, bust: 38, height: [125, 135], age: "6–7", shortsLength: 38 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:255: { size: "#24", length: 56, bust: 40, height: [135, 145], age: "8–9", shortsLength: 39 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:256: { size: "#26", length: 58, bust: 42, height: [145, 155], age: "10–11", shortsLength: 40 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:257: { size: "#28", length: 61, bust: 44, height: [155, 165], age: "12–13", shortsLength: 43 },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:405: size: String(s.size).toUpperCase(),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:413: size: s,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:422: const [selectedSize, setSelectedSize] = useState<string | null>(null);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:424: const pickSize = (size: string) => {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:427: setSelectedSize(size);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:433: if (!selectedSize) return;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:434: const found = sizes.find((s) => s.size === selectedSize);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:436: setSelectedSize(null);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:437: setSelected((st) => ({ ...st, size: null }));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:439: }, [sizes, selectedSize]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:442: const sel = selectedSize ? sizes.find((s) => s.size === selectedSize) : null;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:451: }, [selectedSize, sizes, t]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:620: if (!selectedSize) return false;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:624: }, [selectedSize, qty, missingRequired]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:627: const step1 = !!selectedSize ? 1 : 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:631: }, [selectedSize, missingRequired.length, canAddToCart]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:758: if (!selectedSize) return t("validationChooseSize");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:760: const sel = sizes.find((s) => s.size === selectedSize);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:778: if (!selectedSize) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:1111: title={unavailable ? t("unavailable") : t("selectSize", { size: s.size })}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductConfigurator.tsx:1979: size: number;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductReviews.tsx:557: if (!okSize) errs.push(t("fileTooLarge", { name: f.name, size: MAX_MB }));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:15: size: string;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:95: function normalizeSizeLabel(size: string) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:216: function extractSizeStockQty(size: unknown): number | null {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:257: size: String(s.size ?? "").trim(),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:282: const [selectedSize, setSelectedSize] = useState<string | null>(null);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:310: const selectedSizeEntry = useMemo(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:311: () => safeSizes.find((s) => s.size === selectedSize) ?? null,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:312: [safeSizes, selectedSize]
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:315: const selectedSizeStockQty = useMemo(() => {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:316: if (!selectedSizeEntry) return 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:317: if (selectedSizeEntry.stockQty != null) return Math.max(0, selectedSizeEntry.stockQty);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:318: return selectedSizeEntry.available ? safeStockQty : 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:319: }, [selectedSizeEntry, safeStockQty]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:321: const selectedSizeInStock = !!selectedSizeEntry && selectedSizeStockQty > 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:329: if (!selectedSize && availableSizes.length > 0) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:330: setSelectedSize(availableSizes[0].size);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:332: }, [availableSizes, selectedSize]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:335: if (selectedSize && !safeSizes.some((s) => s.size === selectedSize && s.available && (s.stockQty == null || s.stockQty > 0))) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:336: setSelectedSize(availableSizes[0]?.size ?? null);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:338: }, [safeSizes, availableSizes, selectedSize]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:384: if (selectedSizeStockQty <= 0) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:389: setQty((current) => Math.min(current, selectedSizeStockQty));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:390: }, [selectedSizeStockQty]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:393: () => getStockUrgencyMessage(selectedSize ? selectedSizeStockQty : 0, t),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:394: [selectedSize, selectedSizeStockQty, t]
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:398: if (!selectedSizeEntry) return false;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:399: if (!selectedSizeInStock) return false;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:401: if (qty > selectedSizeStockQty) return false;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:403: }, [selectedSizeEntry, selectedSizeInStock, qty, selectedSizeStockQty]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:408: const step1 = !!selectedSize ? 1 : 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:409: const step2 = selectedSizeInStock ? 1 : 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:412: }, [selectedSize, selectedSizeInStock, canAddToCart]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:415: if (!selectedSize) return t("errors.chooseSize");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:416: if (!selectedSizeInStock) return t("errors.outOfStock");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:418: if (qty > selectedSizeStockQty) return t("errors.invalidQuantity");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:515: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:833: selectedSizeInStock
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:838: {selectedSizeInStock ? t("inStock") : t("outOfStock")}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:841: {selectedSize && selectedSizeInStock && (
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:843: {t("unitsAvailable", { count: selectedSizeStockQty })}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:848: {selectedSize && (
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:870: const isActive = selectedSize === s.size && !unavailable;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:878: setSelectedSize(s.size);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:925: onClick={() => setQty((q) => Math.min(selectedSizeStockQty || 1, q + 1))}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:927: disabled={pending || !selectedSizeInStock || qty >= selectedSizeStockQty}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\admin\SupplierCopyCard.tsx:26: snapshotJson?: unknown;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\admin\SupplierCopyCard.tsx:70: const a = safeParseJSON((snap as any)?.optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\admin\SupplierCopyCard.tsx:149: const snap = safeParseJSON(item.snapshotJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\admin\SupplierCopyCard.tsx:322: Qty: {item.qty} • Size: {extracted.size ?? "—"}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\analytics\MetricChart.tsx:531: tick={{ fontSize: 12, fill: "#6b7280" }}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\analytics\MetricChart.tsx:542: tick={{ fontSize: 12, fill: "#6b7280" }}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:14: optionsJson: Record<string, string | null> | null
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:25: if (optionsJson) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:27: const chosen = optionsJson[group.key];
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:57: function extractSelectedSize(
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:58: optionsJson: Record<string, string | null> | null,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:61: if (optionsJson && typeof optionsJson === "object") {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:63: optionsJson.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:64: optionsJson.Size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:65: optionsJson.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:66: optionsJson.variantSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:75: for (const [key, value] of Object.entries(optionsJson)) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:91: const candidates = [p.size, p.selectedSize];
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:154: snapshotJson: any;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:158: const optionsJson = (it as any).optionsJson as Record<string, string | null> | null;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:161: const unitPrice = await computeUnitPrice(it.productId, optionsJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:166: const selectedSize = extractSelectedSize(optionsJson, personalization);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:175: snapshotJson: {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:181: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:182: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:185: options: optionsJson,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:186: optionsJson,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:187: selectedOptions: optionsJson,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:28: snap.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:42: options.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:54: const selectedOptions = asRecord(snap.selectedOptions);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:55: if (selectedOptions) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:57: selectedOptions.size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:58: selectedOptions.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:59: selectedOptions.variantSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:60: selectedOptions.chosenSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:61: selectedOptions.Size,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:74: personalization.selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:112: snapshotJson: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:152: const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:154: if (!selectedSize) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:162: productId_size: {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:164: size: selectedSize,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:175: `SizeStock not found for product ${item.productId} and size ${selectedSize}`
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:137: font-size:12px;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:171: <div style="font-weight:800; color:#0b1220; font-size:14px; line-height:1.25;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:181: font-size:12px;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:189: <div style="font-weight:900; color:#0b1220; font-size:14px;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:210: <td style="padding:8px 0; color:#475569; font-size:13px; font-weight:700;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:213: <td style="padding:8px 0; text-align:right; color:#0b1220; font-size:13px; font-weight:800; white-space:nowrap;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:224: <td style="padding:10px 0 0; color:#0b1220; font-size:14px; font-weight:900;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:227: <td style="padding:10px 0 0; text-align:right; color:#0b1220; font-size:16px; font-weight:1000; white-space:nowrap;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:238: <div style="font-weight:900; color:#0b1220; font-size:13px; letter-spacing:0.2px;">Shipping address</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:239: <div style="margin-top:8px; color:#334155; font-size:13px; line-height:1.6;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:259: font-size:13px;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:356: font-weight:900;font-size:22px;color:#ffffff;line-height:1.1;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:361: font-size:13px;color:rgba(255,255,255,.70);">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:380: <div style="margin-top:18px; color:#64748b; font-size:12px; line-height:1.5;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:393: <td style="padding-top:14px; text-align:center; color:rgba(255,255,255,0.70); font-size:12px;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:430: <div style="font-size:12px; font-weight:900; letter-spacing:0.3px; color:#475569; text-transform:uppercase;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:434: <div style="margin-top:10px; font-size:18px; font-weight:1000; color:#0b1220; line-height:1.25;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:438: <div style="margin-top:8px; font-size:13px; color:#334155; line-height:1.6;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:446: <td style="color:#0b1220; font-weight:900; font-size:13px;">Customer</td>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:447: <td style="text-align:right; color:#334155; font-weight:800; font-size:13px;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:452: <td style="padding-top:10px; color:#0b1220; font-weight:900; font-size:13px;">Email</td>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:453: <td style="padding-top:10px; text-align:right; color:#334155; font-weight:800; font-size:13px; white-space:nowrap;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:465: <div style="font-weight:1000; color:#0b1220; font-size:13px; letter-spacing:0.2px;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:481: <div style="font-size:14px; color:#334155; line-height:1.7;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:520: <div style="font-size:12px; font-weight:900; letter-spacing:0.3px; color:#475569; text-transform:uppercase;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:523: <div style="margin-top:10px; font-size:18px; font-weight:1000; color:#0b1220; line-height:1.25;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:526: <div style="margin-top:8px; font-size:13px; color:#334155; line-height:1.6;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:531: <div style="font-weight:900; color:#0b1220; font-size:13px;">Tracking code</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:532: <div style="margin-top:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; font-weight:900; color:#0b1220;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:540: <div style="font-weight:1000; color:#0b1220; font-size:13px; letter-spacing:0.2px;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:586: <div style="font-size:12px; font-weight:900; letter-spacing:0.3px; color:#475569; text-transform:uppercase;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:590: <div style="margin-top:10px; font-size:18px; font-weight:1000; color:#0b1220; line-height:1.25;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:594: <div style="margin-top:8px; font-size:13px; color:#334155; line-height:1.6;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:599: <div style="font-weight:900; color:#0b1220; font-size:13px;">Current status</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:600: <div style="margin-top:8px; font-weight:1000; color:#0b1220; font-size:14px;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:609: <div style="font-weight:900; color:#0b1220; font-size:13px;">Tracking code</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:610: <div style="margin-top:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; font-weight:900; color:#0b1220;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:618: <div style="font-weight:900; color:#0b1220; font-size:13px;">Tracking</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:619: <div style="margin-top:8px; font-size:13px;">Not available yet.</div>
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email.ts:624: <div style="margin-top:14px; color:#64748b; font-size:12px; line-height:1.5;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:43: <div style="font-size:12px;color:#6b7280;margin-bottom:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:102: <div style="font-size:24px;line-height:1.2;font-weight:900;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:106: <div style="margin-top:10px;font-size:14px;line-height:1.7;opacity:.90;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:117: <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:121: <div style="margin-top:10px;font-size:18px;font-weight:900;color:#0b0b0f;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:127: style="display:inline-block;padding:12px 18px;border-radius:999px;background:#0b0b0f;color:#fff;text-decoration:none;font-weight:900;font-size:14px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:132: <div style="margin-top:14px;font-size:13px;color:#374151;line-height:1.65;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:144: <div style="border-top:1px solid #e5e7eb;padding-top:18px;font-size:12px;color:#6b7280;line-height:1.6;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\email\shipmentEmail.ts:155: <div style="max-width:760px;margin:14px auto 0 auto;color:#9ca3af;font-size:11px;text-align:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:71: font-weight:900;font-size:22px;color:#ffffff;line-height:1.1;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:77: font-size:13px;color:rgba(255,255,255,.70);">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:87: font-size:13px;color:rgba(255,255,255,.65);white-space:nowrap;"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:110: font-size:24px;line-height:1.25;color:#fff;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:116: font-size:14px;line-height:1.7;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:128: font-weight:900;font-size:14px;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:136: font-size:12px;color:rgba(255,255,255,.65);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:145: font-size:12px;color:#fff;word-break:break-all;">
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:153: font-size:12px;line-height:1.6;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:161: font-size:12px;color:rgba(255,255,255,.50);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:172: font-size:12px;color:rgba(255,255,255,.55);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\emails\resetPasswordEmail.ts:184: font-size:11px;color:rgba(255,255,255,.45);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\create-product\route.ts:42: return raw === "PT_STOCK_CTT" ? ProductChannel.PT_STOCK_CTT : ProductChannel.GLOBAL;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\create-product\route.ts:112: requestedChannel === ProductChannel.PT_STOCK_CTT || forcedPTStock;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\create-product\route.ts:115: ? ProductChannel.PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\create-product\route.ts:201: await prisma.sizeStock.createMany({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:43: return raw === "PT_STOCK_CTT"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:44: ? ProductChannel.PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:160: requestedChannel === ProductChannel.PT_STOCK_CTT || forcedPTStock;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:163: ? ProductChannel.PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:234: await tx.sizeStock.deleteMany({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\admin\products\[id]\route.ts:239: await tx.sizeStock.createMany({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:34: type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:236: return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:294: if (channel !== "PT_STOCK_CTT") continue;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:321: const row = await prisma.sizeStock.findUnique({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:329: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:340: const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:381: channel: "PT_STOCK_CTT" as const,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:465: cartChannel === "PT_STOCK_CTT" ? resolvePtStockShippingCents(cartItems) : 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\paypal\create\route.ts:488: channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:60: type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:248: return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:364: if (channel !== "PT_STOCK_CTT") continue;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:391: const row = await prisma.sizeStock.findUnique({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:399: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:410: const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:615: const isPtStockCart = cartChannel === "PT_STOCK_CTT";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:664: channel: "PT_STOCK_CTT" as const,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\checkout\stripe\route.ts:764: channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\api\search\products\route.ts:66: channel: ProductChannel.PT_STOCK_CTT,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:259: : ((Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:261: if (cartChannel === "PT_STOCK_CTT") {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\actions.ts:265: channel: "PT_STOCK_CTT" as const,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:314: type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:456: const isPtStockCart = cartChannel === "PT_STOCK_CTT";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\cart\page.tsx:734: "PT_STOCK_CTT" && (
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\actions.ts:23: type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\actions.ts:302: cartChannel === "PT_STOCK_CTT"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\actions.ts:306: channel: "PT_STOCK_CTT" as const,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\(store)\checkout\actions.ts:312: cartChannel === "PT_STOCK_CTT"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\orders\page.tsx:134: * ProductChannel.PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\orders\page.tsx:141: channel: ProductChannel.PT_STOCK_CTT,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\actions.ts:200: * Toggles availability of a SizeStock row (boolean `available`).
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\actions.ts:209: const updated = await prisma.sizeStock.update({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\page.tsx:34: await tx.sizeStock.deleteMany({ where: { productId: id } });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\size-actions.ts:8: * @param sizeId ID do registo em SizeStock
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\size-actions.ts:14: const row = await prisma.sizeStock.update({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\size-actions.ts:25: * @param sizeId ID do registo em SizeStock
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\size-actions.ts:30: const row = await prisma.sizeStock.findUnique({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\products\size-actions.ts:38: const updated = await prisma.sizeStock.update({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:23: const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:30: const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\orders\page.tsx:133: * mostrar apenas orders do canal PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\orders\page.tsx:136: channel: "PT_STOCK_CTT" as any,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\page.tsx:26: channel: "PT_STOCK_CTT" as const,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\page.tsx:34: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\page.tsx:46: Products from the <b>PT_STOCK_CTT</b> channel (CTT 2–3 business days).
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\page.tsx:93: const stockQty = p.ptStockQty ?? 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:22: ptStockQty: number;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:27: const qtyRaw = String(formData.get(`sizeStock_${sizeId}`) || "0");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:33: ptStockQty: qty,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:38: const totalFromSizes = updates.reduce((sum, item) => sum + item.ptStockQty, 0);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:42: await tx.sizeStock.update({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:45: ptStockQty: item.ptStockQty,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:54: ptStockQty: totalFromSizes,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:69: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:80: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:91: const currentStock = product.ptStockQty ?? 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:92: const totalBySizes = sizes.reduce((sum, size) => sum + (size.ptStockQty ?? 0), 0);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:206: name={`sizeStock_${size.id}`}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:209: defaultValue={size.ptStockQty ?? 0}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:225: htmlFor="ptStockQty"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:232: id="ptStockQty"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:233: name="ptStockQty"
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\clubs\page.tsx:139: channel: "PT_STOCK_CTT",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\products\[slug]\page.tsx:173: prisma.sizeStock.findMany({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:80: channel: ProductChannel.PT_STOCK_CTT,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:91: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\page.tsx:155: const stockQty = p.ptStockQty ?? 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:130: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:139: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:174: if (product.channel !== ProductChannel.PT_STOCK_CTT || !product.isVisible) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:219: ptStockQty: Math.max(0, Number(s.ptStockQty ?? 0)),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:224: const stockQty = Number(product.ptStockQty ?? 0);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\app\[locale]\pt-stock\[slug]\page.tsx:256: ptStockQty: stockQty,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\FreeShippingBanner.tsx:69: `/api/cart/subtotal?ts=${Date.now()}&excludeChannel=PT_STOCK_CTT`,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductOptions.tsx:6: import type { OptionGroup, OptionValue, Product, SizeStock } from "@prisma/client";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\ProductOptions.tsx:9: sizes: SizeStock[];
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:29: ptStockQty?: number | null;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:216: function extractSizeStockQty(size: unknown): number | null {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:220: const possibleValues = [rec.stockQty, rec.qty, rec.ptStockQty, rec.stock, rec.quantity];
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:251: const stockQty = extractSizeStockQty(s);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:278: const safeStockQty = Number(product?.ptStockQty ?? 0);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:315: const selectedSizeStockQty = useMemo(() => {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:321: const selectedSizeInStock = !!selectedSizeEntry && selectedSizeStockQty > 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:384: if (selectedSizeStockQty <= 0) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:389: setQty((current) => Math.min(current, selectedSizeStockQty));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:390: }, [selectedSizeStockQty]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:393: () => getStockUrgencyMessage(selectedSize ? selectedSizeStockQty : 0, t),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:394: [selectedSize, selectedSizeStockQty, t]
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:401: if (qty > selectedSizeStockQty) return false;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:403: }, [selectedSizeEntry, selectedSizeInStock, qty, selectedSizeStockQty]);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:418: if (qty > selectedSizeStockQty) return t("errors.invalidQuantity");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:843: {t("unitsAvailable", { count: selectedSizeStockQty })}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:868: const sizeStockQty = s.stockQty != null ? Math.max(0, s.stockQty) : 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:869: const unavailable = !s.available || sizeStockQty <= 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:925: onClick={() => setQty((q) => Math.min(selectedSizeStockQty || 1, q + 1))}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\components\PtStockProductConfigurator.tsx:927: disabled={pending || !selectedSizeInStock || qty >= selectedSizeStockQty}
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:44: ): "GLOBAL" | "PT_STOCK_CTT" | "MIXED" {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:54: return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\checkout.ts:222: channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:90: * - Evita descontar duas vezes usando order.stockDeductedAt
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:91: * - Só desconta itens de produtos com channel = PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:92: * - Atualiza SizeStock.ptStockQty e SizeStock.available
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:93: * - Recalcula Product.ptStockQty como soma de todos os tamanhos
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:105: stockDeductedAt: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:130: if (order.stockDeductedAt) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:148: if (item.product.channel !== ProductChannel.PT_STOCK_CTT) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:160: const sizeStock = await tx.sizeStock.findUnique({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:169: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:173: if (!sizeStock) {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:175: `SizeStock not found for product ${item.productId} and size ${selectedSize}`
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:179: const currentQty = Math.max(0, Number(sizeStock.ptStockQty ?? 0));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:182: await tx.sizeStock.update({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:183: where: { id: sizeStock.id },
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:185: ptStockQty: nextQty,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:194: const sizeRows = await tx.sizeStock.findMany({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:197: ptStockQty: true,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:202: return sum + Math.max(0, Number(row.ptStockQty ?? 0));
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:208: ptStockQty: totalQty,
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\deductPtStockForPaidOrder.ts:216: stockDeductedAt: new Date(),
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:3: export type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:42: function normChannel(v: unknown): "GLOBAL" | "PT_STOCK_CTT" {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:43: return String(v ?? "").toUpperCase() === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:55: if (ch === "PT_STOCK_CTT") hasPt = true;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:60: if (hasPt) return "PT_STOCK_CTT";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:93: if (ch === "PT_STOCK_CTT") ptQty += qty;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\src\lib\shipping.ts:111: if (cartChannel === "PT_STOCK_CTT") {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:106: * PT_STOCK_CTT = stock em Portugal enviado pelos CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:110: PT_STOCK_CTT
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:133: ptStockQty Int?
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:141: sizes      SizeStock[]
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:156: @@index([ptStockQty])
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:159: model SizeStock {
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:170: ptStockQty Int @default(0)
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:178: @@index([ptStockQty])
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:434: stockDeductedAt DateTime?
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\schema.prisma:475: @@index([stockDeductedAt])
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\seed.ts:28: await tx.sizeStock.deleteMany({ where: { productId: existing.id } });
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\seed.ts:66: await prisma.sizeStock.createMany({
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250824195151_product_options\migration.sql:20: CREATE TABLE "public"."SizeStock" (
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250824195151_product_options\migration.sql:26: CONSTRAINT "SizeStock_pkey" PRIMARY KEY ("id")
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250824195151_product_options\migration.sql:56: ALTER TABLE "public"."SizeStock" ADD CONSTRAINT "SizeStock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20250825191622_add_player_model_and_optionvalue_link\migration.sql:29: CREATE INDEX "SizeStock_productId_idx" ON "public"."SizeStock"("productId");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251019213633_size_stock_available_boolean\migration.sql:4: - You are about to drop the column `stock` on the `SizeStock` table. All the data in the column will be lost.
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251019213633_size_stock_available_boolean\migration.sql:5: - A unique constraint covering the columns `[productId,size]` on the table `SizeStock` will be added. If there are existing duplicate values, this will fail.
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251019213633_size_stock_available_boolean\migration.sql:9: ALTER TABLE "public"."SizeStock" DROP COLUMN "stock",
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20251019213633_size_stock_available_boolean\migration.sql:13: CREATE UNIQUE INDEX "SizeStock_productId_size_key" ON "public"."SizeStock"("productId", "size");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260304233146_add_channel\migration.sql:2: CREATE TYPE "public"."ProductChannel" AS ENUM ('GLOBAL', 'PT_STOCK_CTT');
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260304233146_add_channel\migration.sql:9: ADD COLUMN     "ptStockQty" INTEGER;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260315122017_make_pt_stock_qty_required\migration.sql:2: CREATE INDEX "Product_ptStockQty_idx" ON "public"."Product"("ptStockQty");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260316235649_add_pt_stock_qty_to_size_stock\migration.sql:2: ALTER TABLE "public"."SizeStock" ADD COLUMN     "ptStockQty" INTEGER NOT NULL DEFAULT 0;
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260316235649_add_pt_stock_qty_to_size_stock\migration.sql:5: CREATE INDEX "SizeStock_ptStockQty_idx" ON "public"."SizeStock"("ptStockQty");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260317180902_add_stock_deducted_at_to_order\migration.sql:2: ALTER TABLE "public"."Order" ADD COLUMN     "stockDeductedAt" TIMESTAMP(3);
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260317180902_add_stock_deducted_at_to_order\migration.sql:5: CREATE INDEX "Order_stockDeductedAt_idx" ON "public"."Order"("stockDeductedAt");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:11: ALTER TABLE "public"."SizeStock" DROP CONSTRAINT "SizeStock_productId_fkey";
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:20: CREATE INDEX "SizeStock_size_idx" ON "public"."SizeStock"("size");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:23: CREATE INDEX "SizeStock_available_idx" ON "public"."SizeStock"("available");
+C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld\prisma\migrations\20260326135030_pt_stock_size_deduction\migration.sql:26: ALTER TABLE "public"."SizeStock" ADD CONSTRAINT "SizeStock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+// src/app/api/stripe/webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
+import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
+import { finalizePaidOrder } from "@/lib/checkout";
+import { pusherServer } from "@/lib/pusher";
+import { sendOrderConfirmationEmail } from "@/lib/email";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* ---------------------------- helpers ---------------------------- */
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postal_code?: string | null;
+      country?: string | null;
+    }
+  | null;
+
+type DiscountMeta = {
+  code: string | null;
+  percentOff: number | null;
+  discountAmountCents: number | null;
+  productSubtotalCents: number | null;
+  finalProductSubtotalCents: number | null;
+  stripePromotionCodeId: string | null;
+  stripeCouponId: string | null;
+  stripeNativeDiscountUsed: boolean;
+};
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+const intOrNull = (v: unknown) => {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+};
+
+type AnyObj = Record<string, any>;
+
+function safeObj(v: any): AnyObj {
+  if (!v) return {};
+  if (typeof v === "object") return v as AnyObj;
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return j && typeof j === "object" ? (j as AnyObj) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function isEmptyShipping(s?: ShippingJson | null) {
+  if (!s) return true;
+  const a = (s as any).address ?? {};
+  return !(
+    (s as any).name ||
+    (s as any).phone ||
+    (s as any).email ||
+    (s as any).line1 ||
+    (s as any).line2 ||
+    (s as any).city ||
+    (s as any).state ||
+    (s as any).postal_code ||
+    (s as any).country ||
+    a.line1 ||
+    a.line2 ||
+    a.city ||
+    a.state ||
+    a.postal_code ||
+    a.country
+  );
+}
+
+function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
+  if (!meta) return null;
+
+  const address =
+    meta.ship_line1 ||
+    meta.ship_line2 ||
+    meta.ship_city ||
+    meta.ship_state ||
+    meta.ship_postal ||
+    meta.ship_country
+      ? {
+          line1: nz(meta.ship_line1),
+          line2: nz(meta.ship_line2),
+          city: nz(meta.ship_city),
+          state: nz(meta.ship_state),
+          postal_code: nz(meta.ship_postal),
+          country: nz(meta.ship_country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(meta.ship_name),
+    phone: nz(meta.ship_phone),
+    email: nz(meta.ship_email),
+    address,
+    line1: nz(meta.ship_line1),
+    line2: nz(meta.ship_line2),
+    city: nz(meta.ship_city),
+    state: nz(meta.ship_state),
+    postal_code: nz(meta.ship_postal),
+    country: nz(meta.ship_country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
+  const cd =
+    session.customer_details as Stripe.Checkout.Session.CustomerDetails | null;
+  if (!cd) return null;
+
+  const addr = cd.address;
+  const address =
+    addr &&
+    (addr.line1 ||
+      addr.line2 ||
+      addr.city ||
+      addr.state ||
+      addr.postal_code ||
+      addr.country)
+      ? {
+          line1: nz(addr.line1),
+          line2: nz(addr.line2),
+          city: nz(addr.city),
+          state: nz(addr.state),
+          postal_code: nz(addr.postal_code),
+          country: nz(addr.country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(cd.name),
+    phone: nz(cd.phone),
+    email: nz(cd.email) ?? nz((session as any).customer_email),
+    address,
+    line1: nz(addr?.line1),
+    line2: nz(addr?.line2),
+    city: nz(addr?.city),
+    state: nz(addr?.state),
+    postal_code: nz(addr?.postal_code),
+    country: nz(addr?.country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
+  const s = pi.shipping || null;
+  const address =
+    s?.address &&
+    (s.address.line1 ||
+      s.address.line2 ||
+      s.address.city ||
+      s.address.state ||
+      s.address.postal_code ||
+      s.address.country)
+      ? {
+          line1: nz(s.address.line1),
+          line2: nz(s.address.line2),
+          city: nz(s.address.city),
+          state: nz(s.address.state),
+          postal_code: nz(s.address.postal_code),
+          country: nz(s.address.country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(s?.name),
+    phone: nz(s?.phone),
+    email: nz(pi.receipt_email),
+    address,
+    line1: nz(s?.address?.line1),
+    line2: nz(s?.address?.line2),
+    city: nz(s?.address?.city),
+    state: nz(s?.address?.state),
+    postal_code: nz(s?.address?.postal_code),
+    country: nz(s?.address?.country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function discountFromMetadata(meta?: Record<string, any> | null): DiscountMeta {
+  if (!meta) {
+    return {
+      code: null,
+      percentOff: null,
+      discountAmountCents: null,
+      productSubtotalCents: null,
+      finalProductSubtotalCents: null,
+      stripePromotionCodeId: null,
+      stripeCouponId: null,
+      stripeNativeDiscountUsed: false,
+    };
+  }
+
+  const code = normalizeDiscountCode(nz(meta.discountCode) ?? "");
+  const percentOff = intOrNull(meta.discountPercent);
+  const discountAmountCents = intOrNull(meta.discountAmountCents);
+  const productSubtotalCents = intOrNull(meta.productSubtotalCents);
+  const finalProductSubtotalCents = intOrNull(meta.finalProductSubtotalCents);
+  const stripePromotionCodeId = nz(meta.stripePromotionCodeId);
+  const stripeCouponId = nz(meta.stripeCouponId);
+  const stripeNativeDiscountUsed =
+    String(meta.stripeNativeDiscountUsed ?? "")
+      .trim()
+      .toLowerCase() === "true";
+
+  return {
+    code: code || null,
+    percentOff,
+    discountAmountCents,
+    productSubtotalCents,
+    finalProductSubtotalCents,
+    stripePromotionCodeId,
+    stripeCouponId,
+    stripeNativeDiscountUsed,
+  };
+}
+
+function pickNonEmpty<T>(a: T, b: T) {
+  if (a == null) return b;
+  if (typeof a === "string" && a.trim() === "") return b;
+  return a;
+}
+
+function normalizeShipping(s: any): AnyObj {
+  const S = safeObj(s);
+  const addr = safeObj(S.address);
+
+  const line1 = pickNonEmpty(nz(S.line1), nz(addr.line1));
+  const line2 = pickNonEmpty(nz(S.line2), nz(addr.line2));
+  const city = pickNonEmpty(nz(S.city), nz(addr.city));
+  const state = pickNonEmpty(nz(S.state), nz(addr.state));
+  const postal_code = pickNonEmpty(nz(S.postal_code), nz(addr.postal_code));
+  const country = pickNonEmpty(nz(S.country), nz(addr.country));
+
+  return {
+    name: nz(S.name),
+    phone: nz(S.phone),
+    email: nz(S.email),
+    line1,
+    line2,
+    city,
+    state,
+    postal_code,
+    country,
+    address: {
+      line1,
+      line2,
+      city,
+      state,
+      postal_code,
+      country,
+    },
+  };
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+
+  if (!base) {
+    const I = normalizeShipping(add);
+    const out: ShippingJson = {
+      name: I.name,
+      phone: I.phone,
+      email: I.email,
+      address: I.address,
+      line1: I.line1,
+      line2: I.line2,
+      city: I.city,
+      state: I.state,
+      postal_code: I.postal_code,
+      country: I.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  if (!add) {
+    const B = normalizeShipping(base);
+    const out: ShippingJson = {
+      name: B.name,
+      phone: B.phone,
+      email: B.email,
+      address: B.address,
+      line1: B.line1,
+      line2: B.line2,
+      city: B.city,
+      state: B.state,
+      postal_code: B.postal_code,
+      country: B.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  const B = normalizeShipping(base);
+  const A = normalizeShipping(add);
+
+  const merged: AnyObj = {
+    name: pickNonEmpty(B.name, A.name),
+    phone: pickNonEmpty(B.phone, A.phone),
+    email: pickNonEmpty(B.email, A.email),
+    line1: pickNonEmpty(B.line1, A.line1),
+    line2: pickNonEmpty(B.line2, A.line2),
+    city: pickNonEmpty(B.city, A.city),
+    state: pickNonEmpty(B.state, A.state),
+    postal_code: pickNonEmpty(B.postal_code, A.postal_code),
+    country: pickNonEmpty(B.country, A.country),
+  };
+
+  merged.address = {
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  const out: ShippingJson = {
+    name: merged.name ?? null,
+    phone: merged.phone ?? null,
+    email: merged.email ?? null,
+    address: merged.address,
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/* -------------------- userId helpers -------------------- */
+
+function userIdFromCheckoutSession(
+  session: Stripe.Checkout.Session
+): string | null {
+  const metaUser = nz((session.metadata as any)?.userId);
+  if (metaUser) return metaUser;
+
+  const ref = nz((session as any)?.client_reference_id);
+  if (ref) return ref;
+
+  return null;
+}
+
+function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
+  return nz((pi.metadata as any)?.userId);
+}
+
+/* -------------------- email helpers -------------------- */
+
+function shippingAddressToString(s?: ShippingJson | null): string | null {
+  if (!s) return null;
+
+  const partsRoot = [
+    (s as any).line1,
+    (s as any).line2,
+    (s as any).postal_code,
+    (s as any).city,
+    (s as any).state,
+    (s as any).country,
+  ].filter(Boolean) as string[];
+
+  if (partsRoot.length) return partsRoot.join(", ");
+
+  if (!s.address) return null;
+  const a = s.address;
+  const parts = [
+    a.line1,
+    a.line2,
+    a.postal_code,
+    a.city,
+    a.state,
+    a.country,
+  ].filter(Boolean) as string[];
+
+  return parts.length ? parts.join(", ") : null;
+}
+
+function totalFromOrder(order: any, optsTotalCents?: number | null): number {
+  if (typeof order?.totalCents === "number") return order.totalCents / 100;
+  if (typeof order?.total === "number") return order.total;
+
+  const subtotal =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? order.finalProductSubtotalCents
+      : typeof order?.subtotal === "number"
+      ? order.subtotal
+      : 0;
+
+  const shipping =
+    typeof order?.shippingCents === "number"
+      ? order.shippingCents
+      : typeof order?.shipping === "number"
+      ? order.shipping
+      : 0;
+
+  const tax = typeof order?.tax === "number" ? order.tax : 0;
+  const discountAmountCents =
+    typeof order?.discountAmountCents === "number"
+      ? order.discountAmountCents
+      : 0;
+
+  const sum =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? subtotal + shipping + tax
+      : subtotal - discountAmountCents + shipping + tax;
+
+  if (sum > 0) return sum / 100;
+
+  if (typeof optsTotalCents === "number") return optsTotalCents / 100;
+
+  return 0;
+}
+
+function shippingPriceFromOrder(order: any): number {
+  if (typeof order?.shippingCents === "number") return order.shippingCents / 100;
+  return typeof order?.shipping === "number" ? order.shipping / 100 : 0;
+}
+
+function orderEmail(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  return (
+    nz(order?.shippingEmail) ||
+    nz(order?.shippingJson?.email) ||
+    nz((order?.shippingJson as any)?.ship_email) ||
+    nz(mergedShipping?.email) ||
+    null
+  );
+}
+
+function orderCustomerName(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  return (
+    nz(order?.shippingFullName) ||
+    nz(order?.shippingJson?.name) ||
+    nz((order?.shippingJson as any)?.ship_name) ||
+    nz(mergedShipping?.name) ||
+    null
+  );
+}
+
+function orderShippingAddress(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  const parts = [
+    nz(order?.shippingAddress1),
+    nz(order?.shippingAddress2),
+    nz(order?.shippingPostalCode),
+    nz(order?.shippingCity),
+    nz(order?.shippingRegion),
+    nz(order?.shippingCountry),
+  ].filter(Boolean) as string[];
+
+  if (parts.length) return parts.join(", ");
+
+  return shippingAddressToString(
+    ((order?.shippingJson as any) as ShippingJson) ?? mergedShipping ?? null
+  );
+}
+
+/* ------------------------- status updaters ------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+    userId?: string | null;
+    discount?: DiscountMeta | null;
+  }
+): Promise<{ transitioned: boolean }> {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      userId: true,
+      discountCodeText: true,
+      discountPercent: true,
+      discountAmountCents: true,
+      productSubtotalCents: true,
+      finalProductSubtotalCents: true,
+      total: true,
+      totalCents: true,
+      shipping: true,
+      shippingCents: true,
+      tax: true,
+      confirmationEmailSentAt: true,
+      stripePromotionCodeIdUsed: true,
+      stripeCouponIdUsed: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const wasAlreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing.shippingCountry ||
+      null)?.toString() || null;
+
+  const normalizedCode = normalizeDiscountCode(opts.discount?.code ?? "");
+  const hasDiscountMeta = !!normalizedCode;
+
+  const updateData: Record<string, any> = {
+    ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    stripePaymentIntentId: opts.paymentIntentId ?? null,
+    ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+    ...(opts.currency ? { currency: upper(opts.currency) } : {}),
+    ...(typeof opts.totalCents === "number"
+      ? { totalCents: opts.totalCents }
+      : {}),
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
+  if (hasDiscountMeta) {
+    updateData.discountCodeText = normalizedCode;
+    updateData.discountPercent =
+      opts.discount?.percentOff ?? existing.discountPercent ?? undefined;
+    updateData.discountAmountCents =
+      opts.discount?.discountAmountCents ??
+      existing.discountAmountCents ??
+      undefined;
+    updateData.productSubtotalCents =
+      opts.discount?.productSubtotalCents ??
+      existing.productSubtotalCents ??
+      undefined;
+
+    updateData.subtotal =
+      opts.discount?.productSubtotalCents ??
+      existing.productSubtotalCents ??
+      undefined;
+
+    if (typeof opts.discount?.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents =
+        opts.discount.finalProductSubtotalCents;
+    } else if (typeof existing.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents = existing.finalProductSubtotalCents;
+    }
+
+    if (opts.discount?.stripePromotionCodeId) {
+      updateData.stripePromotionCodeIdUsed =
+        opts.discount.stripePromotionCodeId;
+    }
+
+    if (opts.discount?.stripeCouponId) {
+      updateData.stripeCouponIdUsed = opts.discount.stripeCouponId;
+    }
+  }
+
+  let transitioned = false;
+
+  if (!wasAlreadyFinal) {
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData as any,
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountMeta && normalizedCode) {
+        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: updateData as any,
+      });
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData as any,
+    });
+  }
+
+  if (transitioned) {
+    await finalizePaidOrder(orderId);
+    await deductPtStockForPaidOrder(orderId);
+
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (order && !order.confirmationEmailSentAt) {
+        const to = orderEmail(order, mergedShipping);
+
+        if (to) {
+          const items = (order.items ?? []).map((i: any) => ({
+            name: i?.name ?? "Item",
+            qty: typeof i?.qty === "number" ? i.qty : 1,
+            price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
+          }));
+
+          const emailResult = await sendOrderConfirmationEmail({
+            to,
+            orderId: order.id,
+            items,
+            total: totalFromOrder(order, opts.totalCents ?? null),
+            shippingPrice: shippingPriceFromOrder(order),
+            customerName: orderCustomerName(order, mergedShipping),
+            shippingAddress: orderShippingAddress(order, mergedShipping),
+          });
+
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              confirmationEmailSentAt: new Date(),
+              confirmationEmailProviderId:
+                typeof (emailResult as any)?.id === "string"
+                  ? (emailResult as any).id
+                  : typeof (emailResult as any)?.messageId === "string"
+                  ? (emailResult as any).messageId
+                  : null,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Order confirmation email failed:", err);
+    }
+  }
+
+  return { transitioned };
+}
+
+async function markPending(
+  orderId: string,
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    shipping?: ShippingJson;
+    userId?: string | null;
+  }
+) {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { shippingJson: true, shippingCountry: true, userId: true },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing.shippingCountry ||
+      null)?.toString() || null;
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
+      status: "pending",
+      paymentStatus: "pending",
+      stripePaymentIntentId: opts.paymentIntentId ?? null,
+      ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+      ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+      ...(country ? { shippingCountry: country } : {}),
+    } as any,
+  });
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+async function markCanceled(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "canceled", paymentStatus: "canceled" },
+  });
+}
+
+/* ------------------------------ route ----------------------------- */
+
+export const POST = async (req: NextRequest) => {
+  const stripe = getStripe();
+
+  const sig = req.headers.get("stripe-signature") as string | null;
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !secret) {
+    return NextResponse.json(
+      { error: "Missing STRIPE_WEBHOOK_SECRET or signature" },
+      { status: 500 }
+    );
+  }
+
+  let event: Stripe.Event;
+  let raw: string;
+
+  try {
+    raw = await req.text();
+    event = stripe.webhooks.constructEvent(raw, sig, secret);
+  } catch (err: any) {
+    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = userIdFromCheckoutSession(session);
+
+        let orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (session.payment_intent &&
+          typeof session.payment_intent !== "string" &&
+          (session.payment_intent.metadata?.orderId as string | undefined)
+            ? (session.payment_intent.metadata.orderId as string)
+            : undefined);
+
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        if (!orderId) {
+          const bySession = await prisma.order.findFirst({
+            where: { stripeSessionId: session.id },
+            select: { id: true },
+          });
+          orderId = bySession?.id;
+        }
+
+        if (!orderId && piId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const totalCents =
+          typeof session.amount_total === "number"
+            ? session.amount_total
+            : undefined;
+
+        const currency = session.currency ?? undefined;
+        const discount = discountFromMetadata(session.metadata ?? null);
+
+        if (session.payment_status === "paid") {
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            currency,
+            totalCents,
+            shipping,
+            userId,
+            discount,
+          });
+
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        } else {
+          await markPending(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            shipping,
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = userIdFromCheckoutSession(session);
+
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        const orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(piId ? [{ stripePaymentIntentId: piId }] : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const discount = discountFromMetadata(session.metadata ?? null);
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: piId,
+          sessionId: session.id,
+          currency: session.currency ?? undefined,
+          totalCents:
+            typeof session.amount_total === "number"
+              ? session.amount_total
+              : undefined,
+          shipping,
+          userId,
+          discount,
+        });
+
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const userId = userIdFromPaymentIntent(pi);
+
+        let orderId = pi.metadata?.orderId as string | undefined;
+
+        if (!orderId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: pi.id },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: pi.id,
+          sessionId: null,
+          currency: pi.currency ?? undefined,
+          totalCents:
+            typeof pi.amount_received === "number"
+              ? pi.amount_received
+              : undefined,
+          shipping: shippingFromPaymentIntent(pi),
+          userId,
+          discount: discountFromMetadata(pi.metadata ?? null),
+        });
+
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.processing": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const userId = userIdFromPaymentIntent(pi);
+
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) {
+          await markPending(orderId, {
+            paymentIntentId: pi.id,
+            sessionId: null,
+            shipping: shippingFromPaymentIntent(pi),
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markFailed(orderId);
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orderId =
+          (session.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(typeof session.payment_intent === "string"
+                    ? [{ stripePaymentIntentId: session.payment_intent }]
+                    : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "charge.succeeded": {
+        const charge = event.data.object as Stripe.Charge;
+
+        let orderId = charge.metadata?.orderId as string | undefined;
+
+        if (!orderId && charge.payment_intent) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as any)?.id;
+
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (orderId && charge.paid) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ??
+                null;
+
+          const cents =
+            typeof charge.amount_captured === "number"
+              ? charge.amount_captured
+              : typeof charge.amount === "number"
+              ? charge.amount
+              : undefined;
+
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: null,
+            currency: charge.currency,
+            totalCents: cents,
+            shipping: null,
+            userId: null,
+            discount: discountFromMetadata(charge.metadata ?? null),
+          });
+
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (e) {
+    console.error("stripe webhook error", e);
+    return new NextResponse("ok", { status: 200 });
+  }
+};
+// src/app/api/paypal/webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* -------------------------------- types ------------------------------- */
+
+type PayPalWebhookEvent = {
+  id?: string;
+  event_type?: string;
+  summary?: string;
+  resource_type?: string;
+  resource?: any;
+  create_time?: string;
+  links?: Array<{ href: string; rel: string; method: string }>;
+};
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+    }
+  | null;
+
+type OrderPick = {
+  id: string;
+  shippingJson: any;
+  shippingCountry: string | null;
+};
+
+/* ------------------------------- helpers ------------------------------ */
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
+  return primary != null && !(typeof primary === "string" && primary.trim() === "")
+    ? (primary as A)
+    : (fallback ?? null);
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+  if (!base) return add ?? null;
+  if (!add) return base ?? null;
+
+  return {
+    name: prefer(base.name, add.name),
+    phone: prefer(base.phone, add.phone),
+    email: prefer(base.email, add.email),
+    address: {
+      line1: prefer(base.address?.line1 ?? null, add.address?.line1 ?? null),
+      line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
+      city: prefer(base.address?.city ?? null, add.address?.city ?? null),
+      state: prefer(base.address?.state ?? null, add.address?.state ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
+      country: prefer(base.address?.country ?? null, add.address?.country ?? null),
+    },
+  };
+}
+
+function shippingFromOrderGet(orderGetResult: any): ShippingJson {
+  const pu = orderGetResult?.result?.purchase_units?.[0];
+  const payer = orderGetResult?.result?.payer;
+  const ship = pu?.shipping;
+
+  const address =
+    ship?.address &&
+    (ship.address.address_line_1 ||
+      ship.address.address_line_2 ||
+      ship.address.admin_area_2 ||
+      ship.address.admin_area_1 ||
+      ship.address.postal_code ||
+      ship.address.country_code)
+      ? {
+          line1: nz(ship.address.address_line_1),
+          line2: nz(ship.address.address_line_2),
+          city: nz(ship.address.admin_area_2),
+          state: nz(ship.address.admin_area_1),
+          postal_code: nz(ship.address.postal_code),
+          country: nz(ship.address.country_code),
+        }
+      : null;
+
+  const fullName =
+    nz(ship?.name?.full_name) ||
+    nz([payer?.name?.given_name, payer?.name?.surname].filter(Boolean).join(" "));
+
+  const out: ShippingJson = {
+    name: fullName,
+    phone: nz(payer?.phone?.phone_number?.national_number),
+    email: nz(payer?.email_address),
+    address,
+  };
+
+  if (!out.name && !out.phone && !out.email && !out.address) return null;
+  return out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+async function getOrderByPayPalIds(
+  paypalOrderId: string | null,
+  captureId: string | null
+): Promise<OrderPick | null> {
+  if (paypalOrderId) {
+    const o = await prisma.order.findFirst({
+      where: { paypalOrderId },
+      select: { id: true, shippingJson: true, shippingCountry: true },
+    });
+    if (o) return o as OrderPick;
+  }
+
+  if (captureId) {
+    const o = await prisma.order.findFirst({
+      where: { paypalCaptureId: captureId },
+      select: { id: true, shippingJson: true, shippingCountry: true },
+    });
+    if (o) return o as OrderPick;
+  }
+
+  return null;
+}
+
+/* ------------------------------ mutations ----------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    captureId?: string | null;
+    paypalOrderId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+  }
+): Promise<{ transitioned: boolean }> {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      discountCodeText: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const alreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.address?.country || existing.shippingCountry || null)?.toString() ||
+    null;
+
+  const normalizedDiscountCode = normalizeDiscountCode(
+    existing.discountCodeText ?? ""
+  );
+  const hasDiscountCode = !!normalizedDiscountCode;
+
+  const updateData = {
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    paypalCaptured: true,
+    paypalOrderId: opts.paypalOrderId ?? undefined,
+    paypalCaptureId: opts.captureId ?? undefined,
+    currency: upper(opts.currency) ?? undefined,
+    totalCents:
+      typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+        ? Math.round(opts.totalCents)
+        : undefined,
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
+  let transitioned = false;
+
+  if (!alreadyFinal) {
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData,
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: updateData,
+      });
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+  }
+
+  if (transitioned) {
+    const { finalizePaidOrder } = await import("@/lib/checkout");
+    await finalizePaidOrder(orderId);
+
+    await deductPtStockForPaidOrder(orderId);
+
+    try {
+      const { pusherServer } = await import("@/lib/pusher");
+      await pusherServer.trigger("stats", "metric:update", {
+        metric: "orders",
+        value: 1,
+      });
+      await pusherServer.trigger("stats", "metric:update", {
+        metric: "countriesMaybeChanged",
+        value: 1,
+      });
+    } catch {}
+  }
+
+  return { transitioned };
+}
+
+async function markPending(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "pending", paymentStatus: "pending" },
+  });
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+/* -------------------------------- route ------------------------------- */
+
+export async function POST(req: NextRequest) {
+  try {
+    const bodyText = await req.text();
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+
+    if (!webhookId) {
+      return new NextResponse("Missing PAYPAL_WEBHOOK_ID", { status: 500 });
+    }
+
+    const transmissionId = req.headers.get("paypal-transmission-id");
+    const timestamp = req.headers.get("paypal-transmission-time");
+    const signature = req.headers.get("paypal-transmission-sig");
+    const certUrl = req.headers.get("paypal-cert-url");
+    const authAlgo = req.headers.get("paypal-auth-algo");
+
+    if (!transmissionId || !timestamp || !signature || !certUrl || !authAlgo) {
+      return new NextResponse("Missing PayPal verification headers", {
+        status: 400,
+      });
+    }
+
+    const { paypalClient, paypal } = await import("@/lib/paypal");
+
+    const verifyReq =
+      new (paypal as any).notifications.VerifyWebhookSignatureRequest();
+    verifyReq.requestBody({
+      auth_algo: authAlgo,
+      cert_url: certUrl,
+      transmission_id: transmissionId,
+      transmission_sig: signature,
+      transmission_time: timestamp,
+      webhook_id: webhookId,
+      webhook_event: JSON.parse(bodyText),
+    });
+
+    const verifyRes = await (paypalClient as any).execute(verifyReq);
+    const verificationStatus = (verifyRes?.result as any)?.verification_status;
+
+    if (verificationStatus !== "SUCCESS") {
+      return new NextResponse("Invalid signature", { status: 400 });
+    }
+
+    const event = JSON.parse(bodyText) as PayPalWebhookEvent;
+    const type = (event.event_type ?? "").replace(/^PAYMENTS\./, "PAYMENT.");
+
+    switch (type) {
+      case "PAYMENT.CAPTURE.COMPLETED": {
+        const capture = event.resource || {};
+        const captureId: string | null = capture.id ?? null;
+        const currency: string | null = capture?.amount?.currency_code ?? null;
+        const totalCents: number | null =
+          capture?.amount?.value != null
+            ? Math.round(parseFloat(capture.amount.value) * 100)
+            : null;
+
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ??
+          capture?.links?.find((l: any) => l?.rel === "up")?.href?.split("/").pop() ??
+          null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, captureId);
+
+        if (!order) {
+          console.warn("[PayPal Webhook] capture.completed sem order mapeada", {
+            captureId,
+            paypalOrderId,
+          });
+          return NextResponse.json({ received: true });
+        }
+
+        let shipping: ShippingJson = null;
+
+        if (paypalOrderId) {
+          try {
+            const getReq = new (paypal as any).orders.OrdersGetRequest(
+              paypalOrderId
+            );
+            const orderGet = await (paypalClient as any).execute(getReq);
+            shipping = shippingFromOrderGet(orderGet);
+          } catch {}
+        }
+
+        await markPaid(order.id, {
+          captureId,
+          paypalOrderId,
+          currency,
+          totalCents,
+          shipping,
+        });
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.PENDING": {
+        const capture = event.resource || {};
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ?? null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, null);
+        if (order) await markPending(order.id);
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.DENIED": {
+        const capture = event.resource || {};
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ?? null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, null);
+        if (order) await markFailed(order.id);
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.REFUNDED":
+      case "PAYMENT.CAPTURE.REVERSED": {
+        return NextResponse.json({ received: true });
+      }
+
+      case "CHECKOUT.ORDER.APPROVED": {
+        return NextResponse.json({ received: true });
+      }
+
+      default:
+        return NextResponse.json({ received: true });
+    }
+  } catch (e) {
+    console.error("PayPal webhook error", e);
+    return new NextResponse("ok", { status: 200 });
+  }
+}
+// src/app/api/checkout/paypal/create/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { paypalClient, paypal } from "@/lib/paypal";
+import { getShippingForCart } from "@/lib/shipping";
+import {
+  DISCOUNT_COOKIE,
+  calcDiscountOnProductsOnly,
+  getValidDiscountCode,
+  normalizeDiscountCode,
+} from "@/lib/discount-codes";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* -------------------------- helpers -------------------------- */
+
+type Shipping = {
+  name?: string;
+  phone?: string;
+  email?: string;
+  address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
+};
+
+type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+
+type CartItemRow = {
+  productId: string;
+  qty: number;
+  unitPrice: number;
+  product: {
+    id?: string;
+    name: string;
+    imageUrls?: string[] | null;
+    slug?: string | null;
+    channel?: string | null;
+    team?: string | null;
+  };
+  optionsJson?: any;
+  personalization?: any;
+  totalPrice?: number | null;
+};
+
+function getBaseUrl(req: NextRequest): string {
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+
+  if (host) return `${proto}://${host}`.replace(/\/+$/, "");
+
+  const env =
+    (process.env.NEXT_PUBLIC_SITE_URL || "").trim() ||
+    (process.env.NEXT_PUBLIC_APP_URL || "").trim() ||
+    (process.env.SITE_URL || "").trim();
+
+  if (env) return env.replace(/\/+$/, "");
+
+  throw new Error(
+    "Base URL not resolvable. Set NEXT_PUBLIC_SITE_URL/NEXT_PUBLIC_APP_URL or ensure Host headers are present."
+  );
+}
+
+function decodeShippingCookie(raw?: string | null): Shipping | null {
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+  } catch {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function centsToMoney(cents: number) {
+  return (Math.round(cents) / 100).toFixed(2);
+}
+
+function normalizeLocale(value: unknown): "pt" | "en" {
+  const locale = String(value ?? "").trim().toLowerCase();
+  return locale === "en" ? "en" : "pt";
+}
+
+function safeCountryCode(v?: string | null) {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (!s) return undefined;
+
+  const map: Record<string, string> = {
+    PT: "PT",
+    PORTUGAL: "PT",
+
+    ES: "ES",
+    SPAIN: "ES",
+    ESPANHA: "ES",
+
+    FR: "FR",
+    FRANCE: "FR",
+    FRANCA: "FR",
+    "FRANÇA": "FR",
+
+    DE: "DE",
+    GERMANY: "DE",
+    ALEMANHA: "DE",
+
+    IT: "IT",
+    ITALY: "IT",
+    ITALIA: "IT",
+    "ITÁLIA": "IT",
+
+    GB: "GB",
+    UK: "GB",
+    "UNITED KINGDOM": "GB",
+    ENGLAND: "GB",
+    "REINO UNIDO": "GB",
+    REINO_UNIDO: "GB",
+
+    NL: "NL",
+    NETHERLANDS: "NL",
+    HOLANDA: "NL",
+
+    BE: "BE",
+    BELGIUM: "BE",
+    BELGICA: "BE",
+    "BÉLGICA": "BE",
+
+    CH: "CH",
+    SWITZERLAND: "CH",
+    SUICA: "CH",
+    "SUÍÇA": "CH",
+  };
+
+  return map[s] || (/^[A-Z]{2}$/.test(s) ? s : undefined);
+}
+
+function safeStr(v: any): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+function safeObj(v: any): Record<string, any> {
+  if (!v) return {};
+  if (typeof v === "object") return v as Record<string, any>;
+
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return typeof j === "object" && j ? (j as Record<string, any>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+function normalizeSize(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const s = value.trim().toUpperCase();
+  return s || null;
+}
+
+function extractSelectedSize(optionsJson: any): string | null {
+  const root = safeObj(optionsJson);
+
+  const directCandidates = [
+    root.size,
+    root.selectedSize,
+    root.variantSize,
+    root.chosenSize,
+    root.Size,
+  ];
+
+  for (const candidate of directCandidates) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  const options = safeObj(root.options);
+  for (const candidate of [
+    options.size,
+    options.selectedSize,
+    options.variantSize,
+    options.chosenSize,
+    options.Size,
+  ]) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  const selectedOptions = safeObj(root.selectedOptions);
+  for (const candidate of [
+    selectedOptions.size,
+    selectedOptions.selectedSize,
+    selectedOptions.variantSize,
+    selectedOptions.chosenSize,
+    selectedOptions.Size,
+  ]) {
+    const size = normalizeSize(candidate);
+    if (size) return size;
+  }
+
+  for (const [key, value] of Object.entries(root)) {
+    if (typeof value !== "string") continue;
+    const k = key.trim().toLowerCase();
+    if (k === "size" || k.includes("size")) {
+      const size = normalizeSize(value);
+      if (size) return size;
+    }
+  }
+
+  return null;
+}
+
+function detectCartChannel(items: CartItemRow[]): CartChannel {
+  const channels = new Set<string>();
+
+  for (const it of items) {
+    channels.add(String(it.product?.channel ?? "GLOBAL"));
+  }
+
+  if (channels.size > 1) return "MIXED";
+
+  const only = Array.from(channels)[0];
+  return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+}
+
+function buildSnapshotJson(
+  optionsJson: any,
+  personalization: any,
+  extras?: Record<string, any>
+) {
+  const baseSnapshot = safeObj(optionsJson);
+  const selectedSize = extractSelectedSize(baseSnapshot);
+
+  const snapshot: Record<string, any> = {
+    ...baseSnapshot,
+    personalization: personalization ?? null,
+  };
+
+  if (selectedSize) {
+    snapshot.size = selectedSize;
+
+    if (!safeStr(snapshot.selectedSize)) {
+      snapshot.selectedSize = selectedSize;
+    }
+
+    const options = safeObj(snapshot.options);
+    if (!safeStr(options.size)) {
+      snapshot.options = {
+        ...options,
+        size: selectedSize,
+      };
+    }
+
+    const selectedOptions = safeObj(snapshot.selectedOptions);
+    if (!safeStr(selectedOptions.size)) {
+      snapshot.selectedOptions = {
+        ...selectedOptions,
+        size: selectedSize,
+      };
+    }
+  }
+
+  if (extras && typeof extras === "object") {
+    Object.assign(snapshot, extras);
+  }
+
+  return snapshot;
+}
+
+async function validatePtStockOrThrow(items: CartItemRow[]) {
+  const aggregated = new Map<
+    string,
+    { productId: string; size: string; qty: number; productName: string }
+  >();
+
+  for (const it of items) {
+    const qty = Math.max(0, Number(it.qty ?? 0));
+    if (qty <= 0) continue;
+
+    const channel = String(it.product?.channel ?? "GLOBAL");
+    if (channel !== "PT_STOCK_CTT") continue;
+
+    const size = extractSelectedSize(it.optionsJson);
+    if (!size) {
+      throw new Error(
+        `O produto PT Stock "${it.product?.name ?? "Produto"}" não tem tamanho selecionado.`
+      );
+    }
+
+    const key = `${it.productId}__${size}`;
+    const existing = aggregated.get(key);
+
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      aggregated.set(key, {
+        productId: it.productId,
+        size,
+        qty,
+        productName: String(it.product?.name ?? "Produto"),
+      });
+    }
+  }
+
+  if (aggregated.size === 0) return;
+
+  for (const entry of aggregated.values()) {
+    const row = await prisma.sizeStock.findUnique({
+      where: {
+        productId_size: {
+          productId: entry.productId,
+          size: entry.size,
+        },
+      },
+      select: {
+        ptStockQty: true,
+        available: true,
+      },
+    });
+
+    if (!row) {
+      throw new Error(
+        `Não existe stock configurado para "${entry.productName}" no tamanho ${entry.size}.`
+      );
+    }
+
+    const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+
+    if (!row.available || availableQty < entry.qty) {
+      throw new Error(
+        `Stock insuficiente para "${entry.productName}" no tamanho ${entry.size}. Disponível: ${availableQty}.`
+      );
+    }
+  }
+}
+
+function shippingToFlatJson(s?: Shipping | null): Record<string, any> | null {
+  if (!s) return null;
+
+  const addr = safeObj(s.address);
+  return {
+    name: safeStr(s.name),
+    phone: safeStr(s.phone),
+    email: safeStr(s.email),
+
+    line1: safeStr(addr.line1),
+    line2: safeStr(addr.line2),
+    city: safeStr(addr.city),
+    state: safeStr(addr.state),
+    postal_code: safeStr(addr.postal_code),
+    country: safeStr(addr.country),
+
+    address: {
+      line1: safeStr(addr.line1),
+      line2: safeStr(addr.line2),
+      city: safeStr(addr.city),
+      state: safeStr(addr.state),
+      postal_code: safeStr(addr.postal_code),
+      country: safeStr(addr.country),
+    },
+  };
+}
+
+function resolvePtStockShippingCents(items: CartItemRow[]) {
+  const result = getShippingForCart(
+    items.map((it) => ({
+      qty: Math.max(0, Number(it.qty ?? 0)),
+      channel: "PT_STOCK_CTT" as const,
+    }))
+  );
+
+  return typeof (result as any)?.shippingCents === "number"
+    ? Math.max(0, Number((result as any).shippingCents))
+    : 0;
+}
+
+/* --------------------------- route --------------------------- */
+
+export async function POST(req: NextRequest) {
+  try {
+    const APP = getBaseUrl(req);
+    const body = await req.json().catch(() => ({}));
+    const locale = normalizeLocale(body?.locale);
+
+    const jar = await cookies();
+    const sid = jar.get("sid")?.value ?? null;
+
+    if (!sid) {
+      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+    }
+
+    const rawDiscountCode = jar.get(DISCOUNT_COOKIE)?.value ?? "";
+    const normalizedDiscountCode = normalizeDiscountCode(rawDiscountCode);
+    const validDiscount = normalizedDiscountCode
+      ? await getValidDiscountCode(normalizedDiscountCode)
+      : null;
+
+    const cart = await prisma.cart.findFirst({
+      where: { sessionId: sid },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                imageUrls: true,
+                slug: true,
+                channel: true,
+                team: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+    }
+
+    const cartItems: CartItemRow[] = cart.items.map((it: any) => ({
+      productId: it.productId,
+      qty: Math.max(0, Number(it.qty ?? 0)),
+      unitPrice: Math.max(0, Number(it.unitPrice ?? 0)),
+      product: it.product,
+      optionsJson:
+        it.optionsJson ??
+        it.options ??
+        it.snapshotJson ??
+        it.optionsJSON ??
+        (it as any).optionsJson ??
+        {},
+      personalization: it.personalization ?? null,
+      totalPrice: (it as any).totalPrice ?? null,
+    }));
+
+    await validatePtStockOrThrow(cartItems);
+
+    const cartChannel = detectCartChannel(cartItems);
+    const currency = "EUR";
+
+    const productSubtotalCents = cartItems.reduce((acc, it) => {
+      const line = it.totalPrice ?? it.qty * it.unitPrice;
+      return acc + Number(line || 0);
+    }, 0);
+
+    const shippingFromCookie = decodeShippingCookie(jar.get("ship")?.value);
+    const shippingJsonFlat = shippingToFlatJson(shippingFromCookie);
+
+    const shippingCents =
+      cartChannel === "PT_STOCK_CTT" ? resolvePtStockShippingCents(cartItems) : 0;
+
+    const taxCents = 0;
+
+    const discountCents = validDiscount
+      ? calcDiscountOnProductsOnly(
+          productSubtotalCents,
+          Number(validDiscount.percentOff ?? 0)
+        )
+      : 0;
+
+    const finalProductSubtotalCents = Math.max(
+      0,
+      productSubtotalCents - discountCents
+    );
+
+    const totalCents = finalProductSubtotalCents + shippingCents + taxCents;
+
+    const order = await prisma.order.create({
+      data: {
+        sessionId: cart.sessionId ?? null,
+        status: "pending",
+        currency: currency.toLowerCase(),
+        channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+
+        subtotal: productSubtotalCents,
+        productSubtotalCents,
+        finalProductSubtotalCents,
+
+        shipping: shippingCents,
+        shippingCents,
+        tax: taxCents,
+
+        discountCodeText: validDiscount?.code ?? null,
+        discountPercent:
+          validDiscount?.percentOff != null
+            ? Number(validDiscount.percentOff)
+            : null,
+        discountAmountCents: discountCents,
+
+        total: totalCents / 100,
+        totalCents,
+
+        shippingJson: (shippingJsonFlat as any) ?? null,
+
+        shippingFullName: shippingFromCookie?.name ?? null,
+        shippingEmail: shippingFromCookie?.email ?? null,
+        shippingPhone: shippingFromCookie?.phone ?? null,
+        shippingAddress1: shippingFromCookie?.address?.line1 ?? null,
+        shippingAddress2: shippingFromCookie?.address?.line2 ?? null,
+        shippingCity: shippingFromCookie?.address?.city ?? null,
+        shippingRegion: shippingFromCookie?.address?.state ?? null,
+        shippingPostalCode: shippingFromCookie?.address?.postal_code ?? null,
+        shippingCountry: shippingFromCookie?.address?.country ?? null,
+
+        items: {
+          create: cartItems.map((it) => ({
+            productId: it.productId,
+            name: it.product.name,
+            image: it.product.imageUrls?.[0] ?? null,
+            qty: it.qty,
+            unitPrice: it.unitPrice,
+            totalPrice: it.totalPrice ?? it.qty * it.unitPrice,
+            snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+              productId: it.productId,
+              productSlug: it.product.slug ?? null,
+              productChannel: it.product.channel ?? "GLOBAL",
+              team: it.product.team ?? null,
+            }),
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    const return_url = `${APP}/${locale}/checkout/paypal/return?order=${order.id}`;
+    const cancel_url = `${APP}/${locale}/cart`;
+
+    const countryCode =
+      safeCountryCode(shippingFromCookie?.address?.country) ?? "PT";
+
+    const ppReq = new paypal.orders.OrdersCreateRequest();
+    ppReq.prefer("return=representation");
+    ppReq.requestBody({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          reference_id: "default",
+          custom_id: order.id,
+          description: validDiscount?.code
+            ? `Order ${order.id} - Discount ${validDiscount.code}`
+            : `Order ${order.id}`,
+
+          amount: {
+            currency_code: currency,
+            value: centsToMoney(totalCents),
+            breakdown: {
+              item_total: {
+                currency_code: currency,
+                value: centsToMoney(productSubtotalCents),
+              },
+              shipping: {
+                currency_code: currency,
+                value: centsToMoney(shippingCents),
+              },
+              tax_total: {
+                currency_code: currency,
+                value: centsToMoney(taxCents),
+              },
+              discount: {
+                currency_code: currency,
+                value: centsToMoney(discountCents),
+              },
+            },
+          },
+
+          items: order.items.map((it: typeof order.items[number]) => ({
+            name: it.name.slice(0, 127),
+            quantity: String(it.qty),
+            unit_amount: {
+              currency_code: currency,
+              value: centsToMoney(it.unitPrice),
+            },
+            category: "PHYSICAL_GOODS",
+          })),
+
+          shipping: shippingFromCookie?.address?.line1
+            ? {
+                name: shippingFromCookie?.name
+                  ? { full_name: shippingFromCookie.name }
+                  : undefined,
+                address: {
+                  address_line_1: shippingFromCookie.address.line1 ?? "",
+                  address_line_2:
+                    shippingFromCookie.address.line2 ?? undefined,
+                  admin_area_2: shippingFromCookie.address.city ?? undefined,
+                  admin_area_1: shippingFromCookie.address.state ?? undefined,
+                  postal_code:
+                    shippingFromCookie.address.postal_code ?? undefined,
+                  country_code: countryCode,
+                },
+              }
+            : undefined,
+        },
+      ],
+      application_context: {
+        brand_name: "FootballWorld",
+        user_action: "PAY_NOW",
+        return_url,
+        cancel_url,
+        shipping_preference: shippingFromCookie?.address?.line1
+          ? "SET_PROVIDED_ADDRESS"
+          : "GET_FROM_FILE",
+      },
+    });
+
+    const ppRes = await paypalClient.execute(ppReq);
+
+    type PpLink = { rel?: string; href?: string };
+    const result = ppRes.result as { id?: string; links?: PpLink[] };
+
+    const ppOrderId = result?.id;
+    if (ppOrderId) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { paypalOrderId: ppOrderId },
+      });
+    }
+
+    const approveUrl =
+      result?.links?.find((l) => l.rel === "approve")?.href ?? null;
+
+    if (!approveUrl) {
+      return NextResponse.json(
+        { error: "PayPal did not return an approval URL." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      url: approveUrl,
+      approveUrl,
+      orderId: order.id,
+      paypalOrderId: ppOrderId,
+      discountCode: validDiscount?.code ?? null,
+      discountAmountCents: discountCents,
+    });
+  } catch (err: any) {
+    console.error("PayPal create error:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "PayPal create error" },
+      { status: 400 }
+    );
+  }
+}
+// src/lib/checkout.ts
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import {
+  DISCOUNT_COOKIE,
+  calcDiscountOnProductsOnly,
+  getValidDiscountCode,
+  normalizeDiscountCode,
+} from "@/lib/discount-codes";
+
+/** Recalcula o preço de 1 unidade com base em basePrice + deltas das opções */
+async function computeUnitPrice(
+  productId: string,
+  optionsJson: Record<string, string | null> | null
+) {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { options: { include: { values: true } } },
+  });
+
+  if (!product) throw new Error("Product not found");
+
+  let price = product.basePrice;
+
+  if (optionsJson) {
+    for (const group of product.options) {
+      const chosen = optionsJson[group.key];
+      if (!chosen) continue;
+
+      const val = group.values.find((v) => v.value === chosen);
+      if (val) price += val.priceDelta;
+    }
+  }
+
+  return price;
+}
+
+function detectCartChannel(
+  items: Array<{
+    product: {
+      channel?: string | null;
+    };
+  }>
+): "GLOBAL" | "PT_STOCK_CTT" | "MIXED" {
+  const channels = new Set<string>();
+
+  for (const it of items) {
+    channels.add(String(it.product?.channel ?? "GLOBAL"));
+  }
+
+  if (channels.size > 1) return "MIXED";
+
+  const only = Array.from(channels)[0];
+  return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+}
+
+function extractSelectedSize(
+  optionsJson: Record<string, string | null> | null,
+  personalization: unknown
+): string | null {
+  if (optionsJson && typeof optionsJson === "object") {
+    const directCandidates = [
+      optionsJson.size,
+      optionsJson.Size,
+      optionsJson.selectedSize,
+      optionsJson.variantSize,
+    ];
+
+    for (const candidate of directCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim().toUpperCase();
+      }
+    }
+
+    for (const [key, value] of Object.entries(optionsJson)) {
+      if (typeof value !== "string" || !value.trim()) continue;
+
+      const normalizedKey = key.trim().toLowerCase();
+      if (normalizedKey === "size" || normalizedKey.includes("size")) {
+        return value.trim().toUpperCase();
+      }
+    }
+  }
+
+  if (
+    personalization &&
+    typeof personalization === "object" &&
+    !Array.isArray(personalization)
+  ) {
+    const p = personalization as Record<string, unknown>;
+    const candidates = [p.size, p.selectedSize];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim().toUpperCase();
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Cria uma Order 'pending' a partir do carrinho atual e devolve a Order completa */
+export async function createOrderFromCart() {
+  const jar = await cookies();
+  const sid = jar.get("sid")?.value ?? null;
+  const rawDiscountCode = jar.get(DISCOUNT_COOKIE)?.value ?? "";
+  const normalizedDiscountCode = normalizeDiscountCode(rawDiscountCode);
+
+  // NOTA: se usares auth, carrega userId aqui
+  const userId: string | null = null;
+
+  const orWhere = [
+    userId ? { userId } : null,
+    sid ? { sessionId: sid } : null,
+  ].filter(Boolean) as Array<{ userId?: string | null; sessionId?: string | null }>;
+
+  const cart = await prisma.cart.findFirst({
+    where: orWhere.length ? { OR: orWhere } : undefined,
+    include: {
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              imageUrls: true,
+              basePrice: true,
+              slug: true,
+              team: true,
+              channel: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!cart || cart.items.length === 0) {
+    throw new Error("Cart empty");
+  }
+
+  const cartChannel = detectCartChannel(cart.items);
+
+  let productSubtotalCents = 0;
+
+  const orderItemsData: Array<{
+    productId: string;
+    name: string;
+    image: string | null;
+    qty: number;
+    unitPrice: number;
+    totalPrice: number;
+    snapshotJson: any;
+  }> = [];
+
+  for (const it of cart.items) {
+    const optionsJson = (it as any).optionsJson as Record<string, string | null> | null;
+    const personalization = (it as any).personalization ?? null;
+
+    const unitPrice = await computeUnitPrice(it.productId, optionsJson);
+    const totalPrice = unitPrice * it.qty;
+
+    productSubtotalCents += totalPrice;
+
+    const selectedSize = extractSelectedSize(optionsJson, personalization);
+
+    orderItemsData.push({
+      productId: it.productId,
+      name: it.product.name,
+      image: it.product.imageUrls?.[0] ?? null,
+      qty: it.qty,
+      unitPrice,
+      totalPrice,
+      snapshotJson: {
+        team: it.product.team,
+        productSlug: it.product.slug,
+        productChannel: it.product.channel ?? "GLOBAL",
+
+        // guardar o tamanho explicitamente para a dedução de stock funcionar
+        size: selectedSize,
+        selectedSize,
+
+        // manter também as estruturas antigas/úteis
+        options: optionsJson,
+        optionsJson,
+        selectedOptions: optionsJson,
+
+        personalization,
+      } as any,
+    });
+  }
+
+  const validDiscount = normalizedDiscountCode
+    ? await getValidDiscountCode(normalizedDiscountCode)
+    : null;
+
+  const discountAmountCents = validDiscount
+    ? calcDiscountOnProductsOnly(
+        productSubtotalCents,
+        Number(validDiscount.percentOff ?? 0)
+      )
+    : 0;
+
+  const shippingCents = 0; // ajusta se tiveres portes calculados aqui
+  const tax = 0;
+  const finalProductSubtotalCents = Math.max(
+    0,
+    productSubtotalCents - discountAmountCents
+  );
+  const totalCents = Math.max(
+    0,
+    finalProductSubtotalCents + shippingCents + tax
+  );
+
+  const order = await prisma.order.create({
+    data: {
+      userId: userId ?? null,
+      sessionId: sid,
+      status: "pending",
+      currency: "EUR",
+      channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+
+      subtotal: productSubtotalCents,
+      productSubtotalCents,
+      finalProductSubtotalCents,
+
+      shipping: shippingCents,
+      shippingCents,
+
+      tax,
+
+      discountCodeText: validDiscount?.code ?? null,
+      discountPercent:
+        validDiscount?.percentOff != null
+          ? Number(validDiscount.percentOff)
+          : null,
+      discountAmountCents,
+
+      total: totalCents / 100,
+      totalCents,
+
+      items: { create: orderItemsData },
+    },
+    include: { items: true },
+  });
+
+  return order;
+}
+
+/** Após pagamento bem-sucedido: limpa carrinho */
+export async function finalizePaidOrder(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+  });
+
+  if (!order) return;
+
+  // O desconto de stock PT por tamanho é feito separadamente em:
+  // deductPtStockForPaidOrder(orderId)
+
+  if (order.sessionId) {
+    const cart = await prisma.cart.findFirst({
+      where: { sessionId: order.sessionId },
+    });
+
+    if (cart) {
+      await prisma.cartItem.deleteMany({
+        where: { cartId: cart.id },
+      });
+    }
+  }
+}
+import { prisma } from "@/lib/prisma";
+import { ProductChannel } from "@prisma/client";
+
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as JsonRecord;
+}
+
+function normalizeSize(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return null;
+
+  return normalized;
+}
+
+function extractSizeFromSnapshot(snapshot: unknown): string | null {
+  const snap = asRecord(snapshot);
+  if (!snap) return null;
+
+  const directCandidates: unknown[] = [
+    snap.size,
+    snap.selectedSize,
+    snap.variantSize,
+    snap.chosenSize,
+  ];
+
+  for (const candidate of directCandidates) {
+    const normalized = normalizeSize(candidate);
+    if (normalized) return normalized;
+  }
+
+  const options = asRecord(snap.options);
+  if (options) {
+    const optionCandidates: unknown[] = [
+      options.size,
+      options.selectedSize,
+      options.variantSize,
+      options.chosenSize,
+      options.Size,
+    ];
+
+    for (const candidate of optionCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  const selectedOptions = asRecord(snap.selectedOptions);
+  if (selectedOptions) {
+    const selectedOptionCandidates: unknown[] = [
+      selectedOptions.size,
+      selectedOptions.selectedSize,
+      selectedOptions.variantSize,
+      selectedOptions.chosenSize,
+      selectedOptions.Size,
+    ];
+
+    for (const candidate of selectedOptionCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  const personalization = asRecord(snap.personalization);
+  if (personalization) {
+    const personalizationCandidates: unknown[] = [
+      personalization.size,
+      personalization.selectedSize,
+    ];
+
+    for (const candidate of personalizationCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Deduz o stock PT por tamanho quando a encomenda fica paga.
+ *
+ * Regras:
+ * - Evita descontar duas vezes usando order.stockDeductedAt
+ * - Só desconta itens de produtos com channel = PT_STOCK_CTT
+ * - Atualiza SizeStock.ptStockQty e SizeStock.available
+ * - Recalcula Product.ptStockQty como soma de todos os tamanhos
+ */
+export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
+  if (!orderId?.trim()) {
+    throw new Error("Missing orderId");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        stockDeductedAt: true,
+        items: {
+          select: {
+            id: true,
+            productId: true,
+            qty: true,
+            name: true,
+            snapshotJson: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                channel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+
+    // Evita descontar duas vezes caso o webhook repita
+    if (order.stockDeductedAt) {
+      return;
+    }
+
+    const affectedProductIds = new Set<string>();
+
+    for (const item of order.items) {
+      const qty = Math.max(0, Number(item.qty ?? 0));
+      if (qty <= 0) continue;
+
+      if (!item.product) {
+        console.warn(
+          `[deductPtStockForPaidOrder] Missing product relation for order item ${item.id}`
+        );
+        continue;
+      }
+
+      // Só desconta stock de produtos PT Stock
+      if (item.product.channel !== ProductChannel.PT_STOCK_CTT) {
+        continue;
+      }
+
+      const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
+
+      if (!selectedSize) {
+        throw new Error(
+          `Missing size for PT Stock order item ${item.id} (${item.name}) on product ${item.productId}`
+        );
+      }
+
+      const sizeStock = await tx.sizeStock.findUnique({
+        where: {
+          productId_size: {
+            productId: item.productId,
+            size: selectedSize,
+          },
+        },
+        select: {
+          id: true,
+          ptStockQty: true,
+        },
+      });
+
+      if (!sizeStock) {
+        throw new Error(
+          `SizeStock not found for product ${item.productId} and size ${selectedSize}`
+        );
+      }
+
+      const currentQty = Math.max(0, Number(sizeStock.ptStockQty ?? 0));
+      const nextQty = Math.max(0, currentQty - qty);
+
+      await tx.sizeStock.update({
+        where: { id: sizeStock.id },
+        data: {
+          ptStockQty: nextQty,
+          available: nextQty > 0,
+        },
+      });
+
+      affectedProductIds.add(item.productId);
+    }
+
+    for (const productId of affectedProductIds) {
+      const sizeRows = await tx.sizeStock.findMany({
+        where: { productId },
+        select: {
+          ptStockQty: true,
+        },
+      });
+
+      const totalQty = sizeRows.reduce((sum, row) => {
+        return sum + Math.max(0, Number(row.ptStockQty ?? 0));
+      }, 0);
+
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          ptStockQty: totalQty,
+        },
+      });
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        stockDeductedAt: new Date(),
+      },
+    });
+  });
+}
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_POSTGRES_URL_NON_POOLING")
+}
+
+/**
+ * =========================================================
+ * =============== Auth / Users ============================
+ * =========================================================
+ */
+model User {
+  id            String    @id @default(cuid())
+  name          String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  Cart     Cart[]
+
+  orders  Order[]
+  reviews Review[]
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+}
+
+/**
+ * =========================================================
+ * =============== Password Reset ===========================
+ * =========================================================
+ */
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+/**
+ * =========================================================
+ * =============== Store / Products ========================
+ * =========================================================
+ */
+
+enum TeamType {
+  CLUB
+  NATION
+}
+
+/**
+ * 🔹 canal do produto / order
+ * GLOBAL = envio normal
+ * PT_STOCK_CTT = stock em Portugal enviado pelos CTT
+ */
+enum ProductChannel {
+  GLOBAL
+  PT_STOCK_CTT
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  team        String
+  teamType    TeamType @default(CLUB)
+  season      String?
+  basePrice   Int
+  description String?
+
+  /**
+   * 🔹 canal de venda
+   */
+  channel ProductChannel @default(GLOBAL)
+
+  /**
+   * 🔹 stock local em Portugal
+   * null = produto normal/global sem stock PT
+   * número = produto PT Stock com quantidade controlada
+   */
+  ptStockQty Int?
+
+  imageUrls String[] @default([])
+  badges    String[] @default([])
+
+  allowNameNumber Boolean @default(true)
+  isVisible       Boolean @default(true)
+
+  sizes      SizeStock[]
+  options    OptionGroup[] @relation("ProductOptions")
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([team])
+  @@index([teamType])
+  @@index([season])
+  @@index([teamType, team])
+  @@index([isVisible])
+  @@index([channel])
+  @@index([ptStockQty])
+}
+
+model SizeStock {
+  id        String  @id @default(cuid())
+  productId String
+  size      String
+  available Boolean @default(true)
+
+  /**
+   * 🔹 stock por tamanho em Portugal
+   * este é o campo que deve ser decrementado
+   * quando uma order PT Stock é paga
+   */
+  ptStockQty Int @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, size])
+  @@index([productId])
+  @@index([size])
+  @@index([available])
+  @@index([ptStockQty])
+}
+
+model OptionGroup {
+  id        String     @id @default(cuid())
+  productId String
+  key       String
+  label     String
+  type      OptionType
+  required  Boolean    @default(false)
+
+  product Product       @relation("ProductOptions", fields: [productId], references: [id], onDelete: Cascade)
+  values  OptionValue[]
+
+  @@index([productId])
+}
+
+model OptionValue {
+  id         String @id @default(cuid())
+  groupId    String
+  value      String
+  label      String
+  priceDelta Int    @default(0)
+
+  playerId     String?
+  playerName   String?
+  playerNumber Int?
+
+  group  OptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player Player?     @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([playerId])
+}
+
+enum OptionType {
+  SIZE
+  RADIO
+  ADDON
+}
+
+/**
+ * =========================================================
+ * =============== Players ================================
+ * =========================================================
+ */
+
+model Player {
+  id        String   @id @default(cuid())
+  team      String
+  name      String
+  number    Int
+  position  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  optionValues OptionValue[]
+
+  @@unique([team, name], name: "player_team_name")
+  @@index([team])
+}
+
+/**
+ * =========================================================
+ * =============== Cart ====================================
+ * =========================================================
+ */
+
+model Cart {
+  id        String  @id @default(cuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId String? @unique
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  productId String
+
+  qty        Int @default(1)
+  unitPrice  Int
+  totalPrice Int @default(0)
+
+  optionsJson     Json?
+  personalization Json?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+/**
+ * =========================================================
+ * =============== Discount Codes ==========================
+ * =========================================================
+ */
+
+model DiscountCode {
+  id         String  @id @default(cuid())
+  code       String  @unique
+  percentOff Int     @default(10)
+  active     Boolean @default(true)
+
+  /**
+   * 🔹 uso único:
+   * maxUses e usesCount mantidos para compatibilidade/histórico,
+   * mas o fluxo passa a ser de 1 utilização apenas.
+   */
+  maxUses   Int       @default(1)
+  usesCount Int       @default(0)
+  usedAt    DateTime?
+  expiresAt DateTime?
+
+  /**
+   * 🔹 order que consumiu este código
+   * um código só pode ficar ligado a UMA única order
+   */
+  usedByOrderId String? @unique
+  usedByOrder   Order?  @relation("DiscountCodeUsedByOrder", fields: [usedByOrderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /**
+   * 🔹 integração opcional com Stripe para exibir
+   * o desconto como linha separada no Checkout
+   * Podes usar um OU outro:
+   * - stripeCouponId: cupão do Stripe
+   * - stripePromotionCodeId: promotion code do Stripe
+   * Normalmente basta stripePromotionCodeId se quiseres
+   * espelhar diretamente cada código interno.
+   */
+  stripeCouponId        String?
+  stripePromotionCodeId String?
+
+  @@index([active])
+  @@index([code, active])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@index([usedAt])
+  @@index([usedByOrderId])
+  @@index([stripeCouponId])
+  @@index([stripePromotionCodeId])
+}
+
+/**
+ * =========================================================
+ * =============== Orders ==================================
+ * =========================================================
+ */
+
+enum OrderStatus {
+  pending
+  paid
+  failed
+  canceled
+  refunded
+  shipped
+  delivered
+}
+
+enum ShippingStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+}
+
+model Order {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  sessionId String?
+
+  status   String @default("pending")
+  currency String @default("eur")
+
+  /**
+   * 🔹 canal da order (mesmo enum do Product)
+   */
+  channel ProductChannel @default(GLOBAL)
+
+  /**
+   * 🔹 subtotal dos produtos antes do desconto
+   */
+  subtotal Int @default(0)
+
+  /**
+   * 🔹 subtotal dos produtos antes do desconto
+   * campo adicional explícito para o resumo final
+   */
+  productSubtotalCents Int @default(0)
+
+  /**
+   * 🔹 subtotal final dos produtos depois do desconto
+   * útil para bater certo com Stripe/resumos/admin
+   */
+  finalProductSubtotalCents Int @default(0)
+
+  /**
+   * 🔹 shipping (em cents) — SINGLE SOURCE OF TRUTH
+   */
+  shipping Int @default(0)
+
+  /**
+   * 🔹 shipping explícito em cents para checkout/resumo
+   */
+  shippingCents Int @default(0)
+
+  tax Int @default(0)
+
+  total      Float?
+  totalCents Int?
+
+  /**
+   * 🔹 dados do desconto aplicado à order
+   * o vínculo do código consumido fica no model DiscountCode.usedByOrderId
+   */
+  discountCodeText    String?
+  discountPercent     Int?
+  discountAmountCents Int     @default(0)
+
+  /**
+   * 🔹 ids Stripe ligados ao desconto aplicado
+   * guardados na order para auditoria/debug
+   */
+  stripeCouponIdUsed        String?
+  stripePromotionCodeIdUsed String?
+
+  stripeSessionId       String?
+  stripePaymentIntentId String?
+  paypalOrderId         String?
+  paypalCaptured        Boolean?
+  paypalCaptureId       String?
+
+  paymentStatus String?
+  paidAt        DateTime?
+
+  /**
+   * 🔹 usado para impedir descontar stock duas vezes
+   * quando o webhook/payment handler repetir
+   */
+  stockDeductedAt DateTime?
+
+  shippingJson Json?
+
+  shippingFullName   String?
+  shippingEmail      String?
+  shippingPhone      String?
+  shippingAddress1   String?
+  shippingAddress2   String?
+  shippingCity       String?
+  shippingRegion     String?
+  shippingPostalCode String?
+  shippingCountry    String?
+
+  shippingStatus ShippingStatus @default(PENDING)
+  trackingCode   String?
+  trackingUrl    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+
+  confirmationEmailSentAt     DateTime?
+  confirmationEmailProviderId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+
+  /**
+   * 🔹 relação inversa do DiscountCode usado por esta order
+   * cada order pode ter no máximo um código consumido
+   */
+  usedDiscountCode DiscountCode? @relation("DiscountCodeUsedByOrder")
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([shippingCountry])
+  @@index([paidAt])
+  @@index([stockDeductedAt])
+  @@index([shippingStatus])
+  @@index([shippedAt])
+  @@index([deliveredAt])
+  @@index([trackingCode])
+  @@index([confirmationEmailSentAt])
+  @@index([channel])
+  @@index([discountCodeText])
+  @@index([stripeCouponIdUsed])
+  @@index([stripePromotionCodeIdUsed])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  name         String
+  image        String?
+  qty          Int
+  unitPrice    Int
+  totalPrice   Int
+  snapshotJson Json?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+/**
+ * =========================================================
+ * =============== Reviews / Engagement ====================
+ * =========================================================
+ */
+
+model Review {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  rating    Int
+  comment   String?
+  imageUrls String[] @default([])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([productId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model SocialMetric {
+  id             String   @id @default(cuid())
+  followersTotal Int
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Visit {
+  id        String   @id @default(cuid())
+  visitorId String
+  path      String
+  referrer  String?
+  ua        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  createdAt      DateTime  @default(now())
+  unsubToken     String    @unique @default(cuid())
+  unsubscribedAt DateTime?
+}
+
+model NewsletterCampaign {
+  id              String    @id @default(cuid())
+  subject         String
+  style           String
+  contentJson     String
+  html            String
+  text            String
+  status          String    @default("DRAFT")
+  totalRecipients Int       @default(0)
+  sentCount       Int       @default(0)
+  failedCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  sentAt          DateTime?
+
+  logs NewsletterSendLog[]
+}
+
+model NewsletterSendLog {
+  id         String   @id @default(cuid())
+  campaignId String
+  email      String
+  status     String
+  providerId String?
+  error      String?
+  createdAt  DateTime @default(now())
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([email])
+}
