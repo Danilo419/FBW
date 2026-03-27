@@ -423,15 +423,15 @@ function totalFromOrder(order: any, optsTotalCents?: number | null): number {
     typeof order?.finalProductSubtotalCents === "number"
       ? order.finalProductSubtotalCents
       : typeof order?.subtotal === "number"
-      ? order.subtotal
-      : 0;
+        ? order.subtotal
+        : 0;
 
   const shipping =
     typeof order?.shippingCents === "number"
       ? order.shippingCents
       : typeof order?.shipping === "number"
-      ? order.shipping
-      : 0;
+        ? order.shipping
+        : 0;
 
   const tax = typeof order?.tax === "number" ? order.tax : 0;
   const discountAmountCents =
@@ -560,8 +560,19 @@ async function markPaid(
       existing.shippingCountry ||
       null)?.toString() || null;
 
-  const normalizedCode = normalizeDiscountCode(opts.discount?.code ?? "");
-  const hasDiscountMeta = !!normalizedCode;
+  const normalizedCode = normalizeDiscountCode(
+    opts.discount?.code ?? existing.discountCodeText ?? ""
+  );
+  const hasResolvedDiscountCode = !!normalizedCode;
+  const hasIncomingDiscountMeta =
+    !!opts.discount &&
+    (opts.discount.percentOff != null ||
+      opts.discount.discountAmountCents != null ||
+      opts.discount.productSubtotalCents != null ||
+      opts.discount.finalProductSubtotalCents != null ||
+      !!opts.discount.stripePromotionCodeId ||
+      !!opts.discount.stripeCouponId ||
+      !!opts.discount.code);
 
   const updateData: Record<string, any> = {
     ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
@@ -578,8 +589,11 @@ async function markPaid(
     ...(country ? { shippingCountry: country } : {}),
   };
 
-  if (hasDiscountMeta) {
+  if (hasResolvedDiscountCode) {
     updateData.discountCodeText = normalizedCode;
+  }
+
+  if (hasIncomingDiscountMeta) {
     updateData.discountPercent =
       opts.discount?.percentOff ?? existing.discountPercent ?? undefined;
     updateData.discountAmountCents =
@@ -629,7 +643,7 @@ async function markPaid(
         return false;
       }
 
-      if (hasDiscountMeta && normalizedCode) {
+      if (hasResolvedDiscountCode) {
         await redeemDiscountCodeTx(tx, normalizedCode, orderId);
       }
 
@@ -649,11 +663,15 @@ async function markPaid(
     });
   }
 
-  if (transitioned) {
-    await finalizePaidOrder(orderId);
-  }
-
   await deductPtStockForPaidOrder(orderId);
+
+  if (transitioned) {
+    try {
+      await finalizePaidOrder(orderId);
+    } catch (err) {
+      console.error("finalizePaidOrder failed:", err);
+    }
+  }
 
   if (transitioned) {
     try {

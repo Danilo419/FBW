@@ -1,0 +1,47 @@
+===== 1. TARGET ORDER =====
+{
+  "id": "cmn8b60530008kz04k3p4or9m",
+  "status": "paid",
+  "paymentStatus": "paid",
+  "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+  "paidAt": "2026-03-27T02:57:15.717Z"
+}
+
+===== 2. BEFORE =====
+{
+  "id": "cmn3wdlhr0000js044qw28uu8",
+  "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+  "active": true,
+  "maxUses": 1,
+  "usesCount": 0,
+  "usedAt": null,
+  "usedByOrderId": null,
+  "expiresAt": "2026-05-27T10:00:00.000Z"
+}
+
+===== 3. DIRECT UPDATE MANY TEST =====
+UPDATE_RESULT
+{
+  "count": 1
+}
+
+===== 4. AFTER =====
+{
+  "id": "cmn3wdlhr0000js044qw28uu8",
+  "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+  "active": false,
+  "maxUses": 1,
+  "usesCount": 1,
+  "usedAt": "2026-03-27T12:24:01.971Z",
+  "usedByOrderId": "cmn8b60530008kz04k3p4or9m",
+  "expiresAt": "2026-05-27T10:00:00.000Z"
+}
+
+===== 5. EXTRA CHECK =====
+{
+  "id": "cmn8b60530008kz04k3p4or9m",
+  "status": "paid",
+  "paymentStatus": "paid",
+  "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+  "paidAt": "2026-03-27T02:57:15.717Z"
+}

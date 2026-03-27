@@ -1,0 +1,2775 @@
+===== A. QUEM CHAMA AS ROTAS =====
+
+src\app\api\checkout\paypal\capture\route.ts:1:// src/app/api/checkout/paypal/capture/route.ts
+src\app\api\checkout\paypal\create\route.ts:540:    const return_url = `${APP}/${locale}/checkout/paypal/return?order=${order.id}`;
+src\app\api\checkout\paypal\return\route.ts:1:// src/app/api/checkout/paypal/return/route.ts
+src\app\api\checkout\paypal\return\route.ts:30:      `/api/checkout/paypal/capture?token=${encodeURIComponent(
+src\app\api\checkout\stripe\confirm\route.ts:1:// src/app/api/checkout/stripe/confirm/route.ts
+src\app\api\checkout\success\order\route.ts:1:// src/app/api/checkout/success/order/route.ts
+src\app\api\paypal\webhook\route.ts:1:// src/app/api/paypal/webhook/route.ts
+src\app\api\stripe\webhook\route.ts:1:// src/app/api/stripe/webhook/route.ts
+src\app\[locale]\checkout\paypal\return\page.tsx:1:// src/app/checkout/paypal/return/page.tsx
+src\app\[locale]\checkout\paypal\return\ReturnClient.tsx:1:// src/app/checkout/paypal/return/ReturnClient.tsx
+src\app\[locale]\checkout\paypal\return\ReturnClient.tsx:30:        const r = await fetch("/api/checkout/paypal/return", {
+src\app\[locale]\checkout\success\SuccessClient.tsx:533:            `/api/checkout/stripe/confirm?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+src\app\[locale]\checkout\success\SuccessClient.tsx:577:              `/api/checkout/success/order?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+
+
+===== B. FETCH / AXIOS / ROUTER CALLS =====
+
+src\app\HomeClient.tsx:1309:        const res = await fetch('/api/home-products?limit=all', {
+src\app\api\account\orders\[orderId]\route.ts:1:// src/app/api/account/orders/[orderId]/route.ts
+src\app\api\account\orders\[orderId]\route.ts:37:    const orderId = String(context?.params?.orderId ?? "").trim();
+src\app\api\account\orders\[orderId]\route.ts:38:    if (!orderId) {
+src\app\api\account\orders\[orderId]\route.ts:39:      return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+src\app\api\account\orders\[orderId]\route.ts:44:        id: orderId,
+src\app\api\admin\image-proxy\route.ts:23:    const res = await fetch(url, {
+src\app\api\analytics\series\route.ts:101:      { stripeSessionId: { not: null } as any },
+src\app\api\analytics\series\route.ts:187:      select: { createdAt: true, userId: true, sessionId: true, id: true },
+src\app\api\analytics\series\route.ts:195:      const buyerKey = o.userId ?? o.sessionId ?? o.id; // melhor esforço
+src\app\api\auth\forgot-password\route.ts:94:    const resetUrl = `${base}/reset-password?token=${token}`;
+src\app\api\cart\subtotal\route.ts:27:      | { cart: { sessionId: string } }
+src\app\api\cart\subtotal\route.ts:32:      where = { cart: { sessionId: sid } };
+src\app\api\checkout\link\start\route.ts:52:    const { orderId } = (await req.json().catch(() => ({}))) as { orderId?: string };
+src\app\api\checkout\link\start\route.ts:53:    if (!orderId) return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+src\app\api\checkout\link\start\route.ts:56:      where: { id: orderId },
+src\app\api\checkout\link\start\route.ts:86:        metadata: { orderId },
+src\app\api\checkout\link\start\route.ts:94:        metadata: { orderId },
+src\app\api\checkout\paypal\capture\route.ts:11:type CaptureBody = { paypalOrderId?: string; orderId?: string };
+src\app\api\checkout\paypal\capture\route.ts:179:  orderId: string,
+src\app\api\checkout\paypal\capture\route.ts:182:    paypalOrderId?: string | null;
+src\app\api\checkout\paypal\capture\route.ts:189:    where: { id: orderId },
+src\app\api\checkout\paypal\capture\route.ts:199:    throw new Error(`Order not found: ${orderId}`);
+src\app\api\checkout\paypal\capture\route.ts:225:          id: orderId,
+src\app\api\checkout\paypal\capture\route.ts:233:          paypalOrderId: opts.paypalOrderId ?? undefined,
+src\app\api\checkout\paypal\capture\route.ts:251:        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+src\app\api\checkout\paypal\capture\route.ts:262:      where: { id: orderId },
+src\app\api\checkout\paypal\capture\route.ts:268:        paypalOrderId: opts.paypalOrderId ?? undefined,
+src\app\api\checkout\paypal\capture\route.ts:285:      await finalizePaidOrder(orderId);
+src\app\api\checkout\paypal\capture\route.ts:292:      await deductPtStockForPaidOrder(orderId);
+src\app\api\checkout\paypal\capture\route.ts:299:async function markFailed(orderId: string) {
+src\app\api\checkout\paypal\capture\route.ts:301:    where: { id: orderId },
+src\app\api\checkout\paypal\capture\route.ts:310:    // Aceita dados no body e/ou via query (?token=paypalOrderId&order=localId)
+src\app\api\checkout\paypal\capture\route.ts:313:    const paypalOrderId =
+src\app\api\checkout\paypal\capture\route.ts:314:      body.paypalOrderId || url.searchParams.get("token") || undefined;
+src\app\api\checkout\paypal\capture\route.ts:315:    const orderId = body.orderId || url.searchParams.get("order") || undefined;
+src\app\api\checkout\paypal\capture\route.ts:317:    if (!paypalOrderId || !orderId) {
+src\app\api\checkout\paypal\capture\route.ts:319:        { error: "Missing required fields: paypalOrderId and orderId." },
+src\app\api\checkout\paypal\capture\route.ts:338:    const capReq = new (paypal as any).orders.OrdersCaptureRequest(paypalOrderId);
+src\app\api\checkout\paypal\capture\route.ts:357:      const { transitioned } = await markPaid(orderId, {
+src\app\api\checkout\paypal\capture\route.ts:359:        paypalOrderId,
+src\app\api\checkout\paypal\capture\route.ts:386:    await markFailed(orderId);
+src\app\api\checkout\paypal\create\route.ts:412:      where: { sessionId: sid },
+src\app\api\checkout\paypal\create\route.ts:485:        sessionId: cart.sessionId ?? null,
+src\app\api\checkout\paypal\create\route.ts:626:    const ppOrderId = result?.id;
+src\app\api\checkout\paypal\create\route.ts:627:    if (ppOrderId) {
+src\app\api\checkout\paypal\create\route.ts:630:        data: { paypalOrderId: ppOrderId },
+src\app\api\checkout\paypal\create\route.ts:647:      orderId: order.id,
+src\app\api\checkout\paypal\create\route.ts:648:      paypalOrderId: ppOrderId,
+src\app\api\checkout\paypal\return\route.ts:17:    // PayPal envia ?token=<paypalOrderId>; no create definimos também ?order=<id_local>
+src\app\api\checkout\paypal\return\route.ts:18:    const paypalOrderId = url.searchParams.get("token");
+src\app\api\checkout\paypal\return\route.ts:19:    const localOrderId = url.searchParams.get("order");
+src\app\api\checkout\paypal\return\route.ts:21:    if (!paypalOrderId) {
+src\app\api\checkout\paypal\return\route.ts:30:      `/api/checkout/paypal/capture?token=${encodeURIComponent(
+src\app\api\checkout\paypal\return\route.ts:31:        paypalOrderId
+src\app\api\checkout\paypal\return\route.ts:32:      )}${localOrderId ? `&order=${encodeURIComponent(localOrderId)}` : ""}`
+src\app\api\checkout\paypal\return\route.ts:35:    const res = await fetch(captureUrl, { method: "POST" });
+src\app\api\checkout\paypal\return\route.ts:52:        paypalOrderId
+src\app\api\checkout\paypal\return\route.ts:53:      )}${localOrderId ? `&order=${encodeURIComponent(localOrderId)}` : ""}`
+src\app\api\checkout\paypal\start\route.ts:42:  orderId: string;
+src\app\api\checkout\paypal\start\route.ts:43:  paypalOrderId?: string;
+src\app\api\checkout\paypal\start\route.ts:47:  const res = await fetch(createUrl, {
+src\app\api\checkout\stripe\route.ts:573:      where: { sessionId: sid },
+src\app\api\checkout\stripe\route.ts:761:        sessionId: cart.sessionId ?? sid,
+src\app\api\checkout\stripe\route.ts:800:      `?order=${createdOrder.id}&provider=stripe&session_id={CHECKOUT_SESSION_ID}`;
+src\app\api\checkout\stripe\route.ts:875:      orderId: createdOrder.id,
+src\app\api\checkout\stripe\route.ts:931:      data: { stripeSessionId: stripeSession.id },
+src\app\api\checkout\stripe\route.ts:936:      sessionId: stripeSession.id,
+src\app\api\checkout\stripe\confirm\route.ts:134:    const qSession = url.searchParams.get("session_id") || undefined;
+src\app\api\checkout\stripe\confirm\route.ts:136:    const orderId = (body.orderId as string) || qOrder;
+src\app\api\checkout\stripe\confirm\route.ts:137:    const sessionId = (body.sessionId as string) || qSession;
+src\app\api\checkout\stripe\confirm\route.ts:139:    if (!orderId || !sessionId) {
+src\app\api\checkout\stripe\confirm\route.ts:141:        { error: "Missing order or session_id" },
+src\app\api\checkout\stripe\confirm\route.ts:147:      where: { id: orderId },
+src\app\api\checkout\stripe\confirm\route.ts:151:        stripeSessionId: true,
+src\app\api\checkout\stripe\confirm\route.ts:168:    if (existing.stripeSessionId && existing.stripeSessionId !== sessionId) {
+src\app\api\checkout\stripe\confirm\route.ts:176:    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+src\app\api\checkout\stripe\confirm\route.ts:213:          id: orderId,
+src\app\api\checkout\stripe\confirm\route.ts:220:          stripeSessionId: sessionId,
+src\app\api\checkout\stripe\confirm\route.ts:235:        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+src\app\api\checkout\stripe\confirm\route.ts:248:      await finalizePaidOrder(orderId);
+src\app\api\checkout\stripe\confirm\route.ts:255:      await deductPtStockForPaidOrder(orderId);
+src\app\api\checkout\success\order\route.ts:13:    const orderId = url.searchParams.get("order") || "";
+src\app\api\checkout\success\order\route.ts:14:    const sessionId = url.searchParams.get("session_id") || "";
+src\app\api\checkout\success\order\route.ts:16:    if (!orderId || !sessionId) {
+src\app\api\checkout\success\order\route.ts:17:      return NextResponse.json({ error: "Missing order or session_id" }, { status: 400 });
+src\app\api\checkout\success\order\route.ts:20:    // 1) DB check (and if order already has stripeSessionId saved, it must match)
+src\app\api\checkout\success\order\route.ts:22:      where: { id: orderId },
+src\app\api\checkout\success\order\route.ts:23:      select: { id: true, stripeSessionId: true },
+src\app\api\checkout\success\order\route.ts:30:    if (existing.stripeSessionId && existing.stripeSessionId !== sessionId) {
+src\app\api\checkout\success\order\route.ts:36:    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+src\app\api\checkout\success\order\route.ts:40:    const metaOrderId = (session.metadata as any)?.orderId as string | undefined;
+src\app\api\checkout\success\order\route.ts:41:    if (metaOrderId && metaOrderId !== orderId) {
+src\app\api\checkout\success\order\route.ts:52:      where: { id: orderId },
+src\app\api\paypal\webhook\route.ts:128:  paypalOrderId: string | null,
+src\app\api\paypal\webhook\route.ts:131:  if (paypalOrderId) {
+src\app\api\paypal\webhook\route.ts:133:      where: { paypalOrderId },
+src\app\api\paypal\webhook\route.ts:153:  orderId: string,
+src\app\api\paypal\webhook\route.ts:156:    paypalOrderId?: string | null;
+src\app\api\paypal\webhook\route.ts:163:    where: { id: orderId },
+src\app\api\paypal\webhook\route.ts:174:    throw new Error(`Order not found: ${orderId}`);
+src\app\api\paypal\webhook\route.ts:201:    paypalOrderId: opts.paypalOrderId ?? undefined,
+src\app\api\paypal\webhook\route.ts:218:          id: orderId,
+src\app\api\paypal\webhook\route.ts:229:        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+src\app\api\paypal\webhook\route.ts:237:        where: { id: orderId },
+src\app\api\paypal\webhook\route.ts:243:      where: { id: orderId },
+src\app\api\paypal\webhook\route.ts:250:    await finalizePaidOrder(orderId);
+src\app\api\paypal\webhook\route.ts:253:  await deductPtStockForPaidOrder(orderId);
+src\app\api\paypal\webhook\route.ts:272:async function markPending(orderId: string) {
+src\app\api\paypal\webhook\route.ts:274:    where: { id: orderId },
+src\app\api\paypal\webhook\route.ts:279:async function markFailed(orderId: string) {
+src\app\api\paypal\webhook\route.ts:281:    where: { id: orderId },
+src\app\api\paypal\webhook\route.ts:343:        const paypalOrderId: string | null =
+src\app\api\paypal\webhook\route.ts:348:        const order = await getOrderByPayPalIds(paypalOrderId, captureId);
+src\app\api\paypal\webhook\route.ts:353:            paypalOrderId,
+src\app\api\paypal\webhook\route.ts:360:        if (paypalOrderId) {
+src\app\api\paypal\webhook\route.ts:363:              paypalOrderId
+src\app\api\paypal\webhook\route.ts:372:          paypalOrderId,
+src\app\api\paypal\webhook\route.ts:383:        const paypalOrderId: string | null =
+src\app\api\paypal\webhook\route.ts:386:        const order = await getOrderByPayPalIds(paypalOrderId, null);
+src\app\api\paypal\webhook\route.ts:394:        const paypalOrderId: string | null =
+src\app\api\paypal\webhook\route.ts:397:        const order = await getOrderByPayPalIds(paypalOrderId, null);
+src\app\api\reviews\route.ts:207:    await fetch(`${siteOrigin()}/api/realtime`, {
+src\app\api\stripe\checkout\route.ts:103:        `/${locale}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
+src\app\api\stripe\checkout\route.ts:129:          sessionId: stripeSession.id,
+src\app\api\stripe\checkout\route.ts:137:      sessionId: stripeSession.id,
+src\app\api\stripe\webhook\route.ts:508:  orderId: string,
+src\app\api\stripe\webhook\route.ts:511:    sessionId?: string | null;
+src\app\api\stripe\webhook\route.ts:520:    where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:544:    throw new Error(`Order not found: ${orderId}`);
+src\app\api\stripe\webhook\route.ts:572:    ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+src\app\api\stripe\webhook\route.ts:622:          id: orderId,
+src\app\api\stripe\webhook\route.ts:633:        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+src\app\api\stripe\webhook\route.ts:641:        where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:647:      where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:653:    await finalizePaidOrder(orderId);
+src\app\api\stripe\webhook\route.ts:656:  await deductPtStockForPaidOrder(orderId);
+src\app\api\stripe\webhook\route.ts:661:        where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:677:            orderId: order.id,
+src\app\api\stripe\webhook\route.ts:686:            where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:708:  orderId: string,
+src\app\api\stripe\webhook\route.ts:711:    sessionId?: string | null;
+src\app\api\stripe\webhook\route.ts:717:    where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:722:    throw new Error(`Order not found: ${orderId}`);
+src\app\api\stripe\webhook\route.ts:737:    where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:743:      ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+src\app\api\stripe\webhook\route.ts:750:async function markFailed(orderId: string) {
+src\app\api\stripe\webhook\route.ts:752:    where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:757:async function markCanceled(orderId: string) {
+src\app\api\stripe\webhook\route.ts:759:    where: { id: orderId },
+src\app\api\stripe\webhook\route.ts:795:        let orderId =
+src\app\api\stripe\webhook\route.ts:796:          (session.metadata?.orderId as string | undefined) ??
+src\app\api\stripe\webhook\route.ts:799:          (session.payment_intent.metadata?.orderId as string | undefined)
+src\app\api\stripe\webhook\route.ts:800:            ? (session.payment_intent.metadata.orderId as string)
+src\app\api\stripe\webhook\route.ts:808:        if (!orderId) {
+src\app\api\stripe\webhook\route.ts:810:            where: { stripeSessionId: session.id },
+src\app\api\stripe\webhook\route.ts:813:          orderId = bySession?.id;
+src\app\api\stripe\webhook\route.ts:816:        if (!orderId && piId) {
+src\app\api\stripe\webhook\route.ts:821:          orderId = byPI?.id;
+src\app\api\stripe\webhook\route.ts:824:        if (!orderId) break;
+src\app\api\stripe\webhook\route.ts:840:          const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:842:            sessionId: session.id,
+src\app\api\stripe\webhook\route.ts:863:          await markPending(orderId, {
+src\app\api\stripe\webhook\route.ts:865:            sessionId: session.id,
+src\app\api\stripe\webhook\route.ts:882:        const orderId =
+src\app\api\stripe\webhook\route.ts:883:          (session.metadata?.orderId as string | undefined) ??
+src\app\api\stripe\webhook\route.ts:888:                  { stripeSessionId: session.id },
+src\app\api\stripe\webhook\route.ts:896:        if (!orderId) break;
+src\app\api\stripe\webhook\route.ts:905:        const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:907:          sessionId: session.id,
+src\app\api\stripe\webhook\route.ts:937:        let orderId = pi.metadata?.orderId as string | undefined;
+src\app\api\stripe\webhook\route.ts:939:        if (!orderId) {
+src\app\api\stripe\webhook\route.ts:944:          orderId = byPI?.id;
+src\app\api\stripe\webhook\route.ts:947:        if (!orderId) break;
+src\app\api\stripe\webhook\route.ts:949:        const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:951:          sessionId: null,
+src\app\api\stripe\webhook\route.ts:981:        const orderId =
+src\app\api\stripe\webhook\route.ts:982:          (pi.metadata?.orderId as string | undefined) ||
+src\app\api\stripe\webhook\route.ts:990:        if (orderId) {
+src\app\api\stripe\webhook\route.ts:991:          await markPending(orderId, {
+src\app\api\stripe\webhook\route.ts:993:            sessionId: null,
+src\app\api\stripe\webhook\route.ts:1003:        const orderId =
+src\app\api\stripe\webhook\route.ts:1004:          (pi.metadata?.orderId as string | undefined) ||
+src\app\api\stripe\webhook\route.ts:1012:        if (orderId) await markFailed(orderId);
+src\app\api\stripe\webhook\route.ts:1018:        const orderId =
+src\app\api\stripe\webhook\route.ts:1019:          (pi.metadata?.orderId as string | undefined) ||
+src\app\api\stripe\webhook\route.ts:1027:        if (orderId) await markCanceled(orderId);
+src\app\api\stripe\webhook\route.ts:1033:        const orderId =
+src\app\api\stripe\webhook\route.ts:1034:          (session.metadata?.orderId as string | undefined) ||
+src\app\api\stripe\webhook\route.ts:1039:                  { stripeSessionId: session.id },
+src\app\api\stripe\webhook\route.ts:1049:        if (orderId) await markCanceled(orderId);
+src\app\api\stripe\webhook\route.ts:1056:        let orderId = charge.metadata?.orderId as string | undefined;
+src\app\api\stripe\webhook\route.ts:1058:        if (!orderId && charge.payment_intent) {
+src\app\api\stripe\webhook\route.ts:1068:          orderId = byPI?.id;
+src\app\api\stripe\webhook\route.ts:1071:        if (orderId && charge.paid) {
+src\app\api\stripe\webhook\route.ts:1085:          const { transitioned } = await markPaid(orderId, {
+src\app\api\stripe\webhook\route.ts:1087:            sessionId: null,
+src\app\[locale]\(store)\cart\actions.ts:115:      where: { sessionId: existingSid },
+src\app\[locale]\(store)\cart\actions.ts:120:        sid: foundBySid.sessionId,
+src\app\[locale]\(store)\cart\actions.ts:134:        foundByCartId.sessionId ||
+src\app\[locale]\(store)\cart\actions.ts:140:        foundByCartId.sessionId === ensuredSid
+src\app\[locale]\(store)\cart\actions.ts:144:              data: { sessionId: ensuredSid },
+src\app\[locale]\(store)\cart\actions.ts:148:        sid: cart.sessionId,
+src\app\[locale]\(store)\cart\actions.ts:160:    data: { sessionId: newSid, userId: userId ?? null },
+src\app\[locale]\(store)\cart\actions.ts:164:    sid: cart.sessionId,
+src\app\[locale]\(store)\cart\actions.ts:286:      sid: cart.sessionId,
+src\app\[locale]\(store)\cart\actions.ts:357:      sid: cart.sessionId,
+src\app\[locale]\(store)\cart\actions.ts:445:    | { cart: { sessionId: string } }
+src\app\[locale]\(store)\cart\actions.ts:449:  if (sid) cartWhere = { cart: { sessionId: sid } };
+src\app\[locale]\(store)\cart\actions.ts:535:      select: { cartId: true, cart: { select: { sessionId: true } } },
+src\app\[locale]\(store)\cart\actions.ts:540:        sid: item.cart?.sessionId ?? null,
+src\app\[locale]\(store)\cart\actions.ts:570:        cart: { select: { sessionId: true } },
+src\app\[locale]\(store)\cart\actions.ts:577:      sid: item.cart?.sessionId ?? null,
+src\app\[locale]\(store)\cart\page.tsx:379:    sid ? { sessionId: sid } : null,
+src\app\[locale]\(store)\cart\page.tsx:380:  ].filter(Boolean) as Array<{ userId?: string | null; sessionId?: string | null }>;
+src\app\[locale]\(store)\checkout\actions.ts:373:    success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+src\app\[locale]\(store)\checkout\CheckoutClient.tsx:20:  const res = await fetch('/api/checkout/stripe', {
+src\app\[locale]\(store)\checkout\CheckoutClient.tsx:35:  const res = await fetch('/api/checkout/paypal/start', { method: 'POST' });
+src\app\[locale]\(store)\checkout\CheckoutClient.tsx:134:        const r = await fetch('/api/checkout/shipping', {
+src\app\[locale]\(store)\checkout\address\CheckoutAddressClient.tsx:62:      const res = await fetch('/api/checkout/shipping', {
+src\app\[locale]\(store)\checkout\link\LinkClient.tsx:31:        const r = await fetch("/api/checkout/link/confirm", {
+src\app\[locale]\account\AccountClient.tsx:58:  const r = await fetch('/api/account/upload-signature', { method: 'POST' })
+src\app\[locale]\account\AccountClient.tsx:78:  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+src\app\[locale]\account\AccountClient.tsx:238:        const r = await fetch('/api/account/orders', { method: 'GET', cache: 'no-store' })
+src\app\[locale]\account\AccountClient.tsx:262:  function goToOrderDetails(orderId: string) {
+src\app\[locale]\account\AccountClient.tsx:263:    const href = `/${locale}/account/orders/${encodeURIComponent(orderId)}`
+src\app\[locale]\account\AccountClient.tsx:371:      const res = await fetch('/api/account/profile', {
+src\app\[locale]\account\AccountClient.tsx:496:      const res = await fetch('/api/account/password', {
+src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:564:export default function OrderDetailsClient({ orderId }: { orderId: string }) {
+src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:584:        const r = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, {
+src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:614:  }, [orderId])
+src\app\[locale]\account\orders\[orderId]\page.tsx:1:// src/app/[locale]/account/orders/[orderId]/page.tsx
+src\app\[locale]\account\orders\[orderId]\page.tsx:12:  params: Promise<{ locale: string; orderId: string }>;
+src\app\[locale]\account\orders\[orderId]\page.tsx:16:  const { locale, orderId } = await params;
+src\app\[locale]\account\orders\[orderId]\page.tsx:22:    redirect(`/${locale}/account/login?next=/${locale}/account/orders/${orderId}`);
+src\app\[locale]\account\orders\[orderId]\page.tsx:25:  return <OrderDetailsClient orderId={orderId} />;
+src\app\[locale]\account\signup\SignupClient.tsx:129:      const res = await fetch("/api/account/register", {
+src\app\[locale]\admin\(panel)\actions.ts:7:export async function setOrderStatus(orderId: string, status: string) {
+src\app\[locale]\admin\(panel)\actions.ts:9:    where: { id: orderId },
+src\app\[locale]\admin\(panel)\actions.ts:14:  revalidatePath(`/admin/orders/${orderId}`);
+src\app\[locale]\admin\(panel)\actions.ts:19:  orderId: string;
+src\app\[locale]\admin\(panel)\actions.ts:23:  const { orderId, makeResolved, fallbackStatus = "PENDING" } = params;
+src\app\[locale]\admin\(panel)\actions.ts:26:    await setOrderStatus(orderId, "RESOLVED");
+src\app\[locale]\admin\(panel)\actions.ts:29:    await setOrderStatus(orderId, fallbackStatus);
+src\app\[locale]\admin\(panel)\page.tsx:299:                        orderId={o.id}
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:140:    usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\actions.ts:146:      safeCurrent.usedByOrderId ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:29:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:55:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:61:      code.usedByOrderId ||
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:75:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:89:  usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:127:      usedByOrderId?: string | null;
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:143:      usedByOrderId:
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:144:        typeof row.usedByOrderId === "string" ? row.usedByOrderId : null,
+src\app\[locale]\admin\(panel)\discount-codes\page.tsx:429:                          {code.usedByOrderId || "—"}
+src\app\[locale]\admin\(panel)\newsletter\actions.ts:395:    unsubscribeUrl: `${siteUrl()}/api/newsletter/unsubscribe?token=__TOKEN__`,
+src\app\[locale]\admin\(panel)\newsletter\actions.ts:400:    `${siteUrl()}/api/newsletter/unsubscribe?token=__TOKEN__`
+src\app\[locale]\admin\(panel)\newsletter\actions.ts:410:      const unsubscribeUrl = `${siteUrl()}/api/newsletter/unsubscribe?token=${encodeURIComponent(
+src\app\[locale]\admin\(panel)\orders\page.tsx:179:  const orderId = String(formData.get("orderId") ?? "").trim();
+src\app\[locale]\admin\(panel)\orders\page.tsx:183:  if (!orderId) return;
+src\app\[locale]\admin\(panel)\orders\page.tsx:185:  await prisma.order.delete({ where: { id: orderId } });
+src\app\[locale]\admin\(panel)\orders\page.tsx:188:  revalidatePath(`/${locale}/admin/orders/${orderId}`);
+src\app\[locale]\admin\(panel)\orders\page.tsx:282:                        orderId={ord.id}
+src\app\[locale]\admin\(panel)\orders\page.tsx:302:                          <input type="hidden" name="orderId" value={ord.id} />
+src\app\[locale]\admin\(panel)\products\new\page.tsx:266:        const res = await fetch("/api/upload", {
+src\app\[locale]\admin\(panel)\products\new\page.tsx:333:    const res = await fetch("/api/admin/create-product", {
+src\app\[locale]\admin\(panel)\products\[id]\page.tsx:728:    const res = await fetch("/api/upload", { method: "POST", body: formData });
+src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:85:        const res = await fetch("/api/upload", {
+src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:148:    const res = await fetch("/api/admin/create-product", {
+src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:70:        const res = await fetch(`/api/admin/products/${id}`, {
+src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:177:        const res = await fetch("/api/upload", {
+src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:243:      const res = await fetch(`/api/admin/products/${id}`, {
+src\app\[locale]\admin\orders\actions.ts:86:  const orderId = formData.get("orderId")?.toString() || "";
+src\app\[locale]\admin\orders\actions.ts:87:  if (!orderId) throw new Error("Missing orderId");
+src\app\[locale]\admin\orders\actions.ts:108:    where: { id: orderId },
+src\app\[locale]\admin\orders\actions.ts:127:    where: { id: orderId },
+src\app\[locale]\admin\orders\actions.ts:170:        orderId: updatedOrder.id,
+src\app\[locale]\admin\orders\actions.ts:190:  revalidatePath(`/admin/orders/${orderId}`);
+src\app\[locale]\admin\orders\[id]\actions.ts:108:  const orderId = safeString(formData.get("orderId"));
+src\app\[locale]\admin\orders\[id]\actions.ts:109:  if (!orderId) throw new Error("Missing orderId");
+src\app\[locale]\admin\orders\[id]\actions.ts:116:    where: { id: orderId },
+src\app\[locale]\admin\orders\[id]\actions.ts:142:    where: { id: orderId },
+src\app\[locale]\admin\orders\[id]\actions.ts:149:  revalidatePath(`/admin/orders/${orderId}`);
+src\app\[locale]\admin\orders\[id]\actions.ts:160:  const orderId = safeString(formData.get("orderId"));
+src\app\[locale]\admin\orders\[id]\actions.ts:164:  if (!orderId) throw new Error("Missing orderId");
+src\app\[locale]\admin\orders\[id]\actions.ts:168:    where: { id: orderId },
+src\app\[locale]\admin\orders\[id]\actions.ts:196:    const uploaded = await put(`shipments/${orderId}/${Date.now()}.${ext}`, file, {
+src\app\[locale]\admin\orders\[id]\actions.ts:206:    where: { id: orderId },
+src\app\[locale]\admin\orders\[id]\actions.ts:225:  const orderShort = `#${orderId.slice(0, 7)}`;
+src\app\[locale]\admin\orders\[id]\actions.ts:245:  revalidatePath(`/admin/orders/${orderId}`);
+src\app\[locale]\admin\orders\[id]\actions.ts:247:  revalidatePath(`/orders/${orderId}`);
+src\app\[locale]\admin\orders\[id]\page.tsx:282:  const base = it?.id ?? it?.orderId ?? it?.productId ?? it?.name ?? "item";
+src\app\[locale]\admin\orders\[id]\page.tsx:469:                <input type="hidden" name="orderId" value={order.id} />
+src\app\[locale]\admin\pt-stock\orders\page.tsx:170:  const orderId = String(formData.get("orderId") ?? "").trim();
+src\app\[locale]\admin\pt-stock\orders\page.tsx:174:  if (!orderId) return;
+src\app\[locale]\admin\pt-stock\orders\page.tsx:176:  await prisma.order.delete({ where: { id: orderId } });
+src\app\[locale]\admin\pt-stock\orders\page.tsx:179:  revalidatePath(`/${locale}/admin/orders/${orderId}`);
+src\app\[locale]\admin\pt-stock\orders\page.tsx:273:                        orderId={ord.id}
+src\app\[locale]\admin\pt-stock\orders\page.tsx:293:                          <input type="hidden" name="orderId" value={ord.id} />
+src\app\[locale]\admin\pt-stock\products\DeletePtStockProductButton.tsx:21:      const res = await fetch(`/api/admin/products/${productId}`, {
+src\app\[locale]\checkout\paypal\return\ReturnClient.tsx:30:        const r = await fetch("/api/checkout/paypal/return", {
+src\app\[locale]\checkout\success\SuccessClient.tsx:505:  const { orderId, provider, sessionId } = useMemo(() => {
+src\app\[locale]\checkout\success\SuccessClient.tsx:508:    const sess = params.get("session_id") || "";
+src\app\[locale]\checkout\success\SuccessClient.tsx:509:    return { orderId: id, provider: prov, sessionId: sess };
+src\app\[locale]\checkout\success\SuccessClient.tsx:532:          const res = await fetch(
+src\app\[locale]\checkout\success\SuccessClient.tsx:533:            `/api/checkout/stripe/confirm?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+src\app\[locale]\checkout\success\SuccessClient.tsx:576:            const res = await fetch(
+src\app\[locale]\checkout\success\SuccessClient.tsx:577:              `/api/checkout/success/order?order=${encodeURIComponent(oid)}&session_id=${encodeURIComponent(sid)}`,
+src\app\[locale]\checkout\success\SuccessClient.tsx:621:        let res = await fetch(`/api/orders/${encodeURIComponent(oid)}`, {
+src\app\[locale]\checkout\success\SuccessClient.tsx:627:          res = await fetch(`/api/orders?id=${encodeURIComponent(oid)}`, {
+src\app\[locale]\checkout\success\SuccessClient.tsx:665:      if (!orderId) {
+src\app\[locale]\checkout\success\SuccessClient.tsx:670:      if (provider === "stripe" && sessionId) {
+src\app\[locale]\checkout\success\SuccessClient.tsx:671:        await confirmStripe(orderId, sessionId);
+src\app\[locale]\checkout\success\SuccessClient.tsx:675:      await fetchOrder(orderId, provider === "stripe" ? sessionId : "");
+src\app\[locale]\checkout\success\SuccessClient.tsx:683:  }, [confirmStripe, fetchOrder, orderId, provider, sessionId]);
+src\app\[locale]\contact\ContactClient.tsx:158:      const res = await fetch("/api/contact", {
+src\app\[locale]\forgot-password\page.tsx:60:      const res = await fetch("/api/auth/forgot-password", {
+src\app\[locale]\products\adult\page.tsx:625:          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+src\app\[locale]\products\concept-kits\page.tsx:558:    fetch(`/api/concept-kits`, { cache: "no-store" })
+src\app\[locale]\products\crop-tops\page.tsx:542:    fetch(`/api/crop-tops`, { cache: "no-store" })
+src\app\[locale]\products\current-season-25-26\page.tsx:431:    fetch(`/api/current-season-25-26`, { cache: "no-store" })
+src\app\[locale]\products\fifa-world-cup-2026-jerseys\page.tsx:546:    fetch(`/api/search?q=world%20cup%202026`, { cache: "no-store" })
+src\app\[locale]\products\jerseys\page.tsx:535:    fetch(`/api/jerseys`, { cache: "no-store" })
+src\app\[locale]\products\kids\page.tsx:622:          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+src\app\[locale]\products\kids-kits\page.tsx:590:    fetch(`/api/search?q=kit`, { cache: "no-store" })
+src\app\[locale]\products\long-sleeve-jerseys\page.tsx:535:    fetch(`/api/long-sleeve-jerseys`, { cache: "no-store" })
+src\app\[locale]\products\player-version-jerseys\page.tsx:546:    fetch(`/api/search?q=jersey`, { cache: "no-store" })
+src\app\[locale]\products\player-version-long-sleeve-jerseys\page.tsx:537:  const r = await fetch(url, { cache: "no-store" });
+src\app\[locale]\products\pre-match-jerseys\page.tsx:565:    fetch("/api/pre-match-jerseys", { cache: "no-store" })
+src\app\[locale]\products\retro\page.tsx:625:          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+src\app\[locale]\products\retro-jerseys\page.tsx:524:    fetch(`/api/retro-jerseys`, { cache: "no-store" })
+src\app\[locale]\products\retro-long-sleeve-jerseys\page.tsx:548:    fetch(`/api/retro-long-sleeve-jerseys`, { cache: "no-store" })
+src\app\[locale]\products\tracksuits\page.tsx:565:    fetch(`/api/search?q=tracksuit`, { cache: "no-store" })
+src\app\[locale]\products\training-sleeveless-sets\page.tsx:573:          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+src\app\[locale]\products\training-tracksuits\page.tsx:634:          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+src\app\[locale]\reset-password\page.tsx:122:      const res = await fetch("/api/auth/reset-password", {
+src\app\[locale]\search\ResultsClient.tsx:291:    fetch(`/api/search${qParam}`, { cache: "no-store" })
+src\components\Footer.tsx:42:      const res = await fetch("/api/newsletter", {
+src\components\FreeShippingBanner.tsx:68:      const res = await fetch(
+src\components\Header.tsx:818:      fetch(url, { signal: ctrl.signal })
+src\components\LiveStats.tsx:38:        const res = await fetch("/api/reviews", { cache: "no-store" });
+src\components\ProductConfigurator.tsx:218:  const res = await fetch(`/api/reviews?productId=${productId}`, { cache: "no-store" });
+src\components\ProductReviews.tsx:531:      const res = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`, {
+src\components\ProductReviews.tsx:599:    const r = await fetch("/api/reviews/upload-signature", { method: "POST" });
+src\components\ProductReviews.tsx:630:        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+src\components\ProductReviews.tsx:660:      const res = await fetch("/api/reviews", {
+src\components\admin\ResolveCheckbox.tsx:8:  orderId: string;
+src\components\admin\ResolveCheckbox.tsx:14:  orderId,
+src\components\admin\ResolveCheckbox.tsx:36:          await toggleResolved({ orderId, makeResolved: true });
+src\components\admin\ResolveCheckbox.tsx:39:            orderId,
+src\components\admin\SupplierCopyCard.tsx:215:  const res = await fetch(url, { cache: "no-store" });
+src\components\analytics\LiveVisitorsBadge.tsx:14:        const r = await fetch("/api/analytics/live", { cache: "no-store" });
+src\components\analytics\MetricChart.tsx:262:        const res = await fetch(`/api/admin/analytics?${qs}`, { cache: "no-store" });
+src\components\analytics\Tracker.tsx:31:        fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload })
+src\components\analytics\Tracker.tsx:35:      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload })
+src\lib\checkout.ts:115:    sid ? { sessionId: sid } : null,
+src\lib\checkout.ts:116:  ].filter(Boolean) as Array<{ userId?: string | null; sessionId?: string | null }>;
+src\lib\checkout.ts:219:      sessionId: sid,
+src\lib\checkout.ts:252:export async function finalizePaidOrder(orderId: string) {
+src\lib\checkout.ts:254:    where: { id: orderId },
+src\lib\checkout.ts:260:  // deductPtStockForPaidOrder(orderId)
+src\lib\checkout.ts:262:  if (order.sessionId) {
+src\lib\checkout.ts:264:      where: { sessionId: order.sessionId },
+src\lib\deductPtStockForPaidOrder.ts:95:export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
+src\lib\deductPtStockForPaidOrder.ts:96:  if (!orderId?.trim()) {
+src\lib\deductPtStockForPaidOrder.ts:97:    throw new Error("Missing orderId");
+src\lib\deductPtStockForPaidOrder.ts:102:      where: { id: orderId },
+src\lib\deductPtStockForPaidOrder.ts:126:      throw new Error(`Order not found: ${orderId}`);
+src\lib\deductPtStockForPaidOrder.ts:214:      where: { id: orderId },
+src\lib\discount-codes.ts:47:    usedByOrderId?: string | null;
+src\lib\discount-codes.ts:55:  if (safeDiscount.usedByOrderId) return null;
+src\lib\discount-codes.ts:71:  usedByOrderId?: string | null;
+src\lib\discount-codes.ts:81:  if (input.usedByOrderId) return "used";
+src\lib\email.ts:69:  orderId: string;
+src\lib\email.ts:79:  orderId: string;
+src\lib\email.ts:91:  orderId: string;
+src\lib\email.ts:439:        Your order <strong style="color:#0b1220;">#${escapeHtml(data.orderId)}</strong> is confirmed.
+src\lib\email.ts:503:    subject: `${STORE_NAME} — Order confirmed (#${data.orderId})`,
+src\lib\email.ts:527:      ${greeting} Your order <strong style="color:#0b1220;">#${escapeHtml(data.orderId)}</strong> has shipped.
+src\lib\email.ts:569:    subject: `${STORE_NAME} — Shipped (#${data.orderId})`,
+src\lib\email.ts:595:      ${greeting} Your order <strong style="color:#0b1220;">#${escapeHtml(data.orderId)}</strong> has been updated.
+src\lib\email.ts:645:    subject: `${STORE_NAME} — Order update (#${data.orderId}): ${statusLabel}`,
+src\lib\redeem-discount-code.ts:10:  orderId: string
+src\lib\redeem-discount-code.ts:22:    usedByOrderId?: string | null;
+src\lib\redeem-discount-code.ts:35:  if (safeDiscount.usedByOrderId) {
+src\lib\redeem-discount-code.ts:56:      ...(safeDiscount.usedByOrderId === undefined
+src\lib\redeem-discount-code.ts:58:        : { usedByOrderId: null }),
+src\lib\redeem-discount-code.ts:64:      usedByOrderId: orderId,
+src\lib\redeem-discount-code.ts:77:    usedByOrderId: orderId,
+src\lib\upload.ts:5:  const res = await fetch("/api/upload", { method: "POST", body: fd });
+
+
+===== C. STRIPE CONFIRM ROUTE =====
+// src/app/api/checkout/stripe/confirm/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* --------------------------- helpers --------------------------- */
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null; // ISO-3166 alpha-2
+          }
+        | null;
+    }
+  | null;
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+const isFinal = (s?: string | null) =>
+  (s ?? "").toLowerCase() === "paid" ||
+  (s ?? "").toLowerCase() === "shipped" ||
+  (s ?? "").toLowerCase() === "delivered";
+
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
+  return primary != null && !(typeof primary === "string" && primary.trim() === "")
+    ? (primary as A)
+    : (fallback ?? null);
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+  if (!base) return add ?? null;
+  if (!add) return base ?? null;
+
+  return {
+    name: prefer(base.name, add.name),
+    phone: prefer(base.phone, add.phone),
+    email: prefer(base.email, add.email),
+    address: {
+      line1: prefer(base.address?.line1 ?? null, add.address?.line1 ?? null),
+      line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
+      city: prefer(base.address?.city ?? null, add.address?.city ?? null),
+      state: prefer(base.address?.state ?? null, add.address?.state ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
+      country: prefer(base.address?.country ?? null, add.address?.country ?? null),
+    },
+  };
+}
+
+/** Converte um ShippingJson em colunas canónicas da Order. */
+function canonFromShipping(s?: ShippingJson) {
+  const a = s?.address ?? null;
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+
+  return {
+    shippingFullName: nz(s?.name),
+    shippingEmail: nz(s?.email),
+    shippingPhone: nz(s?.phone),
+    shippingAddress1: nz(a?.line1),
+    shippingAddress2: nz(a?.line2),
+    shippingCity: nz(a?.city),
+    shippingRegion: nz(a?.state),
+    shippingPostalCode: nz(a?.postal_code),
+    shippingCountry: up(nz(a?.country)),
+  };
+}
+
+/** Extrai morada de shipping/customer da Stripe Session (se existir). */
+function shippingFromStripe(session: any): ShippingJson {
+  const ship = session?.shipping_details || session?.shipping || null;
+  const cust = session?.customer_details || null;
+
+  const addressSrc = ship?.address || cust?.address || null;
+
+  const address =
+    addressSrc &&
+    (addressSrc.line1 ||
+      addressSrc.line2 ||
+      addressSrc.city ||
+      addressSrc.state ||
+      addressSrc.postal_code ||
+      addressSrc.country)
+      ? {
+          line1: nz(addressSrc.line1),
+          line2: nz(addressSrc.line2),
+          city: nz(addressSrc.city),
+          state: nz(addressSrc.state),
+          postal_code: nz(addressSrc.postal_code),
+          country: nz(addressSrc.country),
+        }
+      : null;
+
+  return {
+    name: nz(ship?.name) || nz(cust?.name),
+    phone: nz(ship?.phone) || nz(cust?.phone),
+    email: nz(cust?.email),
+    address,
+  };
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/* ------------------------------ route ----------------------------- */
+
+export async function POST(req: NextRequest) {
+  try {
+    // aceitar por querystring ou body
+    const url = new URL(req.url);
+    const qOrder = url.searchParams.get("order") || undefined;
+    const qSession = url.searchParams.get("session_id") || undefined;
+    const body = await req.json().catch(() => ({} as any));
+    const orderId = (body.orderId as string) || qOrder;
+    const sessionId = (body.sessionId as string) || qSession;
+
+    if (!orderId || !sessionId) {
+      return NextResponse.json(
+        { error: "Missing order or session_id" },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        status: true,
+        stripeSessionId: true,
+        shippingJson: true,
+        shippingCountry: true,
+        discountCodeText: true,
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Já final? ok idempotente
+    if (isFinal(existing.status)) {
+      return NextResponse.json({ ok: true, status: "already_paid" });
+    }
+
+    // Segurança: a sessão deve bater certo se já estiver gravada
+    if (existing.stripeSessionId && existing.stripeSessionId !== sessionId) {
+      return NextResponse.json(
+        { error: "Session does not match this order" },
+        { status: 400 }
+      );
+    }
+
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent", "customer"],
+    });
+
+    // Alguns métodos podem demorar a marcar "paid"; devolve 202 para retry
+    if (session.payment_status !== "paid") {
+      return NextResponse.json(
+        { ok: false, status: session.payment_status },
+        { status: 202 }
+      );
+    }
+
+    const amountCents =
+      typeof session.amount_total === "number" ? session.amount_total : null;
+    const currency = upper(session.currency || null);
+    const pi = session.payment_intent as any;
+
+    // Merge de morada/e-mail vindos da Stripe (se houver)
+    const newShipping = shippingFromStripe(session);
+    const mergedShipping = mergeShipping(
+      existing.shippingJson as ShippingJson,
+      newShipping
+    );
+    const canon = canonFromShipping(mergedShipping);
+    const country =
+      canon.shippingCountry || upper(existing.shippingCountry || null) || null;
+
+    const normalizedDiscountCode = normalizeDiscountCode(
+      existing.discountCodeText ?? ""
+    );
+    const hasDiscountCode = !!normalizedDiscountCode;
+
+    let transitioned = false;
+
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: {
+          status: "paid",
+          paymentStatus: "paid",
+          paidAt: new Date(),
+          stripeSessionId: sessionId,
+          stripePaymentIntentId: pi?.id ?? undefined,
+          totalCents: amountCents ?? undefined,
+          currency: currency ?? undefined,
+          shippingJson: (mergedShipping as any) ?? undefined,
+          ...(country ? { shippingCountry: country } : {}),
+          ...canon,
+        },
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      return NextResponse.json({ ok: true, status: "already_paid" });
+    }
+
+    // pós-pagamento
+    try {
+      const { finalizePaidOrder } = await import("@/lib/checkout");
+      await finalizePaidOrder(orderId);
+    } catch {}
+
+    try {
+      const { deductPtStockForPaidOrder } = await import(
+        "@/lib/deductPtStockForPaidOrder"
+      );
+      await deductPtStockForPaidOrder(orderId);
+    } catch {}
+
+    return NextResponse.json({ ok: true, status: "paid" });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || "Stripe confirm error" },
+      { status: 400 }
+    );
+  }
+}
+
+===== D. STRIPE WEBHOOK ROUTE =====
+// src/app/api/stripe/webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
+import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
+import { finalizePaidOrder } from "@/lib/checkout";
+import { pusherServer } from "@/lib/pusher";
+import { sendOrderConfirmationEmail } from "@/lib/email";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* ---------------------------- helpers ---------------------------- */
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postal_code?: string | null;
+      country?: string | null;
+    }
+  | null;
+
+type DiscountMeta = {
+  code: string | null;
+  percentOff: number | null;
+  discountAmountCents: number | null;
+  productSubtotalCents: number | null;
+  finalProductSubtotalCents: number | null;
+  stripePromotionCodeId: string | null;
+  stripeCouponId: string | null;
+  stripeNativeDiscountUsed: boolean;
+};
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+const intOrNull = (v: unknown) => {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+};
+
+type AnyObj = Record<string, any>;
+
+function safeObj(v: any): AnyObj {
+  if (!v) return {};
+  if (typeof v === "object") return v as AnyObj;
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return j && typeof j === "object" ? (j as AnyObj) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function isEmptyShipping(s?: ShippingJson | null) {
+  if (!s) return true;
+  const a = (s as any).address ?? {};
+  return !(
+    (s as any).name ||
+    (s as any).phone ||
+    (s as any).email ||
+    (s as any).line1 ||
+    (s as any).line2 ||
+    (s as any).city ||
+    (s as any).state ||
+    (s as any).postal_code ||
+    (s as any).country ||
+    a.line1 ||
+    a.line2 ||
+    a.city ||
+    a.state ||
+    a.postal_code ||
+    a.country
+  );
+}
+
+function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
+  if (!meta) return null;
+
+  const address =
+    meta.ship_line1 ||
+    meta.ship_line2 ||
+    meta.ship_city ||
+    meta.ship_state ||
+    meta.ship_postal ||
+    meta.ship_country
+      ? {
+          line1: nz(meta.ship_line1),
+          line2: nz(meta.ship_line2),
+          city: nz(meta.ship_city),
+          state: nz(meta.ship_state),
+          postal_code: nz(meta.ship_postal),
+          country: nz(meta.ship_country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(meta.ship_name),
+    phone: nz(meta.ship_phone),
+    email: nz(meta.ship_email),
+    address,
+    line1: nz(meta.ship_line1),
+    line2: nz(meta.ship_line2),
+    city: nz(meta.ship_city),
+    state: nz(meta.ship_state),
+    postal_code: nz(meta.ship_postal),
+    country: nz(meta.ship_country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
+  const cd =
+    session.customer_details as Stripe.Checkout.Session.CustomerDetails | null;
+  if (!cd) return null;
+
+  const addr = cd.address;
+  const address =
+    addr &&
+    (addr.line1 ||
+      addr.line2 ||
+      addr.city ||
+      addr.state ||
+      addr.postal_code ||
+      addr.country)
+      ? {
+          line1: nz(addr.line1),
+          line2: nz(addr.line2),
+          city: nz(addr.city),
+          state: nz(addr.state),
+          postal_code: nz(addr.postal_code),
+          country: nz(addr.country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(cd.name),
+    phone: nz(cd.phone),
+    email: nz(cd.email) ?? nz((session as any).customer_email),
+    address,
+    line1: nz(addr?.line1),
+    line2: nz(addr?.line2),
+    city: nz(addr?.city),
+    state: nz(addr?.state),
+    postal_code: nz(addr?.postal_code),
+    country: nz(addr?.country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
+  const s = pi.shipping || null;
+  const address =
+    s?.address &&
+    (s.address.line1 ||
+      s.address.line2 ||
+      s.address.city ||
+      s.address.state ||
+      s.address.postal_code ||
+      s.address.country)
+      ? {
+          line1: nz(s.address.line1),
+          line2: nz(s.address.line2),
+          city: nz(s.address.city),
+          state: nz(s.address.state),
+          postal_code: nz(s.address.postal_code),
+          country: nz(s.address.country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(s?.name),
+    phone: nz(s?.phone),
+    email: nz(pi.receipt_email),
+    address,
+    line1: nz(s?.address?.line1),
+    line2: nz(s?.address?.line2),
+    city: nz(s?.address?.city),
+    state: nz(s?.address?.state),
+    postal_code: nz(s?.address?.postal_code),
+    country: nz(s?.address?.country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function discountFromMetadata(meta?: Record<string, any> | null): DiscountMeta {
+  if (!meta) {
+    return {
+      code: null,
+      percentOff: null,
+      discountAmountCents: null,
+      productSubtotalCents: null,
+      finalProductSubtotalCents: null,
+      stripePromotionCodeId: null,
+      stripeCouponId: null,
+      stripeNativeDiscountUsed: false,
+    };
+  }
+
+  const code = normalizeDiscountCode(nz(meta.discountCode) ?? "");
+  const percentOff = intOrNull(meta.discountPercent);
+  const discountAmountCents = intOrNull(meta.discountAmountCents);
+  const productSubtotalCents = intOrNull(meta.productSubtotalCents);
+  const finalProductSubtotalCents = intOrNull(meta.finalProductSubtotalCents);
+  const stripePromotionCodeId = nz(meta.stripePromotionCodeId);
+  const stripeCouponId = nz(meta.stripeCouponId);
+  const stripeNativeDiscountUsed =
+    String(meta.stripeNativeDiscountUsed ?? "")
+      .trim()
+      .toLowerCase() === "true";
+
+  return {
+    code: code || null,
+    percentOff,
+    discountAmountCents,
+    productSubtotalCents,
+    finalProductSubtotalCents,
+    stripePromotionCodeId,
+    stripeCouponId,
+    stripeNativeDiscountUsed,
+  };
+}
+
+function pickNonEmpty<T>(a: T, b: T) {
+  if (a == null) return b;
+  if (typeof a === "string" && a.trim() === "") return b;
+  return a;
+}
+
+function normalizeShipping(s: any): AnyObj {
+  const S = safeObj(s);
+  const addr = safeObj(S.address);
+
+  const line1 = pickNonEmpty(nz(S.line1), nz(addr.line1));
+  const line2 = pickNonEmpty(nz(S.line2), nz(addr.line2));
+  const city = pickNonEmpty(nz(S.city), nz(addr.city));
+  const state = pickNonEmpty(nz(S.state), nz(addr.state));
+  const postal_code = pickNonEmpty(nz(S.postal_code), nz(addr.postal_code));
+  const country = pickNonEmpty(nz(S.country), nz(addr.country));
+
+  return {
+    name: nz(S.name),
+    phone: nz(S.phone),
+    email: nz(S.email),
+    line1,
+    line2,
+    city,
+    state,
+    postal_code,
+    country,
+    address: {
+      line1,
+      line2,
+      city,
+      state,
+      postal_code,
+      country,
+    },
+  };
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+
+  if (!base) {
+    const I = normalizeShipping(add);
+    const out: ShippingJson = {
+      name: I.name,
+      phone: I.phone,
+      email: I.email,
+      address: I.address,
+      line1: I.line1,
+      line2: I.line2,
+      city: I.city,
+      state: I.state,
+      postal_code: I.postal_code,
+      country: I.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  if (!add) {
+    const B = normalizeShipping(base);
+    const out: ShippingJson = {
+      name: B.name,
+      phone: B.phone,
+      email: B.email,
+      address: B.address,
+      line1: B.line1,
+      line2: B.line2,
+      city: B.city,
+      state: B.state,
+      postal_code: B.postal_code,
+      country: B.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  const B = normalizeShipping(base);
+  const A = normalizeShipping(add);
+
+  const merged: AnyObj = {
+    name: pickNonEmpty(B.name, A.name),
+    phone: pickNonEmpty(B.phone, A.phone),
+    email: pickNonEmpty(B.email, A.email),
+    line1: pickNonEmpty(B.line1, A.line1),
+    line2: pickNonEmpty(B.line2, A.line2),
+    city: pickNonEmpty(B.city, A.city),
+    state: pickNonEmpty(B.state, A.state),
+    postal_code: pickNonEmpty(B.postal_code, A.postal_code),
+    country: pickNonEmpty(B.country, A.country),
+  };
+
+  merged.address = {
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  const out: ShippingJson = {
+    name: merged.name ?? null,
+    phone: merged.phone ?? null,
+    email: merged.email ?? null,
+    address: merged.address,
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/* -------------------- userId helpers -------------------- */
+
+function userIdFromCheckoutSession(
+  session: Stripe.Checkout.Session
+): string | null {
+  const metaUser = nz((session.metadata as any)?.userId);
+  if (metaUser) return metaUser;
+
+  const ref = nz((session as any)?.client_reference_id);
+  if (ref) return ref;
+
+  return null;
+}
+
+function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
+  return nz((pi.metadata as any)?.userId);
+}
+
+/* -------------------- email helpers -------------------- */
+
+function shippingAddressToString(s?: ShippingJson | null): string | null {
+  if (!s) return null;
+
+  const partsRoot = [
+    (s as any).line1,
+    (s as any).line2,
+    (s as any).postal_code,
+    (s as any).city,
+    (s as any).state,
+    (s as any).country,
+  ].filter(Boolean) as string[];
+
+  if (partsRoot.length) return partsRoot.join(", ");
+
+  if (!s.address) return null;
+  const a = s.address;
+  const parts = [
+    a.line1,
+    a.line2,
+    a.postal_code,
+    a.city,
+    a.state,
+    a.country,
+  ].filter(Boolean) as string[];
+
+  return parts.length ? parts.join(", ") : null;
+}
+
+function totalFromOrder(order: any, optsTotalCents?: number | null): number {
+  if (typeof order?.totalCents === "number") return order.totalCents / 100;
+  if (typeof order?.total === "number") return order.total;
+
+  const subtotal =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? order.finalProductSubtotalCents
+      : typeof order?.subtotal === "number"
+      ? order.subtotal
+      : 0;
+
+  const shipping =
+    typeof order?.shippingCents === "number"
+      ? order.shippingCents
+      : typeof order?.shipping === "number"
+      ? order.shipping
+      : 0;
+
+  const tax = typeof order?.tax === "number" ? order.tax : 0;
+  const discountAmountCents =
+    typeof order?.discountAmountCents === "number"
+      ? order.discountAmountCents
+      : 0;
+
+  const sum =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? subtotal + shipping + tax
+      : subtotal - discountAmountCents + shipping + tax;
+
+  if (sum > 0) return sum / 100;
+
+  if (typeof optsTotalCents === "number") return optsTotalCents / 100;
+
+  return 0;
+}
+
+function shippingPriceFromOrder(order: any): number {
+  if (typeof order?.shippingCents === "number") return order.shippingCents / 100;
+  return typeof order?.shipping === "number" ? order.shipping / 100 : 0;
+}
+
+function orderEmail(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  return (
+    nz(order?.shippingEmail) ||
+    nz(order?.shippingJson?.email) ||
+    nz((order?.shippingJson as any)?.ship_email) ||
+    nz(mergedShipping?.email) ||
+    null
+  );
+}
+
+function orderCustomerName(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  return (
+    nz(order?.shippingFullName) ||
+    nz(order?.shippingJson?.name) ||
+    nz((order?.shippingJson as any)?.ship_name) ||
+    nz(mergedShipping?.name) ||
+    null
+  );
+}
+
+function orderShippingAddress(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  const parts = [
+    nz(order?.shippingAddress1),
+    nz(order?.shippingAddress2),
+    nz(order?.shippingPostalCode),
+    nz(order?.shippingCity),
+    nz(order?.shippingRegion),
+    nz(order?.shippingCountry),
+  ].filter(Boolean) as string[];
+
+  if (parts.length) return parts.join(", ");
+
+  return shippingAddressToString(
+    ((order?.shippingJson as any) as ShippingJson) ?? mergedShipping ?? null
+  );
+}
+
+/* ------------------------- status updaters ------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+    userId?: string | null;
+    discount?: DiscountMeta | null;
+  }
+): Promise<{ transitioned: boolean }> {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      userId: true,
+      discountCodeText: true,
+      discountPercent: true,
+      discountAmountCents: true,
+      productSubtotalCents: true,
+      finalProductSubtotalCents: true,
+      total: true,
+      totalCents: true,
+      shipping: true,
+      shippingCents: true,
+      tax: true,
+      confirmationEmailSentAt: true,
+      stripePromotionCodeIdUsed: true,
+      stripeCouponIdUsed: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const wasAlreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing.shippingCountry ||
+      null)?.toString() || null;
+
+  const normalizedCode = normalizeDiscountCode(opts.discount?.code ?? "");
+  const hasDiscountMeta = !!normalizedCode;
+
+  const updateData: Record<string, any> = {
+    ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    stripePaymentIntentId: opts.paymentIntentId ?? null,
+    ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+    ...(opts.currency ? { currency: upper(opts.currency) } : {}),
+    ...(typeof opts.totalCents === "number"
+      ? { totalCents: opts.totalCents }
+      : {}),
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
+  if (hasDiscountMeta) {
+    updateData.discountCodeText = normalizedCode;
+    updateData.discountPercent =
+      opts.discount?.percentOff ?? existing.discountPercent ?? undefined;
+    updateData.discountAmountCents =
+      opts.discount?.discountAmountCents ??
+      existing.discountAmountCents ??
+      undefined;
+    updateData.productSubtotalCents =
+      opts.discount?.productSubtotalCents ??
+      existing.productSubtotalCents ??
+      undefined;
+
+    updateData.subtotal =
+      opts.discount?.productSubtotalCents ??
+      existing.productSubtotalCents ??
+      undefined;
+
+    if (typeof opts.discount?.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents =
+        opts.discount.finalProductSubtotalCents;
+    } else if (typeof existing.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents = existing.finalProductSubtotalCents;
+    }
+
+    if (opts.discount?.stripePromotionCodeId) {
+      updateData.stripePromotionCodeIdUsed =
+        opts.discount.stripePromotionCodeId;
+    }
+
+    if (opts.discount?.stripeCouponId) {
+      updateData.stripeCouponIdUsed = opts.discount.stripeCouponId;
+    }
+  }
+
+  let transitioned = false;
+
+  if (!wasAlreadyFinal) {
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData as any,
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountMeta && normalizedCode) {
+        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: updateData as any,
+      });
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData as any,
+    });
+  }
+
+  if (transitioned) {
+    await finalizePaidOrder(orderId);
+  }
+
+  await deductPtStockForPaidOrder(orderId);
+
+  if (transitioned) {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (order && !order.confirmationEmailSentAt) {
+        const to = orderEmail(order, mergedShipping);
+
+        if (to) {
+          const items = (order.items ?? []).map((i: any) => ({
+            name: i?.name ?? "Item",
+            qty: typeof i?.qty === "number" ? i.qty : 1,
+            price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
+          }));
+
+          const emailResult = await sendOrderConfirmationEmail({
+            to,
+            orderId: order.id,
+            items,
+            total: totalFromOrder(order, opts.totalCents ?? null),
+            shippingPrice: shippingPriceFromOrder(order),
+            customerName: orderCustomerName(order, mergedShipping),
+            shippingAddress: orderShippingAddress(order, mergedShipping),
+          });
+
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              confirmationEmailSentAt: new Date(),
+              confirmationEmailProviderId:
+                typeof (emailResult as any)?.id === "string"
+                  ? (emailResult as any).id
+                  : typeof (emailResult as any)?.messageId === "string"
+                    ? (emailResult as any).messageId
+                    : null,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Order confirmation email failed:", err);
+    }
+  }
+
+  return { transitioned };
+}
+
+async function markPending(
+  orderId: string,
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    shipping?: ShippingJson;
+    userId?: string | null;
+  }
+) {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { shippingJson: true, shippingCountry: true, userId: true },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing.shippingCountry ||
+      null)?.toString() || null;
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
+      status: "pending",
+      paymentStatus: "pending",
+      stripePaymentIntentId: opts.paymentIntentId ?? null,
+      ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+      ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+      ...(country ? { shippingCountry: country } : {}),
+    } as any,
+  });
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+async function markCanceled(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "canceled", paymentStatus: "canceled" },
+  });
+}
+
+/* ------------------------------ route ----------------------------- */
+
+export const POST = async (req: NextRequest) => {
+  const stripe = getStripe();
+
+  const sig = req.headers.get("stripe-signature") as string | null;
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !secret) {
+    return NextResponse.json(
+      { error: "Missing STRIPE_WEBHOOK_SECRET or signature" },
+      { status: 500 }
+    );
+  }
+
+  let event: Stripe.Event;
+  let raw: string;
+
+  try {
+    raw = await req.text();
+    event = stripe.webhooks.constructEvent(raw, sig, secret);
+  } catch (err: any) {
+    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = userIdFromCheckoutSession(session);
+
+        let orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (session.payment_intent &&
+          typeof session.payment_intent !== "string" &&
+          (session.payment_intent.metadata?.orderId as string | undefined)
+            ? (session.payment_intent.metadata.orderId as string)
+            : undefined);
+
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        if (!orderId) {
+          const bySession = await prisma.order.findFirst({
+            where: { stripeSessionId: session.id },
+            select: { id: true },
+          });
+          orderId = bySession?.id;
+        }
+
+        if (!orderId && piId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const totalCents =
+          typeof session.amount_total === "number"
+            ? session.amount_total
+            : undefined;
+
+        const currency = session.currency ?? undefined;
+        const discount = discountFromMetadata(session.metadata ?? null);
+
+        if (session.payment_status === "paid") {
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            currency,
+            totalCents,
+            shipping,
+            userId,
+            discount,
+          });
+
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        } else {
+          await markPending(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            shipping,
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = userIdFromCheckoutSession(session);
+
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        const orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(piId ? [{ stripePaymentIntentId: piId }] : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const discount = discountFromMetadata(session.metadata ?? null);
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: piId,
+          sessionId: session.id,
+          currency: session.currency ?? undefined,
+          totalCents:
+            typeof session.amount_total === "number"
+              ? session.amount_total
+              : undefined,
+          shipping,
+          userId,
+          discount,
+        });
+
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const userId = userIdFromPaymentIntent(pi);
+
+        let orderId = pi.metadata?.orderId as string | undefined;
+
+        if (!orderId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: pi.id },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: pi.id,
+          sessionId: null,
+          currency: pi.currency ?? undefined,
+          totalCents:
+            typeof pi.amount_received === "number"
+              ? pi.amount_received
+              : undefined,
+          shipping: shippingFromPaymentIntent(pi),
+          userId,
+          discount: discountFromMetadata(pi.metadata ?? null),
+        });
+
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.processing": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const userId = userIdFromPaymentIntent(pi);
+
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) {
+          await markPending(orderId, {
+            paymentIntentId: pi.id,
+            sessionId: null,
+            shipping: shippingFromPaymentIntent(pi),
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markFailed(orderId);
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orderId =
+          (session.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(typeof session.payment_intent === "string"
+                    ? [{ stripePaymentIntentId: session.payment_intent }]
+                    : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "charge.succeeded": {
+        const charge = event.data.object as Stripe.Charge;
+
+        let orderId = charge.metadata?.orderId as string | undefined;
+
+        if (!orderId && charge.payment_intent) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as any)?.id;
+
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (orderId && charge.paid) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ??
+                null;
+
+          const cents =
+            typeof charge.amount_captured === "number"
+              ? charge.amount_captured
+              : typeof charge.amount === "number"
+                ? charge.amount
+                : undefined;
+
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: null,
+            currency: charge.currency,
+            totalCents: cents,
+            shipping: null,
+            userId: null,
+            discount: discountFromMetadata(charge.metadata ?? null),
+          });
+
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (e) {
+    console.error("stripe webhook error", e);
+    return new NextResponse("ok", { status: 200 });
+  }
+};
+
+===== E. PAYPAL CAPTURE ROUTE =====
+// src/app/api/checkout/paypal/capture/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type CaptureBody = { paypalOrderId?: string; orderId?: string };
+
+// Tipagem mínima/segura para o retorno do SDK do PayPal (OrdersCapture)
+type PayPalCaptureResult = {
+  result?: {
+    id?: string;
+    status?: string; // "COMPLETED" esperado
+    payer?: {
+      email_address?: string;
+      name?: { given_name?: string; surname?: string };
+      phone?: { phone_number?: { national_number?: string } };
+    };
+    purchase_units?: Array<{
+      shipping?: {
+        name?: { full_name?: string };
+        address?: {
+          address_line_1?: string;
+          address_line_2?: string;
+          admin_area_2?: string; // city
+          admin_area_1?: string; // state / region
+          postal_code?: string;
+          country_code?: string;
+        };
+      };
+      payments?: {
+        captures?: Array<{
+          id?: string;
+          status?: string; // "COMPLETED"
+          amount?: { value?: string; currency_code?: string };
+        }>;
+      };
+    }>;
+  };
+};
+
+/* ---------------------------- helpers ---------------------------- */
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+    }
+  | null;
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+function isEmptyShipping(s?: ShippingJson | null) {
+  if (!s) return true;
+  const a = s.address ?? {};
+  return !(
+    s.name ||
+    s.phone ||
+    s.email ||
+    a.line1 ||
+    a.line2 ||
+    a.city ||
+    a.state ||
+    a.postal_code ||
+    a.country
+  );
+}
+
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
+  return primary != null && !(typeof primary === "string" && (primary as any).trim?.() === "")
+    ? (primary as A)
+    : (fallback ?? null);
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+  if (!base) return add ?? null;
+  if (!add) return base ?? null;
+
+  return {
+    name: prefer(base.name, add.name),
+    phone: prefer(base.phone, add.phone),
+    email: prefer(base.email, add.email),
+    address: {
+      line1: prefer(base.address?.line1 ?? null, add.address?.line1 ?? null),
+      line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
+      city: prefer(base.address?.city ?? null, add.address?.city ?? null),
+      state: prefer(base.address?.state ?? null, add.address?.state ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
+      country: prefer(base.address?.country ?? null, add.address?.country ?? null),
+    },
+  };
+}
+
+function shippingFromPayPal(res: PayPalCaptureResult): ShippingJson {
+  const pu = res?.result?.purchase_units?.[0];
+  const payer = res?.result?.payer;
+  const ship = pu?.shipping;
+
+  const address =
+    ship?.address &&
+    (ship.address.address_line_1 ||
+      ship.address.address_line_2 ||
+      ship.address.admin_area_2 ||
+      ship.address.admin_area_1 ||
+      ship.address.postal_code ||
+      ship.address.country_code)
+      ? {
+          line1: nz(ship.address.address_line_1),
+          line2: nz(ship.address.address_line_2),
+          city: nz(ship.address.admin_area_2),
+          state: nz(ship.address.admin_area_1),
+          postal_code: nz(ship.address.postal_code),
+          country: nz(ship.address.country_code),
+        }
+      : null;
+
+  const fullName =
+    nz(ship?.name?.full_name) ||
+    nz([payer?.name?.given_name, payer?.name?.surname].filter(Boolean).join(" "));
+
+  const out: ShippingJson = {
+    name: fullName,
+    phone: nz(payer?.phone?.phone_number?.national_number),
+    email: nz(payer?.email_address),
+    address,
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/** Converte ShippingJson em colunas canónicas da Order. */
+function canonFromShipping(s?: ShippingJson) {
+  const a = s?.address ?? null;
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+
+  return {
+    shippingFullName: nz(s?.name),
+    shippingEmail: nz(s?.email),
+    shippingPhone: nz(s?.phone),
+    shippingAddress1: nz(a?.line1),
+    shippingAddress2: nz(a?.line2),
+    shippingCity: nz(a?.city),
+    shippingRegion: nz(a?.state),
+    shippingPostalCode: nz(a?.postal_code),
+    shippingCountry: up(nz(a?.country)),
+  };
+}
+
+/* -------------------------- mutations --------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    captureId?: string | null;
+    paypalOrderId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    newShipping?: ShippingJson;
+  }
+) {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      discountCodeText: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const alreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    existing.shippingJson as ShippingJson,
+    opts.newShipping ?? null
+  );
+  const canon = canonFromShipping(mergedShipping);
+  const country = canon.shippingCountry || upper(existing.shippingCountry || null) || null;
+
+  const normalizedDiscountCode = normalizeDiscountCode(
+    existing.discountCodeText ?? ""
+  );
+  const hasDiscountCode = !!normalizedDiscountCode;
+
+  let transitioned = false;
+
+  if (!alreadyFinal) {
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: {
+          status: "paid",
+          paymentStatus: "paid",
+          paidAt: new Date(),
+          paypalCaptured: true,
+          paypalOrderId: opts.paypalOrderId ?? undefined,
+          paypalCaptureId: opts.captureId ?? undefined,
+          currency: upper(opts.currency) ?? undefined,
+          totalCents:
+            typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+              ? Math.round(opts.totalCents)
+              : undefined,
+          shippingJson: (mergedShipping as any) ?? undefined,
+          ...(country ? { shippingCountry: country } : {}),
+          ...canon,
+        },
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      return { transitioned: false };
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: "paid",
+        paymentStatus: "paid",
+        paidAt: new Date(),
+        paypalCaptured: true,
+        paypalOrderId: opts.paypalOrderId ?? undefined,
+        paypalCaptureId: opts.captureId ?? undefined,
+        currency: upper(opts.currency) ?? undefined,
+        totalCents:
+          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+            ? Math.round(opts.totalCents)
+            : undefined,
+        shippingJson: (mergedShipping as any) ?? undefined,
+        ...(country ? { shippingCountry: country } : {}),
+        ...canon,
+      },
+    });
+  }
+
+  if (transitioned) {
+    try {
+      const { finalizePaidOrder } = await import("@/lib/checkout");
+      await finalizePaidOrder(orderId);
+    } catch {}
+
+    try {
+      const { deductPtStockForPaidOrder } = await import(
+        "@/lib/deductPtStockForPaidOrder"
+      );
+      await deductPtStockForPaidOrder(orderId);
+    } catch {}
+  }
+
+  return { transitioned };
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+/* ------------------------------ route ----------------------------- */
+
+export async function POST(req: NextRequest) {
+  try {
+    // Aceita dados no body e/ou via query (?token=paypalOrderId&order=localId)
+    const body = (await req.json().catch(() => ({}))) as CaptureBody;
+    const url = new URL(req.url);
+    const paypalOrderId =
+      body.paypalOrderId || url.searchParams.get("token") || undefined;
+    const orderId = body.orderId || url.searchParams.get("order") || undefined;
+
+    if (!paypalOrderId || !orderId) {
+      return NextResponse.json(
+        { error: "Missing required fields: paypalOrderId and orderId." },
+        { status: 400 }
+      );
+    }
+
+    // Verifica envs (aceita PAYPAL_CLIENT_SECRET ou PAYPAL_SECRET)
+    if (
+      !process.env.PAYPAL_CLIENT_ID ||
+      !(process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET)
+    ) {
+      return NextResponse.json(
+        { error: "PayPal is not configured on this environment." },
+        { status: 501 }
+      );
+    }
+
+    // Importes dinâmicos para evitar problemas de build em ambientes sem PayPal
+    const { paypalClient, paypal } = await import("@/lib/paypal");
+
+    const capReq = new (paypal as any).orders.OrdersCaptureRequest(paypalOrderId);
+    capReq.requestBody({});
+
+    const rawRes: unknown = await (paypalClient as any).execute(capReq);
+    const res = rawRes as PayPalCaptureResult;
+
+    const status = res?.result?.status ?? "UNKNOWN";
+    const unit = res?.result?.purchase_units?.[0];
+    const capture = unit?.payments?.captures?.[0];
+
+    const captureId = capture?.id ?? null;
+    const currency = capture?.amount?.currency_code ?? null;
+    const totalCents =
+      capture?.amount?.value != null
+        ? Math.round(parseFloat(capture.amount.value) * 100)
+        : null;
+
+    if (status === "COMPLETED") {
+      const newShipping = shippingFromPayPal(res);
+      const { transitioned } = await markPaid(orderId, {
+        captureId,
+        paypalOrderId,
+        currency,
+        totalCents,
+        newShipping,
+      });
+
+      try {
+        if (transitioned) {
+          const { pusherServer } = await import("@/lib/pusher");
+          await pusherServer.trigger("stats", "metric:update", {
+            metric: "orders",
+            value: 1,
+          });
+          await pusherServer.trigger("stats", "metric:update", {
+            metric: "countriesMaybeChanged",
+            value: 1,
+          });
+        }
+      } catch {}
+
+      return NextResponse.json({
+        ok: true,
+        status: "COMPLETED",
+        captureId,
+      });
+    }
+
+    await markFailed(orderId);
+    return NextResponse.json({ ok: false, status }, { status: 400 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "PayPal capture error";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+}
+
+===== F. PAYPAL WEBHOOK ROUTE =====
+// src/app/api/paypal/webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* -------------------------------- types ------------------------------- */
+
+type PayPalWebhookEvent = {
+  id?: string;
+  event_type?: string;
+  summary?: string;
+  resource_type?: string;
+  resource?: any;
+  create_time?: string;
+  links?: Array<{ href: string; rel: string; method: string }>;
+};
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+    }
+  | null;
+
+type OrderPick = {
+  id: string;
+  shippingJson: any;
+  shippingCountry: string | null;
+};
+
+/* ------------------------------- helpers ------------------------------ */
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
+  return primary != null && !(typeof primary === "string" && primary.trim() === "")
+    ? (primary as A)
+    : (fallback ?? null);
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+  if (!base) return add ?? null;
+  if (!add) return base ?? null;
+
+  return {
+    name: prefer(base.name, add.name),
+    phone: prefer(base.phone, add.phone),
+    email: prefer(base.email, add.email),
+    address: {
+      line1: prefer(base.address?.line1 ?? null, add.address?.line1 ?? null),
+      line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
+      city: prefer(base.address?.city ?? null, add.address?.city ?? null),
+      state: prefer(base.address?.state ?? null, add.address?.state ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
+      country: prefer(base.address?.country ?? null, add.address?.country ?? null),
+    },
+  };
+}
+
+function shippingFromOrderGet(orderGetResult: any): ShippingJson {
+  const pu = orderGetResult?.result?.purchase_units?.[0];
+  const payer = orderGetResult?.result?.payer;
+  const ship = pu?.shipping;
+
+  const address =
+    ship?.address &&
+    (ship.address.address_line_1 ||
+      ship.address.address_line_2 ||
+      ship.address.admin_area_2 ||
+      ship.address.admin_area_1 ||
+      ship.address.postal_code ||
+      ship.address.country_code)
+      ? {
+          line1: nz(ship.address.address_line_1),
+          line2: nz(ship.address.address_line_2),
+          city: nz(ship.address.admin_area_2),
+          state: nz(ship.address.admin_area_1),
+          postal_code: nz(ship.address.postal_code),
+          country: nz(ship.address.country_code),
+        }
+      : null;
+
+  const fullName =
+    nz(ship?.name?.full_name) ||
+    nz([payer?.name?.given_name, payer?.name?.surname].filter(Boolean).join(" "));
+
+  const out: ShippingJson = {
+    name: fullName,
+    phone: nz(payer?.phone?.phone_number?.national_number),
+    email: nz(payer?.email_address),
+    address,
+  };
+
+  if (!out.name && !out.phone && !out.email && !out.address) return null;
+  return out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+async function getOrderByPayPalIds(
+  paypalOrderId: string | null,
+  captureId: string | null
+): Promise<OrderPick | null> {
+  if (paypalOrderId) {
+    const o = await prisma.order.findFirst({
+      where: { paypalOrderId },
+      select: { id: true, shippingJson: true, shippingCountry: true },
+    });
+    if (o) return o as OrderPick;
+  }
+
+  if (captureId) {
+    const o = await prisma.order.findFirst({
+      where: { paypalCaptureId: captureId },
+      select: { id: true, shippingJson: true, shippingCountry: true },
+    });
+    if (o) return o as OrderPick;
+  }
+
+  return null;
+}
+
+/* ------------------------------ mutations ----------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    captureId?: string | null;
+    paypalOrderId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+  }
+): Promise<{ transitioned: boolean }> {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      discountCodeText: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const alreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.address?.country || existing.shippingCountry || null)?.toString() ||
+    null;
+
+  const normalizedDiscountCode = normalizeDiscountCode(
+    existing.discountCodeText ?? ""
+  );
+  const hasDiscountCode = !!normalizedDiscountCode;
+
+  const updateData = {
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    paypalCaptured: true,
+    paypalOrderId: opts.paypalOrderId ?? undefined,
+    paypalCaptureId: opts.captureId ?? undefined,
+    currency: upper(opts.currency) ?? undefined,
+    totalCents:
+      typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+        ? Math.round(opts.totalCents)
+        : undefined,
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
+  let transitioned = false;
+
+  if (!alreadyFinal) {
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData,
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: updateData,
+      });
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+  }
+
+  if (transitioned) {
+    const { finalizePaidOrder } = await import("@/lib/checkout");
+    await finalizePaidOrder(orderId);
+  }
+
+  await deductPtStockForPaidOrder(orderId);
+
+  if (transitioned) {
+    try {
+      const { pusherServer } = await import("@/lib/pusher");
+      await pusherServer.trigger("stats", "metric:update", {
+        metric: "orders",
+        value: 1,
+      });
+      await pusherServer.trigger("stats", "metric:update", {
+        metric: "countriesMaybeChanged",
+        value: 1,
+      });
+    } catch {}
+  }
+
+  return { transitioned };
+}
+
+async function markPending(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "pending", paymentStatus: "pending" },
+  });
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+/* -------------------------------- route ------------------------------- */
+
+export async function POST(req: NextRequest) {
+  try {
+    const bodyText = await req.text();
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+
+    if (!webhookId) {
+      return new NextResponse("Missing PAYPAL_WEBHOOK_ID", { status: 500 });
+    }
+
+    const transmissionId = req.headers.get("paypal-transmission-id");
+    const timestamp = req.headers.get("paypal-transmission-time");
+    const signature = req.headers.get("paypal-transmission-sig");
+    const certUrl = req.headers.get("paypal-cert-url");
+    const authAlgo = req.headers.get("paypal-auth-algo");
+
+    if (!transmissionId || !timestamp || !signature || !certUrl || !authAlgo) {
+      return new NextResponse("Missing PayPal verification headers", {
+        status: 400,
+      });
+    }
+
+    const { paypalClient, paypal } = await import("@/lib/paypal");
+
+    const verifyReq =
+      new (paypal as any).notifications.VerifyWebhookSignatureRequest();
+    verifyReq.requestBody({
+      auth_algo: authAlgo,
+      cert_url: certUrl,
+      transmission_id: transmissionId,
+      transmission_sig: signature,
+      transmission_time: timestamp,
+      webhook_id: webhookId,
+      webhook_event: JSON.parse(bodyText),
+    });
+
+    const verifyRes = await (paypalClient as any).execute(verifyReq);
+    const verificationStatus = (verifyRes?.result as any)?.verification_status;
+
+    if (verificationStatus !== "SUCCESS") {
+      return new NextResponse("Invalid signature", { status: 400 });
+    }
+
+    const event = JSON.parse(bodyText) as PayPalWebhookEvent;
+    const type = (event.event_type ?? "").replace(/^PAYMENTS\./, "PAYMENT.");
+
+    switch (type) {
+      case "PAYMENT.CAPTURE.COMPLETED": {
+        const capture = event.resource || {};
+        const captureId: string | null = capture.id ?? null;
+        const currency: string | null = capture?.amount?.currency_code ?? null;
+        const totalCents: number | null =
+          capture?.amount?.value != null
+            ? Math.round(parseFloat(capture.amount.value) * 100)
+            : null;
+
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ??
+          capture?.links?.find((l: any) => l?.rel === "up")?.href?.split("/").pop() ??
+          null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, captureId);
+
+        if (!order) {
+          console.warn("[PayPal Webhook] capture.completed sem order mapeada", {
+            captureId,
+            paypalOrderId,
+          });
+          return NextResponse.json({ received: true });
+        }
+
+        let shipping: ShippingJson = null;
+
+        if (paypalOrderId) {
+          try {
+            const getReq = new (paypal as any).orders.OrdersGetRequest(
+              paypalOrderId
+            );
+            const orderGet = await (paypalClient as any).execute(getReq);
+            shipping = shippingFromOrderGet(orderGet);
+          } catch {}
+        }
+
+        await markPaid(order.id, {
+          captureId,
+          paypalOrderId,
+          currency,
+          totalCents,
+          shipping,
+        });
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.PENDING": {
+        const capture = event.resource || {};
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ?? null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, null);
+        if (order) await markPending(order.id);
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.DENIED": {
+        const capture = event.resource || {};
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ?? null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, null);
+        if (order) await markFailed(order.id);
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.REFUNDED":
+      case "PAYMENT.CAPTURE.REVERSED": {
+        return NextResponse.json({ received: true });
+      }
+
+      case "CHECKOUT.ORDER.APPROVED": {
+        return NextResponse.json({ received: true });
+      }
+
+      default:
+        return NextResponse.json({ received: true });
+    }
+  } catch (e) {
+    console.error("PayPal webhook error", e);
+    return new NextResponse("ok", { status: 200 });
+  }
+}
+
+===== G. PAYPAL RETURN ROUTE =====
+// src/app/api/checkout/paypal/return/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+// helper para criar URLs absolutas com base no pedido atual
+function toUrl(req: NextRequest, path: string) {
+  return new URL(path, req.url);
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+
+    // PayPal envia ?token=<paypalOrderId>; no create definimos também ?order=<id_local>
+    const paypalOrderId = url.searchParams.get("token");
+    const localOrderId = url.searchParams.get("order");
+
+    if (!paypalOrderId) {
+      return NextResponse.redirect(
+        toUrl(req, "/cart?paypal_error=missing_token")
+      );
+    }
+
+    // Chama o nosso endpoint de captura (POST) com os mesmos parâmetros
+    const captureUrl = toUrl(
+      req,
+      `/api/checkout/paypal/capture?token=${encodeURIComponent(
+        paypalOrderId
+      )}${localOrderId ? `&order=${encodeURIComponent(localOrderId)}` : ""}`
+    );
+
+    const res = await fetch(captureUrl, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || data?.ok !== true) {
+      const msg =
+        data?.error ||
+        data?.status ||
+        `capture_failed_${res.status ?? "unknown"}`;
+      return NextResponse.redirect(
+        toUrl(req, `/cart?paypal_error=${encodeURIComponent(String(msg))}`)
+      );
+    }
+
+    // Sucesso → leva o cliente para a página de sucesso do checkout
+    const success = toUrl(
+      req,
+      `/checkout/success?provider=paypal&paypal_order=${encodeURIComponent(
+        paypalOrderId
+      )}${localOrderId ? `&order=${encodeURIComponent(localOrderId)}` : ""}`
+    );
+    return NextResponse.redirect(success);
+  } catch (e: any) {
+    const msg = e?.message || "paypal_return_error";
+    return NextResponse.redirect(
+      toUrl(req, `/cart?paypal_error=${encodeURIComponent(String(msg))}`)
+    );
+  }
+}
+
+===== H. STRIPE SUCCESS ROUTE =====
+// src/app/api/checkout/success/order/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const orderId = url.searchParams.get("order") || "";
+    const sessionId = url.searchParams.get("session_id") || "";
+
+    if (!orderId || !sessionId) {
+      return NextResponse.json({ error: "Missing order or session_id" }, { status: 400 });
+    }
+
+    // 1) DB check (and if order already has stripeSessionId saved, it must match)
+    const existing = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, stripeSessionId: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (existing.stripeSessionId && existing.stripeSessionId !== sessionId) {
+      return NextResponse.json({ error: "Session does not match this order" }, { status: 400 });
+    }
+
+    // 2) Stripe session check
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent", "customer"],
+    });
+
+    const metaOrderId = (session.metadata as any)?.orderId as string | undefined;
+    if (metaOrderId && metaOrderId !== orderId) {
+      return NextResponse.json({ error: "Session metadata does not match this order" }, { status: 400 });
+    }
+
+    // If not paid yet, let client retry (same behavior you already use)
+    if (session.payment_status !== "paid") {
+      return NextResponse.json({ ok: false, status: session.payment_status }, { status: 202 });
+    }
+
+    // 3) Return “rich” order details (schema-compatible)
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          orderBy: { id: "asc" },
+          select: {
+            id: true,
+            qty: true,
+            unitPrice: true,
+            totalPrice: true,
+            name: true,
+            image: true,
+            snapshotJson: true, // ✅ exists in your schema
+            product: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                imageUrls: true,
+                badges: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ order }, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || "Failed to load success order" },
+      { status: 400 }
+    );
+  }
+}
+
+===== I. DB SNAPSHOT (RECENT ORDERS + DISCOUNT CODES) =====
+
+===== J. PRISMA CLIENT VERSION =====
+6.16.0

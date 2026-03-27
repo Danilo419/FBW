@@ -1,0 +1,619 @@
+===== PAID ORDERS WITH DISCOUNT + MATCHED DISCOUNT CODE =====
+[
+  {
+    "order": {
+      "id": "cmn8b60530008kz04k3p4or9m",
+      "createdAt": "2026-03-27T02:54:49.143Z",
+      "status": "paid",
+      "paymentStatus": "paid",
+      "paidAt": "2026-03-27T02:57:15.717Z",
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b13JCeBIHuCUshMr0Y2rq2mwkHjMYXyaE1LWhM86lkAC0wmVHWPeAbPtur",
+      "stripePaymentIntentId": "pi_3TFQaCG4MpYuBeCx1660v9Kw",
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn867mrl0003l104x8v5m4j1",
+      "createdAt": "2026-03-27T00:36:07.041Z",
+      "status": "paid",
+      "paymentStatus": "paid",
+      "paidAt": "2026-03-27T00:39:33.941Z",
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1hxNmbHExoj3GQcupHIjk3caNs1IsfLSJ23xMRRu4yFTa80XlVKzxC2k9",
+      "stripePaymentIntentId": "pi_3TFOQvG4MpYuBeCx0afuYQAG",
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn6sqsqj000hjm04qnzno8oa",
+      "createdAt": "2026-03-26T01:31:20.443Z",
+      "status": "paid",
+      "paymentStatus": "paid",
+      "paidAt": "2026-03-26T01:33:17.087Z",
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b10h1ewLzNbNI9pfj3ZA7VqcrWCPYQarSiUe3TTHEBIGOfIxbjndx7Au7l",
+      "stripePaymentIntentId": "pi_3TF2nMG4MpYuBeCx1Afit5Gt",
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn6sq8ga000bjm04c5zevwr1",
+      "createdAt": "2026-03-26T01:30:54.154Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b19EdCdnSvZEwpn7h8kKOWaV36b5mC4Zf3og6icUj8djx8eo4m5cLApEwe",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4vr8qf0002jr04ege2duzx",
+      "createdAt": "2026-03-24T17:20:07.671Z",
+      "status": "PENDING",
+      "paymentStatus": "paid",
+      "paidAt": "2026-03-24T17:22:55.005Z",
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1MKlNVfPoj1FpI18NxvWnJU4lpIjLlC6fuk20ZRJYPjN0CzrLBc7rA6gU",
+      "stripePaymentIntentId": "pi_3TEYfHG4MpYuBeCx0kwfzBm2",
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4va5f0000sib047nipb032",
+      "createdAt": "2026-03-24T17:06:50.221Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1IwR79b6DbzwbMVfSKPgiuc7OHWEOdQpDgdERoCYBzcmaQbE6WlGw9x1f",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4va0ip0007la04qw2cx0yk",
+      "createdAt": "2026-03-24T17:06:43.873Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1zOW7WOdgJ8OsGX2E0H2IPDXqSTWsVBmM1K5SIJSloTVY5QVyR47WA5Wr",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v9urv000nib04igsoiu3p",
+      "createdAt": "2026-03-24T17:06:36.427Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1E1tgWmTgVSWdhmmu0kw44kSDDXdK1sHacSanSqfABLWcYuVW4pETb7AR",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v9o7j000iib04gk5hdamr",
+      "createdAt": "2026-03-24T17:06:27.919Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1TBVXROYARmZUq1WfptBDNHEqBMj1KV2c4zBrBs5jRXnS0c125h61mWG6",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v9k8v000dji0487xgw1ew",
+      "createdAt": "2026-03-24T17:06:22.783Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1V2VOMPhHcsKi6z89vBoGqGNdV02Mykf58EyKXC1rIQABRjtSAjP0epe6",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v9fz2000cib04f5blixl7",
+      "createdAt": "2026-03-24T17:06:17.246Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1fXoETk8aL3vFsdTsw02kytIKjQSJBr7UBEZbk9Gur2lPqTsyR7o1X9UO",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v9bsu0007ji04owmwvj27",
+      "createdAt": "2026-03-24T17:06:11.838Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b10miNN2GS6ZMFPsOGc1EBkIeFJUN5upbqc5F1uxYC4LDB4UxoSLoODxBp",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v8nky0002ji04n86e4yau",
+      "createdAt": "2026-03-24T17:05:40.450Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1gBXudXo9va4nXZyGwncJMP6YdgbzFOoZ5Uk9CjAgIQhnXVPLaxAGFzpa",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v8glf0001ib04bgg6sshd",
+      "createdAt": "2026-03-24T17:05:31.394Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1yN2T1Sac3qnKO0xeP7t1mzOBetKyb19bf60FsHUphpbzriV40psx33kQ",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4v89nf0005if041wqmoqvk",
+      "createdAt": "2026-03-24T17:05:22.395Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1yk77qhOu6nMGOL1Q5YraM7YPJj1VjqSXRiBocI7hjqYPyxELLI3812h2",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4uzyh6000al104uvtvlhkp",
+      "createdAt": "2026-03-24T16:58:54.666Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b19WC1QT62VTBJBp0egQRJuJ382OQjg5xppHlFHdhy4EfmSFdQTeVeNANL",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn4t1m6w000pji04vxrc220k",
+      "createdAt": "2026-03-24T16:04:12.824Z",
+      "status": "paid",
+      "paymentStatus": "paid",
+      "paidAt": "2026-03-24T16:09:36.068Z",
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 8,
+      "stripeSessionId": "cs_live_b1emWlaRowRmUyJ3RysbmFCUIwkjCN3FwULOBkpmvT7PZLL5xWbNKLbQ3V",
+      "stripePaymentIntentId": "pi_3TEXWGG4MpYuBeCx0tRfsyDu",
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 67
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn40tker0001l204na7thiv3",
+      "createdAt": "2026-03-24T02:54:08.019Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 1050,
+      "stripeSessionId": "cs_live_b1qW6E29faGP1n4XWvMKG0XL4lrWIo0RS3L4sh2suWEtAVgTqZqsqHzdKh",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 9447
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn40qh500006jv04chdakxv6",
+      "createdAt": "2026-03-24T02:51:43.812Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 350,
+      "stripeSessionId": "cs_live_a1KDHt7XQAtRUKQLluU7HVaJk0uqqBYs7mcUjknWhNChBtlNIQe0wYY6xu",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 3649
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  },
+  {
+    "order": {
+      "id": "cmn3xlbws0009ky0446x2zdm2",
+      "createdAt": "2026-03-24T01:23:44.908Z",
+      "status": "pending",
+      "paymentStatus": null,
+      "paidAt": null,
+      "discountCodeText": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "discountPercent": 10,
+      "discountAmountCents": 350,
+      "stripeSessionId": "cs_live_a1HHUQgZcU5xifvO8v0Qi4CeJouya7VuAhiLP1Jb77imbT7VrLCRthnVxD",
+      "stripePaymentIntentId": null,
+      "paypalOrderId": null,
+      "paypalCaptureId": null,
+      "paypalCaptured": null,
+      "totalCents": 3649
+    },
+    "discountCode": {
+      "id": "cmn3wdlhr0000js044qw28uu8",
+      "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+      "active": true,
+      "maxUses": 1,
+      "usesCount": 0,
+      "usedAt": null,
+      "usedByOrderId": null,
+      "expiresAt": "2026-05-27T10:00:00.000Z",
+      "createdAt": "2026-03-24T00:49:44.463Z",
+      "updatedAt": "2026-03-24T00:49:44.463Z"
+    }
+  }
+]
+
+===== RECENT DISCOUNT CODES =====
+[
+  {
+    "id": "cmn3wdlhr0000js044qw28uu8",
+    "code": "DEUSESDOFUTEBOL10-R4ENASNN",
+    "active": true,
+    "maxUses": 1,
+    "usesCount": 0,
+    "usedAt": null,
+    "usedByOrderId": null,
+    "expiresAt": "2026-05-27T10:00:00.000Z",
+    "createdAt": "2026-03-24T00:49:44.463Z",
+    "updatedAt": "2026-03-24T00:49:44.463Z"
+  }
+]

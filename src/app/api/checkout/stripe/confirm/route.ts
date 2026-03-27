@@ -124,6 +124,29 @@ function shippingFromStripe(session: any): ShippingJson {
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
+async function isDiscountAlreadyRedeemed(code: string) {
+  const discount = await prisma.discountCode.findUnique({
+    where: { code },
+    select: {
+      active: true,
+      usedAt: true,
+      usesCount: true,
+      maxUses: true,
+      usedByOrderId: true,
+    },
+  });
+
+  if (!discount) return false;
+
+  return Boolean(
+    discount.usedAt ||
+      discount.usedByOrderId ||
+      discount.usesCount >= 1 ||
+      discount.usesCount >= discount.maxUses ||
+      !discount.active
+  );
+}
+
 /* ------------------------------ route ----------------------------- */
 
 export async function POST(req: NextRequest) {
@@ -157,11 +180,6 @@ export async function POST(req: NextRequest) {
 
     if (!existing) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    }
-
-    // Já final? ok idempotente
-    if (isFinal(existing.status)) {
-      return NextResponse.json({ ok: true, status: "already_paid" });
     }
 
     // Segurança: a sessão deve bater certo se já estiver gravada
@@ -205,6 +223,34 @@ export async function POST(req: NextRequest) {
     );
     const hasDiscountCode = !!normalizedDiscountCode;
 
+    // Se já está final, ainda tentamos reparar o redeem do código
+    if (isFinal(existing.status)) {
+      let repairedDiscount = false;
+
+      if (hasDiscountCode) {
+        const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+          normalizedDiscountCode
+        );
+
+        if (!alreadyRedeemed) {
+          try {
+            await prisma.$transaction(async (tx) => {
+              await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+            });
+            repairedDiscount = true;
+          } catch (err) {
+            console.error("[stripe/confirm] discount repair failed:", err);
+          }
+        }
+      }
+
+      return NextResponse.json({
+        ok: true,
+        status: "already_paid",
+        repairedDiscount,
+      });
+    }
+
     let transitioned = false;
 
     transitioned = await prisma.$transaction(async (tx) => {
@@ -239,7 +285,41 @@ export async function POST(req: NextRequest) {
     });
 
     if (!transitioned) {
-      return NextResponse.json({ ok: true, status: "already_paid" });
+      // fallback de reparação caso outro processo tenha marcado paid antes desta rota
+      let repairedDiscount = false;
+
+      if (hasDiscountCode) {
+        const currentOrder = await prisma.order.findUnique({
+          where: { id: orderId },
+          select: { status: true },
+        });
+
+        if (currentOrder && isFinal(currentOrder.status)) {
+          const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+            normalizedDiscountCode
+          );
+
+          if (!alreadyRedeemed) {
+            try {
+              await prisma.$transaction(async (tx) => {
+                await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+              });
+              repairedDiscount = true;
+            } catch (err) {
+              console.error(
+                "[stripe/confirm] post-race discount repair failed:",
+                err
+              );
+            }
+          }
+        }
+      }
+
+      return NextResponse.json({
+        ok: true,
+        status: "already_paid",
+        repairedDiscount,
+      });
     }
 
     // pós-pagamento

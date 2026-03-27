@@ -52,6 +52,11 @@ const nz = (v: unknown) => {
   return s.length ? s : null;
 };
 
+const isFinal = (s?: string | null) =>
+  (s ?? "").toLowerCase() === "paid" ||
+  (s ?? "").toLowerCase() === "shipped" ||
+  (s ?? "").toLowerCase() === "delivered";
+
 function prefer<A>(
   primary: A | null | undefined,
   fallback: A | null | undefined
@@ -124,6 +129,46 @@ function shippingFromOrderGet(orderGetResult: any): ShippingJson {
 
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
+function canonFromShipping(s?: ShippingJson) {
+  const a = s?.address ?? null;
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+
+  return {
+    shippingFullName: nz(s?.name),
+    shippingEmail: nz(s?.email),
+    shippingPhone: nz(s?.phone),
+    shippingAddress1: nz(a?.line1),
+    shippingAddress2: nz(a?.line2),
+    shippingCity: nz(a?.city),
+    shippingRegion: nz(a?.state),
+    shippingPostalCode: nz(a?.postal_code),
+    shippingCountry: up(nz(a?.country)),
+  };
+}
+
+async function isDiscountAlreadyRedeemed(code: string) {
+  const discount = await prisma.discountCode.findUnique({
+    where: { code },
+    select: {
+      active: true,
+      usedAt: true,
+      usesCount: true,
+      maxUses: true,
+      usedByOrderId: true,
+    },
+  });
+
+  if (!discount) return false;
+
+  return Boolean(
+    discount.usedAt ||
+      discount.usedByOrderId ||
+      discount.usesCount >= 1 ||
+      discount.usesCount >= discount.maxUses ||
+      !discount.active
+  );
+}
+
 async function getOrderByPayPalIds(
   paypalOrderId: string | null,
   captureId: string | null
@@ -158,7 +203,7 @@ async function markPaid(
     totalCents?: number | null;
     shipping?: ShippingJson;
   }
-): Promise<{ transitioned: boolean }> {
+): Promise<{ transitioned: boolean; repairedDiscount: boolean }> {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
     select: {
@@ -174,19 +219,16 @@ async function markPaid(
     throw new Error(`Order not found: ${orderId}`);
   }
 
-  const alreadyFinal =
-    existing.status === "paid" ||
-    existing.status === "shipped" ||
-    existing.status === "delivered";
+  const alreadyFinal = isFinal(existing.status);
 
   const mergedShipping = mergeShipping(
     (existing.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
+  const canon = canonFromShipping(mergedShipping);
   const country =
-    (mergedShipping?.address?.country || existing.shippingCountry || null)?.toString() ||
-    null;
+    canon.shippingCountry || upper(existing.shippingCountry || null) || null;
 
   const normalizedDiscountCode = normalizeDiscountCode(
     existing.discountCodeText ?? ""
@@ -207,66 +249,121 @@ async function markPaid(
         : undefined,
     ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
     ...(country ? { shippingCountry: country } : {}),
+    ...canon,
   };
 
-  let transitioned = false;
+  if (alreadyFinal) {
+    let repairedDiscount = false;
 
-  if (!alreadyFinal) {
-    transitioned = await prisma.$transaction(async (tx) => {
-      const claim = await tx.order.updateMany({
-        where: {
-          id: orderId,
-          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
-        },
-        data: updateData,
-      });
+    if (hasDiscountCode) {
+      const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+        normalizedDiscountCode
+      );
 
-      if (claim.count !== 1) {
-        return false;
+      if (!alreadyRedeemed) {
+        try {
+          await prisma.$transaction(async (tx) => {
+            await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+          });
+          repairedDiscount = true;
+        } catch (err) {
+          console.error("[paypal/webhook] discount repair failed:", err);
+        }
       }
-
-      if (hasDiscountCode) {
-        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
-      }
-
-      return true;
-    });
-
-    if (!transitioned) {
-      await prisma.order.update({
-        where: { id: orderId },
-        data: updateData,
-      });
     }
-  } else {
+
     await prisma.order.update({
       where: { id: orderId },
       data: updateData,
     });
+
+    await deductPtStockForPaidOrder(orderId);
+
+    return { transitioned: false, repairedDiscount };
   }
 
-  if (transitioned) {
-    const { finalizePaidOrder } = await import("@/lib/checkout");
-    await finalizePaidOrder(orderId);
+  const transitioned = await prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: {
+        id: orderId,
+        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+      },
+      data: updateData,
+    });
+
+    if (claim.count !== 1) {
+      return false;
+    }
+
+    if (hasDiscountCode) {
+      await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+    }
+
+    return true;
+  });
+
+  if (!transitioned) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+
+    let repairedDiscount = false;
+
+    if (hasDiscountCode) {
+      const currentOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (currentOrder && isFinal(currentOrder.status)) {
+        const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+          normalizedDiscountCode
+        );
+
+        if (!alreadyRedeemed) {
+          try {
+            await prisma.$transaction(async (tx) => {
+              await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+            });
+            repairedDiscount = true;
+          } catch (err) {
+            console.error(
+              "[paypal/webhook] post-race discount repair failed:",
+              err
+            );
+          }
+        }
+      }
+    }
+
+    await deductPtStockForPaidOrder(orderId);
+
+    return { transitioned: false, repairedDiscount };
   }
 
   await deductPtStockForPaidOrder(orderId);
 
-  if (transitioned) {
-    try {
-      const { pusherServer } = await import("@/lib/pusher");
-      await pusherServer.trigger("stats", "metric:update", {
-        metric: "orders",
-        value: 1,
-      });
-      await pusherServer.trigger("stats", "metric:update", {
-        metric: "countriesMaybeChanged",
-        value: 1,
-      });
-    } catch {}
+  try {
+    const { finalizePaidOrder } = await import("@/lib/checkout");
+    await finalizePaidOrder(orderId);
+  } catch (err) {
+    console.error("[paypal/webhook] finalizePaidOrder failed:", err);
   }
 
-  return { transitioned };
+  try {
+    const { pusherServer } = await import("@/lib/pusher");
+    await pusherServer.trigger("stats", "metric:update", {
+      metric: "orders",
+      value: 1,
+    });
+    await pusherServer.trigger("stats", "metric:update", {
+      metric: "countriesMaybeChanged",
+      value: 1,
+    });
+  } catch {}
+
+  return { transitioned: true, repairedDiscount: false };
 }
 
 async function markPending(orderId: string) {

@@ -68,6 +68,11 @@ const nz = (v: unknown) => {
   return s.length ? s : null;
 };
 
+const isFinal = (s?: string | null) =>
+  (s ?? "").toLowerCase() === "paid" ||
+  (s ?? "").toLowerCase() === "shipped" ||
+  (s ?? "").toLowerCase() === "delivered";
+
 function isEmptyShipping(s?: ShippingJson | null) {
   if (!s) return true;
   const a = s.address ?? {};
@@ -88,7 +93,8 @@ function prefer<A>(
   primary: A | null | undefined,
   fallback: A | null | undefined
 ): A | null {
-  return primary != null && !(typeof primary === "string" && (primary as any).trim?.() === "")
+  return primary != null &&
+    !(typeof primary === "string" && (primary as any).trim?.() === "")
     ? (primary as A)
     : (fallback ?? null);
 }
@@ -173,6 +179,29 @@ function canonFromShipping(s?: ShippingJson) {
   };
 }
 
+async function isDiscountAlreadyRedeemed(code: string) {
+  const discount = await prisma.discountCode.findUnique({
+    where: { code },
+    select: {
+      active: true,
+      usedAt: true,
+      usesCount: true,
+      maxUses: true,
+      usedByOrderId: true,
+    },
+  });
+
+  if (!discount) return false;
+
+  return Boolean(
+    discount.usedAt ||
+      discount.usedByOrderId ||
+      discount.usesCount >= 1 ||
+      discount.usesCount >= discount.maxUses ||
+      !discount.active
+  );
+}
+
 /* -------------------------- mutations --------------------------- */
 
 async function markPaid(
@@ -199,65 +228,41 @@ async function markPaid(
     throw new Error(`Order not found: ${orderId}`);
   }
 
-  const alreadyFinal =
-    existing.status === "paid" ||
-    existing.status === "shipped" ||
-    existing.status === "delivered";
+  const alreadyFinal = isFinal(existing.status);
 
   const mergedShipping = mergeShipping(
     existing.shippingJson as ShippingJson,
     opts.newShipping ?? null
   );
   const canon = canonFromShipping(mergedShipping);
-  const country = canon.shippingCountry || upper(existing.shippingCountry || null) || null;
+  const country =
+    canon.shippingCountry || upper(existing.shippingCountry || null) || null;
 
   const normalizedDiscountCode = normalizeDiscountCode(
     existing.discountCodeText ?? ""
   );
   const hasDiscountCode = !!normalizedDiscountCode;
 
-  let transitioned = false;
+  if (alreadyFinal) {
+    let repairedDiscount = false;
 
-  if (!alreadyFinal) {
-    transitioned = await prisma.$transaction(async (tx) => {
-      const claim = await tx.order.updateMany({
-        where: {
-          id: orderId,
-          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
-        },
-        data: {
-          status: "paid",
-          paymentStatus: "paid",
-          paidAt: new Date(),
-          paypalCaptured: true,
-          paypalOrderId: opts.paypalOrderId ?? undefined,
-          paypalCaptureId: opts.captureId ?? undefined,
-          currency: upper(opts.currency) ?? undefined,
-          totalCents:
-            typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
-              ? Math.round(opts.totalCents)
-              : undefined,
-          shippingJson: (mergedShipping as any) ?? undefined,
-          ...(country ? { shippingCountry: country } : {}),
-          ...canon,
-        },
-      });
+    if (hasDiscountCode) {
+      const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+        normalizedDiscountCode
+      );
 
-      if (claim.count !== 1) {
-        return false;
+      if (!alreadyRedeemed) {
+        try {
+          await prisma.$transaction(async (tx) => {
+            await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+          });
+          repairedDiscount = true;
+        } catch (err) {
+          console.error("[paypal/capture] discount repair failed:", err);
+        }
       }
-
-      if (hasDiscountCode) {
-        await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
-      }
-
-      return true;
-    });
-
-    if (!transitioned) {
-      return { transitioned: false };
     }
-  } else {
+
     await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -277,23 +282,93 @@ async function markPaid(
         ...canon,
       },
     });
+
+    return { transitioned: false, repairedDiscount };
   }
 
-  if (transitioned) {
-    try {
-      const { finalizePaidOrder } = await import("@/lib/checkout");
-      await finalizePaidOrder(orderId);
-    } catch {}
+  let transitioned = false;
 
-    try {
-      const { deductPtStockForPaidOrder } = await import(
-        "@/lib/deductPtStockForPaidOrder"
-      );
-      await deductPtStockForPaidOrder(orderId);
-    } catch {}
+  transitioned = await prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: {
+        id: orderId,
+        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+      },
+      data: {
+        status: "paid",
+        paymentStatus: "paid",
+        paidAt: new Date(),
+        paypalCaptured: true,
+        paypalOrderId: opts.paypalOrderId ?? undefined,
+        paypalCaptureId: opts.captureId ?? undefined,
+        currency: upper(opts.currency) ?? undefined,
+        totalCents:
+          typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+            ? Math.round(opts.totalCents)
+            : undefined,
+        shippingJson: (mergedShipping as any) ?? undefined,
+        ...(country ? { shippingCountry: country } : {}),
+        ...canon,
+      },
+    });
+
+    if (claim.count !== 1) {
+      return false;
+    }
+
+    if (hasDiscountCode) {
+      await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+    }
+
+    return true;
+  });
+
+  if (!transitioned) {
+    let repairedDiscount = false;
+
+    if (hasDiscountCode) {
+      const currentOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (currentOrder && isFinal(currentOrder.status)) {
+        const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+          normalizedDiscountCode
+        );
+
+        if (!alreadyRedeemed) {
+          try {
+            await prisma.$transaction(async (tx) => {
+              await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+            });
+            repairedDiscount = true;
+          } catch (err) {
+            console.error(
+              "[paypal/capture] post-race discount repair failed:",
+              err
+            );
+          }
+        }
+      }
+    }
+
+    return { transitioned: false, repairedDiscount };
   }
 
-  return { transitioned };
+  try {
+    const { finalizePaidOrder } = await import("@/lib/checkout");
+    await finalizePaidOrder(orderId);
+  } catch {}
+
+  try {
+    const { deductPtStockForPaidOrder } = await import(
+      "@/lib/deductPtStockForPaidOrder"
+    );
+    await deductPtStockForPaidOrder(orderId);
+  } catch {}
+
+  return { transitioned: true, repairedDiscount: false };
 }
 
 async function markFailed(orderId: string) {
