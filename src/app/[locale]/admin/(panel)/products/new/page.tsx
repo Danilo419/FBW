@@ -329,6 +329,7 @@ export default function NewProductPage() {
     imageUrls.forEach((u) => formData.append("imageUrls", u));
 
     formData.delete("images");
+    formData.delete("description");
 
     const res = await fetch("/api/admin/create-product", {
       method: "POST",
@@ -511,7 +512,7 @@ export default function NewProductPage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label htmlFor="price" className="text-sm font-medium">
                 Base Price (EUR)
               </label>
@@ -526,19 +527,6 @@ export default function NewProductPage() {
                 placeholder="e.g., 39.90"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description (optional)
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={4}
-              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-              placeholder="Short description..."
-            />
           </div>
 
           <div className="space-y-3">

@@ -26,7 +26,9 @@ export async function updatePtStockQuantity(formData: FormData) {
   for (const sizeId of sizeIds) {
     const qtyRaw = String(formData.get(`sizeStock_${sizeId}`) || "0");
     const qty = Math.max(0, Number.parseInt(qtyRaw, 10) || 0);
-    const available = formData.get(`available_${sizeId}`) === "on";
+
+    // available passa a ser AUTOMÁTICO com base na quantidade
+    const available = qty > 0;
 
     updates.push({
       id: sizeId,
