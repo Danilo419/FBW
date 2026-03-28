@@ -1,166 +1,396 @@
 // src/app/[locale]/admin/pt-stock/products/page.tsx
-import { Link } from "@/i18n/navigation";
-import type { Route } from "next";
-import { prisma } from "@/lib/prisma";
-import { formatMoney } from "@/lib/money";
-import DeletePtStockProductButton from "./DeletePtStockProductButton";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const runtime = "nodejs";
 
-function formatMoneyRight(cents: number) {
-  const s = formatMoney(cents);
+import { prisma } from "@/lib/prisma";
+import { Link } from "@/i18n/navigation";
+import Image from "next/image";
+import { revalidatePath } from "next/cache";
+import { Search as SearchIcon, Eye, EyeOff } from "lucide-react";
+import DeletePtStockProductButton from "./DeletePtStockProductButton";
 
-  let m = s.match(/^-€\s*(.+)$/);
-  if (m) return `-${m[1]}€`;
-
-  m = s.match(/^€\s*(.+)$/);
-  if (m) return `${m[1]}€`;
-
-  return s;
+/* ---------- helpers ---------- */
+function formatMoneyFromCents(cents: number, currency = "EUR") {
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(
+    (Number.isFinite(cents) ? cents : 0) / 100
+  );
 }
 
-export default async function AdminPtStockProductsPage() {
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function normalizeUrl(u?: string | null) {
+  if (!u) return "";
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
+function getImageFromImageUrls(imageUrls: unknown) {
+  try {
+    if (!imageUrls) return "";
+
+    if (Array.isArray(imageUrls)) {
+      const first = String(imageUrls[0] ?? "").trim();
+      return normalizeUrl(first);
+    }
+
+    if (typeof imageUrls === "string") {
+      const s = imageUrls.trim();
+      if (!s) return "";
+
+      if (s.startsWith("[")) {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          const first = String(parsed[0] ?? "").trim();
+          return normalizeUrl(first);
+        }
+      }
+
+      return normalizeUrl(s);
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+/* ---------- server action: toggle visible/invisible ---------- */
+async function toggleVisibilityAction(formData: FormData) {
+  "use server";
+
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+
+  const current = String(formData.get("isVisible") || "");
+  const isVisibleNow = current === "1" || current === "true";
+  const next = !isVisibleNow;
+
+  await prisma.product.update({
+    where: { id },
+    data: { isVisible: next },
+    select: { id: true },
+  });
+
+  revalidatePath("/admin/pt-stock/products");
+}
+
+/* ---------- page ---------- */
+export default async function AdminPtStockProductsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  const { locale } = await params;
+  const sp = await searchParams;
+
+  const q = (sp?.q || "").trim();
+  const LIMIT = 10;
+
+  const pageParam = Number(sp?.page ?? "1");
+  let page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+
+  const where = {
+    channel: "PT_STOCK_CTT" as const,
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { team: { contains: q, mode: "insensitive" as const } },
+            { season: { contains: q, mode: "insensitive" as const } },
+            { slug: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const total = await prisma.product.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+  page = clamp(page, 1, totalPages);
+
   const products = await prisma.product.findMany({
-    where: {
-      channel: "PT_STOCK_CTT" as const,
-    },
+    where,
+    orderBy: [{ createdAt: "desc" }, { name: "asc" }],
     select: {
       id: true,
       slug: true,
       name: true,
       team: true,
+      season: true,
       basePrice: true,
       ptStockQty: true,
-      updatedAt: true,
+      imageUrls: true,
+      createdAt: true,
+      isVisible: true,
     },
-    orderBy: [{ updatedAt: "desc" }],
+    skip: (page - 1) * LIMIT,
+    take: LIMIT,
   });
 
+  const queryForLink = (p: number) => {
+    const usp = new URLSearchParams();
+    if (q) usp.set("q", q);
+    usp.set("page", String(p));
+    return `/admin/pt-stock/products?${usp.toString()}`;
+  };
+
+  /* ---------- pagination: show only 5 page buttons at a time ---------- */
+  const MAX_PAGE_BUTTONS = 5;
+
+  const half = Math.floor(MAX_PAGE_BUTTONS / 2);
+  let start = Math.max(1, page - half);
+  let end = start + MAX_PAGE_BUTTONS - 1;
+
+  if (end > totalPages) {
+    end = totalPages;
+    start = Math.max(1, end - MAX_PAGE_BUTTONS + 1);
+  }
+
+  const pageNumbers = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">PT Stock • Products</h1>
-          <p className="text-sm text-gray-600">
-            Products from the <b>PT_STOCK_CTT</b> channel (CTT 2–3 business days).
-          </p>
-        </div>
+    <div className="space-y-6">
+      <header className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold md:text-3xl">PT Stock Products</h1>
+            <p className="text-sm text-gray-500">
+              Manage your PT Stock products.{" "}
+              {total > 0 ? `${total} result${total === 1 ? "" : "s"}.` : "No results."}
+            </p>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={"/pt-stock" as Route}
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50"
-          >
-            View PT Stock page →
-          </Link>
+          <div className="flex items-center gap-3">
+            <form action={`/${locale}/admin/pt-stock/products`} method="get" className="relative">
+              <input
+                type="search"
+                name="q"
+                defaultValue={q}
+                placeholder="Search products…"
+                className="w-64 rounded-xl border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input type="hidden" name="page" value="1" />
+            </form>
 
-          <Link
-            href={"/admin/pt-stock/products/new" as Route}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            + New PT Stock Product
-          </Link>
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
-          <div className="text-sm font-semibold text-gray-900">
-            Total: <span className="tabular-nums">{products.length}</span>
+            <Link
+              href="/admin/pt-stock/products/new"
+              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
+            >
+              Create New Product
+            </Link>
           </div>
         </div>
+      </header>
 
-        {products.length === 0 ? (
-          <div className="p-8 text-sm text-gray-600">
-            You do not have any PT Stock products yet.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-[820px] w-full text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b text-left">
-                  <th className="px-4 py-3 font-semibold text-gray-900">Name</th>
-                  <th className="px-4 py-3 font-semibold text-gray-900">Team</th>
-                  <th className="px-4 py-3 font-semibold text-gray-900">Price</th>
-                  <th className="px-4 py-3 font-semibold text-gray-900">Stock</th>
-                  <th className="px-4 py-3 font-semibold text-gray-900">Actions</th>
+      <section className="rounded-2xl border bg-white p-5 shadow">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-gray-500">
+                <th className="py-2 pr-3">Image</th>
+                <th className="py-2 pr-3">Name</th>
+                <th className="py-2 pr-3">Team</th>
+                <th className="py-2 pr-3">Season</th>
+                <th className="py-2 pr-3">Price</th>
+                <th className="py-2 pr-3">Stock</th>
+                <th className="py-2 pr-3">Status</th>
+                <th className="py-2 pr-3 text-right">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {products.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-3 text-center text-gray-500">
+                    No products found.
+                  </td>
                 </tr>
-              </thead>
+              )}
 
-              <tbody>
-                {products.map((p) => {
-                  const stockQty = p.ptStockQty ?? 0;
-                  const viewHref = `/pt-stock/${p.slug}` as Route;
-                  const editHref = `/admin/pt-stock/products/${p.id}/edit` as Route;
-                  const stockHref = `/admin/pt-stock/products/${p.id}/stock` as Route;
+              {products.map((p) => {
+                const img = getImageFromImageUrls(p.imageUrls);
+                const stockQty = p.ptStockQty ?? 0;
+                const isVisible = !!p.isVisible;
+                const viewHref = `/pt-stock/${p.slug}`;
+                const editHref = `/admin/pt-stock/products/${p.id}/edit`;
+                const stockHref = `/admin/pt-stock/products/${p.id}/stock`;
 
-                  return (
-                    <tr key={p.id} className="border-b last:border-b-0 hover:bg-gray-50/60">
-                      <td className="px-4 py-3">
-                        <div className="break-words font-semibold text-gray-900">{p.name}</div>
-                        <div className="text-xs text-gray-500">
-                          Updated:{" "}
-                          <span className="tabular-nums">
-                            {new Date(p.updatedAt).toLocaleString("en-GB")}
-                          </span>
-                        </div>
-                      </td>
+                return (
+                  <tr key={p.id} className="align-top border-b last:border-0">
+                    <td className="py-2 pr-3">
+                      <div className="h-14 w-14 overflow-hidden rounded-lg border bg-gray-50">
+                        {img ? (
+                          <Image
+                            src={img}
+                            alt={p.name}
+                            width={56}
+                            height={56}
+                            className="h-14 w-14 object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center text-[10px] text-gray-400">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                    </td>
 
-                      <td className="break-words px-4 py-3 text-gray-700">{p.team || "—"}</td>
+                    <td className="py-2 pr-3">{p.name}</td>
+                    <td className="py-2 pr-3">{p.team || "—"}</td>
+                    <td className="py-2 pr-3">{p.season ?? "—"}</td>
+                    <td className="py-2 pr-3">{formatMoneyFromCents(p.basePrice)}</td>
 
-                      <td className="px-4 py-3 font-semibold tabular-nums text-gray-900">
-                        {formatMoneyRight(p.basePrice)}
-                      </td>
+                    <td className="py-2 pr-3">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          stockQty <= 0
+                            ? "border border-red-200 bg-red-50 text-red-700"
+                            : stockQty <= 3
+                              ? "border border-orange-200 bg-orange-50 text-orange-700"
+                              : "border border-green-200 bg-green-50 text-green-700"
+                        }`}
+                      >
+                        {stockQty} unit{stockQty === 1 ? "" : "s"}
+                      </span>
+                    </td>
 
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            stockQty <= 0
-                              ? "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200"
-                              : stockQty <= 3
-                                ? "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200"
-                                : "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200"
-                          }`}
-                        >
-                          {stockQty} unit{stockQty === 1 ? "" : "s"}
+                    <td className="py-2 pr-3">
+                      {isVisible ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+                          <Eye className="h-3.5 w-3.5" />
+                          Visible
                         </span>
-                      </td>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full border bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600">
+                          <EyeOff className="h-3.5 w-3.5" />
+                          Hidden
+                        </span>
+                      )}
+                    </td>
 
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={viewHref}
-                            className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50"
+                    <td className="py-2 pr-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link
+                          href={viewHref}
+                          className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                        >
+                          View
+                        </Link>
+
+                        <Link
+                          href={editHref}
+                          className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                        >
+                          Edit
+                        </Link>
+
+                        <Link
+                          href={stockHref}
+                          className="inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                        >
+                          Stock
+                        </Link>
+
+                        <form action={toggleVisibilityAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <input type="hidden" name="isVisible" value={isVisible ? "1" : "0"} />
+                          <button
+                            type="submit"
+                            className={
+                              isVisible
+                                ? "inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs hover:bg-gray-50"
+                                : "inline-flex items-center gap-1 rounded-xl border bg-black px-3 py-1.5 text-xs text-white hover:bg-gray-900"
+                            }
+                            title={isVisible ? "Hide product" : "Make product visible"}
                           >
-                            View
-                          </Link>
+                            {isVisible ? (
+                              <>
+                                <EyeOff className="h-4 w-4" />
+                                Hide
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-4 w-4" />
+                                Show
+                              </>
+                            )}
+                          </button>
+                        </form>
 
-                          <Link
-                            href={editHref}
-                            className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50"
-                          >
-                            Edit
-                          </Link>
+                        <DeletePtStockProductButton productId={p.id} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-                          <Link
-                            href={stockHref}
-                            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                          >
-                            Stock
-                          </Link>
+        {totalPages > 1 && (
+          <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3">
+            <div>
+              {hasPrev ? (
+                <Link
+                  href={queryForLink(page - 1)}
+                  className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+                >
+                  Previous
+                </Link>
+              ) : (
+                <span className="inline-flex cursor-not-allowed items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400">
+                  Previous
+                </span>
+              )}
+            </div>
 
-                          <DeletePtStockProductButton productId={p.id} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            <ul className="flex flex-wrap items-center gap-1">
+              {pageNumbers.map((pn) =>
+                pn === page ? (
+                  <li key={pn}>
+                    <span className="inline-flex min-w-9 justify-center rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white">
+                      {pn}
+                    </span>
+                  </li>
+                ) : (
+                  <li key={pn}>
+                    <Link
+                      href={queryForLink(pn)}
+                      className="inline-flex min-w-9 justify-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      {pn}
+                    </Link>
+                  </li>
+                )
+              )}
+            </ul>
+
+            <div>
+              {hasNext ? (
+                <Link
+                  href={queryForLink(page + 1)}
+                  className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+                >
+                  Next
+                </Link>
+              ) : (
+                <span className="inline-flex cursor-not-allowed items-center rounded-lg border px-3 py-1.5 text-sm text-gray-400">
+                  Next
+                </span>
+              )}
+            </div>
+          </nav>
         )}
-      </div>
+      </section>
     </div>
   );
 }
