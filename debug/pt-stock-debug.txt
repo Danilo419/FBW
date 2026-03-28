@@ -1,0 +1,1264 @@
+PT STOCK DEBUG
+Quando: 2026-03-28T15:22:07.100Z
+Pasta: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld
+
+====================================================================================================
+1) ├ÜLTIMAS ENCOMENDAS PAID / RECENTES
+====================================================================================================
+
+====================================================================================================
+ORDER cmn95xmmi0008ky04gtc8bu4z
+====================================================================================================
+status: paid
+paymentStatus: paid
+channel: PT_STOCK_CTT
+createdAt: 2026-03-27T17:16:06.475Z
+updatedAt: 2026-03-27T17:17:14.105Z
+paidAt: 2026-03-27T17:17:14.103Z
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn95xmmj000aky04w3lt7gao
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'M',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn95xmmj000bky04ct9jvzju
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'L',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+====================================================================================================
+ORDER cmn95ku1z0001kw04i6vturg1
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-27T17:06:09.574Z
+updatedAt: 2026-03-27T17:06:10.258Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn95ku1z0003kw04i7d67i3r
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'M',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn95ku1z0004kw041sji202a
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'L',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn950yj1000djl04q3bgwqjd
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-27T16:50:42.254Z
+updatedAt: 2026-03-27T16:50:42.905Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn950yj2000fjl04zpzpisgh
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'M',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn950yj2000gjl04kt5and3h
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'L',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn8b60530008kz04k3p4or9m
+====================================================================================================
+status: paid
+paymentStatus: paid
+channel: PT_STOCK_CTT
+createdAt: 2026-03-27T02:54:49.143Z
+updatedAt: 2026-03-27T13:03:20.263Z
+paidAt: 2026-03-27T02:57:15.717Z
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn8b6054000akz04xhq66pqt
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'M',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn8b6054000bkz04x53rb5ra
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'L',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+====================================================================================================
+ORDER cmn867mrl0003l104x8v5m4j1
+====================================================================================================
+status: paid
+paymentStatus: paid
+channel: PT_STOCK_CTT
+createdAt: 2026-03-27T00:36:07.041Z
+updatedAt: 2026-03-27T00:39:33.942Z
+paidAt: 2026-03-27T00:39:33.941Z
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn867mrm0005l1042y3b0ysq
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'M',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn867mrm0006l104ebd0hqbx
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  productId: 'cmmif0plf0000l4043r2dzqf3',
+  selectedSize: 'L',
+  productChannel: 'PT_STOCK_CTT',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+====================================================================================================
+ORDER cmn6sqsqj000hjm04qnzno8oa
+====================================================================================================
+status: paid
+paymentStatus: paid
+channel: PT_STOCK_CTT
+createdAt: 2026-03-26T01:31:20.443Z
+updatedAt: 2026-03-26T01:33:17.089Z
+paidAt: 2026-03-26T01:33:17.087Z
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn6sqsqj000jjm045u5kgj9e
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn6sqsqj000kjm04zqj4n8tu
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+====================================================================================================
+ORDER cmn6sqf4t0007js04iva7iho0
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: GLOBAL
+createdAt: 2026-03-26T01:31:02.814Z
+updatedAt: 2026-03-26T01:31:03.550Z
+paidAt: null
+total: 75
+totalCents: null
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn6sqf4u0009js04h2ezkyzn
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: { size: 'L' }
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn6sqf4u000ajs044eati9iu
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: { size: 'M' }
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn6sq8ga000bjm04c5zevwr1
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-26T01:30:54.154Z
+updatedAt: 2026-03-26T01:30:54.710Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn6sq8ga000djm04q08jn4ym
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn6sq8ga000ejm04gqrmfe1r
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4vr8qf0002jr04ege2duzx
+====================================================================================================
+status: PENDING
+paymentStatus: paid
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:20:07.671Z
+updatedAt: 2026-03-25T17:19:55.517Z
+paidAt: 2026-03-24T17:22:55.005Z
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4vr8qf0004jr04sv1l8ah9
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4vr8qf0005jr04yvmgk65j
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+Ô£à Estrutura parece minimamente compat├¡vel para descontar stock.
+
+====================================================================================================
+ORDER cmn4vqm1k0004l5043cbq5cfe
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: GLOBAL
+createdAt: 2026-03-24T17:19:38.264Z
+updatedAt: 2026-03-24T17:19:39.008Z
+paidAt: null
+total: 75
+totalCents: null
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4vqm1k0006l5041obyrwag
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: { size: 'M' }
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4vqm1k0007l5041fsajvu7
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: { size: 'L' }
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4va5f0000sib047nipb032
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:50.221Z
+updatedAt: 2026-03-24T17:06:50.728Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4va5f1000uib04iy4z98sw
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4va5f1000vib0496pzuxny
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4va0ip0007la04qw2cx0yk
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:43.873Z
+updatedAt: 2026-03-24T17:06:44.461Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4va0ip0009la04z2dhbod1
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4va0ip000ala045qq5mczh
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v9urv000nib04igsoiu3p
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:36.427Z
+updatedAt: 2026-03-24T17:06:36.935Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9urv000pib04odp4plxq
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9urv000qib04czf0d03i
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v9o7j000iib04gk5hdamr
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:27.919Z
+updatedAt: 2026-03-24T17:06:28.328Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9o7j000kib044dppxaq4
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9o7j000lib04l37txkz4
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v9k8v000dji0487xgw1ew
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:22.783Z
+updatedAt: 2026-03-24T17:06:23.193Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9k8v000fji04lrqxg2sr
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9k8v000gji04n6fbfvvr
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v9fz2000cib04f5blixl7
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:17.246Z
+updatedAt: 2026-03-24T17:06:17.811Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9fz2000eib04ka8lag8l
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9fz2000fib04qxtop2p8
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v9bsu0007ji04owmwvj27
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:06:11.838Z
+updatedAt: 2026-03-24T17:06:12.320Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9bsu0009ji04grwbu0wi
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v9bsu000aji04ohrpp3ho
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v8vgr0007ib04y61poupu
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: GLOBAL
+createdAt: 2026-03-24T17:05:50.667Z
+updatedAt: 2026-03-24T17:05:50.667Z
+paidAt: null
+total: 75
+totalCents: null
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v8vgr0009ib04n5kx1bv1
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: { size: 'M' }
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v8vgr000aib04bj9u58gr
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: { size: 'L' }
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v8nky0002ji04n86e4yau
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:05:40.450Z
+updatedAt: 2026-03-24T17:05:40.910Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v8nky0004ji04upbnhj0j
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v8nky0005ji04kyu9qghu
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+ORDER cmn4v8glf0001ib04bgg6sshd
+====================================================================================================
+status: pending
+paymentStatus: null
+channel: PT_STOCK_CTT
+createdAt: 2026-03-24T17:05:31.394Z
+updatedAt: 2026-03-24T17:05:31.870Z
+paidAt: null
+total: 0.67
+totalCents: 67
+subtotal: 75
+shipping: 0
+tax: 0
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v8glf0003ib0493b20zm8
+name: TESTE1
+qty: 2
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: M
+snapshotJson: {
+  size: 'M',
+  options: { size: 'M' },
+  selectedSize: 'M',
+  personalization: null,
+  selectedOptions: { size: 'M' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+--- ITEM ------------------------------------------------------------
+itemId: cmn4v8glf0004ib046fntnx6n
+name: TESTE1
+qty: 1
+unitPrice: 25
+productId: cmmif0plf0000l4043r2dzqf3
+sizeDetectado: L
+snapshotJson: {
+  size: 'L',
+  options: { size: 'L' },
+  selectedSize: 'L',
+  personalization: null,
+  selectedOptions: { size: 'L' }
+}
+optionsJson: null
+variantJson: null
+metaJson: null
+product.name: TESTE1
+product.slug: portugal-stock-teste1
+product.channel: PT_STOCK_CTT
+product.ptStockQty: 3
+possibleStockFields: { ptStockQty: 3 }
+ÔÜá´©Å A order n├úo parece efetivamente marcada como paid nos campos esperados.
+
+====================================================================================================
+2) RESUMO R├üPIDO
+====================================================================================================
+Se aparecer um destes problemas, normalmente a falha est├í aqui:
+- sizeDetectado = (n├úo encontrado)  -> o webhook/fun├º├úo n├úo sabe que tamanho descontar
+- product.channel != PT_STOCK_CTT   -> o item n├úo est├í a cair na l├│gica PT stock
+- sem stockFields                   -> o produto n├úo tem onde descontar por tamanho
+- status/paymentStatus n├úo paid     -> a fun├º├úo nunca ├® disparada na condi├º├úo certa
+
+====================================================================================================
+3) FIM
+====================================================================================================

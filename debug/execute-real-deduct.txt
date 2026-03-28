@@ -1,0 +1,166 @@
+MANUAL EXECUTION OF deductPtStockForPaidOrder
+Quando: 2026-03-28T15:34:20.291Z
+ORDER_ID: cmn95xmmi0008ky04gtc8bu4z
+
+==================================================
+ANTES
+==================================================
+ORDER:
+{
+  "id": "cmn95xmmi0008ky04gtc8bu4z",
+  "status": "paid",
+  "paymentStatus": "paid",
+  "paidAt": "2026-03-27T17:17:14.103Z",
+  "stockDeductedAt": null,
+  "items": [
+    {
+      "id": "cmn95xmmj000aky04w3lt7gao",
+      "name": "TESTE1",
+      "qty": 2,
+      "productId": "cmmif0plf0000l4043r2dzqf3",
+      "snapshotJson": {
+        "size": "M",
+        "options": {
+          "size": "M"
+        },
+        "productId": "cmmif0plf0000l4043r2dzqf3",
+        "selectedSize": "M",
+        "productChannel": "PT_STOCK_CTT",
+        "personalization": null,
+        "selectedOptions": {
+          "size": "M"
+        }
+      }
+    },
+    {
+      "id": "cmn95xmmj000bky04ct9jvzju",
+      "name": "TESTE1",
+      "qty": 1,
+      "productId": "cmmif0plf0000l4043r2dzqf3",
+      "snapshotJson": {
+        "size": "L",
+        "options": {
+          "size": "L"
+        },
+        "productId": "cmmif0plf0000l4043r2dzqf3",
+        "selectedSize": "L",
+        "productChannel": "PT_STOCK_CTT",
+        "personalization": null,
+        "selectedOptions": {
+          "size": "L"
+        }
+      }
+    }
+  ]
+}
+SIZE STOCKS:
+[
+  {
+    "id": "cmn4swpe40003ju04m8fl3pvp",
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "size": "L",
+    "ptStockQty": 1,
+    "available": true
+  },
+  {
+    "id": "cmn4swpe40004ju04alhl6ovq",
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "size": "M",
+    "ptStockQty": 2,
+    "available": true
+  }
+]
+PRODUCTS:
+[
+  {
+    "id": "cmmif0plf0000l4043r2dzqf3",
+    "name": "TESTE1",
+    "slug": "portugal-stock-teste1",
+    "channel": "PT_STOCK_CTT",
+    "ptStockQty": 3
+  }
+]
+
+==================================================
+A EXECUTAR deductPtStockForPaidOrder
+==================================================
+OK: deductPtStockForPaidOrder terminou sem erro.
+
+==================================================
+DEPOIS
+==================================================
+ORDER:
+{
+  "id": "cmn95xmmi0008ky04gtc8bu4z",
+  "status": "paid",
+  "paymentStatus": "paid",
+  "paidAt": "2026-03-27T17:17:14.103Z",
+  "stockDeductedAt": "2026-03-28T15:34:24.625Z",
+  "items": [
+    {
+      "id": "cmn95xmmj000aky04w3lt7gao",
+      "name": "TESTE1",
+      "qty": 2,
+      "productId": "cmmif0plf0000l4043r2dzqf3",
+      "snapshotJson": {
+        "size": "M",
+        "options": {
+          "size": "M"
+        },
+        "productId": "cmmif0plf0000l4043r2dzqf3",
+        "selectedSize": "M",
+        "productChannel": "PT_STOCK_CTT",
+        "personalization": null,
+        "selectedOptions": {
+          "size": "M"
+        }
+      }
+    },
+    {
+      "id": "cmn95xmmj000bky04ct9jvzju",
+      "name": "TESTE1",
+      "qty": 1,
+      "productId": "cmmif0plf0000l4043r2dzqf3",
+      "snapshotJson": {
+        "size": "L",
+        "options": {
+          "size": "L"
+        },
+        "productId": "cmmif0plf0000l4043r2dzqf3",
+        "selectedSize": "L",
+        "productChannel": "PT_STOCK_CTT",
+        "personalization": null,
+        "selectedOptions": {
+          "size": "L"
+        }
+      }
+    }
+  ]
+}
+SIZE STOCKS:
+[
+  {
+    "id": "cmn4swpe40003ju04m8fl3pvp",
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "size": "L",
+    "ptStockQty": 0,
+    "available": false
+  },
+  {
+    "id": "cmn4swpe40004ju04alhl6ovq",
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "size": "M",
+    "ptStockQty": 0,
+    "available": false
+  }
+]
+PRODUCTS:
+[
+  {
+    "id": "cmmif0plf0000l4043r2dzqf3",
+    "name": "TESTE1",
+    "slug": "portugal-stock-teste1",
+    "channel": "PT_STOCK_CTT",
+    "ptStockQty": 0
+  }
+]

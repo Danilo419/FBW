@@ -1635,6 +1635,7 @@
   },
   "ptStockPage": {
     "title": "Portugal Stock Jerseys",
+    "count": "{count} products",
     "shippingRules": {
       "title": "Portugal Shipping Rules",
       "one": "1 jersey: 6€",

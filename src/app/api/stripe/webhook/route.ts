@@ -62,6 +62,11 @@ const intOrNull = (v: unknown) => {
   return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
 };
 
+const isFinal = (s?: string | null) =>
+  (s ?? "").toLowerCase() === "paid" ||
+  (s ?? "").toLowerCase() === "shipped" ||
+  (s ?? "").toLowerCase() === "delivered";
+
 type AnyObj = Record<string, any>;
 
 function safeObj(v: any): AnyObj {
@@ -365,6 +370,24 @@ function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
   return isEmptyShipping(out) ? null : out;
 }
 
+function canonFromShipping(s?: ShippingJson | null) {
+  const root = safeObj(s);
+  const addr = safeObj(root.address);
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+
+  return {
+    shippingFullName: nz(root.name),
+    shippingEmail: nz(root.email),
+    shippingPhone: nz(root.phone),
+    shippingAddress1: nz(root.line1) ?? nz(addr.line1),
+    shippingAddress2: nz(root.line2) ?? nz(addr.line2),
+    shippingCity: nz(root.city) ?? nz(addr.city),
+    shippingRegion: nz(root.state) ?? nz(addr.state),
+    shippingPostalCode: nz(root.postal_code) ?? nz(addr.postal_code),
+    shippingCountry: up(nz(root.country) ?? nz(addr.country)),
+  };
+}
+
 const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
 
 /* -------------------- userId helpers -------------------- */
@@ -502,6 +525,74 @@ function orderShippingAddress(
   );
 }
 
+/* -------------------- paid side effects -------------------- */
+
+async function ensurePaidOrderSideEffects(
+  orderId: string,
+  opts?: {
+    transitioned?: boolean;
+    mergedShipping?: ShippingJson | null;
+    totalCents?: number | null;
+  }
+) {
+  try {
+    await deductPtStockForPaidOrder(orderId);
+  } catch (err) {
+    console.error("[stripe/webhook] deductPtStockForPaidOrder failed:", err);
+  }
+
+  if (!opts?.transitioned) return;
+
+  try {
+    await finalizePaidOrder(orderId);
+  } catch (err) {
+    console.error("[stripe/webhook] finalizePaidOrder failed:", err);
+  }
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+
+    if (!order || order.confirmationEmailSentAt) return;
+
+    const to = orderEmail(order, opts.mergedShipping ?? null);
+    if (!to) return;
+
+    const items = (order.items ?? []).map((i: any) => ({
+      name: i?.name ?? "Item",
+      qty: typeof i?.qty === "number" ? i.qty : 1,
+      price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
+    }));
+
+    const emailResult = await sendOrderConfirmationEmail({
+      to,
+      orderId: order.id,
+      items,
+      total: totalFromOrder(order, opts.totalCents ?? null),
+      shippingPrice: shippingPriceFromOrder(order),
+      customerName: orderCustomerName(order, opts.mergedShipping ?? null),
+      shippingAddress: orderShippingAddress(order, opts.mergedShipping ?? null),
+    });
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        confirmationEmailSentAt: new Date(),
+        confirmationEmailProviderId:
+          typeof (emailResult as any)?.id === "string"
+            ? (emailResult as any).id
+            : typeof (emailResult as any)?.messageId === "string"
+              ? (emailResult as any).messageId
+              : null,
+      },
+    });
+  } catch (err) {
+    console.error("[stripe/webhook] order confirmation email failed:", err);
+  }
+}
+
 /* ------------------------- status updaters ------------------------- */
 
 async function markPaid(
@@ -544,21 +635,21 @@ async function markPaid(
     throw new Error(`Order not found: ${orderId}`);
   }
 
-  const wasAlreadyFinal =
-    existing.status === "paid" ||
-    existing.status === "shipped" ||
-    existing.status === "delivered";
+  const wasAlreadyFinal = isFinal(existing.status);
 
   const mergedShipping = mergeShipping(
     (existing.shippingJson as ShippingJson) ?? null,
     opts.shipping ?? null
   );
 
+  const canon = canonFromShipping(mergedShipping);
   const country =
+    canon.shippingCountry ||
     (mergedShipping?.country ||
       mergedShipping?.address?.country ||
       existing.shippingCountry ||
-      null)?.toString() || null;
+      null)?.toString() ||
+    null;
 
   const normalizedCode = normalizeDiscountCode(
     opts.discount?.code ?? existing.discountCodeText ?? ""
@@ -587,6 +678,7 @@ async function markPaid(
       : {}),
     ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
     ...(country ? { shippingCountry: country } : {}),
+    ...canon,
   };
 
   if (hasResolvedDiscountCode) {
@@ -663,61 +755,12 @@ async function markPaid(
     });
   }
 
-  await deductPtStockForPaidOrder(orderId);
-
-  if (transitioned) {
-    try {
-      await finalizePaidOrder(orderId);
-    } catch (err) {
-      console.error("finalizePaidOrder failed:", err);
-    }
-  }
-
-  if (transitioned) {
-    try {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: { items: true },
-      });
-
-      if (order && !order.confirmationEmailSentAt) {
-        const to = orderEmail(order, mergedShipping);
-
-        if (to) {
-          const items = (order.items ?? []).map((i: any) => ({
-            name: i?.name ?? "Item",
-            qty: typeof i?.qty === "number" ? i.qty : 1,
-            price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
-          }));
-
-          const emailResult = await sendOrderConfirmationEmail({
-            to,
-            orderId: order.id,
-            items,
-            total: totalFromOrder(order, opts.totalCents ?? null),
-            shippingPrice: shippingPriceFromOrder(order),
-            customerName: orderCustomerName(order, mergedShipping),
-            shippingAddress: orderShippingAddress(order, mergedShipping),
-          });
-
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              confirmationEmailSentAt: new Date(),
-              confirmationEmailProviderId:
-                typeof (emailResult as any)?.id === "string"
-                  ? (emailResult as any).id
-                  : typeof (emailResult as any)?.messageId === "string"
-                    ? (emailResult as any).messageId
-                    : null,
-            },
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Order confirmation email failed:", err);
-    }
-  }
+  await ensurePaidOrderSideEffects(orderId, {
+    transitioned,
+    mergedShipping,
+    totalCents:
+      typeof opts.totalCents === "number" ? opts.totalCents : existing.totalCents,
+  });
 
   return { transitioned };
 }
@@ -745,11 +788,14 @@ async function markPending(
     opts.shipping ?? null
   );
 
+  const canon = canonFromShipping(mergedShipping);
   const country =
+    canon.shippingCountry ||
     (mergedShipping?.country ||
       mergedShipping?.address?.country ||
       existing.shippingCountry ||
-      null)?.toString() || null;
+      null)?.toString() ||
+    null;
 
   await prisma.order.update({
     where: { id: orderId },
@@ -761,6 +807,7 @@ async function markPending(
       ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
       ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
       ...(country ? { shippingCountry: country } : {}),
+      ...canon,
     } as any,
   });
 }

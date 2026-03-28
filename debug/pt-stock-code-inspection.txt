@@ -1,0 +1,3151 @@
+PT STOCK CODE INSPECTION
+Quando: 2026-03-28T15:25:12.476Z
+Pasta: C:\Users\bestp\OneDrive\Desktop\footballworld\footballworld
+
+========================================================================================================================
+1) FICHEIROS-ALVO
+========================================================================================================================
+src/app/api/paypal/webhook/route.ts -> EXISTE
+src/app/api/stripe/webhook/route.ts -> EXISTE
+src/lib/deductPtStockForPaidOrder.ts -> EXISTE
+src/lib/redeemDiscountCode.ts -> NAO EXISTE
+src/lib/redeem-discount-code.ts -> EXISTE
+prisma/schema.prisma -> EXISTE
+
+========================================================================================================================
+2) CONTEUDO DOS FICHEIROS-ALVO
+========================================================================================================================
+
+--- src/app/api/paypal/webhook/route.ts ---
+// src/app/api/paypal/webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* -------------------------------- types ------------------------------- */
+
+type PayPalWebhookEvent = {
+  id?: string;
+  event_type?: string;
+  summary?: string;
+  resource_type?: string;
+  resource?: any;
+  create_time?: string;
+  links?: Array<{ href: string; rel: string; method: string }>;
+};
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+    }
+  | null;
+
+type OrderPick = {
+  id: string;
+  shippingJson: any;
+  shippingCountry: string | null;
+};
+
+/* ------------------------------- helpers ------------------------------ */
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+const isFinal = (s?: string | null) =>
+  (s ?? "").toLowerCase() === "paid" ||
+  (s ?? "").toLowerCase() === "shipped" ||
+  (s ?? "").toLowerCase() === "delivered";
+
+function prefer<A>(
+  primary: A | null | undefined,
+  fallback: A | null | undefined
+): A | null {
+  return primary != null && !(typeof primary === "string" && primary.trim() === "")
+    ? (primary as A)
+    : (fallback ?? null);
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+  if (!base) return add ?? null;
+  if (!add) return base ?? null;
+
+  return {
+    name: prefer(base.name, add.name),
+    phone: prefer(base.phone, add.phone),
+    email: prefer(base.email, add.email),
+    address: {
+      line1: prefer(base.address?.line1 ?? null, add.address?.line1 ?? null),
+      line2: prefer(base.address?.line2 ?? null, add.address?.line2 ?? null),
+      city: prefer(base.address?.city ?? null, add.address?.city ?? null),
+      state: prefer(base.address?.state ?? null, add.address?.state ?? null),
+      postal_code: prefer(
+        base.address?.postal_code ?? null,
+        add.address?.postal_code ?? null
+      ),
+      country: prefer(base.address?.country ?? null, add.address?.country ?? null),
+    },
+  };
+}
+
+function shippingFromOrderGet(orderGetResult: any): ShippingJson {
+  const pu = orderGetResult?.result?.purchase_units?.[0];
+  const payer = orderGetResult?.result?.payer;
+  const ship = pu?.shipping;
+
+  const address =
+    ship?.address &&
+    (ship.address.address_line_1 ||
+      ship.address.address_line_2 ||
+      ship.address.admin_area_2 ||
+      ship.address.admin_area_1 ||
+      ship.address.postal_code ||
+      ship.address.country_code)
+      ? {
+          line1: nz(ship.address.address_line_1),
+          line2: nz(ship.address.address_line_2),
+          city: nz(ship.address.admin_area_2),
+          state: nz(ship.address.admin_area_1),
+          postal_code: nz(ship.address.postal_code),
+          country: nz(ship.address.country_code),
+        }
+      : null;
+
+  const fullName =
+    nz(ship?.name?.full_name) ||
+    nz([payer?.name?.given_name, payer?.name?.surname].filter(Boolean).join(" "));
+
+  const out: ShippingJson = {
+    name: fullName,
+    phone: nz(payer?.phone?.phone_number?.national_number),
+    email: nz(payer?.email_address),
+    address,
+  };
+
+  if (!out.name && !out.phone && !out.email && !out.address) return null;
+  return out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+function canonFromShipping(s?: ShippingJson) {
+  const a = s?.address ?? null;
+  const up = (c?: string | null) => (c ? c.toUpperCase() : c ?? null);
+
+  return {
+    shippingFullName: nz(s?.name),
+    shippingEmail: nz(s?.email),
+    shippingPhone: nz(s?.phone),
+    shippingAddress1: nz(a?.line1),
+    shippingAddress2: nz(a?.line2),
+    shippingCity: nz(a?.city),
+    shippingRegion: nz(a?.state),
+    shippingPostalCode: nz(a?.postal_code),
+    shippingCountry: up(nz(a?.country)),
+  };
+}
+
+async function isDiscountAlreadyRedeemed(code: string) {
+  const discount = await prisma.discountCode.findUnique({
+    where: { code },
+    select: {
+      active: true,
+      usedAt: true,
+      usesCount: true,
+      maxUses: true,
+      usedByOrderId: true,
+    },
+  });
+
+  if (!discount) return false;
+
+  return Boolean(
+    discount.usedAt ||
+      discount.usedByOrderId ||
+      discount.usesCount >= 1 ||
+      discount.usesCount >= discount.maxUses ||
+      !discount.active
+  );
+}
+
+async function getOrderByPayPalIds(
+  paypalOrderId: string | null,
+  captureId: string | null
+): Promise<OrderPick | null> {
+  if (paypalOrderId) {
+    const o = await prisma.order.findFirst({
+      where: { paypalOrderId },
+      select: { id: true, shippingJson: true, shippingCountry: true },
+    });
+    if (o) return o as OrderPick;
+  }
+
+  if (captureId) {
+    const o = await prisma.order.findFirst({
+      where: { paypalCaptureId: captureId },
+      select: { id: true, shippingJson: true, shippingCountry: true },
+    });
+    if (o) return o as OrderPick;
+  }
+
+  return null;
+}
+
+/* ------------------------------ mutations ----------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    captureId?: string | null;
+    paypalOrderId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+  }
+): Promise<{ transitioned: boolean; repairedDiscount: boolean }> {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      discountCodeText: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const alreadyFinal = isFinal(existing.status);
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const canon = canonFromShipping(mergedShipping);
+  const country =
+    canon.shippingCountry || upper(existing.shippingCountry || null) || null;
+
+  const normalizedDiscountCode = normalizeDiscountCode(
+    existing.discountCodeText ?? ""
+  );
+  const hasDiscountCode = !!normalizedDiscountCode;
+
+  const updateData = {
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    paypalCaptured: true,
+    paypalOrderId: opts.paypalOrderId ?? undefined,
+    paypalCaptureId: opts.captureId ?? undefined,
+    currency: upper(opts.currency) ?? undefined,
+    totalCents:
+      typeof opts.totalCents === "number" && Number.isFinite(opts.totalCents)
+        ? Math.round(opts.totalCents)
+        : undefined,
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+    ...canon,
+  };
+
+  if (alreadyFinal) {
+    let repairedDiscount = false;
+
+    if (hasDiscountCode) {
+      const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+        normalizedDiscountCode
+      );
+
+      if (!alreadyRedeemed) {
+        try {
+          await prisma.$transaction(async (tx) => {
+            await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+          });
+          repairedDiscount = true;
+        } catch (err) {
+          console.error("[paypal/webhook] discount repair failed:", err);
+        }
+      }
+    }
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+
+    await deductPtStockForPaidOrder(orderId);
+
+    return { transitioned: false, repairedDiscount };
+  }
+
+  const transitioned = await prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: {
+        id: orderId,
+        NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+      },
+      data: updateData,
+    });
+
+    if (claim.count !== 1) {
+      return false;
+    }
+
+    if (hasDiscountCode) {
+      await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+    }
+
+    return true;
+  });
+
+  if (!transitioned) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+
+    let repairedDiscount = false;
+
+    if (hasDiscountCode) {
+      const currentOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (currentOrder && isFinal(currentOrder.status)) {
+        const alreadyRedeemed = await isDiscountAlreadyRedeemed(
+          normalizedDiscountCode
+        );
+
+        if (!alreadyRedeemed) {
+          try {
+            await prisma.$transaction(async (tx) => {
+              await redeemDiscountCodeTx(tx, normalizedDiscountCode, orderId);
+            });
+            repairedDiscount = true;
+          } catch (err) {
+            console.error(
+              "[paypal/webhook] post-race discount repair failed:",
+              err
+            );
+          }
+        }
+      }
+    }
+
+    await deductPtStockForPaidOrder(orderId);
+
+    return { transitioned: false, repairedDiscount };
+  }
+
+  await deductPtStockForPaidOrder(orderId);
+
+  try {
+    const { finalizePaidOrder } = await import("@/lib/checkout");
+    await finalizePaidOrder(orderId);
+  } catch (err) {
+    console.error("[paypal/webhook] finalizePaidOrder failed:", err);
+  }
+
+  try {
+    const { pusherServer } = await import("@/lib/pusher");
+    await pusherServer.trigger("stats", "metric:update", {
+      metric: "orders",
+      value: 1,
+    });
+    await pusherServer.trigger("stats", "metric:update", {
+      metric: "countriesMaybeChanged",
+      value: 1,
+    });
+  } catch {}
+
+  return { transitioned: true, repairedDiscount: false };
+}
+
+async function markPending(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "pending", paymentStatus: "pending" },
+  });
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+/* -------------------------------- route ------------------------------- */
+
+export async function POST(req: NextRequest) {
+  try {
+    const bodyText = await req.text();
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+
+    if (!webhookId) {
+      return new NextResponse("Missing PAYPAL_WEBHOOK_ID", { status: 500 });
+    }
+
+    const transmissionId = req.headers.get("paypal-transmission-id");
+    const timestamp = req.headers.get("paypal-transmission-time");
+    const signature = req.headers.get("paypal-transmission-sig");
+    const certUrl = req.headers.get("paypal-cert-url");
+    const authAlgo = req.headers.get("paypal-auth-algo");
+
+    if (!transmissionId || !timestamp || !signature || !certUrl || !authAlgo) {
+      return new NextResponse("Missing PayPal verification headers", {
+        status: 400,
+      });
+    }
+
+    const { paypalClient, paypal } = await import("@/lib/paypal");
+
+    const verifyReq =
+      new (paypal as any).notifications.VerifyWebhookSignatureRequest();
+    verifyReq.requestBody({
+      auth_algo: authAlgo,
+      cert_url: certUrl,
+      transmission_id: transmissionId,
+      transmission_sig: signature,
+      transmission_time: timestamp,
+      webhook_id: webhookId,
+      webhook_event: JSON.parse(bodyText),
+    });
+
+    const verifyRes = await (paypalClient as any).execute(verifyReq);
+    const verificationStatus = (verifyRes?.result as any)?.verification_status;
+
+    if (verificationStatus !== "SUCCESS") {
+      return new NextResponse("Invalid signature", { status: 400 });
+    }
+
+    const event = JSON.parse(bodyText) as PayPalWebhookEvent;
+    const type = (event.event_type ?? "").replace(/^PAYMENTS\./, "PAYMENT.");
+
+    switch (type) {
+      case "PAYMENT.CAPTURE.COMPLETED": {
+        const capture = event.resource || {};
+        const captureId: string | null = capture.id ?? null;
+        const currency: string | null = capture?.amount?.currency_code ?? null;
+        const totalCents: number | null =
+          capture?.amount?.value != null
+            ? Math.round(parseFloat(capture.amount.value) * 100)
+            : null;
+
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ??
+          capture?.links?.find((l: any) => l?.rel === "up")?.href?.split("/").pop() ??
+          null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, captureId);
+
+        if (!order) {
+          console.warn("[PayPal Webhook] capture.completed sem order mapeada", {
+            captureId,
+            paypalOrderId,
+          });
+          return NextResponse.json({ received: true });
+        }
+
+        let shipping: ShippingJson = null;
+
+        if (paypalOrderId) {
+          try {
+            const getReq = new (paypal as any).orders.OrdersGetRequest(
+              paypalOrderId
+            );
+            const orderGet = await (paypalClient as any).execute(getReq);
+            shipping = shippingFromOrderGet(orderGet);
+          } catch {}
+        }
+
+        await markPaid(order.id, {
+          captureId,
+          paypalOrderId,
+          currency,
+          totalCents,
+          shipping,
+        });
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.PENDING": {
+        const capture = event.resource || {};
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ?? null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, null);
+        if (order) await markPending(order.id);
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.DENIED": {
+        const capture = event.resource || {};
+        const paypalOrderId: string | null =
+          capture?.supplementary_data?.related_ids?.order_id ?? null;
+
+        const order = await getOrderByPayPalIds(paypalOrderId, null);
+        if (order) await markFailed(order.id);
+
+        return NextResponse.json({ received: true });
+      }
+
+      case "PAYMENT.CAPTURE.REFUNDED":
+      case "PAYMENT.CAPTURE.REVERSED": {
+        return NextResponse.json({ received: true });
+      }
+
+      case "CHECKOUT.ORDER.APPROVED": {
+        return NextResponse.json({ received: true });
+      }
+
+      default:
+        return NextResponse.json({ received: true });
+    }
+  } catch (e) {
+    console.error("PayPal webhook error", e);
+    return new NextResponse("ok", { status: 200 });
+  }
+}
+
+--- src/app/api/stripe/webhook/route.ts ---
+// src/app/api/stripe/webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
+import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
+import { finalizePaidOrder } from "@/lib/checkout";
+import { pusherServer } from "@/lib/pusher";
+import { sendOrderConfirmationEmail } from "@/lib/email";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+import { redeemDiscountCodeTx } from "@/lib/redeem-discount-code";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* ---------------------------- helpers ---------------------------- */
+
+type ShippingJson =
+  | {
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?:
+        | {
+            line1?: string | null;
+            line2?: string | null;
+            city?: string | null;
+            state?: string | null;
+            postal_code?: string | null;
+            country?: string | null;
+          }
+        | null;
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postal_code?: string | null;
+      country?: string | null;
+    }
+  | null;
+
+type DiscountMeta = {
+  code: string | null;
+  percentOff: number | null;
+  discountAmountCents: number | null;
+  productSubtotalCents: number | null;
+  finalProductSubtotalCents: number | null;
+  stripePromotionCodeId: string | null;
+  stripeCouponId: string | null;
+  stripeNativeDiscountUsed: boolean;
+};
+
+const nz = (v: unknown) => {
+  const s = (v ?? "").toString().trim();
+  return s.length ? s : null;
+};
+
+const intOrNull = (v: unknown) => {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+};
+
+type AnyObj = Record<string, any>;
+
+function safeObj(v: any): AnyObj {
+  if (!v) return {};
+  if (typeof v === "object") return v as AnyObj;
+  if (typeof v === "string") {
+    try {
+      const j = JSON.parse(v);
+      return j && typeof j === "object" ? (j as AnyObj) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function isEmptyShipping(s?: ShippingJson | null) {
+  if (!s) return true;
+  const a = (s as any).address ?? {};
+  return !(
+    (s as any).name ||
+    (s as any).phone ||
+    (s as any).email ||
+    (s as any).line1 ||
+    (s as any).line2 ||
+    (s as any).city ||
+    (s as any).state ||
+    (s as any).postal_code ||
+    (s as any).country ||
+    a.line1 ||
+    a.line2 ||
+    a.city ||
+    a.state ||
+    a.postal_code ||
+    a.country
+  );
+}
+
+function shippingFromMetadata(meta?: Record<string, any> | null): ShippingJson {
+  if (!meta) return null;
+
+  const address =
+    meta.ship_line1 ||
+    meta.ship_line2 ||
+    meta.ship_city ||
+    meta.ship_state ||
+    meta.ship_postal ||
+    meta.ship_country
+      ? {
+          line1: nz(meta.ship_line1),
+          line2: nz(meta.ship_line2),
+          city: nz(meta.ship_city),
+          state: nz(meta.ship_state),
+          postal_code: nz(meta.ship_postal),
+          country: nz(meta.ship_country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(meta.ship_name),
+    phone: nz(meta.ship_phone),
+    email: nz(meta.ship_email),
+    address,
+    line1: nz(meta.ship_line1),
+    line2: nz(meta.ship_line2),
+    city: nz(meta.ship_city),
+    state: nz(meta.ship_state),
+    postal_code: nz(meta.ship_postal),
+    country: nz(meta.ship_country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function shippingFromSession(session: Stripe.Checkout.Session): ShippingJson {
+  const cd =
+    session.customer_details as Stripe.Checkout.Session.CustomerDetails | null;
+  if (!cd) return null;
+
+  const addr = cd.address;
+  const address =
+    addr &&
+    (addr.line1 ||
+      addr.line2 ||
+      addr.city ||
+      addr.state ||
+      addr.postal_code ||
+      addr.country)
+      ? {
+          line1: nz(addr.line1),
+          line2: nz(addr.line2),
+          city: nz(addr.city),
+          state: nz(addr.state),
+          postal_code: nz(addr.postal_code),
+          country: nz(addr.country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(cd.name),
+    phone: nz(cd.phone),
+    email: nz(cd.email) ?? nz((session as any).customer_email),
+    address,
+    line1: nz(addr?.line1),
+    line2: nz(addr?.line2),
+    city: nz(addr?.city),
+    state: nz(addr?.state),
+    postal_code: nz(addr?.postal_code),
+    country: nz(addr?.country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function shippingFromPaymentIntent(pi: Stripe.PaymentIntent): ShippingJson {
+  const s = pi.shipping || null;
+  const address =
+    s?.address &&
+    (s.address.line1 ||
+      s.address.line2 ||
+      s.address.city ||
+      s.address.state ||
+      s.address.postal_code ||
+      s.address.country)
+      ? {
+          line1: nz(s.address.line1),
+          line2: nz(s.address.line2),
+          city: nz(s.address.city),
+          state: nz(s.address.state),
+          postal_code: nz(s.address.postal_code),
+          country: nz(s.address.country),
+        }
+      : null;
+
+  const out: ShippingJson = {
+    name: nz(s?.name),
+    phone: nz(s?.phone),
+    email: nz(pi.receipt_email),
+    address,
+    line1: nz(s?.address?.line1),
+    line2: nz(s?.address?.line2),
+    city: nz(s?.address?.city),
+    state: nz(s?.address?.state),
+    postal_code: nz(s?.address?.postal_code),
+    country: nz(s?.address?.country),
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+function discountFromMetadata(meta?: Record<string, any> | null): DiscountMeta {
+  if (!meta) {
+    return {
+      code: null,
+      percentOff: null,
+      discountAmountCents: null,
+      productSubtotalCents: null,
+      finalProductSubtotalCents: null,
+      stripePromotionCodeId: null,
+      stripeCouponId: null,
+      stripeNativeDiscountUsed: false,
+    };
+  }
+
+  const code = normalizeDiscountCode(nz(meta.discountCode) ?? "");
+  const percentOff = intOrNull(meta.discountPercent);
+  const discountAmountCents = intOrNull(meta.discountAmountCents);
+  const productSubtotalCents = intOrNull(meta.productSubtotalCents);
+  const finalProductSubtotalCents = intOrNull(meta.finalProductSubtotalCents);
+  const stripePromotionCodeId = nz(meta.stripePromotionCodeId);
+  const stripeCouponId = nz(meta.stripeCouponId);
+  const stripeNativeDiscountUsed =
+    String(meta.stripeNativeDiscountUsed ?? "")
+      .trim()
+      .toLowerCase() === "true";
+
+  return {
+    code: code || null,
+    percentOff,
+    discountAmountCents,
+    productSubtotalCents,
+    finalProductSubtotalCents,
+    stripePromotionCodeId,
+    stripeCouponId,
+    stripeNativeDiscountUsed,
+  };
+}
+
+function pickNonEmpty<T>(a: T, b: T) {
+  if (a == null) return b;
+  if (typeof a === "string" && a.trim() === "") return b;
+  return a;
+}
+
+function normalizeShipping(s: any): AnyObj {
+  const S = safeObj(s);
+  const addr = safeObj(S.address);
+
+  const line1 = pickNonEmpty(nz(S.line1), nz(addr.line1));
+  const line2 = pickNonEmpty(nz(S.line2), nz(addr.line2));
+  const city = pickNonEmpty(nz(S.city), nz(addr.city));
+  const state = pickNonEmpty(nz(S.state), nz(addr.state));
+  const postal_code = pickNonEmpty(nz(S.postal_code), nz(addr.postal_code));
+  const country = pickNonEmpty(nz(S.country), nz(addr.country));
+
+  return {
+    name: nz(S.name),
+    phone: nz(S.phone),
+    email: nz(S.email),
+    line1,
+    line2,
+    city,
+    state,
+    postal_code,
+    country,
+    address: {
+      line1,
+      line2,
+      city,
+      state,
+      postal_code,
+      country,
+    },
+  };
+}
+
+function mergeShipping(base: ShippingJson, add: ShippingJson): ShippingJson {
+  if (!base && !add) return null;
+
+  if (!base) {
+    const I = normalizeShipping(add);
+    const out: ShippingJson = {
+      name: I.name,
+      phone: I.phone,
+      email: I.email,
+      address: I.address,
+      line1: I.line1,
+      line2: I.line2,
+      city: I.city,
+      state: I.state,
+      postal_code: I.postal_code,
+      country: I.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  if (!add) {
+    const B = normalizeShipping(base);
+    const out: ShippingJson = {
+      name: B.name,
+      phone: B.phone,
+      email: B.email,
+      address: B.address,
+      line1: B.line1,
+      line2: B.line2,
+      city: B.city,
+      state: B.state,
+      postal_code: B.postal_code,
+      country: B.country,
+    };
+    return isEmptyShipping(out) ? null : out;
+  }
+
+  const B = normalizeShipping(base);
+  const A = normalizeShipping(add);
+
+  const merged: AnyObj = {
+    name: pickNonEmpty(B.name, A.name),
+    phone: pickNonEmpty(B.phone, A.phone),
+    email: pickNonEmpty(B.email, A.email),
+    line1: pickNonEmpty(B.line1, A.line1),
+    line2: pickNonEmpty(B.line2, A.line2),
+    city: pickNonEmpty(B.city, A.city),
+    state: pickNonEmpty(B.state, A.state),
+    postal_code: pickNonEmpty(B.postal_code, A.postal_code),
+    country: pickNonEmpty(B.country, A.country),
+  };
+
+  merged.address = {
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  const out: ShippingJson = {
+    name: merged.name ?? null,
+    phone: merged.phone ?? null,
+    email: merged.email ?? null,
+    address: merged.address,
+    line1: merged.line1 ?? null,
+    line2: merged.line2 ?? null,
+    city: merged.city ?? null,
+    state: merged.state ?? null,
+    postal_code: merged.postal_code ?? null,
+    country: merged.country ?? null,
+  };
+
+  return isEmptyShipping(out) ? null : out;
+}
+
+const upper = (s?: string | null) => (s ? s.toUpperCase() : s ?? null);
+
+/* -------------------- userId helpers -------------------- */
+
+function userIdFromCheckoutSession(
+  session: Stripe.Checkout.Session
+): string | null {
+  const metaUser = nz((session.metadata as any)?.userId);
+  if (metaUser) return metaUser;
+
+  const ref = nz((session as any)?.client_reference_id);
+  if (ref) return ref;
+
+  return null;
+}
+
+function userIdFromPaymentIntent(pi: Stripe.PaymentIntent): string | null {
+  return nz((pi.metadata as any)?.userId);
+}
+
+/* -------------------- email helpers -------------------- */
+
+function shippingAddressToString(s?: ShippingJson | null): string | null {
+  if (!s) return null;
+
+  const partsRoot = [
+    (s as any).line1,
+    (s as any).line2,
+    (s as any).postal_code,
+    (s as any).city,
+    (s as any).state,
+    (s as any).country,
+  ].filter(Boolean) as string[];
+
+  if (partsRoot.length) return partsRoot.join(", ");
+
+  if (!s.address) return null;
+  const a = s.address;
+  const parts = [
+    a.line1,
+    a.line2,
+    a.postal_code,
+    a.city,
+    a.state,
+    a.country,
+  ].filter(Boolean) as string[];
+
+  return parts.length ? parts.join(", ") : null;
+}
+
+function totalFromOrder(order: any, optsTotalCents?: number | null): number {
+  if (typeof order?.totalCents === "number") return order.totalCents / 100;
+  if (typeof order?.total === "number") return order.total;
+
+  const subtotal =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? order.finalProductSubtotalCents
+      : typeof order?.subtotal === "number"
+        ? order.subtotal
+        : 0;
+
+  const shipping =
+    typeof order?.shippingCents === "number"
+      ? order.shippingCents
+      : typeof order?.shipping === "number"
+        ? order.shipping
+        : 0;
+
+  const tax = typeof order?.tax === "number" ? order.tax : 0;
+  const discountAmountCents =
+    typeof order?.discountAmountCents === "number"
+      ? order.discountAmountCents
+      : 0;
+
+  const sum =
+    typeof order?.finalProductSubtotalCents === "number"
+      ? subtotal + shipping + tax
+      : subtotal - discountAmountCents + shipping + tax;
+
+  if (sum > 0) return sum / 100;
+
+  if (typeof optsTotalCents === "number") return optsTotalCents / 100;
+
+  return 0;
+}
+
+function shippingPriceFromOrder(order: any): number {
+  if (typeof order?.shippingCents === "number") return order.shippingCents / 100;
+  return typeof order?.shipping === "number" ? order.shipping / 100 : 0;
+}
+
+function orderEmail(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  return (
+    nz(order?.shippingEmail) ||
+    nz(order?.shippingJson?.email) ||
+    nz((order?.shippingJson as any)?.ship_email) ||
+    nz(mergedShipping?.email) ||
+    null
+  );
+}
+
+function orderCustomerName(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  return (
+    nz(order?.shippingFullName) ||
+    nz(order?.shippingJson?.name) ||
+    nz((order?.shippingJson as any)?.ship_name) ||
+    nz(mergedShipping?.name) ||
+    null
+  );
+}
+
+function orderShippingAddress(
+  order: any,
+  mergedShipping?: ShippingJson | null
+): string | null {
+  const parts = [
+    nz(order?.shippingAddress1),
+    nz(order?.shippingAddress2),
+    nz(order?.shippingPostalCode),
+    nz(order?.shippingCity),
+    nz(order?.shippingRegion),
+    nz(order?.shippingCountry),
+  ].filter(Boolean) as string[];
+
+  if (parts.length) return parts.join(", ");
+
+  return shippingAddressToString(
+    ((order?.shippingJson as any) as ShippingJson) ?? mergedShipping ?? null
+  );
+}
+
+/* ------------------------- status updaters ------------------------- */
+
+async function markPaid(
+  orderId: string,
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    currency?: string | null;
+    totalCents?: number | null;
+    shipping?: ShippingJson;
+    userId?: string | null;
+    discount?: DiscountMeta | null;
+  }
+): Promise<{ transitioned: boolean }> {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      shippingJson: true,
+      shippingCountry: true,
+      userId: true,
+      discountCodeText: true,
+      discountPercent: true,
+      discountAmountCents: true,
+      productSubtotalCents: true,
+      finalProductSubtotalCents: true,
+      total: true,
+      totalCents: true,
+      shipping: true,
+      shippingCents: true,
+      tax: true,
+      confirmationEmailSentAt: true,
+      stripePromotionCodeIdUsed: true,
+      stripeCouponIdUsed: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const wasAlreadyFinal =
+    existing.status === "paid" ||
+    existing.status === "shipped" ||
+    existing.status === "delivered";
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing.shippingCountry ||
+      null)?.toString() || null;
+
+  const normalizedCode = normalizeDiscountCode(
+    opts.discount?.code ?? existing.discountCodeText ?? ""
+  );
+  const hasResolvedDiscountCode = !!normalizedCode;
+  const hasIncomingDiscountMeta =
+    !!opts.discount &&
+    (opts.discount.percentOff != null ||
+      opts.discount.discountAmountCents != null ||
+      opts.discount.productSubtotalCents != null ||
+      opts.discount.finalProductSubtotalCents != null ||
+      !!opts.discount.stripePromotionCodeId ||
+      !!opts.discount.stripeCouponId ||
+      !!opts.discount.code);
+
+  const updateData: Record<string, any> = {
+    ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
+    status: "paid",
+    paymentStatus: "paid",
+    paidAt: new Date(),
+    stripePaymentIntentId: opts.paymentIntentId ?? null,
+    ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+    ...(opts.currency ? { currency: upper(opts.currency) } : {}),
+    ...(typeof opts.totalCents === "number"
+      ? { totalCents: opts.totalCents }
+      : {}),
+    ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+    ...(country ? { shippingCountry: country } : {}),
+  };
+
+  if (hasResolvedDiscountCode) {
+    updateData.discountCodeText = normalizedCode;
+  }
+
+  if (hasIncomingDiscountMeta) {
+    updateData.discountPercent =
+      opts.discount?.percentOff ?? existing.discountPercent ?? undefined;
+    updateData.discountAmountCents =
+      opts.discount?.discountAmountCents ??
+      existing.discountAmountCents ??
+      undefined;
+    updateData.productSubtotalCents =
+      opts.discount?.productSubtotalCents ??
+      existing.productSubtotalCents ??
+      undefined;
+
+    updateData.subtotal =
+      opts.discount?.productSubtotalCents ??
+      existing.productSubtotalCents ??
+      undefined;
+
+    if (typeof opts.discount?.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents =
+        opts.discount.finalProductSubtotalCents;
+    } else if (typeof existing.finalProductSubtotalCents === "number") {
+      updateData.finalProductSubtotalCents = existing.finalProductSubtotalCents;
+    }
+
+    if (opts.discount?.stripePromotionCodeId) {
+      updateData.stripePromotionCodeIdUsed =
+        opts.discount.stripePromotionCodeId;
+    }
+
+    if (opts.discount?.stripeCouponId) {
+      updateData.stripeCouponIdUsed = opts.discount.stripeCouponId;
+    }
+  }
+
+  let transitioned = false;
+
+  if (!wasAlreadyFinal) {
+    transitioned = await prisma.$transaction(async (tx) => {
+      const claim = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          NOT: { status: { in: ["paid", "shipped", "delivered"] } },
+        },
+        data: updateData as any,
+      });
+
+      if (claim.count !== 1) {
+        return false;
+      }
+
+      if (hasResolvedDiscountCode) {
+        await redeemDiscountCodeTx(tx, normalizedCode, orderId);
+      }
+
+      return true;
+    });
+
+    if (!transitioned) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: updateData as any,
+      });
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData as any,
+    });
+  }
+
+  await deductPtStockForPaidOrder(orderId);
+
+  if (transitioned) {
+    try {
+      await finalizePaidOrder(orderId);
+    } catch (err) {
+      console.error("finalizePaidOrder failed:", err);
+    }
+  }
+
+  if (transitioned) {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (order && !order.confirmationEmailSentAt) {
+        const to = orderEmail(order, mergedShipping);
+
+        if (to) {
+          const items = (order.items ?? []).map((i: any) => ({
+            name: i?.name ?? "Item",
+            qty: typeof i?.qty === "number" ? i.qty : 1,
+            price: typeof i?.unitPrice === "number" ? i.unitPrice / 100 : 0,
+          }));
+
+          const emailResult = await sendOrderConfirmationEmail({
+            to,
+            orderId: order.id,
+            items,
+            total: totalFromOrder(order, opts.totalCents ?? null),
+            shippingPrice: shippingPriceFromOrder(order),
+            customerName: orderCustomerName(order, mergedShipping),
+            shippingAddress: orderShippingAddress(order, mergedShipping),
+          });
+
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              confirmationEmailSentAt: new Date(),
+              confirmationEmailProviderId:
+                typeof (emailResult as any)?.id === "string"
+                  ? (emailResult as any).id
+                  : typeof (emailResult as any)?.messageId === "string"
+                    ? (emailResult as any).messageId
+                    : null,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Order confirmation email failed:", err);
+    }
+  }
+
+  return { transitioned };
+}
+
+async function markPending(
+  orderId: string,
+  opts: {
+    paymentIntentId?: string | null;
+    sessionId?: string | null;
+    shipping?: ShippingJson;
+    userId?: string | null;
+  }
+) {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { shippingJson: true, shippingCountry: true, userId: true },
+  });
+
+  if (!existing) {
+    throw new Error(`Order not found: ${orderId}`);
+  }
+
+  const mergedShipping = mergeShipping(
+    (existing.shippingJson as ShippingJson) ?? null,
+    opts.shipping ?? null
+  );
+
+  const country =
+    (mergedShipping?.country ||
+      mergedShipping?.address?.country ||
+      existing.shippingCountry ||
+      null)?.toString() || null;
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      ...(opts.userId && !existing.userId ? { userId: opts.userId } : {}),
+      status: "pending",
+      paymentStatus: "pending",
+      stripePaymentIntentId: opts.paymentIntentId ?? null,
+      ...(opts.sessionId ? { stripeSessionId: opts.sessionId } : {}),
+      ...(mergedShipping ? { shippingJson: mergedShipping as any } : {}),
+      ...(country ? { shippingCountry: country } : {}),
+    } as any,
+  });
+}
+
+async function markFailed(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "failed", paymentStatus: "failed" },
+  });
+}
+
+async function markCanceled(orderId: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: "canceled", paymentStatus: "canceled" },
+  });
+}
+
+/* ------------------------------ route ----------------------------- */
+
+export const POST = async (req: NextRequest) => {
+  const stripe = getStripe();
+
+  const sig = req.headers.get("stripe-signature") as string | null;
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !secret) {
+    return NextResponse.json(
+      { error: "Missing STRIPE_WEBHOOK_SECRET or signature" },
+      { status: 500 }
+    );
+  }
+
+  let event: Stripe.Event;
+  let raw: string;
+
+  try {
+    raw = await req.text();
+    event = stripe.webhooks.constructEvent(raw, sig, secret);
+  } catch (err: any) {
+    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = userIdFromCheckoutSession(session);
+
+        let orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (session.payment_intent &&
+          typeof session.payment_intent !== "string" &&
+          (session.payment_intent.metadata?.orderId as string | undefined)
+            ? (session.payment_intent.metadata.orderId as string)
+            : undefined);
+
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        if (!orderId) {
+          const bySession = await prisma.order.findFirst({
+            where: { stripeSessionId: session.id },
+            select: { id: true },
+          });
+          orderId = bySession?.id;
+        }
+
+        if (!orderId && piId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const totalCents =
+          typeof session.amount_total === "number"
+            ? session.amount_total
+            : undefined;
+
+        const currency = session.currency ?? undefined;
+        const discount = discountFromMetadata(session.metadata ?? null);
+
+        if (session.payment_status === "paid") {
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            currency,
+            totalCents,
+            shipping,
+            userId,
+            discount,
+          });
+
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        } else {
+          await markPending(orderId, {
+            paymentIntentId: piId,
+            sessionId: session.id,
+            shipping,
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = userIdFromCheckoutSession(session);
+
+        const piId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+
+        const orderId =
+          (session.metadata?.orderId as string | undefined) ??
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(piId ? [{ stripePaymentIntentId: piId }] : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (!orderId) break;
+
+        const shipping = mergeShipping(
+          shippingFromMetadata(session.metadata ?? null),
+          shippingFromSession(session)
+        );
+
+        const discount = discountFromMetadata(session.metadata ?? null);
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: piId,
+          sessionId: session.id,
+          currency: session.currency ?? undefined,
+          totalCents:
+            typeof session.amount_total === "number"
+              ? session.amount_total
+              : undefined,
+          shipping,
+          userId,
+          discount,
+        });
+
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const userId = userIdFromPaymentIntent(pi);
+
+        let orderId = pi.metadata?.orderId as string | undefined;
+
+        if (!orderId) {
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: pi.id },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (!orderId) break;
+
+        const { transitioned } = await markPaid(orderId, {
+          paymentIntentId: pi.id,
+          sessionId: null,
+          currency: pi.currency ?? undefined,
+          totalCents:
+            typeof pi.amount_received === "number"
+              ? pi.amount_received
+              : undefined,
+          shipping: shippingFromPaymentIntent(pi),
+          userId,
+          discount: discountFromMetadata(pi.metadata ?? null),
+        });
+
+        if (transitioned) {
+          try {
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "orders",
+              value: 1,
+            });
+            await pusherServer.trigger("stats", "metric:update", {
+              metric: "countriesMaybeChanged",
+              value: 1,
+            });
+          } catch {}
+        }
+        break;
+      }
+
+      case "payment_intent.processing": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const userId = userIdFromPaymentIntent(pi);
+
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) {
+          await markPending(orderId, {
+            paymentIntentId: pi.id,
+            sessionId: null,
+            shipping: shippingFromPaymentIntent(pi),
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markFailed(orderId);
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const orderId =
+          (pi.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: { stripePaymentIntentId: pi.id },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orderId =
+          (session.metadata?.orderId as string | undefined) ||
+          (await prisma.order
+            .findFirst({
+              where: {
+                OR: [
+                  { stripeSessionId: session.id },
+                  ...(typeof session.payment_intent === "string"
+                    ? [{ stripePaymentIntentId: session.payment_intent }]
+                    : []),
+                ],
+              },
+              select: { id: true },
+            })
+            .then((r) => r?.id));
+
+        if (orderId) await markCanceled(orderId);
+        break;
+      }
+
+      case "charge.succeeded": {
+        const charge = event.data.object as Stripe.Charge;
+
+        let orderId = charge.metadata?.orderId as string | undefined;
+
+        if (!orderId && charge.payment_intent) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as any)?.id;
+
+          const byPI = await prisma.order.findFirst({
+            where: { stripePaymentIntentId: piId },
+            select: { id: true },
+          });
+          orderId = byPI?.id;
+        }
+
+        if (orderId && charge.paid) {
+          const piId =
+            typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as Stripe.PaymentIntent | null)?.id ??
+                null;
+
+          const cents =
+            typeof charge.amount_captured === "number"
+              ? charge.amount_captured
+              : typeof charge.amount === "number"
+                ? charge.amount
+                : undefined;
+
+          const { transitioned } = await markPaid(orderId, {
+            paymentIntentId: piId,
+            sessionId: null,
+            currency: charge.currency,
+            totalCents: cents,
+            shipping: null,
+            userId: null,
+            discount: discountFromMetadata(charge.metadata ?? null),
+          });
+
+          if (transitioned) {
+            try {
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "orders",
+                value: 1,
+              });
+              await pusherServer.trigger("stats", "metric:update", {
+                metric: "countriesMaybeChanged",
+                value: 1,
+              });
+            } catch {}
+          }
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (e) {
+    console.error("stripe webhook error", e);
+    return new NextResponse("ok", { status: 200 });
+  }
+};
+
+--- src/lib/deductPtStockForPaidOrder.ts ---
+import { prisma } from "@/lib/prisma";
+import { ProductChannel } from "@prisma/client";
+
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as JsonRecord;
+}
+
+function normalizeSize(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return null;
+
+  return normalized;
+}
+
+function extractSizeFromSnapshot(snapshot: unknown): string | null {
+  const snap = asRecord(snapshot);
+  if (!snap) return null;
+
+  const directCandidates: unknown[] = [
+    snap.size,
+    snap.selectedSize,
+    snap.variantSize,
+    snap.chosenSize,
+  ];
+
+  for (const candidate of directCandidates) {
+    const normalized = normalizeSize(candidate);
+    if (normalized) return normalized;
+  }
+
+  const options = asRecord(snap.options);
+  if (options) {
+    const optionCandidates: unknown[] = [
+      options.size,
+      options.selectedSize,
+      options.variantSize,
+      options.chosenSize,
+      options.Size,
+    ];
+
+    for (const candidate of optionCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  const selectedOptions = asRecord(snap.selectedOptions);
+  if (selectedOptions) {
+    const selectedOptionCandidates: unknown[] = [
+      selectedOptions.size,
+      selectedOptions.selectedSize,
+      selectedOptions.variantSize,
+      selectedOptions.chosenSize,
+      selectedOptions.Size,
+    ];
+
+    for (const candidate of selectedOptionCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  const personalization = asRecord(snap.personalization);
+  if (personalization) {
+    const personalizationCandidates: unknown[] = [
+      personalization.size,
+      personalization.selectedSize,
+    ];
+
+    for (const candidate of personalizationCandidates) {
+      const normalized = normalizeSize(candidate);
+      if (normalized) return normalized;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Deduz o stock PT por tamanho quando a encomenda fica paga.
+ *
+ * Regras:
+ * - Evita descontar duas vezes usando order.stockDeductedAt
+ * - Só desconta itens de produtos com channel = PT_STOCK_CTT
+ * - Atualiza SizeStock.ptStockQty e SizeStock.available
+ * - Recalcula Product.ptStockQty como soma de todos os tamanhos
+ */
+export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
+  if (!orderId?.trim()) {
+    throw new Error("Missing orderId");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        stockDeductedAt: true,
+        items: {
+          select: {
+            id: true,
+            productId: true,
+            qty: true,
+            name: true,
+            snapshotJson: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                channel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+
+    // Evita descontar duas vezes caso o webhook repita
+    if (order.stockDeductedAt) {
+      return;
+    }
+
+    const affectedProductIds = new Set<string>();
+
+    for (const item of order.items) {
+      const qty = Math.max(0, Number(item.qty ?? 0));
+      if (qty <= 0) continue;
+
+      if (!item.product) {
+        console.warn(
+          `[deductPtStockForPaidOrder] Missing product relation for order item ${item.id}`
+        );
+        continue;
+      }
+
+      // Só desconta stock de produtos PT Stock
+      if (item.product.channel !== ProductChannel.PT_STOCK_CTT) {
+        continue;
+      }
+
+      const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
+
+      if (!selectedSize) {
+        throw new Error(
+          `Missing size for PT Stock order item ${item.id} (${item.name}) on product ${item.productId}`
+        );
+      }
+
+      const sizeStock = await tx.sizeStock.findUnique({
+        where: {
+          productId_size: {
+            productId: item.productId,
+            size: selectedSize,
+          },
+        },
+        select: {
+          id: true,
+          ptStockQty: true,
+        },
+      });
+
+      if (!sizeStock) {
+        throw new Error(
+          `SizeStock not found for product ${item.productId} and size ${selectedSize}`
+        );
+      }
+
+      const currentQty = Math.max(0, Number(sizeStock.ptStockQty ?? 0));
+      const nextQty = Math.max(0, currentQty - qty);
+
+      await tx.sizeStock.update({
+        where: { id: sizeStock.id },
+        data: {
+          ptStockQty: nextQty,
+          available: nextQty > 0,
+        },
+      });
+
+      affectedProductIds.add(item.productId);
+    }
+
+    for (const productId of affectedProductIds) {
+      const sizeRows = await tx.sizeStock.findMany({
+        where: { productId },
+        select: {
+          ptStockQty: true,
+        },
+      });
+
+      const totalQty = sizeRows.reduce((sum, row) => {
+        return sum + Math.max(0, Number(row.ptStockQty ?? 0));
+      }, 0);
+
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          ptStockQty: totalQty,
+        },
+      });
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        stockDeductedAt: new Date(),
+      },
+    });
+  });
+}
+
+--- src/lib/redeem-discount-code.ts ---
+// src/lib/redeem-discount-code.ts
+import type { Prisma } from "@prisma/client";
+import { normalizeDiscountCode } from "@/lib/discount-codes";
+
+type DiscountTx = Prisma.TransactionClient;
+
+export async function redeemDiscountCodeTx(
+  tx: DiscountTx,
+  rawCode: string | null | undefined,
+  orderId: string
+) {
+  const code = normalizeDiscountCode(rawCode || "");
+  if (!code) return null;
+
+  const discount = await tx.discountCode.findUnique({
+    where: { code },
+  });
+
+  if (!discount) return null;
+
+  const safeDiscount = discount as typeof discount & {
+    usedByOrderId?: string | null;
+  };
+
+  const now = new Date();
+
+  if (!discount.active) return null;
+  if (discount.expiresAt && discount.expiresAt < now) return null;
+
+  // uso único real
+  if (discount.usedAt) {
+    throw new Error("Discount code already used.");
+  }
+
+  if (safeDiscount.usedByOrderId) {
+    throw new Error("Discount code already linked to an order.");
+  }
+
+  // compatibilidade com o modelo atual/anterior
+  if (discount.maxUses <= 0) return null;
+  if (discount.usesCount >= 1) {
+    throw new Error("Discount code already used.");
+  }
+  if (discount.usesCount >= discount.maxUses) {
+    throw new Error("Discount code usage limit reached.");
+  }
+
+  // updateMany protege contra corrida:
+  // só atualiza se o código continuar livre no exato momento do update
+  const updated = await tx.discountCode.updateMany({
+    where: {
+      id: discount.id,
+      active: true,
+      usedAt: null,
+      usesCount: 0,
+      ...(safeDiscount.usedByOrderId === undefined
+        ? {}
+        : { usedByOrderId: null }),
+    } as any,
+    data: {
+      active: false,
+      usedAt: now,
+      usesCount: 1,
+      usedByOrderId: orderId,
+    } as any,
+  });
+
+  if (updated.count !== 1) {
+    throw new Error("Failed to redeem discount code.");
+  }
+
+  return {
+    ...discount,
+    active: false,
+    usedAt: now,
+    usesCount: 1,
+    usedByOrderId: orderId,
+  };
+}
+
+--- prisma/schema.prisma ---
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_POSTGRES_URL_NON_POOLING")
+}
+
+/**
+ * =========================================================
+ * =============== Auth / Users ============================
+ * =========================================================
+ */
+model User {
+  id            String    @id @default(cuid())
+  name          String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  Cart     Cart[]
+
+  orders  Order[]
+  reviews Review[]
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+}
+
+/**
+ * =========================================================
+ * =============== Password Reset ===========================
+ * =========================================================
+ */
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+/**
+ * =========================================================
+ * =============== Store / Products ========================
+ * =========================================================
+ */
+
+enum TeamType {
+  CLUB
+  NATION
+}
+
+/**
+ * 🔹 canal do produto / order
+ * GLOBAL = envio normal
+ * PT_STOCK_CTT = stock em Portugal enviado pelos CTT
+ */
+enum ProductChannel {
+  GLOBAL
+  PT_STOCK_CTT
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  team        String
+  teamType    TeamType @default(CLUB)
+  season      String?
+  basePrice   Int
+  description String?
+
+  /**
+   * 🔹 canal de venda
+   */
+  channel ProductChannel @default(GLOBAL)
+
+  /**
+   * 🔹 stock local em Portugal
+   * null = produto normal/global sem stock PT
+   * número = produto PT Stock com quantidade controlada
+   */
+  ptStockQty Int?
+
+  imageUrls String[] @default([])
+  badges    String[] @default([])
+
+  allowNameNumber Boolean @default(true)
+  isVisible       Boolean @default(true)
+
+  sizes      SizeStock[]
+  options    OptionGroup[] @relation("ProductOptions")
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([team])
+  @@index([teamType])
+  @@index([season])
+  @@index([teamType, team])
+  @@index([isVisible])
+  @@index([channel])
+  @@index([ptStockQty])
+}
+
+model SizeStock {
+  id        String  @id @default(cuid())
+  productId String
+  size      String
+  available Boolean @default(true)
+
+  /**
+   * 🔹 stock por tamanho em Portugal
+   * este é o campo que deve ser decrementado
+   * quando uma order PT Stock é paga
+   */
+  ptStockQty Int @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, size])
+  @@index([productId])
+  @@index([size])
+  @@index([available])
+  @@index([ptStockQty])
+}
+
+model OptionGroup {
+  id        String     @id @default(cuid())
+  productId String
+  key       String
+  label     String
+  type      OptionType
+  required  Boolean    @default(false)
+
+  product Product       @relation("ProductOptions", fields: [productId], references: [id], onDelete: Cascade)
+  values  OptionValue[]
+
+  @@index([productId])
+}
+
+model OptionValue {
+  id         String @id @default(cuid())
+  groupId    String
+  value      String
+  label      String
+  priceDelta Int    @default(0)
+
+  playerId     String?
+  playerName   String?
+  playerNumber Int?
+
+  group  OptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player Player?     @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([playerId])
+}
+
+enum OptionType {
+  SIZE
+  RADIO
+  ADDON
+}
+
+/**
+ * =========================================================
+ * =============== Players ================================
+ * =========================================================
+ */
+
+model Player {
+  id        String   @id @default(cuid())
+  team      String
+  name      String
+  number    Int
+  position  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  optionValues OptionValue[]
+
+  @@unique([team, name], name: "player_team_name")
+  @@index([team])
+}
+
+/**
+ * =========================================================
+ * =============== Cart ====================================
+ * =========================================================
+ */
+
+model Cart {
+  id        String  @id @default(cuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId String? @unique
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  productId String
+
+  qty        Int @default(1)
+  unitPrice  Int
+  totalPrice Int @default(0)
+
+  optionsJson     Json?
+  personalization Json?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+/**
+ * =========================================================
+ * =============== Discount Codes ==========================
+ * =========================================================
+ */
+
+model DiscountCode {
+  id         String  @id @default(cuid())
+  code       String  @unique
+  percentOff Int     @default(10)
+  active     Boolean @default(true)
+
+  /**
+   * 🔹 uso único:
+   * maxUses e usesCount mantidos para compatibilidade/histórico,
+   * mas o fluxo passa a ser de 1 utilização apenas.
+   */
+  maxUses   Int       @default(1)
+  usesCount Int       @default(0)
+  usedAt    DateTime?
+  expiresAt DateTime?
+
+  /**
+   * 🔹 order que consumiu este código
+   * um código só pode ficar ligado a UMA única order
+   */
+  usedByOrderId String? @unique
+  usedByOrder   Order?  @relation("DiscountCodeUsedByOrder", fields: [usedByOrderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /**
+   * 🔹 integração opcional com Stripe para exibir
+   * o desconto como linha separada no Checkout
+   * Podes usar um OU outro:
+   * - stripeCouponId: cupão do Stripe
+   * - stripePromotionCodeId: promotion code do Stripe
+   * Normalmente basta stripePromotionCodeId se quiseres
+   * espelhar diretamente cada código interno.
+   */
+  stripeCouponId        String?
+  stripePromotionCodeId String?
+
+  @@index([active])
+  @@index([code, active])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@index([usedAt])
+  @@index([usedByOrderId])
+  @@index([stripeCouponId])
+  @@index([stripePromotionCodeId])
+}
+
+/**
+ * =========================================================
+ * =============== Orders ==================================
+ * =========================================================
+ */
+
+enum OrderStatus {
+  pending
+  paid
+  failed
+  canceled
+  refunded
+  shipped
+  delivered
+}
+
+enum ShippingStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+}
+
+model Order {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  sessionId String?
+
+  status   String @default("pending")
+  currency String @default("eur")
+
+  /**
+   * 🔹 canal da order (mesmo enum do Product)
+   */
+  channel ProductChannel @default(GLOBAL)
+
+  /**
+   * 🔹 subtotal dos produtos antes do desconto
+   */
+  subtotal Int @default(0)
+
+  /**
+   * 🔹 subtotal dos produtos antes do desconto
+   * campo adicional explícito para o resumo final
+   */
+  productSubtotalCents Int @default(0)
+
+  /**
+   * 🔹 subtotal final dos produtos depois do desconto
+   * útil para bater certo com Stripe/resumos/admin
+   */
+  finalProductSubtotalCents Int @default(0)
+
+  /**
+   * 🔹 shipping (em cents) — SINGLE SOURCE OF TRUTH
+   */
+  shipping Int @default(0)
+
+  /**
+   * 🔹 shipping explícito em cents para checkout/resumo
+   */
+  shippingCents Int @default(0)
+
+  tax Int @default(0)
+
+  total      Float?
+  totalCents Int?
+
+  /**
+   * 🔹 dados do desconto aplicado à order
+   * o vínculo do código consumido fica no model DiscountCode.usedByOrderId
+   */
+  discountCodeText    String?
+  discountPercent     Int?
+  discountAmountCents Int     @default(0)
+
+  /**
+   * 🔹 ids Stripe ligados ao desconto aplicado
+   * guardados na order para auditoria/debug
+   */
+  stripeCouponIdUsed        String?
+  stripePromotionCodeIdUsed String?
+
+  stripeSessionId       String?
+  stripePaymentIntentId String?
+  paypalOrderId         String?
+  paypalCaptured        Boolean?
+  paypalCaptureId       String?
+
+  paymentStatus String?
+  paidAt        DateTime?
+
+  /**
+   * 🔹 usado para impedir descontar stock duas vezes
+   * quando o webhook/payment handler repetir
+   */
+  stockDeductedAt DateTime?
+
+  shippingJson Json?
+
+  shippingFullName   String?
+  shippingEmail      String?
+  shippingPhone      String?
+  shippingAddress1   String?
+  shippingAddress2   String?
+  shippingCity       String?
+  shippingRegion     String?
+  shippingPostalCode String?
+  shippingCountry    String?
+
+  shippingStatus ShippingStatus @default(PENDING)
+  trackingCode   String?
+  trackingUrl    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+
+  confirmationEmailSentAt     DateTime?
+  confirmationEmailProviderId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+
+  /**
+   * 🔹 relação inversa do DiscountCode usado por esta order
+   * cada order pode ter no máximo um código consumido
+   */
+  usedDiscountCode DiscountCode? @relation("DiscountCodeUsedByOrder")
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([shippingCountry])
+  @@index([paidAt])
+  @@index([stockDeductedAt])
+  @@index([shippingStatus])
+  @@index([shippedAt])
+  @@index([deliveredAt])
+  @@index([trackingCode])
+  @@index([confirmationEmailSentAt])
+  @@index([channel])
+  @@index([discountCodeText])
+  @@index([stripeCouponIdUsed])
+  @@index([stripePromotionCodeIdUsed])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  name         String
+  image        String?
+  qty          Int
+  unitPrice    Int
+  totalPrice   Int
+  snapshotJson Json?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+/**
+ * =========================================================
+ * =============== Reviews / Engagement ====================
+ * =========================================================
+ */
+
+model Review {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  rating    Int
+  comment   String?
+  imageUrls String[] @default([])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([productId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model SocialMetric {
+  id             String   @id @default(cuid())
+  followersTotal Int
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Visit {
+  id        String   @id @default(cuid())
+  visitorId String
+  path      String
+  referrer  String?
+  ua        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  createdAt      DateTime  @default(now())
+  unsubToken     String    @unique @default(cuid())
+  unsubscribedAt DateTime?
+}
+
+model NewsletterCampaign {
+  id              String    @id @default(cuid())
+  subject         String
+  style           String
+  contentJson     String
+  html            String
+  text            String
+  status          String    @default("DRAFT")
+  totalRecipients Int       @default(0)
+  sentCount       Int       @default(0)
+  failedCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  sentAt          DateTime?
+
+  logs NewsletterSendLog[]
+}
+
+model NewsletterSendLog {
+  id         String   @id @default(cuid())
+  campaignId String
+  email      String
+  status     String
+  providerId String?
+  error      String?
+  createdAt  DateTime @default(now())
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([email])
+}
+
+
+========================================================================================================================
+3) PESQUISA GLOBAL POR TERMOS IMPORTANTES
+========================================================================================================================
+[diagnose-pt-stock.js:21] (selectedSize)     snap.selectedSize,
+[diagnose-pt-stock.js:35] (selectedSize)       options.selectedSize,
+[diagnose-pt-stock.js:49] (selectedSize)       selectedOptions.selectedSize,
+[diagnose-pt-stock.js:61] (selectedSize)     for (const c of [personalization.size, personalization.selectedSize]) {
+[diagnose-pt-stock.js:72] (status: "paid")     where: { status: "paid" },
+[diagnose-pt-stock.js:82] (ptStockQty)               ptStockQty: true,
+[diagnose-pt-stock.js:101] (paymentStatus)     paymentStatus: order.paymentStatus,
+[diagnose-pt-stock.js:105] (paidAt)     paidAt: order.paidAt,
+[diagnose-pt-stock.js:110] (PT_STOCK_CTT)     (it) => it.product && it.product.channel === "PT_STOCK_CTT"
+[diagnose-pt-stock.js:122] (snapshotJson)     const size = extractSize(item.snapshotJson);
+[diagnose-pt-stock.js:130] (snapshotJson)       snapshotJson: item.snapshotJson,
+[diagnose-pt-stock.js:137] (snapshotJson)     const size = extractSize(item.snapshotJson);
+[diagnose-pt-stock.js:196] (ptStockQty)       currentPtStockQty: row.ptStockQty,
+[diagnose-pt-stock.js:197] (ptStockQty)       expectedPtStockQtyAfterDeduction: Math.max(0, Number(row.ptStockQty || 0) - Number(entry.orderedQty || 0)),
+[manual-deduct-test.js:19] (selectedSize)   for (const c of [snap.size, snap.selectedSize, snap.variantSize, snap.chosenSize]) {
+[manual-deduct-test.js:26] (selectedSize)     for (const c of [options.size, options.selectedSize, options.variantSize, options.chosenSize, options.Size]) {
+[manual-deduct-test.js:34] (selectedSize)     for (const c of [selectedOptions.size, selectedOptions.selectedSize, selectedOptions.variantSize, selectedOptions.chosenSize, selectedOptions.Size]) {
+[manual-deduct-test.js:45] (status: "paid")     where: { status: "paid" },
+[manual-deduct-test.js:72] (PT_STOCK_CTT)       if (!item.product || item.product.channel !== "PT_STOCK_CTT") continue;
+[manual-deduct-test.js:74] (snapshotJson)       const size = extractSize(item.snapshotJson);
+[manual-deduct-test.js:101] (ptStockQty)       const nextQty = Math.max(0, Number(row.ptStockQty || 0) - Number(item.qty || 0));
+[manual-deduct-test.js:106] (ptStockQty)           ptStockQty: nextQty,
+[manual-deduct-test.js:117] (ptStockQty)         select: { ptStockQty: true },
+[manual-deduct-test.js:120] (ptStockQty)       const totalQty = rows.reduce((sum, r) => sum + Math.max(0, Number(r.ptStockQty || 0)), 0);
+[manual-deduct-test.js:122] (product.update)       await tx.product.update({
+[manual-deduct-test.js:124] (ptStockQty)         data: { ptStockQty: totalQty },
+[manual-deduct-test.js:128] (order.update)     await tx.order.update({
+[prisma\schema.prisma:106] (PT_STOCK_CTT)  * PT_STOCK_CTT = stock em Portugal enviado pelos CTT
+[prisma\schema.prisma:110] (PT_STOCK_CTT)   PT_STOCK_CTT
+[prisma\schema.prisma:133] (ptStockQty)   ptStockQty Int?
+[prisma\schema.prisma:156] (ptStockQty)   @@index([ptStockQty])
+[prisma\schema.prisma:170] (ptStockQty)   ptStockQty Int @default(0)
+[prisma\schema.prisma:178] (ptStockQty)   @@index([ptStockQty])
+[prisma\schema.prisma:427] (paymentStatus)   paymentStatus String?
+[prisma\schema.prisma:428] (paidAt)   paidAt        DateTime?
+[prisma\schema.prisma:471] (paymentStatus)   @@index([paymentStatus])
+[prisma\schema.prisma:474] (paidAt)   @@index([paidAt])
+[prisma\schema.prisma:496] (snapshotJson)   snapshotJson Json?
+[scripts\backfill-shipping.ts:58] (order.update)     await prisma.order.update({
+[scripts\fix-images-to-webp.ts:34] (product.update)     await prisma.product.update({
+[scripts\migrate-blob-to-supabase.ts:202] (product.update)       await prisma.product.update({
+[scripts\migrate-cloudinary-to-vercel-blob.ts:299] (product.update)         await prisma.product.update({
+[scripts\migrate-supabase-to-vercel-blob.ts:403] (product.update)         await prisma.product.update({
+[src\app\api\account\orders\[orderId]\route.ts:65] (snapshotJson)             snapshotJson: true,
+[src\app\api\admin\analytics\route.ts:142] (paymentStatus)   paymentStatus: string | null;
+[src\app\api\admin\analytics\route.ts:143] (paidAt)   paidAt: Date | null;
+[src\app\api\admin\analytics\route.ts:147] (paymentStatus)   const ps = (o.paymentStatus ?? "").toLowerCase();
+[src\app\api\admin\analytics\route.ts:149] (paidAt)   if (o.paidAt) return true;
+[src\app\api\admin\create-product\route.ts:42] (PT_STOCK_CTT)   return raw === "PT_STOCK_CTT" ? ProductChannel.PT_STOCK_CTT : ProductChannel.GLOBAL;
+[src\app\api\admin\create-product\route.ts:112] (PT_STOCK_CTT)       requestedChannel === ProductChannel.PT_STOCK_CTT || forcedPTStock;
+[src\app\api\admin\create-product\route.ts:115] (PT_STOCK_CTT)       ? ProductChannel.PT_STOCK_CTT
+[src\app\api\admin\products\[id]\route.ts:43] (PT_STOCK_CTT)   return raw === "PT_STOCK_CTT"
+[src\app\api\admin\products\[id]\route.ts:44] (PT_STOCK_CTT)     ? ProductChannel.PT_STOCK_CTT
+[src\app\api\admin\products\[id]\route.ts:160] (PT_STOCK_CTT)       requestedChannel === ProductChannel.PT_STOCK_CTT || forcedPTStock;
+[src\app\api\admin\products\[id]\route.ts:163] (PT_STOCK_CTT)       ? ProductChannel.PT_STOCK_CTT
+[src\app\api\admin\products\[id]\route.ts:216] (product.update)       await tx.product.update({
+[src\app\api\checkout\link\start\route.ts:100] (order.update)       await prisma.order.update({
+[src\app\api\checkout\paypal\capture\route.ts:266] (order.update)     await prisma.order.update({
+[src\app\api\checkout\paypal\capture\route.ts:269] (status: "paid")         status: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:270] (paymentStatus)         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:270] (status: "paid")         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:270] (paymentStatus: "paid")         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:271] (paidAt)         paidAt: new Date(),
+[src\app\api\checkout\paypal\capture\route.ts:292] (order.update)     const claim = await tx.order.updateMany({
+[src\app\api\checkout\paypal\capture\route.ts:292] (order.updateMany)     const claim = await tx.order.updateMany({
+[src\app\api\checkout\paypal\capture\route.ts:298] (status: "paid")         status: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:299] (paymentStatus)         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:299] (status: "paid")         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:299] (paymentStatus: "paid")         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:300] (paidAt)         paidAt: new Date(),
+[src\app\api\checkout\paypal\capture\route.ts:365] (deductPtStockForPaidOrder)     const { deductPtStockForPaidOrder } = await import(
+[src\app\api\checkout\paypal\capture\route.ts:366] (deductPtStockForPaidOrder)       "@/lib/deductPtStockForPaidOrder"
+[src\app\api\checkout\paypal\capture\route.ts:368] (deductPtStockForPaidOrder)     await deductPtStockForPaidOrder(orderId);
+[src\app\api\checkout\paypal\capture\route.ts:375] (order.update)   await prisma.order.update({
+[src\app\api\checkout\paypal\capture\route.ts:377] (paymentStatus)     data: { status: "failed", paymentStatus: "failed" },
+[src\app\api\checkout\paypal\create\route.ts:34] (PT_STOCK_CTT) type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+[src\app\api\checkout\paypal\create\route.ts:174] (selectedSize) function extractSelectedSize(optionsJson: any): string | null {
+[src\app\api\checkout\paypal\create\route.ts:179] (selectedSize)     root.selectedSize,
+[src\app\api\checkout\paypal\create\route.ts:193] (selectedSize)     options.selectedSize,
+[src\app\api\checkout\paypal\create\route.ts:205] (selectedSize)     selectedOptions.selectedSize,
+[src\app\api\checkout\paypal\create\route.ts:236] (PT_STOCK_CTT)   return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+[src\app\api\checkout\paypal\create\route.ts:239] (snapshotJson) function buildSnapshotJson(
+[src\app\api\checkout\paypal\create\route.ts:245] (selectedSize)   const selectedSize = extractSelectedSize(baseSnapshot);
+[src\app\api\checkout\paypal\create\route.ts:252] (selectedSize)   if (selectedSize) {
+[src\app\api\checkout\paypal\create\route.ts:253] (selectedSize)     snapshot.size = selectedSize;
+[src\app\api\checkout\paypal\create\route.ts:255] (selectedSize)     if (!safeStr(snapshot.selectedSize)) {
+[src\app\api\checkout\paypal\create\route.ts:256] (selectedSize)       snapshot.selectedSize = selectedSize;
+[src\app\api\checkout\paypal\create\route.ts:263] (selectedSize)         size: selectedSize,
+[src\app\api\checkout\paypal\create\route.ts:271] (selectedSize)         size: selectedSize,
+[src\app\api\checkout\paypal\create\route.ts:294] (PT_STOCK_CTT)     if (channel !== "PT_STOCK_CTT") continue;
+[src\app\api\checkout\paypal\create\route.ts:296] (selectedSize)     const size = extractSelectedSize(it.optionsJson);
+[src\app\api\checkout\paypal\create\route.ts:329] (ptStockQty)         ptStockQty: true,
+[src\app\api\checkout\paypal\create\route.ts:340] (ptStockQty)     const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+[src\app\api\checkout\paypal\create\route.ts:381] (PT_STOCK_CTT)       channel: "PT_STOCK_CTT" as const,
+[src\app\api\checkout\paypal\create\route.ts:443] (snapshotJson)         it.snapshotJson ??
+[src\app\api\checkout\paypal\create\route.ts:465] (PT_STOCK_CTT)       cartChannel === "PT_STOCK_CTT" ? resolvePtStockShippingCents(cartItems) : 0;
+[src\app\api\checkout\paypal\create\route.ts:488] (PT_STOCK_CTT)         channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+[src\app\api\checkout\paypal\create\route.ts:528] (snapshotJson)             snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+[src\app\api\checkout\paypal\create\route.ts:628] (order.update)       await prisma.order.update({
+[src\app\api\checkout\stripe\confirm\route.ts:257] (order.update)       const claim = await tx.order.updateMany({
+[src\app\api\checkout\stripe\confirm\route.ts:257] (order.updateMany)       const claim = await tx.order.updateMany({
+[src\app\api\checkout\stripe\confirm\route.ts:263] (status: "paid")           status: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:264] (paymentStatus)           paymentStatus: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:264] (status: "paid")           paymentStatus: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:264] (paymentStatus: "paid")           paymentStatus: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:265] (paidAt)           paidAt: new Date(),
+[src\app\api\checkout\stripe\confirm\route.ts:332] (deductPtStockForPaidOrder)       const { deductPtStockForPaidOrder } = await import(
+[src\app\api\checkout\stripe\confirm\route.ts:333] (deductPtStockForPaidOrder)         "@/lib/deductPtStockForPaidOrder"
+[src\app\api\checkout\stripe\confirm\route.ts:335] (deductPtStockForPaidOrder)       await deductPtStockForPaidOrder(orderId);
+[src\app\api\checkout\stripe\confirm\route.ts:338] (status: "paid")     return NextResponse.json({ ok: true, status: "paid" });
+[src\app\api\checkout\stripe\route.ts:60] (PT_STOCK_CTT) type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+[src\app\api\checkout\stripe\route.ts:248] (PT_STOCK_CTT)   return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+[src\app\api\checkout\stripe\route.ts:257] (selectedSize) function extractSelectedSize(optionsJson: any): string | null {
+[src\app\api\checkout\stripe\route.ts:262] (selectedSize)     root.selectedSize,
+[src\app\api\checkout\stripe\route.ts:276] (selectedSize)     options.selectedSize,
+[src\app\api\checkout\stripe\route.ts:288] (selectedSize)     selectedOptions.selectedSize,
+[src\app\api\checkout\stripe\route.ts:309] (snapshotJson) function buildSnapshotJson(
+[src\app\api\checkout\stripe\route.ts:315] (selectedSize)   const selectedSize = extractSelectedSize(baseSnapshot);
+[src\app\api\checkout\stripe\route.ts:322] (selectedSize)   if (selectedSize) {
+[src\app\api\checkout\stripe\route.ts:323] (selectedSize)     snapshot.size = selectedSize;
+[src\app\api\checkout\stripe\route.ts:325] (selectedSize)     if (!safeStr(snapshot.selectedSize)) {
+[src\app\api\checkout\stripe\route.ts:326] (selectedSize)       snapshot.selectedSize = selectedSize;
+[src\app\api\checkout\stripe\route.ts:333] (selectedSize)         size: selectedSize,
+[src\app\api\checkout\stripe\route.ts:341] (selectedSize)         size: selectedSize,
+[src\app\api\checkout\stripe\route.ts:364] (PT_STOCK_CTT)     if (channel !== "PT_STOCK_CTT") continue;
+[src\app\api\checkout\stripe\route.ts:366] (selectedSize)     const size = extractSelectedSize(it.optionsJson);
+[src\app\api\checkout\stripe\route.ts:399] (ptStockQty)         ptStockQty: true,
+[src\app\api\checkout\stripe\route.ts:410] (ptStockQty)     const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+[src\app\api\checkout\stripe\route.ts:604] (snapshotJson)         it.snapshotJson ??
+[src\app\api\checkout\stripe\route.ts:615] (PT_STOCK_CTT)     const isPtStockCart = cartChannel === "PT_STOCK_CTT";
+[src\app\api\checkout\stripe\route.ts:664] (PT_STOCK_CTT)             channel: "PT_STOCK_CTT" as const,
+[src\app\api\checkout\stripe\route.ts:731] (snapshotJson)           snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+[src\app\api\checkout\stripe\route.ts:746] (snapshotJson)           snapshotJson: buildSnapshotJson(it.optionsJson, it.personalization, {
+[src\app\api\checkout\stripe\route.ts:764] (PT_STOCK_CTT)         channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+[src\app\api\checkout\stripe\route.ts:929] (order.update)     await prisma.order.update({
+[src\app\api\checkout\success\order\route.ts:63] (snapshotJson)             snapshotJson: true, // ✅ exists in your schema
+[src\app\api\paypal\webhook\route.ts:4] (deductPtStockForPaidOrder) import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+[src\app\api\paypal\webhook\route.ts:239] (status: "paid")     status: "paid",
+[src\app\api\paypal\webhook\route.ts:240] (paymentStatus)     paymentStatus: "paid",
+[src\app\api\paypal\webhook\route.ts:240] (status: "paid")     paymentStatus: "paid",
+[src\app\api\paypal\webhook\route.ts:240] (paymentStatus: "paid")     paymentStatus: "paid",
+[src\app\api\paypal\webhook\route.ts:241] (paidAt)     paidAt: new Date(),
+[src\app\api\paypal\webhook\route.ts:275] (order.update)     await prisma.order.update({
+[src\app\api\paypal\webhook\route.ts:280] (deductPtStockForPaidOrder)     await deductPtStockForPaidOrder(orderId);
+[src\app\api\paypal\webhook\route.ts:286] (order.update)     const claim = await tx.order.updateMany({
+[src\app\api\paypal\webhook\route.ts:286] (order.updateMany)     const claim = await tx.order.updateMany({
+[src\app\api\paypal\webhook\route.ts:306] (order.update)     await prisma.order.update({
+[src\app\api\paypal\webhook\route.ts:340] (deductPtStockForPaidOrder)     await deductPtStockForPaidOrder(orderId);
+[src\app\api\paypal\webhook\route.ts:345] (deductPtStockForPaidOrder)   await deductPtStockForPaidOrder(orderId);
+[src\app\api\paypal\webhook\route.ts:370] (order.update)   await prisma.order.update({
+[src\app\api\paypal\webhook\route.ts:372] (paymentStatus)     data: { status: "pending", paymentStatus: "pending" },
+[src\app\api\paypal\webhook\route.ts:377] (order.update)   await prisma.order.update({
+[src\app\api\paypal\webhook\route.ts:379] (paymentStatus)     data: { status: "failed", paymentStatus: "failed" },
+[src\app\api\search\products\route.ts:66] (PT_STOCK_CTT)           channel: ProductChannel.PT_STOCK_CTT,
+[src\app\api\stripe\webhook\route.ts:10] (deductPtStockForPaidOrder) import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+[src\app\api\stripe\webhook\route.ts:548] (status === "paid")     existing.status === "paid" ||
+[src\app\api\stripe\webhook\route.ts:579] (status: "paid")     status: "paid",
+[src\app\api\stripe\webhook\route.ts:580] (paymentStatus)     paymentStatus: "paid",
+[src\app\api\stripe\webhook\route.ts:580] (status: "paid")     paymentStatus: "paid",
+[src\app\api\stripe\webhook\route.ts:580] (paymentStatus: "paid")     paymentStatus: "paid",
+[src\app\api\stripe\webhook\route.ts:581] (paidAt)     paidAt: new Date(),
+[src\app\api\stripe\webhook\route.ts:634] (order.update)       const claim = await tx.order.updateMany({
+[src\app\api\stripe\webhook\route.ts:634] (order.updateMany)       const claim = await tx.order.updateMany({
+[src\app\api\stripe\webhook\route.ts:654] (order.update)       await prisma.order.update({
+[src\app\api\stripe\webhook\route.ts:660] (order.update)     await prisma.order.update({
+[src\app\api\stripe\webhook\route.ts:666] (deductPtStockForPaidOrder)   await deductPtStockForPaidOrder(orderId);
+[src\app\api\stripe\webhook\route.ts:703] (order.update)           await prisma.order.update({
+[src\app\api\stripe\webhook\route.ts:754] (order.update)   await prisma.order.update({
+[src\app\api\stripe\webhook\route.ts:759] (paymentStatus)       paymentStatus: "pending",
+[src\app\api\stripe\webhook\route.ts:769] (order.update)   await prisma.order.update({
+[src\app\api\stripe\webhook\route.ts:771] (paymentStatus)     data: { status: "failed", paymentStatus: "failed" },
+[src\app\api\stripe\webhook\route.ts:776] (order.update)   await prisma.order.update({
+[src\app\api\stripe\webhook\route.ts:778] (paymentStatus)     data: { status: "canceled", paymentStatus: "canceled" },
+[src\app\api\stripe\webhook\route.ts:857] (status === "paid")         if (session.payment_status === "paid") {
+[src\app\[locale]\(store)\cart\actions.ts:259] (PT_STOCK_CTT)       : ((Array.from(channels)[0] as "GLOBAL" | "PT_STOCK_CTT") ?? "GLOBAL");
+[src\app\[locale]\(store)\cart\actions.ts:261] (PT_STOCK_CTT)   if (cartChannel === "PT_STOCK_CTT") {
+[src\app\[locale]\(store)\cart\actions.ts:265] (PT_STOCK_CTT)         channel: "PT_STOCK_CTT" as const,
+[src\app\[locale]\(store)\cart\page.tsx:314] (PT_STOCK_CTT) type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+[src\app\[locale]\(store)\cart\page.tsx:456] (PT_STOCK_CTT)   const isPtStockCart = cartChannel === "PT_STOCK_CTT";
+[src\app\[locale]\(store)\cart\page.tsx:734] (PT_STOCK_CTT)                         "PT_STOCK_CTT" && (
+[src\app\[locale]\(store)\checkout\actions.ts:23] (PT_STOCK_CTT) type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+[src\app\[locale]\(store)\checkout\actions.ts:302] (PT_STOCK_CTT)     cartChannel === "PT_STOCK_CTT"
+[src\app\[locale]\(store)\checkout\actions.ts:306] (PT_STOCK_CTT)             channel: "PT_STOCK_CTT" as const,
+[src\app\[locale]\(store)\checkout\actions.ts:312] (PT_STOCK_CTT)     cartChannel === "PT_STOCK_CTT"
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:94] (snapshotJson)   snapshotJson?: unknown
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:110] (paidAt)   paidAt?: string | null
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:112] (paymentStatus)   paymentStatus?: string | null
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:501] (snapshotJson)   const snap = safeParseJSON(it?.snapshotJson)
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:911] (paidAt)                   {order.paidAt && (
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:913] (paidAt)                       <span className="text-gray-500">{t('paidAt')}:</span> {new Date(order.paidAt).toLocaleString(locale)}
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:917] (paymentStatus)                   {order.paymentStatus && (
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:919] (paymentStatus)                       <span className="text-gray-500">{t('payment')}:</span> {order.paymentStatus}
+[src\app\[locale]\admin\(panel)\actions.ts:8] (order.update)   await prisma.order.update({
+[src\app\[locale]\admin\(panel)\orders\page.tsx:121] (paidAt)     { paidAt: { not: null } },
+[src\app\[locale]\admin\(panel)\orders\page.tsx:123] (paymentStatus)       paymentStatus: {
+[src\app\[locale]\admin\(panel)\orders\page.tsx:134] (PT_STOCK_CTT)  * ProductChannel.PT_STOCK_CTT
+[src\app\[locale]\admin\(panel)\orders\page.tsx:141] (PT_STOCK_CTT)           channel: ProductChannel.PT_STOCK_CTT,
+[src\app\[locale]\admin\(panel)\orders\page.tsx:156] (paymentStatus)   paymentStatus: true,
+[src\app\[locale]\admin\(panel)\orders\page.tsx:157] (paidAt)   paidAt: true,
+[src\app\[locale]\admin\(panel)\page.tsx:101] (paymentStatus)         paymentStatus: true,
+[src\app\[locale]\admin\(panel)\page.tsx:102] (paidAt)         paidAt: true,
+[src\app\[locale]\admin\(panel)\page.tsx:184] (paymentStatus)   const raw = String(o?.paymentStatus ?? "").toUpperCase();
+[src\app\[locale]\admin\(panel)\page.tsx:188] (paidAt)   if (o?.paidAt) return "paid";
+[src\app\[locale]\admin\(panel)\products\actions.ts:173] (product.update)   const updated = await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\actions.ts:318] (product.update)         await tx.product.update({
+[src\app\[locale]\admin\(panel)\products\actions.ts:366] (product.update)     const updated = await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\page.tsx:55] (product.update)   await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\[id]\page.tsx:97] (product.update)     await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\[id]\page.tsx:129] (product.update)     await prisma.product.update({
+[src\app\[locale]\admin\(panel)\pt-stock\products\new\page.tsx:23] (PT_STOCK_CTT) const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
+[src\app\[locale]\admin\(panel)\pt-stock\products\[id]\edit\page.tsx:30] (PT_STOCK_CTT) const PT_STOCK_CHANNEL = "PT_STOCK_CTT";
+[src\app\[locale]\admin\orders\actions.ts:126] (order.update)   const updatedOrder = await prisma.order.update({
+[src\app\[locale]\admin\orders\[id]\actions.ts:141] (order.update)   await prisma.order.update({
+[src\app\[locale]\admin\orders\[id]\actions.ts:205] (order.update)   await prisma.order.update({
+[src\app\[locale]\admin\orders\[id]\page.tsx:296] (snapshotJson)           // ✅ IMPORTANT: não uses select no item (assim vem snapshotJson/personalizationJson/etc)
+[src\app\[locale]\admin\orders\[id]\page.tsx:323] (snapshotJson)     // unitPrice, totalPrice, snapshotJson, personalizationJson, product.badges
+[src\app\[locale]\admin\orders\[id]\page.tsx:344] (snapshotJson)         snapshotJson: it?.snapshotJson ?? null,
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:121] (paidAt)     { paidAt: { not: null } },
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:123] (paymentStatus)       paymentStatus: {
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:127] (status: "paid")     { status: "paid" },
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:133] (PT_STOCK_CTT)  * mostrar apenas orders do canal PT_STOCK_CTT
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:136] (PT_STOCK_CTT)   channel: "PT_STOCK_CTT" as any,
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:147] (paymentStatus)   paymentStatus: true,
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:148] (paidAt)   paidAt: true,
+[src\app\[locale]\admin\pt-stock\products\page.tsx:71] (product.update)   await prisma.product.update({
+[src\app\[locale]\admin\pt-stock\products\page.tsx:98] (PT_STOCK_CTT)     channel: "PT_STOCK_CTT" as const,
+[src\app\[locale]\admin\pt-stock\products\page.tsx:125] (ptStockQty)       ptStockQty: true,
+[src\app\[locale]\admin\pt-stock\products\page.tsx:220] (ptStockQty)                 const stockQty = p.ptStockQty ?? 0;
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:22] (ptStockQty)     ptStockQty: number;
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:33] (ptStockQty)       ptStockQty: qty,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:38] (ptStockQty)   const totalFromSizes = updates.reduce((sum, item) => sum + item.ptStockQty, 0);
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:45] (ptStockQty)           ptStockQty: item.ptStockQty,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:51] (product.update)     await tx.product.update({
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:54] (ptStockQty)         ptStockQty: totalFromSizes,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:69] (ptStockQty)       ptStockQty: true,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:80] (ptStockQty)           ptStockQty: true,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:91] (ptStockQty)   const currentStock = product.ptStockQty ?? 0;
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:92] (ptStockQty)   const totalBySizes = sizes.reduce((sum, size) => sum + (size.ptStockQty ?? 0), 0);
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:137] (product.update)               {new Date(product.updatedAt).toLocaleString("en-GB")}
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:209] (ptStockQty)                           defaultValue={size.ptStockQty ?? 0}
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:225] (ptStockQty)               htmlFor="ptStockQty"
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:232] (ptStockQty)               id="ptStockQty"
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:233] (ptStockQty)               name="ptStockQty"
+[src\app\[locale]\checkout\success\SuccessClient.tsx:17] (snapshotJson)   snapshotJson?: unknown;
+[src\app\[locale]\checkout\success\SuccessClient.tsx:436] (snapshotJson)   const snap = safeParseJSON(it.snapshotJson);
+[src\app\[locale]\clubs\page.tsx:139] (PT_STOCK_CTT)         channel: "PT_STOCK_CTT",
+[src\app\[locale]\orders\[id]\page.tsx:389] (snapshotJson)   const snap = safeParseJSON(it.snapshotJson);
+[src\app\[locale]\orders\[id]\page.tsx:478] (paymentStatus) function formatPaymentStatus(paymentStatus: string, t: (key: string) => string) {
+[src\app\[locale]\orders\[id]\page.tsx:479] (paymentStatus)   const normalized = String(paymentStatus || "").trim().toLowerCase();
+[src\app\[locale]\orders\[id]\page.tsx:516] (snapshotJson)   snapshotJson: unknown;
+[src\app\[locale]\orders\[id]\page.tsx:523] (paidAt)   paidAt: Date | null;
+[src\app\[locale]\orders\[id]\page.tsx:525] (paymentStatus)   paymentStatus: string | null;
+[src\app\[locale]\orders\[id]\page.tsx:556] (paidAt)       paidAt: true,
+[src\app\[locale]\orders\[id]\page.tsx:558] (paymentStatus)       paymentStatus: true,
+[src\app\[locale]\orders\[id]\page.tsx:587] (snapshotJson)           snapshotJson: true,
+[src\app\[locale]\orders\[id]\page.tsx:628] (status === "paid")     status === "paid" || status === "shipped" || status === "delivered"
+[src\app\[locale]\orders\[id]\page.tsx:818] (paidAt)                 {order.paidAt ? (
+[src\app\[locale]\orders\[id]\page.tsx:820] (paidAt)                     <span className="text-gray-500">{t("paidAtLabel")}:</span>{" "}
+[src\app\[locale]\orders\[id]\page.tsx:821] (paidAt)                     {new Date(order.paidAt).toLocaleString(
+[src\app\[locale]\orders\[id]\page.tsx:827] (paymentStatus)                 {order.paymentStatus ? (
+[src\app\[locale]\orders\[id]\page.tsx:830] (paymentStatus)                     {formatPaymentStatus(order.paymentStatus, t)}
+[src\app\[locale]\products\[slug]\product-configurator.tsx:38] (selectedSize)   const [selectedSize, setSelectedSize] = useState<string | null>(() => {
+[src\app\[locale]\products\[slug]\product-configurator.tsx:52] (selectedSize)     if (!selectedSize) return 0;
+[src\app\[locale]\products\[slug]\product-configurator.tsx:53] (selectedSize)     return product.sizes.find((s) => s.size === selectedSize)?.stock ?? 0;
+[src\app\[locale]\products\[slug]\product-configurator.tsx:54] (selectedSize)   }, [product.sizes, selectedSize]);
+[src\app\[locale]\products\[slug]\product-configurator.tsx:87] (selectedSize)     if (!selectedSize) {
+[src\app\[locale]\products\[slug]\product-configurator.tsx:96] (selectedSize)       alert(`Only ${stockForSize} in stock for size ${selectedSize}.`);
+[src\app\[locale]\products\[slug]\product-configurator.tsx:105] (selectedSize)       size: selectedSize,
+[src\app\[locale]\products\[slug]\product-configurator.tsx:122] (selectedSize)               const isActive = selectedSize === v.value;
+[src\app\[locale]\products\[slug]\product-configurator.tsx:130] (selectedSize)                   onClick={() => setSelectedSize(v.value)}
+[src\app\[locale]\products\[slug]\product-configurator.tsx:140] (selectedSize)           {selectedSize && (
+[src\app\[locale]\products\[slug]\product-configurator.tsx:142] (selectedSize)               Stock for <b>{selectedSize}</b>: {stockForSize}
+[src\app\[locale]\products\[slug]\product-configurator.tsx:255] (selectedSize)         disabled={!selectedSize || qty < 1 || qty > stockForSize}
+[src\app\[locale]\pt-stock\page.tsx:159] (ptStockQty)   ptStockQty: number | null;
+[src\app\[locale]\pt-stock\page.tsx:177] (ptStockQty)   const stockQty = p.ptStockQty ?? 0;
+[src\app\[locale]\pt-stock\page.tsx:302] (PT_STOCK_CTT)       channel: ProductChannel.PT_STOCK_CTT,
+[src\app\[locale]\pt-stock\page.tsx:313] (ptStockQty)       ptStockQty: true,
+[src\app\[locale]\pt-stock\[slug]\page.tsx:130] (ptStockQty)       ptStockQty: true,
+[src\app\[locale]\pt-stock\[slug]\page.tsx:139] (ptStockQty)           ptStockQty: true,
+[src\app\[locale]\pt-stock\[slug]\page.tsx:174] (PT_STOCK_CTT)   if (product.channel !== ProductChannel.PT_STOCK_CTT || !product.isVisible) {
+[src\app\[locale]\pt-stock\[slug]\page.tsx:219] (ptStockQty)           ptStockQty: Math.max(0, Number(s.ptStockQty ?? 0)),
+[src\app\[locale]\pt-stock\[slug]\page.tsx:224] (ptStockQty)   const stockQty = Number(product.ptStockQty ?? 0);
+[src\app\[locale]\pt-stock\[slug]\page.tsx:256] (ptStockQty)             ptStockQty: stockQty,
+[src\components\admin\SupplierCopyCard.tsx:26] (snapshotJson)   snapshotJson?: unknown;
+[src\components\admin\SupplierCopyCard.tsx:149] (snapshotJson)   const snap = safeParseJSON(item.snapshotJson);
+[src\components\FreeShippingBanner.tsx:69] (PT_STOCK_CTT)         `/api/cart/subtotal?ts=${Date.now()}&excludeChannel=PT_STOCK_CTT`,
+[src\components\ProductConfigurator.tsx:422] (selectedSize)   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+[src\components\ProductConfigurator.tsx:427] (selectedSize)     setSelectedSize(size);
+[src\components\ProductConfigurator.tsx:433] (selectedSize)     if (!selectedSize) return;
+[src\components\ProductConfigurator.tsx:434] (selectedSize)     const found = sizes.find((s) => s.size === selectedSize);
+[src\components\ProductConfigurator.tsx:436] (selectedSize)       setSelectedSize(null);
+[src\components\ProductConfigurator.tsx:439] (selectedSize)   }, [sizes, selectedSize]);
+[src\components\ProductConfigurator.tsx:442] (selectedSize)     const sel = selectedSize ? sizes.find((s) => s.size === selectedSize) : null;
+[src\components\ProductConfigurator.tsx:451] (selectedSize)   }, [selectedSize, sizes, t]);
+[src\components\ProductConfigurator.tsx:620] (selectedSize)     if (!selectedSize) return false;
+[src\components\ProductConfigurator.tsx:624] (selectedSize)   }, [selectedSize, qty, missingRequired]);
+[src\components\ProductConfigurator.tsx:627] (selectedSize)     const step1 = !!selectedSize ? 1 : 0;
+[src\components\ProductConfigurator.tsx:631] (selectedSize)   }, [selectedSize, missingRequired.length, canAddToCart]);
+[src\components\ProductConfigurator.tsx:758] (selectedSize)     if (!selectedSize) return t("validationChooseSize");
+[src\components\ProductConfigurator.tsx:760] (selectedSize)     const sel = sizes.find((s) => s.size === selectedSize);
+[src\components\ProductConfigurator.tsx:778] (selectedSize)       if (!selectedSize) {
+[src\components\PtStockProductConfigurator.tsx:29] (ptStockQty)   ptStockQty?: number | null;
+[src\components\PtStockProductConfigurator.tsx:220] (ptStockQty)   const possibleValues = [rec.stockQty, rec.qty, rec.ptStockQty, rec.stock, rec.quantity];
+[src\components\PtStockProductConfigurator.tsx:278] (ptStockQty)   const safeStockQty = Number(product?.ptStockQty ?? 0);
+[src\components\PtStockProductConfigurator.tsx:282] (selectedSize)   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+[src\components\PtStockProductConfigurator.tsx:310] (selectedSize)   const selectedSizeEntry = useMemo(
+[src\components\PtStockProductConfigurator.tsx:311] (selectedSize)     () => safeSizes.find((s) => s.size === selectedSize) ?? null,
+[src\components\PtStockProductConfigurator.tsx:312] (selectedSize)     [safeSizes, selectedSize]
+[src\components\PtStockProductConfigurator.tsx:315] (selectedSize)   const selectedSizeStockQty = useMemo(() => {
+[src\components\PtStockProductConfigurator.tsx:316] (selectedSize)     if (!selectedSizeEntry) return 0;
+[src\components\PtStockProductConfigurator.tsx:317] (selectedSize)     if (selectedSizeEntry.stockQty != null) return Math.max(0, selectedSizeEntry.stockQty);
+[src\components\PtStockProductConfigurator.tsx:318] (selectedSize)     return selectedSizeEntry.available ? safeStockQty : 0;
+[src\components\PtStockProductConfigurator.tsx:319] (selectedSize)   }, [selectedSizeEntry, safeStockQty]);
+[src\components\PtStockProductConfigurator.tsx:321] (selectedSize)   const selectedSizeInStock = !!selectedSizeEntry && selectedSizeStockQty > 0;
+[src\components\PtStockProductConfigurator.tsx:329] (selectedSize)     if (!selectedSize && availableSizes.length > 0) {
+[src\components\PtStockProductConfigurator.tsx:330] (selectedSize)       setSelectedSize(availableSizes[0].size);
+[src\components\PtStockProductConfigurator.tsx:332] (selectedSize)   }, [availableSizes, selectedSize]);
+[src\components\PtStockProductConfigurator.tsx:335] (selectedSize)     if (selectedSize && !safeSizes.some((s) => s.size === selectedSize && s.available && (s.stockQty == null || s.stockQty > 0))) {
+[src\components\PtStockProductConfigurator.tsx:336] (selectedSize)       setSelectedSize(availableSizes[0]?.size ?? null);
+[src\components\PtStockProductConfigurator.tsx:338] (selectedSize)   }, [safeSizes, availableSizes, selectedSize]);
+[src\components\PtStockProductConfigurator.tsx:384] (selectedSize)     if (selectedSizeStockQty <= 0) {
+[src\components\PtStockProductConfigurator.tsx:389] (selectedSize)     setQty((current) => Math.min(current, selectedSizeStockQty));
+[src\components\PtStockProductConfigurator.tsx:390] (selectedSize)   }, [selectedSizeStockQty]);
+[src\components\PtStockProductConfigurator.tsx:393] (selectedSize)     () => getStockUrgencyMessage(selectedSize ? selectedSizeStockQty : 0, t),
+[src\components\PtStockProductConfigurator.tsx:394] (selectedSize)     [selectedSize, selectedSizeStockQty, t]
+[src\components\PtStockProductConfigurator.tsx:398] (selectedSize)     if (!selectedSizeEntry) return false;
+[src\components\PtStockProductConfigurator.tsx:399] (selectedSize)     if (!selectedSizeInStock) return false;
+[src\components\PtStockProductConfigurator.tsx:401] (selectedSize)     if (qty > selectedSizeStockQty) return false;
+[src\components\PtStockProductConfigurator.tsx:403] (selectedSize)   }, [selectedSizeEntry, selectedSizeInStock, qty, selectedSizeStockQty]);
+[src\components\PtStockProductConfigurator.tsx:408] (selectedSize)     const step1 = !!selectedSize ? 1 : 0;
+[src\components\PtStockProductConfigurator.tsx:409] (selectedSize)     const step2 = selectedSizeInStock ? 1 : 0;
+[src\components\PtStockProductConfigurator.tsx:412] (selectedSize)   }, [selectedSize, selectedSizeInStock, canAddToCart]);
+[src\components\PtStockProductConfigurator.tsx:415] (selectedSize)     if (!selectedSize) return t("errors.chooseSize");
+[src\components\PtStockProductConfigurator.tsx:416] (selectedSize)     if (!selectedSizeInStock) return t("errors.outOfStock");
+[src\components\PtStockProductConfigurator.tsx:418] (selectedSize)     if (qty > selectedSizeStockQty) return t("errors.invalidQuantity");
+[src\components\PtStockProductConfigurator.tsx:515] (selectedSize)       size: selectedSize,
+[src\components\PtStockProductConfigurator.tsx:833] (selectedSize)                     selectedSizeInStock
+[src\components\PtStockProductConfigurator.tsx:838] (selectedSize)                   {selectedSizeInStock ? t("inStock") : t("outOfStock")}
+[src\components\PtStockProductConfigurator.tsx:841] (selectedSize)                 {selectedSize && selectedSizeInStock && (
+[src\components\PtStockProductConfigurator.tsx:843] (selectedSize)                     {t("unitsAvailable", { count: selectedSizeStockQty })}
+[src\components\PtStockProductConfigurator.tsx:848] (selectedSize)               {selectedSize && (
+[src\components\PtStockProductConfigurator.tsx:870] (selectedSize)                     const isActive = selectedSize === s.size && !unavailable;
+[src\components\PtStockProductConfigurator.tsx:878] (selectedSize)                           setSelectedSize(s.size);
+[src\components\PtStockProductConfigurator.tsx:925] (selectedSize)                     onClick={() => setQty((q) => Math.min(selectedSizeStockQty || 1, q + 1))}
+[src\components\PtStockProductConfigurator.tsx:927] (selectedSize)                     disabled={pending || !selectedSizeInStock || qty >= selectedSizeStockQty}
+[src\lib\checkout.ts:44] (PT_STOCK_CTT) ): "GLOBAL" | "PT_STOCK_CTT" | "MIXED" {
+[src\lib\checkout.ts:54] (PT_STOCK_CTT)   return only === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+[src\lib\checkout.ts:57] (selectedSize) function extractSelectedSize(
+[src\lib\checkout.ts:65] (selectedSize)       optionsJson.selectedSize,
+[src\lib\checkout.ts:91] (selectedSize)     const candidates = [p.size, p.selectedSize];
+[src\lib\checkout.ts:154] (snapshotJson)     snapshotJson: any;
+[src\lib\checkout.ts:166] (selectedSize)     const selectedSize = extractSelectedSize(optionsJson, personalization);
+[src\lib\checkout.ts:175] (snapshotJson)       snapshotJson: {
+[src\lib\checkout.ts:181] (selectedSize)         size: selectedSize,
+[src\lib\checkout.ts:182] (selectedSize)         selectedSize,
+[src\lib\checkout.ts:222] (PT_STOCK_CTT)       channel: cartChannel === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL",
+[src\lib\checkout.ts:260] (deductPtStockForPaidOrder)   // deductPtStockForPaidOrder(orderId)
+[src\lib\deductPtStockForPaidOrder.ts:28] (selectedSize)     snap.selectedSize,
+[src\lib\deductPtStockForPaidOrder.ts:42] (selectedSize)       options.selectedSize,
+[src\lib\deductPtStockForPaidOrder.ts:58] (selectedSize)       selectedOptions.selectedSize,
+[src\lib\deductPtStockForPaidOrder.ts:74] (selectedSize)       personalization.selectedSize,
+[src\lib\deductPtStockForPaidOrder.ts:91] (PT_STOCK_CTT)  * - Só desconta itens de produtos com channel = PT_STOCK_CTT
+[src\lib\deductPtStockForPaidOrder.ts:92] (ptStockQty)  * - Atualiza SizeStock.ptStockQty e SizeStock.available
+[src\lib\deductPtStockForPaidOrder.ts:93] (ptStockQty)  * - Recalcula Product.ptStockQty como soma de todos os tamanhos
+[src\lib\deductPtStockForPaidOrder.ts:95] (deductPtStockForPaidOrder) export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
+[src\lib\deductPtStockForPaidOrder.ts:112] (snapshotJson)             snapshotJson: true,
+[src\lib\deductPtStockForPaidOrder.ts:142] (deductPtStockForPaidOrder)           `[deductPtStockForPaidOrder] Missing product relation for order item ${item.id}`
+[src\lib\deductPtStockForPaidOrder.ts:148] (PT_STOCK_CTT)       if (item.product.channel !== ProductChannel.PT_STOCK_CTT) {
+[src\lib\deductPtStockForPaidOrder.ts:152] (selectedSize)       const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
+[src\lib\deductPtStockForPaidOrder.ts:152] (snapshotJson)       const selectedSize = extractSizeFromSnapshot(item.snapshotJson);
+[src\lib\deductPtStockForPaidOrder.ts:154] (selectedSize)       if (!selectedSize) {
+[src\lib\deductPtStockForPaidOrder.ts:164] (selectedSize)             size: selectedSize,
+[src\lib\deductPtStockForPaidOrder.ts:169] (ptStockQty)           ptStockQty: true,
+[src\lib\deductPtStockForPaidOrder.ts:175] (selectedSize)           `SizeStock not found for product ${item.productId} and size ${selectedSize}`
+[src\lib\deductPtStockForPaidOrder.ts:179] (ptStockQty)       const currentQty = Math.max(0, Number(sizeStock.ptStockQty ?? 0));
+[src\lib\deductPtStockForPaidOrder.ts:185] (ptStockQty)           ptStockQty: nextQty,
+[src\lib\deductPtStockForPaidOrder.ts:197] (ptStockQty)           ptStockQty: true,
+[src\lib\deductPtStockForPaidOrder.ts:202] (ptStockQty)         return sum + Math.max(0, Number(row.ptStockQty ?? 0));
+[src\lib\deductPtStockForPaidOrder.ts:205] (product.update)       await tx.product.update({
+[src\lib\deductPtStockForPaidOrder.ts:208] (ptStockQty)           ptStockQty: totalQty,
+[src\lib\deductPtStockForPaidOrder.ts:213] (order.update)     await tx.order.update({
+[src\lib\kpis.ts:13] (paidAt)         { paidAt: { not: null } },
+[src\lib\kpis.ts:27] (paidAt)         { paidAt: { not: null } },
+[src\lib\kpis.ts:79] (paidAt)         { paidAt: { not: null } },
+[src\lib\shipping.ts:3] (PT_STOCK_CTT) export type CartChannel = "GLOBAL" | "PT_STOCK_CTT" | "MIXED";
+[src\lib\shipping.ts:42] (PT_STOCK_CTT) function normChannel(v: unknown): "GLOBAL" | "PT_STOCK_CTT" {
+[src\lib\shipping.ts:43] (PT_STOCK_CTT)   return String(v ?? "").toUpperCase() === "PT_STOCK_CTT" ? "PT_STOCK_CTT" : "GLOBAL";
+[src\lib\shipping.ts:55] (PT_STOCK_CTT)     if (ch === "PT_STOCK_CTT") hasPt = true;
+[src\lib\shipping.ts:60] (PT_STOCK_CTT)   if (hasPt) return "PT_STOCK_CTT";
+[src\lib\shipping.ts:93] (PT_STOCK_CTT)     if (ch === "PT_STOCK_CTT") ptQty += qty;
+[src\lib\shipping.ts:111] (PT_STOCK_CTT)   if (cartChannel === "PT_STOCK_CTT") {
+
+========================================================================================================================
+4) FOCADO NA FUNCAO deductPtStockForPaidOrder
+========================================================================================================================
+[src\app\api\checkout\paypal\capture\route.ts:365]     const { deductPtStockForPaidOrder } = await import(
+[src\app\api\checkout\paypal\capture\route.ts:366]       "@/lib/deductPtStockForPaidOrder"
+[src\app\api\checkout\paypal\capture\route.ts:368]     await deductPtStockForPaidOrder(orderId);
+[src\app\api\checkout\stripe\confirm\route.ts:332]       const { deductPtStockForPaidOrder } = await import(
+[src\app\api\checkout\stripe\confirm\route.ts:333]         "@/lib/deductPtStockForPaidOrder"
+[src\app\api\checkout\stripe\confirm\route.ts:335]       await deductPtStockForPaidOrder(orderId);
+[src\app\api\paypal\webhook\route.ts:4] import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+[src\app\api\paypal\webhook\route.ts:280]     await deductPtStockForPaidOrder(orderId);
+[src\app\api\paypal\webhook\route.ts:340]     await deductPtStockForPaidOrder(orderId);
+[src\app\api\paypal\webhook\route.ts:345]   await deductPtStockForPaidOrder(orderId);
+[src\app\api\stripe\webhook\route.ts:10] import { deductPtStockForPaidOrder } from "@/lib/deductPtStockForPaidOrder";
+[src\app\api\stripe\webhook\route.ts:666]   await deductPtStockForPaidOrder(orderId);
+[src\lib\checkout.ts:260]   // deductPtStockForPaidOrder(orderId)
+[src\lib\deductPtStockForPaidOrder.ts:95] export async function deductPtStockForPaidOrder(orderId: string): Promise<void> {
+[src\lib\deductPtStockForPaidOrder.ts:142]           `[deductPtStockForPaidOrder] Missing product relation for order item ${item.id}`
+
+========================================================================================================================
+5) FOCADO EM ATUALIZACOES DE STOCK
+========================================================================================================================
+[diagnose-pt-stock.js:82]               ptStockQty: true,
+[diagnose-pt-stock.js:196]       currentPtStockQty: row.ptStockQty,
+[diagnose-pt-stock.js:197]       expectedPtStockQtyAfterDeduction: Math.max(0, Number(row.ptStockQty || 0) - Number(entry.orderedQty || 0)),
+[manual-deduct-test.js:101]       const nextQty = Math.max(0, Number(row.ptStockQty || 0) - Number(item.qty || 0));
+[manual-deduct-test.js:106]           ptStockQty: nextQty,
+[manual-deduct-test.js:117]         select: { ptStockQty: true },
+[manual-deduct-test.js:120]       const totalQty = rows.reduce((sum, r) => sum + Math.max(0, Number(r.ptStockQty || 0)), 0);
+[manual-deduct-test.js:122]       await tx.product.update({
+[manual-deduct-test.js:124]         data: { ptStockQty: totalQty },
+[prisma\schema.prisma:133]   ptStockQty Int?
+[prisma\schema.prisma:156]   @@index([ptStockQty])
+[prisma\schema.prisma:170]   ptStockQty Int @default(0)
+[prisma\schema.prisma:178]   @@index([ptStockQty])
+[scripts\fix-images-to-webp.ts:34]     await prisma.product.update({
+[scripts\migrate-blob-to-supabase.ts:202]       await prisma.product.update({
+[scripts\migrate-cloudinary-to-vercel-blob.ts:299]         await prisma.product.update({
+[scripts\migrate-supabase-to-vercel-blob.ts:403]         await prisma.product.update({
+[src\app\api\admin\products\[id]\route.ts:216]       await tx.product.update({
+[src\app\api\checkout\paypal\create\route.ts:329]         ptStockQty: true,
+[src\app\api\checkout\paypal\create\route.ts:340]     const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+[src\app\api\checkout\stripe\route.ts:399]         ptStockQty: true,
+[src\app\api\checkout\stripe\route.ts:410]     const availableQty = Math.max(0, Number(row.ptStockQty ?? 0));
+[src\app\[locale]\admin\(panel)\products\actions.ts:173]   const updated = await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\actions.ts:318]         await tx.product.update({
+[src\app\[locale]\admin\(panel)\products\actions.ts:366]     const updated = await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\page.tsx:55]   await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\[id]\page.tsx:97]     await prisma.product.update({
+[src\app\[locale]\admin\(panel)\products\[id]\page.tsx:129]     await prisma.product.update({
+[src\app\[locale]\admin\pt-stock\products\page.tsx:71]   await prisma.product.update({
+[src\app\[locale]\admin\pt-stock\products\page.tsx:125]       ptStockQty: true,
+[src\app\[locale]\admin\pt-stock\products\page.tsx:220]                 const stockQty = p.ptStockQty ?? 0;
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:22]     ptStockQty: number;
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:33]       ptStockQty: qty,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:38]   const totalFromSizes = updates.reduce((sum, item) => sum + item.ptStockQty, 0);
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:45]           ptStockQty: item.ptStockQty,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:51]     await tx.product.update({
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\actions.ts:54]         ptStockQty: totalFromSizes,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:69]       ptStockQty: true,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:80]           ptStockQty: true,
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:91]   const currentStock = product.ptStockQty ?? 0;
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:92]   const totalBySizes = sizes.reduce((sum, size) => sum + (size.ptStockQty ?? 0), 0);
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:137]               {new Date(product.updatedAt).toLocaleString("en-GB")}
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:209]                           defaultValue={size.ptStockQty ?? 0}
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:225]               htmlFor="ptStockQty"
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:232]               id="ptStockQty"
+[src\app\[locale]\admin\pt-stock\products\[id]\stock\page.tsx:233]               name="ptStockQty"
+[src\app\[locale]\pt-stock\page.tsx:159]   ptStockQty: number | null;
+[src\app\[locale]\pt-stock\page.tsx:177]   const stockQty = p.ptStockQty ?? 0;
+[src\app\[locale]\pt-stock\page.tsx:313]       ptStockQty: true,
+[src\app\[locale]\pt-stock\[slug]\page.tsx:130]       ptStockQty: true,
+[src\app\[locale]\pt-stock\[slug]\page.tsx:139]           ptStockQty: true,
+[src\app\[locale]\pt-stock\[slug]\page.tsx:219]           ptStockQty: Math.max(0, Number(s.ptStockQty ?? 0)),
+[src\app\[locale]\pt-stock\[slug]\page.tsx:224]   const stockQty = Number(product.ptStockQty ?? 0);
+[src\app\[locale]\pt-stock\[slug]\page.tsx:256]             ptStockQty: stockQty,
+[src\components\PtStockProductConfigurator.tsx:29]   ptStockQty?: number | null;
+[src\components\PtStockProductConfigurator.tsx:220]   const possibleValues = [rec.stockQty, rec.qty, rec.ptStockQty, rec.stock, rec.quantity];
+[src\components\PtStockProductConfigurator.tsx:278]   const safeStockQty = Number(product?.ptStockQty ?? 0);
+[src\lib\deductPtStockForPaidOrder.ts:92]  * - Atualiza SizeStock.ptStockQty e SizeStock.available
+[src\lib\deductPtStockForPaidOrder.ts:93]  * - Recalcula Product.ptStockQty como soma de todos os tamanhos
+[src\lib\deductPtStockForPaidOrder.ts:169]           ptStockQty: true,
+[src\lib\deductPtStockForPaidOrder.ts:179]       const currentQty = Math.max(0, Number(sizeStock.ptStockQty ?? 0));
+[src\lib\deductPtStockForPaidOrder.ts:185]           ptStockQty: nextQty,
+[src\lib\deductPtStockForPaidOrder.ts:197]           ptStockQty: true,
+[src\lib\deductPtStockForPaidOrder.ts:202]         return sum + Math.max(0, Number(row.ptStockQty ?? 0));
+[src\lib\deductPtStockForPaidOrder.ts:205]       await tx.product.update({
+[src\lib\deductPtStockForPaidOrder.ts:208]           ptStockQty: totalQty,
+
+========================================================================================================================
+6) FOCADO NA MARCACAO DE ORDER COMO PAID
+========================================================================================================================
+[diagnose-pt-stock.js:72]     where: { status: "paid" },
+[diagnose-pt-stock.js:101]     paymentStatus: order.paymentStatus,
+[diagnose-pt-stock.js:105]     paidAt: order.paidAt,
+[manual-deduct-test.js:45]     where: { status: "paid" },
+[prisma\schema.prisma:427]   paymentStatus String?
+[prisma\schema.prisma:428]   paidAt        DateTime?
+[prisma\schema.prisma:471]   @@index([paymentStatus])
+[prisma\schema.prisma:474]   @@index([paidAt])
+[src\app\api\admin\analytics\route.ts:142]   paymentStatus: string | null;
+[src\app\api\admin\analytics\route.ts:143]   paidAt: Date | null;
+[src\app\api\admin\analytics\route.ts:147]   const ps = (o.paymentStatus ?? "").toLowerCase();
+[src\app\api\admin\analytics\route.ts:149]   if (o.paidAt) return true;
+[src\app\api\checkout\paypal\capture\route.ts:269]         status: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:270]         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:270]         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:270]         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:271]         paidAt: new Date(),
+[src\app\api\checkout\paypal\capture\route.ts:298]         status: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:299]         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:299]         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:299]         paymentStatus: "paid",
+[src\app\api\checkout\paypal\capture\route.ts:300]         paidAt: new Date(),
+[src\app\api\checkout\paypal\capture\route.ts:377]     data: { status: "failed", paymentStatus: "failed" },
+[src\app\api\checkout\stripe\confirm\route.ts:263]           status: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:264]           paymentStatus: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:264]           paymentStatus: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:264]           paymentStatus: "paid",
+[src\app\api\checkout\stripe\confirm\route.ts:265]           paidAt: new Date(),
+[src\app\api\checkout\stripe\confirm\route.ts:338]     return NextResponse.json({ ok: true, status: "paid" });
+[src\app\api\paypal\webhook\route.ts:239]     status: "paid",
+[src\app\api\paypal\webhook\route.ts:240]     paymentStatus: "paid",
+[src\app\api\paypal\webhook\route.ts:240]     paymentStatus: "paid",
+[src\app\api\paypal\webhook\route.ts:240]     paymentStatus: "paid",
+[src\app\api\paypal\webhook\route.ts:241]     paidAt: new Date(),
+[src\app\api\paypal\webhook\route.ts:372]     data: { status: "pending", paymentStatus: "pending" },
+[src\app\api\paypal\webhook\route.ts:379]     data: { status: "failed", paymentStatus: "failed" },
+[src\app\api\stripe\webhook\route.ts:579]     status: "paid",
+[src\app\api\stripe\webhook\route.ts:580]     paymentStatus: "paid",
+[src\app\api\stripe\webhook\route.ts:580]     paymentStatus: "paid",
+[src\app\api\stripe\webhook\route.ts:580]     paymentStatus: "paid",
+[src\app\api\stripe\webhook\route.ts:581]     paidAt: new Date(),
+[src\app\api\stripe\webhook\route.ts:759]       paymentStatus: "pending",
+[src\app\api\stripe\webhook\route.ts:771]     data: { status: "failed", paymentStatus: "failed" },
+[src\app\api\stripe\webhook\route.ts:778]     data: { status: "canceled", paymentStatus: "canceled" },
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:110]   paidAt?: string | null
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:112]   paymentStatus?: string | null
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:911]                   {order.paidAt && (
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:913]                       <span className="text-gray-500">{t('paidAt')}:</span> {new Date(order.paidAt).toLocaleString(locale)}
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:917]                   {order.paymentStatus && (
+[src\app\[locale]\account\orders\[orderId]\OrderDetailsClient.tsx:919]                       <span className="text-gray-500">{t('payment')}:</span> {order.paymentStatus}
+[src\app\[locale]\admin\(panel)\orders\page.tsx:121]     { paidAt: { not: null } },
+[src\app\[locale]\admin\(panel)\orders\page.tsx:123]       paymentStatus: {
+[src\app\[locale]\admin\(panel)\orders\page.tsx:156]   paymentStatus: true,
+[src\app\[locale]\admin\(panel)\orders\page.tsx:157]   paidAt: true,
+[src\app\[locale]\admin\(panel)\page.tsx:101]         paymentStatus: true,
+[src\app\[locale]\admin\(panel)\page.tsx:102]         paidAt: true,
+[src\app\[locale]\admin\(panel)\page.tsx:184]   const raw = String(o?.paymentStatus ?? "").toUpperCase();
+[src\app\[locale]\admin\(panel)\page.tsx:188]   if (o?.paidAt) return "paid";
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:121]     { paidAt: { not: null } },
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:123]       paymentStatus: {
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:127]     { status: "paid" },
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:147]   paymentStatus: true,
+[src\app\[locale]\admin\pt-stock\orders\page.tsx:148]   paidAt: true,
+[src\app\[locale]\orders\[id]\page.tsx:478] function formatPaymentStatus(paymentStatus: string, t: (key: string) => string) {
+[src\app\[locale]\orders\[id]\page.tsx:479]   const normalized = String(paymentStatus || "").trim().toLowerCase();
+[src\app\[locale]\orders\[id]\page.tsx:523]   paidAt: Date | null;
+[src\app\[locale]\orders\[id]\page.tsx:525]   paymentStatus: string | null;
+[src\app\[locale]\orders\[id]\page.tsx:556]       paidAt: true,
+[src\app\[locale]\orders\[id]\page.tsx:558]       paymentStatus: true,
+[src\app\[locale]\orders\[id]\page.tsx:818]                 {order.paidAt ? (
+[src\app\[locale]\orders\[id]\page.tsx:820]                     <span className="text-gray-500">{t("paidAtLabel")}:</span>{" "}
+[src\app\[locale]\orders\[id]\page.tsx:821]                     {new Date(order.paidAt).toLocaleString(
+[src\app\[locale]\orders\[id]\page.tsx:827]                 {order.paymentStatus ? (
+[src\app\[locale]\orders\[id]\page.tsx:830]                     {formatPaymentStatus(order.paymentStatus, t)}
+[src\lib\kpis.ts:13]         { paidAt: { not: null } },
+[src\lib\kpis.ts:27]         { paidAt: { not: null } },
+[src\lib\kpis.ts:79]         { paidAt: { not: null } },
+
+========================================================================================================================
+7) RESUMO AUTOMATICO
+========================================================================================================================
+deductPtStockForPaidOrder.ts existe: true
+paypal webhook existe: true
+stripe webhook existe: true
+A funcao parece ser referenciada no codigo: SIM
+ptStockQty aparece no codigo: SIM

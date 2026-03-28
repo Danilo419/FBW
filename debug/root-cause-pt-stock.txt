@@ -1,0 +1,121 @@
+PT STOCK ROOT CAUSE DEBUG
+Quando: 2026-03-28T15:29:55.004Z
+
+==================================================
+ORDER
+==================================================
+{
+  "id": "cmn95xmmi0008ky04gtc8bu4z",
+  "status": "paid",
+  "paymentStatus": "paid",
+  "paidAt": "2026-03-27T17:17:14.103Z",
+  "stockDeductedAt": null,
+  "channel": "PT_STOCK_CTT"
+}
+
+==================================================
+ITENS E TAMANHOS
+==================================================
+{
+  "itemId": "cmn95xmmj000aky04w3lt7gao",
+  "name": "TESTE1",
+  "qty": 2,
+  "productId": "cmmif0plf0000l4043r2dzqf3",
+  "detectedSize": "M",
+  "snapshotJson": {
+    "size": "M",
+    "options": {
+      "size": "M"
+    },
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "selectedSize": "M",
+    "productChannel": "PT_STOCK_CTT",
+    "personalization": null,
+    "selectedOptions": {
+      "size": "M"
+    }
+  },
+  "product": {
+    "id": "cmmif0plf0000l4043r2dzqf3",
+    "name": "TESTE1",
+    "slug": "portugal-stock-teste1",
+    "channel": "PT_STOCK_CTT",
+    "ptStockQty": 3
+  }
+}
+{
+  "itemId": "cmn95xmmj000bky04ct9jvzju",
+  "name": "TESTE1",
+  "qty": 1,
+  "productId": "cmmif0plf0000l4043r2dzqf3",
+  "detectedSize": "L",
+  "snapshotJson": {
+    "size": "L",
+    "options": {
+      "size": "L"
+    },
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "selectedSize": "L",
+    "productChannel": "PT_STOCK_CTT",
+    "personalization": null,
+    "selectedOptions": {
+      "size": "L"
+    }
+  },
+  "product": {
+    "id": "cmmif0plf0000l4043r2dzqf3",
+    "name": "TESTE1",
+    "slug": "portugal-stock-teste1",
+    "channel": "PT_STOCK_CTT",
+    "ptStockQty": 3
+  }
+}
+
+==================================================
+SIZE STOCKS DOS PRODUTOS
+==================================================
+[
+  {
+    "id": "cmn4swpe40003ju04m8fl3pvp",
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "size": "L",
+    "ptStockQty": 1,
+    "available": true
+  },
+  {
+    "id": "cmn4swpe40004ju04alhl6ovq",
+    "productId": "cmmif0plf0000l4043r2dzqf3",
+    "size": "M",
+    "ptStockQty": 2,
+    "available": true
+  }
+]
+
+==================================================
+VALIDACAO ITEM A ITEM
+==================================================
+{
+  "itemId": "cmn95xmmj000aky04w3lt7gao",
+  "ok": true,
+  "productId": "cmmif0plf0000l4043r2dzqf3",
+  "size": "M",
+  "qtyOrdered": 2,
+  "sizeStockBefore": 2,
+  "expectedAfter": 0
+}
+{
+  "itemId": "cmn95xmmj000bky04ct9jvzju",
+  "ok": true,
+  "productId": "cmmif0plf0000l4043r2dzqf3",
+  "size": "L",
+  "qtyOrdered": 1,
+  "sizeStockBefore": 1,
+  "expectedAfter": 0
+}
+
+==================================================
+RESUMO
+==================================================
+- Se aparecer 'FALTA LINHA SizeStock PARA ESTE TAMANHO', esse e o motivo da falha.
+- Se stockDeductedAt ja estiver preenchido, a funcao sai logo sem descontar.
+- Se existir SizeStock para todos os tamanhos e stockDeductedAt estiver null, entao o problema e outro.

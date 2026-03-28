@@ -1228,6 +1228,7 @@
   },
   "ptStockPage": {
     "title": "Camisolas em Stock em Portugal",
+    "count": "{count} produtos",
     "shippingRules": {
       "title": "Regras de Envio em Portugal",
       "one": "1 camisola: 6€",

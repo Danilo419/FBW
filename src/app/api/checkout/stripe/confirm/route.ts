@@ -147,6 +147,24 @@ async function isDiscountAlreadyRedeemed(code: string) {
   );
 }
 
+async function ensurePaidOrderSideEffects(orderId: string) {
+  try {
+    const { deductPtStockForPaidOrder } = await import(
+      "@/lib/deductPtStockForPaidOrder"
+    );
+    await deductPtStockForPaidOrder(orderId);
+  } catch (err) {
+    console.error("[stripe/confirm] stock repair failed:", err);
+  }
+
+  try {
+    const { finalizePaidOrder } = await import("@/lib/checkout");
+    await finalizePaidOrder(orderId);
+  } catch (err) {
+    console.error("[stripe/confirm] finalizePaidOrder failed:", err);
+  }
+}
+
 /* ------------------------------ route ----------------------------- */
 
 export async function POST(req: NextRequest) {
@@ -224,6 +242,7 @@ export async function POST(req: NextRequest) {
     const hasDiscountCode = !!normalizedDiscountCode;
 
     // Se já está final, ainda tentamos reparar o redeem do código
+    // e garantimos side effects idempotentes (stock/finalização).
     if (isFinal(existing.status)) {
       let repairedDiscount = false;
 
@@ -244,6 +263,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      await ensurePaidOrderSideEffects(orderId);
+
       return NextResponse.json({
         ok: true,
         status: "already_paid",
@@ -251,9 +272,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let transitioned = false;
-
-    transitioned = await prisma.$transaction(async (tx) => {
+    const transitioned = await prisma.$transaction(async (tx) => {
       const claim = await tx.order.updateMany({
         where: {
           id: orderId,
@@ -315,6 +334,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      await ensurePaidOrderSideEffects(orderId);
+
       return NextResponse.json({
         ok: true,
         status: "already_paid",
@@ -322,18 +343,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // pós-pagamento
-    try {
-      const { finalizePaidOrder } = await import("@/lib/checkout");
-      await finalizePaidOrder(orderId);
-    } catch {}
-
-    try {
-      const { deductPtStockForPaidOrder } = await import(
-        "@/lib/deductPtStockForPaidOrder"
-      );
-      await deductPtStockForPaidOrder(orderId);
-    } catch {}
+    await ensurePaidOrderSideEffects(orderId);
 
     return NextResponse.json({ ok: true, status: "paid" });
   } catch (e: any) {

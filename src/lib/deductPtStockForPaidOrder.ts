@@ -102,6 +102,9 @@ export async function deductPtStockForPaidOrder(orderId: string): Promise<void> 
       where: { id: orderId },
       select: {
         id: true,
+        status: true,
+        paymentStatus: true,
+        paidAt: true,
         stockDeductedAt: true,
         items: {
           select: {
@@ -126,9 +129,23 @@ export async function deductPtStockForPaidOrder(orderId: string): Promise<void> 
       throw new Error(`Order not found: ${orderId}`);
     }
 
-    // Evita descontar duas vezes caso o webhook repita
+    // Evita descontar duas vezes caso webhook/confirm/retry repitam
     if (order.stockDeductedAt) {
       return;
+    }
+
+    // Segurança extra: só deve correr para encomendas efetivamente pagas/finais
+    const isPaidLike =
+      String(order.status ?? "").toLowerCase() === "paid" ||
+      String(order.status ?? "").toLowerCase() === "shipped" ||
+      String(order.status ?? "").toLowerCase() === "delivered" ||
+      String(order.paymentStatus ?? "").toLowerCase() === "paid" ||
+      !!order.paidAt;
+
+    if (!isPaidLike) {
+      throw new Error(
+        `Order ${orderId} is not paid yet (status=${order.status ?? "null"}, paymentStatus=${order.paymentStatus ?? "null"})`
+      );
     }
 
     const affectedProductIds = new Set<string>();
