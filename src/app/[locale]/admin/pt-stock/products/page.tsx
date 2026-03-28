@@ -7,8 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
-import { Search as SearchIcon, Eye, EyeOff } from "lucide-react";
-import DeletePtStockProductButton from "./DeletePtStockProductButton";
+import { redirect } from "next/navigation";
+import { Search as SearchIcon, Eye, EyeOff, Trash2 } from "lucide-react";
 
 /* ---------- helpers ---------- */
 function formatMoneyFromCents(cents: number, currency = "EUR") {
@@ -61,7 +61,11 @@ function getImageFromImageUrls(imageUrls: unknown) {
 async function toggleVisibilityAction(formData: FormData) {
   "use server";
 
-  const id = String(formData.get("id") || "");
+  const id = String(formData.get("id") || "").trim();
+  const locale = String(formData.get("locale") || "pt").trim() || "pt";
+  const q = String(formData.get("q") || "").trim();
+  const page = String(formData.get("page") || "1").trim() || "1";
+
   if (!id) return;
 
   const current = String(formData.get("isVisible") || "");
@@ -74,7 +78,53 @@ async function toggleVisibilityAction(formData: FormData) {
     select: { id: true },
   });
 
-  revalidatePath("/admin/pt-stock/products");
+  revalidatePath(`/${locale}/admin/pt-stock/products`);
+
+  const usp = new URLSearchParams();
+  if (q) usp.set("q", q);
+  usp.set("page", page);
+
+  redirect(`/${locale}/admin/pt-stock/products?${usp.toString()}`);
+}
+
+/* ---------- server action: delete product ---------- */
+async function deletePtStockProductAction(formData: FormData) {
+  "use server";
+
+  const id = String(formData.get("id") || "").trim();
+  const locale = String(formData.get("locale") || "pt").trim() || "pt";
+  const q = String(formData.get("q") || "").trim();
+  const page = String(formData.get("page") || "1").trim() || "1";
+
+  if (!id) {
+    throw new Error("Invalid product id.");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: { id: true, channel: true },
+  });
+
+  if (!product) {
+    throw new Error("Product not found.");
+  }
+
+  if (product.channel !== "PT_STOCK_CTT") {
+    throw new Error("Only PT Stock products can be deleted here.");
+  }
+
+  await prisma.product.delete({
+    where: { id },
+  });
+
+  revalidatePath(`/${locale}/admin/pt-stock/products`);
+  revalidatePath(`/${locale}/pt-stock`);
+
+  const usp = new URLSearchParams();
+  if (q) usp.set("q", q);
+  usp.set("page", page);
+
+  redirect(`/${locale}/admin/pt-stock/products?${usp.toString()}`);
 }
 
 /* ---------- page ---------- */
@@ -302,6 +352,9 @@ export default async function AdminPtStockProductsPage({
 
                         <form action={toggleVisibilityAction}>
                           <input type="hidden" name="id" value={p.id} />
+                          <input type="hidden" name="locale" value={locale} />
+                          <input type="hidden" name="q" value={q} />
+                          <input type="hidden" name="page" value={String(page)} />
                           <input type="hidden" name="isVisible" value={isVisible ? "1" : "0"} />
                           <button
                             type="submit"
@@ -326,7 +379,20 @@ export default async function AdminPtStockProductsPage({
                           </button>
                         </form>
 
-                        <DeletePtStockProductButton productId={p.id} />
+                        <form action={deletePtStockProductAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <input type="hidden" name="locale" value={locale} />
+                          <input type="hidden" name="q" value={q} />
+                          <input type="hidden" name="page" value={String(page)} />
+                          <button
+                            type="submit"
+                            className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                            title="Delete product"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </button>
+                        </form>
                       </div>
                     </td>
                   </tr>
